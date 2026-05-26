@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Learn Spring Boot from scratch — auto-configuration, starters, annotations, dependency injection, and building REST APIs with Spring Boot." />
+  <title>Spring Boot — Java Learn</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+
+    <h1>🌱 Spring Boot</h1>
+    <p>
+      Spring Boot is an opinionated, convention-over-configuration framework built on top of the Spring
+      ecosystem. It lets you create stand-alone, production-grade Spring applications with minimal setup —
+      no XML, no separate servlet container required. You write business logic; Spring Boot handles the
+      boilerplate.
+    </p>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>What Is Spring Boot and Why Use It?</h2>
+    <p>
+      Plain Spring gives you a powerful, modular toolkit for building Java applications, but historically
+      required a significant amount of configuration. Spring Boot solves this with three big ideas:
+    </p>
+    <ul>
+      <li><strong>Auto-configuration</strong> — detects libraries on your classpath and configures them automatically.</li>
+      <li><strong>Opinionated defaults</strong> — sensible choices are made for you; you override only what you need.</li>
+      <li><strong>Embedded server</strong> — packages Tomcat, Jetty, or Undertow directly inside your JAR so you run with <code>java -jar app.jar</code>.</li>
+    </ul>
+    <p>
+      The result: a new REST service can be running in under five minutes, with no separate server installation
+      and no XML configuration files.
+    </p>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Spring vs Spring Boot</h2>
+    <p>
+      Understanding the difference helps you know what Spring Boot is actually doing under the hood.
+    </p>
+
+    <table class="topic-table">
+      <thead>
+        <tr>
+          <th>Aspect</th>
+          <th>Spring Framework</th>
+          <th>Spring Boot</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Configuration</td>
+          <td>Manual XML or Java <code>@Configuration</code></td>
+          <td>Auto-configured based on classpath</td>
+        </tr>
+        <tr>
+          <td>Server</td>
+          <td>Deploy WAR to external Tomcat/Jetty</td>
+          <td>Embedded Tomcat/Jetty/Undertow inside JAR</td>
+        </tr>
+        <tr>
+          <td>Startup</td>
+          <td>Needs <code>web.xml</code> or <code>WebApplicationInitializer</code></td>
+          <td>Single <code>main()</code> method</td>
+        </tr>
+        <tr>
+          <td>Dependencies</td>
+          <td>Manually pick compatible versions</td>
+          <td>Starters manage compatible dependency sets</td>
+        </tr>
+        <tr>
+          <td>Production features</td>
+          <td>Build yourself</td>
+          <td>Actuator health checks, metrics out of the box</td>
+        </tr>
+        <tr>
+          <td>Learning curve</td>
+          <td>Steeper — many moving parts</td>
+          <td>Gentler — sensible defaults everywhere</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      Spring Boot <em>is</em> Spring — it does not replace the core IoC container, AOP, or any other Spring
+      module. It simply provides a faster, opinionated way to wire them all together.
+    </p>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Your First Spring Boot Application</h2>
+    <p>
+      The canonical entry point for any Spring Boot app is a single class annotated with
+      <code>@SpringBootApplication</code> and a standard Java <code>main()</code> method.
+    </p>
+
+    <pre><code class="language-java">package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication   // ← does the heavy lifting (see below)
+public class DemoApplication {
+
+  public static void main(String[] args) {
+    SpringApplication.run(DemoApplication.class, args);
+  }
+}
+</code></pre>
+
+    <p>
+      That is a complete, runnable Spring Boot application. When you run it, Spring Boot:
+    </p>
+    <ol>
+      <li>Starts the embedded Tomcat server (default port 8080).</li>
+      <li>Scans the package and sub-packages for Spring-managed components.</li>
+      <li>Applies all relevant auto-configurations.</li>
+    </ol>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Key Annotations Explained</h2>
+    <p>
+      Spring Boot is annotation-driven. Learning these six annotations will take you very far.
+    </p>
+
+    <!-- ─── @SpringBootApplication ──────────────────────────────────────────── -->
+    <h3>@SpringBootApplication</h3>
+    <p>
+      A convenience meta-annotation that combines three annotations:
+    </p>
+    <ul>
+      <li><code>@SpringBootConfiguration</code> — marks the class as a source of <code>@Bean</code> definitions.</li>
+      <li><code>@EnableAutoConfiguration</code> — tells Spring Boot to start adding beans based on classpath settings.</li>
+      <li><code>@ComponentScan</code> — enables scanning of the current package and sub-packages for components.</li>
+    </ul>
+
+    <pre><code class="language-java">// These two declarations are equivalent:
+
+// ① Short form (recommended)
+@SpringBootApplication
+public class MyApp { ... }
+
+// ② Explicit form (shows what's happening)
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan(basePackages = "com.example")
+public class MyApp { ... }
+</code></pre>
+
+    <!-- ─── @Component ──────────────────────────────────────────────────────── -->
+    <h3>@Component</h3>
+    <p>
+      The generic stereotype annotation. Any class annotated with <code>@Component</code> is picked up
+      by component scanning and registered as a Spring bean. The more specific annotations below are all
+      specialisations of <code>@Component</code>.
+    </p>
+
+    <pre><code class="language-java">import org.springframework.stereotype.Component;
+
+@Component
+public class EmailValidator {
+
+  public boolean isValid(String email) {
+    return email != null &amp;&amp; email.contains("@");
+  }
+}
+</code></pre>
+
+    <!-- ─── @Service ────────────────────────────────────────────────────────── -->
+    <h3>@Service</h3>
+    <p>
+      Marks a class as belonging to the <em>service layer</em> — where business logic lives. Functionally
+      identical to <code>@Component</code>, but communicates intent to other developers and enables
+      AOP pointcuts that target the service layer specifically.
+    </p>
+
+    <pre><code class="language-java">import org.springframework.stereotype.Service;
+
+@Service
+public class ProductService {
+
+  private final ProductRepository productRepository;
+
+  // Constructor injection (preferred — see Dependency Injection section)
+  public ProductService(ProductRepository productRepository) {
+    this.productRepository = productRepository;
+  }
+
+  public Product findById(Long id) {
+    return productRepository.findById(id)
+        .orElseThrow(() -&gt; new RuntimeException("Product not found: " + id));
+  }
+}
+</code></pre>
+
+    <!-- ─── @Repository ─────────────────────────────────────────────────────── -->
+    <h3>@Repository</h3>
+    <p>
+      Marks a class as a <em>data access object</em> (DAO). Beyond marking intent, Spring translates
+      persistence-layer exceptions (e.g. <code>SQLException</code>) into Spring's unified
+      <code>DataAccessException</code> hierarchy automatically when this annotation is present.
+    </p>
+
+    <pre><code class="language-java">import org.springframework.stereotype.Repository;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+@Repository
+public class InMemoryProductRepository {
+
+  private final Map&lt;Long, Product&gt; store = new HashMap&lt;&gt;();
+  private long nextId = 1L;
+
+  public Product save(Product product) {
+    product.setId(nextId++);
+    store.put(product.getId(), product);
+    return product;
+  }
+
+  public Optional&lt;Product&gt; findById(Long id) {
+    return Optional.ofNullable(store.get(id));
+  }
+}
+</code></pre>
+
+    <!-- ─── @RestController ─────────────────────────────────────────────────── -->
+    <h3>@RestController</h3>
+    <p>
+      A convenience annotation that combines <code>@Controller</code> and <code>@ResponseBody</code>.
+      Every method return value in a <code>@RestController</code> class is automatically serialized to
+      JSON (via Jackson) and written directly into the HTTP response body.
+    </p>
+
+    <pre><code class="language-java">import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class GreetingController {
+
+  @GetMapping("/hello")
+  public String hello() {
+    return "Hello, Spring Boot!";  // serialized as: Hello, Spring Boot!
+  }
+
+  @GetMapping("/status")
+  public Map&lt;String, String&gt; status() {
+    return Map.of("status", "ok", "version", "1.0.0");
+    // serialized as: {"status":"ok","version":"1.0.0"}
+  }
+}
+</code></pre>
+
+    <!-- ─── @Autowired ──────────────────────────────────────────────────────── -->
+    <h3>@Autowired</h3>
+    <p>
+      Tells Spring to inject a dependency automatically. Can be placed on constructors, fields, or setter
+      methods. <strong>Field injection is discouraged</strong> — prefer constructor injection (shown in the
+      Dependency Injection section below).
+    </p>
+
+    <pre><code class="language-java">import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class NotificationService {
+
+  // ❌ Field injection — avoid (hard to test, hides dependencies)
+  @Autowired
+  private EmailSender emailSender;
+
+  // ✅ Constructor injection — preferred (see next section)
+}
+</code></pre>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Dependency Injection and the IoC Container</h2>
+    <p>
+      <strong>Inversion of Control (IoC)</strong> means you don't create objects with <code>new</code> —
+      instead, you declare what you need and Spring's IoC container creates and wires dependencies for you.
+      <strong>Dependency Injection (DI)</strong> is the mechanism Spring uses to fulfil those declarations.
+    </p>
+
+    <h3>The Three Styles of Injection</h3>
+
+    <pre><code class="language-java">// ① Constructor injection — RECOMMENDED
+// Spring injects through the constructor; no @Autowired needed when
+// there is exactly one constructor (Spring 4.3+).
+@Service
+public class OrderService {
+
+  private final PaymentService paymentService;
+  private final InventoryService inventoryService;
+
+  public OrderService(PaymentService paymentService,
+                      InventoryService inventoryService) {
+    this.paymentService = paymentService;
+    this.inventoryService = inventoryService;
+  }
+}
+
+// ② Setter injection — optional/nullable dependencies
+@Service
+public class ReportService {
+
+  private EmailSender emailSender;
+
+  @Autowired(required = false)
+  public void setEmailSender(EmailSender emailSender) {
+    this.emailSender = emailSender;
+  }
+}
+
+// ③ Field injection — easy to write, hard to test, avoid in production code
+@Service
+public class BadPracticeService {
+
+  @Autowired
+  private SomeDependency someDependency;  // ← not recommended
+}
+</code></pre>
+
+    <h3>How the IoC Container Works</h3>
+    <p>
+      Spring's <code>ApplicationContext</code> is the IoC container. At startup it:
+    </p>
+    <ol>
+      <li>Scans for classes annotated with <code>@Component</code>, <code>@Service</code>, <code>@Repository</code>, <code>@Controller</code>, etc.</li>
+      <li>Reads <code>@Bean</code> factory methods in <code>@Configuration</code> classes.</li>
+      <li>Builds a <strong>bean graph</strong>, resolving all dependencies.</li>
+      <li>Instantiates beans in the correct order and injects them.</li>
+    </ol>
+
+    <pre><code class="language-java">// You can also register beans manually using @Configuration + @Bean
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AppConfig {
+
+  // Spring calls this method and stores the returned object as a bean
+  @Bean
+  public ObjectMapper objectMapper() {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    return mapper;
+  }
+}
+</code></pre>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Auto-Configuration Explained</h2>
+    <p>
+      Auto-configuration is the mechanism behind Spring Boot's "just works" behaviour. When
+      <code>@EnableAutoConfiguration</code> is active, Spring Boot reads a list of candidate
+      configuration classes from <code>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</code>
+      (Spring Boot 3.x) inside each Spring Boot starter JAR.
+    </p>
+    <p>
+      Each auto-configuration class is guarded by <code>@Conditional</code> annotations, so it only
+      activates when certain conditions are met:
+    </p>
+
+    <pre><code class="language-java">// Simplified view of what DataSourceAutoConfiguration looks like internally
+@AutoConfiguration
+@ConditionalOnClass({ DataSource.class, EmbeddedDatabaseType.class })
+@ConditionalOnMissingBean(type = "io.r2dbc.spi.ConnectionFactory")
+@EnableConfigurationProperties(DataSourceProperties.class)
+public class DataSourceAutoConfiguration {
+
+  @Bean
+  @ConditionalOnMissingBean
+  public DataSource dataSource(DataSourceProperties properties) {
+    // Creates a DataSource bean only if you haven't defined your own
+    return properties.initializeDataSourceBuilder().build();
+  }
+}
+</code></pre>
+
+    <p>Key <code>@Conditional</code> annotations you'll encounter:</p>
+    <ul>
+      <li><code>@ConditionalOnClass</code> — activates only if a class is on the classpath.</li>
+      <li><code>@ConditionalOnMissingBean</code> — activates only if you haven't defined your own bean.</li>
+      <li><code>@ConditionalOnProperty</code> — activates based on an <code>application.properties</code> value.</li>
+      <li><code>@ConditionalOnWebApplication</code> — activates only in a web context.</li>
+    </ul>
+    <p>
+      This is why adding <code>spring-boot-starter-data-jpa</code> to your <code>pom.xml</code> is
+      enough to get a fully configured JPA environment — the starter JAR brings the right classes onto
+      the classpath and triggers the relevant auto-configuration.
+    </p>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Spring Boot Starters</h2>
+    <p>
+      Starters are curated dependency descriptors — a single Maven/Gradle dependency that brings in
+      everything you need for a given use case, with guaranteed-compatible versions.
+    </p>
+
+    <table class="topic-table">
+      <thead>
+        <tr>
+          <th>Starter</th>
+          <th>What It Provides</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>spring-boot-starter-web</code></td>
+          <td>Embedded Tomcat, Spring MVC, Jackson (JSON)</td>
+        </tr>
+        <tr>
+          <td><code>spring-boot-starter-data-jpa</code></td>
+          <td>Hibernate, Spring Data JPA, transaction management</td>
+        </tr>
+        <tr>
+          <td><code>spring-boot-starter-security</code></td>
+          <td>Spring Security (authentication &amp; authorization)</td>
+        </tr>
+        <tr>
+          <td><code>spring-boot-starter-test</code></td>
+          <td>JUnit 5, Mockito, AssertJ, Spring Test</td>
+        </tr>
+        <tr>
+          <td><code>spring-boot-starter-validation</code></td>
+          <td>Hibernate Validator / Bean Validation</td>
+        </tr>
+        <tr>
+          <td><code>spring-boot-starter-actuator</code></td>
+          <td>Health checks, metrics, info endpoints</td>
+        </tr>
+        <tr>
+          <td><code>spring-boot-starter-cache</code></td>
+          <td>Spring Cache abstraction</td>
+        </tr>
+        <tr>
+          <td><code>spring-boot-starter-mail</code></td>
+          <td>JavaMail support</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <pre><code class="language-xml">&lt;!-- pom.xml — add starters inside &lt;dependencies&gt; --&gt;
+&lt;parent&gt;
+  &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+  &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+  &lt;version&gt;3.3.0&lt;/version&gt;
+&lt;/parent&gt;
+
+&lt;dependencies&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+  &lt;/dependency&gt;
+
+  &lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-data-jpa&lt;/artifactId&gt;
+  &lt;/dependency&gt;
+
+  &lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-test&lt;/artifactId&gt;
+    &lt;scope&gt;test&lt;/scope&gt;
+  &lt;/dependency&gt;
+&lt;/dependencies&gt;
+</code></pre>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Building a REST API</h2>
+    <p>
+      Let's build a complete CRUD REST API for a <code>Product</code> resource to see all the pieces
+      working together.
+    </p>
+
+    <h3>1. The Model</h3>
+
+    <pre><code class="language-java">package com.example.demo.model;
+
+public class Product {
+
+  private Long id;
+  private String name;
+  private double price;
+
+  // Constructors
+  public Product() {}
+
+  public Product(Long id, String name, double price) {
+    this.id = id;
+    this.name = name;
+    this.price = price;
+  }
+
+  // Getters and setters
+  public Long getId() { return id; }
+  public void setId(Long id) { this.id = id; }
+
+  public String getName() { return name; }
+  public void setName(String name) { this.name = name; }
+
+  public double getPrice() { return price; }
+  public void setPrice(double price) { this.price = price; }
+}
+</code></pre>
+
+    <h3>2. The Service Layer</h3>
+
+    <pre><code class="language-java">package com.example.demo.service;
+
+import com.example.demo.model.Product;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
+
+@Service
+public class ProductService {
+
+  // In-memory store for demo purposes
+  private final Map&lt;Long, Product&gt; store = new HashMap&lt;&gt;();
+  private final AtomicLong idCounter = new AtomicLong(1);
+
+  public List&lt;Product&gt; findAll() {
+    return new ArrayList&lt;&gt;(store.values());
+  }
+
+  public Optional&lt;Product&gt; findById(Long id) {
+    return Optional.ofNullable(store.get(id));
+  }
+
+  public Product create(Product product) {
+    product.setId(idCounter.getAndIncrement());
+    store.put(product.getId(), product);
+    return product;
+  }
+
+  public Optional&lt;Product&gt; update(Long id, Product updated) {
+    if (!store.containsKey(id)) return Optional.empty();
+    updated.setId(id);
+    store.put(id, updated);
+    return Optional.of(updated);
+  }
+
+  public boolean delete(Long id) {
+    return store.remove(id) != null;
+  }
+}
+</code></pre>
+
+    <h3>3. The REST Controller</h3>
+    <p>
+      This is where HTTP verbs meet Java methods. The mapping annotations tell Spring which HTTP method
+      + URL path should invoke which method.
+    </p>
+
+    <pre><code class="language-java">package com.example.demo.controller;
+
+import com.example.demo.model.Product;
+import com.example.demo.service.ProductService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/products")   // base path for all methods in this controller
+public class ProductController {
+
+  private final ProductService productService;
+
+  // Constructor injection — no @Autowired needed (single constructor)
+  public ProductController(ProductService productService) {
+    this.productService = productService;
+  }
+
+  // GET /api/products
+  @GetMapping
+  public List&lt;Product&gt; getAllProducts() {
+    return productService.findAll();
+  }
+
+  // GET /api/products/{id}
+  // @PathVariable binds the {id} segment of the URL to the method parameter
+  @GetMapping("/{id}")
+  public ResponseEntity&lt;Product&gt; getProduct(@PathVariable Long id) {
+    return productService.findById(id)
+        .map(ResponseEntity::ok)                              // 200 OK
+        .orElse(ResponseEntity.notFound().build());           // 404 Not Found
+  }
+
+  // POST /api/products
+  // @RequestBody deserializes the JSON request body into a Product object
+  @PostMapping
+  public ResponseEntity&lt;Product&gt; createProduct(@RequestBody Product product) {
+    Product created = productService.create(product);
+    return ResponseEntity.status(HttpStatus.CREATED).body(created);  // 201 Created
+  }
+
+  // PUT /api/products/{id}
+  @PutMapping("/{id}")
+  public ResponseEntity&lt;Product&gt; updateProduct(
+      @PathVariable Long id,
+      @RequestBody Product product) {
+
+    return productService.update(id, product)
+        .map(ResponseEntity::ok)
+        .orElse(ResponseEntity.notFound().build());
+  }
+
+  // DELETE /api/products/{id}
+  @DeleteMapping("/{id}")
+  public ResponseEntity&lt;Void&gt; deleteProduct(@PathVariable Long id) {
+    if (productService.delete(id)) {
+      return ResponseEntity.noContent().build();    // 204 No Content
+    }
+    return ResponseEntity.notFound().build();       // 404 Not Found
+  }
+}
+</code></pre>
+
+    <h3>Mapping Annotations at a Glance</h3>
+    <table class="topic-table">
+      <thead>
+        <tr>
+          <th>Annotation</th>
+          <th>HTTP Method</th>
+          <th>Typical Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>@GetMapping</code></td>
+          <td>GET</td>
+          <td>Read / retrieve resources</td>
+        </tr>
+        <tr>
+          <td><code>@PostMapping</code></td>
+          <td>POST</td>
+          <td>Create a new resource</td>
+        </tr>
+        <tr>
+          <td><code>@PutMapping</code></td>
+          <td>PUT</td>
+          <td>Replace an existing resource</td>
+        </tr>
+        <tr>
+          <td><code>@PatchMapping</code></td>
+          <td>PATCH</td>
+          <td>Partial update of a resource</td>
+        </tr>
+        <tr>
+          <td><code>@DeleteMapping</code></td>
+          <td>DELETE</td>
+          <td>Remove a resource</td>
+        </tr>
+        <tr>
+          <td><code>@RequestMapping</code></td>
+          <td>Any</td>
+          <td>Base path / explicit method specification</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Useful Parameter Annotations</h3>
+    <table class="topic-table">
+      <thead>
+        <tr>
+          <th>Annotation</th>
+          <th>Binds To</th>
+          <th>Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>@PathVariable</code></td>
+          <td>URL path segment <code>/items/{id}</code></td>
+          <td><code>@PathVariable Long id</code></td>
+        </tr>
+        <tr>
+          <td><code>@RequestParam</code></td>
+          <td>Query parameter <code>?page=2</code></td>
+          <td><code>@RequestParam(defaultValue="0") int page</code></td>
+        </tr>
+        <tr>
+          <td><code>@RequestBody</code></td>
+          <td>Deserialized JSON body</td>
+          <td><code>@RequestBody Product product</code></td>
+        </tr>
+        <tr>
+          <td><code>@RequestHeader</code></td>
+          <td>HTTP request header</td>
+          <td><code>@RequestHeader("Authorization") String token</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Configuration — application.properties &amp; application.yml</h2>
+    <p>
+      Spring Boot centralizes all configuration in <code>src/main/resources/application.properties</code>
+      (or the equivalent <code>application.yml</code>). These files are loaded automatically at startup.
+    </p>
+
+    <h3>application.properties</h3>
+
+    <pre><code class="language-properties"># Server
+server.port=8080
+server.servlet.context-path=/api
+
+# DataSource (used by spring-boot-starter-data-jpa)
+spring.datasource.url=jdbc:postgresql://localhost:5432/mydb
+spring.datasource.username=postgres
+spring.datasource.password=secret
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# JPA / Hibernate
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# Logging
+logging.level.com.example=DEBUG
+logging.level.org.springframework.web=INFO
+
+# Custom property (accessed with @Value or @ConfigurationProperties)
+app.max-page-size=50
+app.welcome-message=Welcome to My App
+</code></pre>
+
+    <h3>application.yml (equivalent)</h3>
+
+    <pre><code class="language-yaml">server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydb
+    username: postgres
+    password: secret
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  level:
+    com.example: DEBUG
+    org.springframework.web: INFO
+
+app:
+  max-page-size: 50
+  welcome-message: Welcome to My App
+</code></pre>
+
+    <h3>Reading Configuration in Your Code</h3>
+
+    <pre><code class="language-java">import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+// ① @Value — inject a single property
+@Component
+public class AppInfo {
+
+  @Value("${app.welcome-message}")
+  private String welcomeMessage;
+
+  @Value("${app.max-page-size:20}")  // 20 is the default if property is missing
+  private int maxPageSize;
+
+  public String getWelcomeMessage() { return welcomeMessage; }
+  public int getMaxPageSize() { return maxPageSize; }
+}
+</code></pre>
+
+    <pre><code class="language-java">import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+// ② @ConfigurationProperties — bind a whole group of properties to a POJO
+// Binds all properties that start with "app."
+@Component
+@ConfigurationProperties(prefix = "app")
+public class AppProperties {
+
+  private int maxPageSize;
+  private String welcomeMessage;
+
+  // Spring needs getters AND setters to bind the values
+  public int getMaxPageSize() { return maxPageSize; }
+  public void setMaxPageSize(int maxPageSize) { this.maxPageSize = maxPageSize; }
+
+  public String getWelcomeMessage() { return welcomeMessage; }
+  public void setWelcomeMessage(String welcomeMessage) {
+    this.welcomeMessage = welcomeMessage;
+  }
+}
+</code></pre>
+
+    <h3>Profiles</h3>
+    <p>
+      Use Spring profiles to maintain different configurations for different environments without
+      changing code.
+    </p>
+
+    <pre><code class="language-properties"># application-dev.properties  (active when spring.profiles.active=dev)
+spring.datasource.url=jdbc:h2:mem:testdb
+logging.level.com.example=DEBUG
+
+# application-prod.properties  (active when spring.profiles.active=prod)
+spring.datasource.url=jdbc:postgresql://prod-server:5432/mydb
+logging.level.com.example=WARN
+</code></pre>
+
+    <pre><code class="language-java">// Activate a profile programmatically or via CLI:
+//   java -jar app.jar --spring.profiles.active=prod
+// or in application.properties:
+//   spring.profiles.active=dev
+
+// Beans can also be profile-scoped:
+import org.springframework.context.annotation.Profile;
+
+@Service
+@Profile("dev")
+public class MockEmailSender implements EmailSender {
+  public void send(String to, String body) {
+    System.out.println("[DEV] Email to " + to + ": " + body);
+  }
+}
+
+@Service
+@Profile("prod")
+public class SmtpEmailSender implements EmailSender {
+  public void send(String to, String body) {
+    // real SMTP implementation
+  }
+}
+</code></pre>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Project Structure Convention</h2>
+    <p>
+      A well-organized Spring Boot project follows a layered package structure that mirrors the
+      separation of concerns:
+    </p>
+
+    <pre><code class="language-java">// Recommended package layout
+com.example.demo
+├── DemoApplication.java          // @SpringBootApplication entry point
+│
+├── controller/                   // @RestController — HTTP layer
+│   └── ProductController.java
+│
+├── service/                      // @Service — business logic
+│   └── ProductService.java
+│
+├── repository/                   // @Repository — data access
+│   └── ProductRepository.java
+│
+├── model/                        // Plain POJOs / JPA entities
+│   └── Product.java
+│
+├── dto/                          // Data Transfer Objects (request/response shapes)
+│   ├── CreateProductRequest.java
+│   └── ProductResponse.java
+│
+└── config/                       // @Configuration classes
+    └── AppConfig.java
+</code></pre>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>A Complete Minimal Example</h2>
+    <p>
+      Here's a self-contained Spring Boot application — a single file that demonstrates all the key
+      concepts together. In a real project these classes would live in separate files.
+    </p>
+
+    <pre><code class="language-java">package com.example.hello;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
+
+// ─── Entry Point ────────────────────────────────────────────────────────────
+@SpringBootApplication
+public class HelloApp {
+  public static void main(String[] args) {
+    SpringApplication.run(HelloApp.class, args);
+  }
+}
+
+// ─── Model ──────────────────────────────────────────────────────────────────
+record Note(Long id, String text) {}
+
+// ─── Service ────────────────────────────────────────────────────────────────
+@Service
+class NoteService {
+
+  private final List&lt;Note&gt; notes = new CopyOnWriteArrayList&lt;&gt;();
+  private final AtomicLong ids = new AtomicLong(1);
+
+  List&lt;Note&gt; getAll() { return notes; }
+
+  Note add(String text) {
+    Note note = new Note(ids.getAndIncrement(), text);
+    notes.add(note);
+    return note;
+  }
+}
+
+// ─── Controller ─────────────────────────────────────────────────────────────
+@RestController
+@RequestMapping("/notes")
+class NoteController {
+
+  private final NoteService noteService;
+
+  NoteController(NoteService noteService) {
+    this.noteService = noteService;
+  }
+
+  @GetMapping
+  List&lt;Note&gt; list() {
+    return noteService.getAll();
+  }
+
+  @PostMapping
+  Note create(@RequestBody String text) {
+    return noteService.add(text);
+  }
+}
+</code></pre>
+
+    <p>Run this app and test it with <code>curl</code>:</p>
+
+    <pre><code class="language-bash"># Create a note
+curl -X POST http://localhost:8080/notes \
+     -H "Content-Type: application/json" \
+     -d '"Learn Spring Boot"'
+
+# Response: {"id":1,"text":"Learn Spring Boot"}
+
+# Get all notes
+curl http://localhost:8080/notes
+
+# Response: [{"id":1,"text":"Learn Spring Boot"}]
+</code></pre>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <h2>Key Takeaways</h2>
+    <ul>
+      <li>Spring Boot = Spring Framework + auto-configuration + embedded server + starters.</li>
+      <li><code>@SpringBootApplication</code> activates component scanning, auto-configuration, and bean definition.</li>
+      <li>Prefer <strong>constructor injection</strong> over field injection — it's testable and explicit.</li>
+      <li>Auto-configuration is conditional: it backs off if you define your own bean.</li>
+      <li>Starters manage compatible dependency sets so you don't version-manage individually.</li>
+      <li><code>@RestController</code> + mapping annotations (<code>@GetMapping</code>, <code>@PostMapping</code>, etc.) are all you need to build a REST API.</li>
+      <li><code>application.properties</code> / <code>application.yml</code> is your single configuration file; profiles let you swap config per environment.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="../js/topic.js"></script>
+</body>
+</html>

@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Master the Java Collections Framework — List, Set, Map, Queue, iteration patterns, sorting with Comparator and Comparable, and utility methods." />
+  <title>Java Collections Framework — Java Learn</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+
+    <!-- ─── Hero ─────────────────────────────────────────────────────────────── -->
+    <h1>Java Collections Framework</h1>
+    <p class="topic-intro">
+      The Java Collections Framework (JCF) is a unified architecture for storing, retrieving,
+      and manipulating groups of objects. It provides a rich set of interfaces and classes —
+      <code>List</code>, <code>Set</code>, <code>Map</code>, <code>Queue</code>, <code>Deque</code> —
+      along with powerful algorithms for sorting and searching. Mastering collections is essential
+      for writing real-world, performant Java.
+    </p>
+
+    <!-- ─── 1. Collections Hierarchy ─────────────────────────────────────────── -->
+    <h2>1. Collections Hierarchy Overview</h2>
+    <p>
+      The framework is built around two root interfaces: <strong>Collection</strong> (for sequences
+      and sets of elements) and <strong>Map</strong> (for key-value pairs). They live in
+      <code>java.util</code> and are generic, so you always parameterise them with a type.
+    </p>
+
+    <pre><code class="language-java">// The two root interface families
+java.util.Collection&lt;E&gt;
+  ├── List&lt;E&gt;        // ordered, index-based, duplicates allowed
+  │     ├── ArrayList&lt;E&gt;
+  │     └── LinkedList&lt;E&gt;
+  ├── Set&lt;E&gt;         // no duplicates
+  │     ├── HashSet&lt;E&gt;
+  │     ├── LinkedHashSet&lt;E&gt;
+  │     └── TreeSet&lt;E&gt;     (SortedSet)
+  └── Queue&lt;E&gt;       // FIFO / priority ordering
+        ├── PriorityQueue&lt;E&gt;
+        └── Deque&lt;E&gt;        // double-ended queue
+              └── ArrayDeque&lt;E&gt;
+
+java.util.Map&lt;K, V&gt;
+  ├── HashMap&lt;K, V&gt;
+  ├── LinkedHashMap&lt;K, V&gt;
+  └── TreeMap&lt;K, V&gt;         (SortedMap)</code></pre>
+
+    <p>
+      Every collection is also an <code>Iterable&lt;E&gt;</code>, so you can use the enhanced
+      for-each loop on any of them. <code>Map</code> is <em>not</em> a subtype of
+      <code>Collection</code>, but you can obtain collection views of its keys, values, or entries.
+    </p>
+
+    <!-- ─── 2. List ────────────────────────────────────────────────────────────── -->
+    <h2>2. List — Ordered, Index-Based</h2>
+    <p>
+      A <code>List</code> maintains insertion order, allows duplicates, and provides
+      positional access by index. The two most-used implementations are
+      <code>ArrayList</code> and <code>LinkedList</code>.
+    </p>
+
+    <h3>2.1 ArrayList</h3>
+    <p>
+      Backed by a resizable array. Offers <strong>O(1) random access</strong> and fast iteration.
+      Appending to the end is amortised O(1). Insertion or removal in the <em>middle</em> is
+      O(n) because elements must be shifted.
+    </p>
+
+    <pre><code class="language-java">import java.util.ArrayList;
+import java.util.List;
+
+public class ArrayListDemo {
+    public static void main(String[] args) {
+        // Create — always program to the interface
+        List&lt;String&gt; fruits = new ArrayList&lt;&gt;();
+
+        // Add
+        fruits.add("Apple");
+        fruits.add("Banana");
+        fruits.add("Cherry");
+        fruits.add(1, "Blueberry"); // insert at index 1
+
+        // Access
+        String first = fruits.get(0);         // "Apple"
+        int size      = fruits.size();         // 4
+        int idx       = fruits.indexOf("Banana"); // 2
+
+        // Update
+        fruits.set(0, "Avocado");
+
+        // Remove
+        fruits.remove("Cherry");              // by object
+        fruits.remove(0);                     // by index
+
+        // Bulk operations
+        List&lt;String&gt; more = List.of("Grape", "Mango");
+        fruits.addAll(more);
+
+        System.out.println(fruits); // [Banana, Blueberry, Grape, Mango]
+    }
+}</code></pre>
+
+    <h3>2.2 LinkedList</h3>
+    <p>
+      Backed by a doubly-linked list. <strong>O(1) insertion and removal at the head or tail</strong>,
+      but O(n) random access. Use it when you frequently add or remove from either end, or
+      when you need a <code>Deque</code> / stack behaviour.
+    </p>
+
+    <pre><code class="language-java">import java.util.LinkedList;
+import java.util.Deque;
+
+public class LinkedListDemo {
+    public static void main(String[] args) {
+        LinkedList&lt;Integer&gt; list = new LinkedList&lt;&gt;();
+
+        // Efficient head / tail operations
+        list.addFirst(10);   // [10]
+        list.addLast(20);    // [10, 20]
+        list.addFirst(5);    // [5, 10, 20]
+
+        System.out.println(list.peekFirst()); // 5  — no removal
+        System.out.println(list.pollFirst()); // 5  — removes it
+        System.out.println(list.peekLast());  // 20
+
+        // Also usable as a Deque
+        Deque&lt;Integer&gt; deque = new LinkedList&lt;&gt;();
+        deque.push(1);  // push = addFirst
+        deque.push(2);
+        deque.pop();    // pop  = removeFirst → 2
+    }
+}</code></pre>
+
+    <h3>2.3 ArrayList vs LinkedList — Quick Reference</h3>
+
+    <table class="topic-table">
+      <thead>
+        <tr>
+          <th>Operation</th>
+          <th>ArrayList</th>
+          <th>LinkedList</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>get(i) / set(i)</td><td>O(1) ✅</td><td>O(n) ❌</td></tr>
+        <tr><td>add(element) — end</td><td>O(1) amortised ✅</td><td>O(1) ✅</td></tr>
+        <tr><td>add(i, element) — middle</td><td>O(n)</td><td>O(n) (traversal)</td></tr>
+        <tr><td>remove(i) — middle</td><td>O(n)</td><td>O(n) (traversal)</td></tr>
+        <tr><td>addFirst / addLast</td><td>O(n) / O(1)</td><td>O(1) ✅</td></tr>
+        <tr><td>Memory overhead</td><td>Low</td><td>High (node pointers)</td></tr>
+        <tr><td>Cache locality</td><td>Excellent ✅</td><td>Poor ❌</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      <strong>Rule of thumb:</strong> default to <code>ArrayList</code>. Switch to
+      <code>LinkedList</code> only when you have heavy head/tail insertions and removals,
+      or when you need <code>Deque</code> behaviour without a backing array.
+    </p>
+
+    <!-- ─── 3. Set ─────────────────────────────────────────────────────────────── -->
+    <h2>3. Set — Unique Elements</h2>
+    <p>
+      A <code>Set</code> guarantees <strong>no duplicate elements</strong>. Attempting to add an
+      existing element is a no-op that returns <code>false</code>. Three implementations cover
+      the common cases.
+    </p>
+
+    <h3>3.1 HashSet</h3>
+    <p>
+      Backed by a <code>HashMap</code>. Offers <strong>O(1) average</strong> add, remove, and
+      contains. Order is <em>not</em> guaranteed — elements can appear in any sequence.
+    </p>
+
+    <pre><code class="language-java">import java.util.HashSet;
+import java.util.Set;
+
+public class HashSetDemo {
+    public static void main(String[] args) {
+        Set&lt;String&gt; colors = new HashSet&lt;&gt;();
+
+        colors.add("Red");
+        colors.add("Green");
+        colors.add("Blue");
+        colors.add("Red");   // duplicate — silently ignored
+
+        System.out.println(colors.size());         // 3
+        System.out.println(colors.contains("Blue")); // true
+
+        colors.remove("Green");
+
+        // Set operations
+        Set&lt;String&gt; warm = new HashSet&lt;&gt;(Set.of("Red", "Orange", "Yellow"));
+        Set&lt;String&gt; all  = new HashSet&lt;&gt;(colors);
+
+        all.addAll(warm);              // union
+        colors.retainAll(warm);        // intersection (mutates colors)
+        all.removeAll(warm);           // difference
+    }
+}</code></pre>
+
+    <h3>3.2 LinkedHashSet</h3>
+    <p>
+      Maintains <strong>insertion order</strong> by combining a hash table with a linked list.
+      Slightly slower than <code>HashSet</code> due to the extra bookkeeping, but still O(1)
+      operations. Use when iteration order matters.
+    </p>
+
+    <pre><code class="language-java">import java.util.LinkedHashSet;
+import java.util.Set;
+
+public class LinkedHashSetDemo {
+    public static void main(String[] args) {
+        Set&lt;String&gt; langs = new LinkedHashSet&lt;&gt;();
+        langs.add("Java");
+        langs.add("Kotlin");
+        langs.add("Scala");
+        langs.add("Java");  // duplicate ignored
+
+        // Iteration respects insertion order
+        for (String lang : langs) {
+            System.out.print(lang + " ");  // Java Kotlin Scala
+        }
+    }
+}</code></pre>
+
+    <h3>3.3 TreeSet</h3>
+    <p>
+      Backed by a <strong>Red-Black tree</strong>. Elements are kept in <em>sorted</em> order
+      (natural ordering or a custom <code>Comparator</code>). Operations are O(log n).
+      Implements <code>NavigableSet</code>, offering range-query methods like
+      <code>floor()</code>, <code>ceiling()</code>, <code>headSet()</code>, and <code>tailSet()</code>.
+    </p>
+
+    <pre><code class="language-java">import java.util.TreeSet;
+
+public class TreeSetDemo {
+    public static void main(String[] args) {
+        TreeSet&lt;Integer&gt; numbers = new TreeSet&lt;&gt;();
+        numbers.add(50);
+        numbers.add(20);
+        numbers.add(80);
+        numbers.add(10);
+        numbers.add(40);
+
+        System.out.println(numbers);          // [10, 20, 40, 50, 80]
+        System.out.println(numbers.first());  // 10
+        System.out.println(numbers.last());   // 80
+        System.out.println(numbers.floor(35));   // 20 — largest ≤ 35
+        System.out.println(numbers.ceiling(35)); // 40 — smallest ≥ 35
+
+        // Subsets
+        System.out.println(numbers.headSet(40));         // [10, 20]     — exclusive
+        System.out.println(numbers.tailSet(40));         // [40, 50, 80] — inclusive
+        System.out.println(numbers.subSet(20, true, 60, false)); // [20, 40, 50]
+    }
+}</code></pre>
+
+    <!-- ─── 4. Map ─────────────────────────────────────────────────────────────── -->
+    <h2>4. Map — Key-Value Pairs</h2>
+    <p>
+      A <code>Map</code> associates unique <em>keys</em> to <em>values</em>. Keys must be unique;
+      values may repeat. The three canonical implementations mirror the Set family.
+    </p>
+
+    <h3>4.1 HashMap</h3>
+    <p>
+      The go-to general-purpose map. Average <strong>O(1)</strong> get and put. No ordering
+      guarantee. Allows one <code>null</code> key and multiple <code>null</code> values.
+    </p>
+
+    <pre><code class="language-java">import java.util.HashMap;
+import java.util.Map;
+
+public class HashMapDemo {
+    public static void main(String[] args) {
+        Map&lt;String, Integer&gt; scores = new HashMap&lt;&gt;();
+
+        // Put / update
+        scores.put("Alice", 95);
+        scores.put("Bob",   88);
+        scores.put("Carol", 72);
+        scores.put("Alice", 97); // updates existing key
+
+        // Read
+        System.out.println(scores.get("Alice"));            // 97
+        System.out.println(scores.getOrDefault("Dave", 0)); // 0
+
+        // Conditional put — only if key absent
+        scores.putIfAbsent("Dave", 85);
+
+        // Compute patterns
+        scores.compute("Bob", (k, v) -> v == null ? 1 : v + 10); // 98
+        scores.merge("Carol", 5, Integer::sum);                    // 77
+
+        // Check
+        System.out.println(scores.containsKey("Bob"));   // true
+        System.out.println(scores.containsValue(100));   // false
+
+        // Remove
+        scores.remove("Carol");
+        scores.remove("Bob", 99); // removes only if value matches
+
+        System.out.println(scores);
+    }
+}</code></pre>
+
+    <h3>4.2 Iterating a Map</h3>
+    <pre><code class="language-java">Map&lt;String, Integer&gt; map = Map.of("A", 1, "B", 2, "C", 3);
+
+// 1. Entry set — most common, access both key and value
+for (Map.Entry&lt;String, Integer&gt; entry : map.entrySet()) {
+    System.out.printf("%s → %d%n", entry.getKey(), entry.getValue());
+}
+
+// 2. Key set
+for (String key : map.keySet()) {
+    System.out.println(key + " = " + map.get(key));
+}
+
+// 3. Values only
+for (int value : map.values()) {
+    System.out.println(value);
+}
+
+// 4. forEach lambda (cleanest)
+map.forEach((k, v) -> System.out.println(k + ": " + v));</code></pre>
+
+    <h3>4.3 LinkedHashMap</h3>
+    <p>
+      Maintains <strong>insertion order</strong> (or optionally access order, useful for LRU caches).
+      Slightly higher memory cost but preserves predictable iteration.
+    </p>
+
+    <pre><code class="language-java">import java.util.LinkedHashMap;
+import java.util.Map;
+
+public class LinkedHashMapDemo {
+    public static void main(String[] args) {
+        Map&lt;String, String&gt; capitals = new LinkedHashMap&lt;&gt;();
+        capitals.put("France",  "Paris");
+        capitals.put("Germany", "Berlin");
+        capitals.put("Japan",   "Tokyo");
+
+        // Iteration order == insertion order
+        capitals.forEach((country, capital) ->
+            System.out.println(country + " → " + capital));
+        // France → Paris
+        // Germany → Berlin
+        // Japan → Tokyo
+    }
+
+    // LRU Cache example (access-order LinkedHashMap)
+    static &lt;K, V&gt; Map&lt;K, V&gt; lruCache(int capacity) {
+        return new LinkedHashMap&lt;K, V&gt;(capacity, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry&lt;K, V&gt; eldest) {
+                return size() &gt; capacity;
+            }
+        };
+    }
+}</code></pre>
+
+    <h3>4.4 TreeMap</h3>
+    <p>
+      Backed by a Red-Black tree; keys are kept in <strong>sorted order</strong>. O(log n) operations.
+      Implements <code>NavigableMap</code> — exposes <code>firstKey()</code>, <code>lastKey()</code>,
+      <code>floorKey()</code>, <code>ceilingKey()</code>, <code>headMap()</code>, and
+      <code>tailMap()</code>.
+    </p>
+
+    <pre><code class="language-java">import java.util.TreeMap;
+
+public class TreeMapDemo {
+    public static void main(String[] args) {
+        TreeMap&lt;String, Integer&gt; wordCount = new TreeMap&lt;&gt;();
+        wordCount.put("banana", 3);
+        wordCount.put("apple",  7);
+        wordCount.put("cherry", 2);
+        wordCount.put("date",   5);
+
+        // Keys in natural (alphabetical) order
+        System.out.println(wordCount.keySet()); // [apple, banana, cherry, date]
+
+        System.out.println(wordCount.firstKey());        // apple
+        System.out.println(wordCount.lastKey());         // date
+        System.out.println(wordCount.floorKey("c"));     // banana
+        System.out.println(wordCount.ceilingKey("c"));   // cherry
+
+        // Descending view
+        wordCount.descendingMap().forEach((k, v) ->
+            System.out.println(k + ": " + v));
+    }
+}</code></pre>
+
+    <!-- ─── 5. Queue and Deque ─────────────────────────────────────────────────── -->
+    <h2>5. Queue and Deque</h2>
+
+    <h3>5.1 Queue — FIFO</h3>
+    <p>
+      <code>Queue&lt;E&gt;</code> models a first-in, first-out line. Use the pair-method API —
+      the <em>throwing</em> version (<code>add</code>, <code>remove</code>, <code>element</code>)
+      vs the <em>safe</em> version (<code>offer</code>, <code>poll</code>, <code>peek</code>).
+    </p>
+
+    <pre><code class="language-java">import java.util.LinkedList;
+import java.util.Queue;
+
+public class QueueDemo {
+    public static void main(String[] args) {
+        Queue&lt;String&gt; queue = new LinkedList&lt;&gt;();
+
+        // Enqueue
+        queue.offer("Task-1");
+        queue.offer("Task-2");
+        queue.offer("Task-3");
+
+        // Peek — inspect head without removing
+        System.out.println(queue.peek());  // Task-1
+
+        // Dequeue — remove head
+        while (!queue.isEmpty()) {
+            System.out.println("Processing: " + queue.poll());
+        }
+        // Processing: Task-1
+        // Processing: Task-2
+        // Processing: Task-3
+    }
+}</code></pre>
+
+    <h3>5.2 PriorityQueue</h3>
+    <p>
+      Elements are dequeued in <strong>priority order</strong> (natural ordering or a custom
+      <code>Comparator</code>), not insertion order. Internally a min-heap.
+    </p>
+
+    <pre><code class="language-java">import java.util.PriorityQueue;
+import java.util.Comparator;
+
+public class PriorityQueueDemo {
+    public static void main(String[] args) {
+        // Min-heap by default (lowest integer first)
+        PriorityQueue&lt;Integer&gt; minHeap = new PriorityQueue&lt;&gt;();
+        minHeap.offer(30);
+        minHeap.offer(10);
+        minHeap.offer(20);
+
+        while (!minHeap.isEmpty()) {
+            System.out.print(minHeap.poll() + " "); // 10 20 30
+        }
+
+        // Max-heap with Comparator.reverseOrder()
+        PriorityQueue&lt;Integer&gt; maxHeap =
+            new PriorityQueue&lt;&gt;(Comparator.reverseOrder());
+        maxHeap.offer(30);
+        maxHeap.offer(10);
+        maxHeap.offer(20);
+
+        while (!maxHeap.isEmpty()) {
+            System.out.print(maxHeap.poll() + " "); // 30 20 10
+        }
+    }
+}</code></pre>
+
+    <h3>5.3 Deque — Double-Ended Queue</h3>
+    <p>
+      <code>Deque&lt;E&gt;</code> supports insertion and removal at <em>both</em> ends.
+      <code>ArrayDeque</code> is the preferred implementation — faster than
+      <code>LinkedList</code> as a deque and also doubles as a stack.
+    </p>
+
+    <pre><code class="language-java">import java.util.ArrayDeque;
+import java.util.Deque;
+
+public class DequeDemo {
+    public static void main(String[] args) {
+        Deque&lt;String&gt; deque = new ArrayDeque&lt;&gt;();
+
+        // Add at both ends
+        deque.offerFirst("B");
+        deque.offerFirst("A");  // [A, B]
+        deque.offerLast("C");   // [A, B, C]
+
+        System.out.println(deque.peekFirst()); // A
+        System.out.println(deque.peekLast());  // C
+
+        deque.pollFirst(); // removes A → [B, C]
+        deque.pollLast();  // removes C → [B]
+
+        // Use as a stack
+        Deque&lt;Integer&gt; stack = new ArrayDeque&lt;&gt;();
+        stack.push(1);  // addFirst
+        stack.push(2);
+        stack.push(3);
+        System.out.println(stack.pop());  // 3 — LIFO
+        System.out.println(stack.pop());  // 2
+    }
+}</code></pre>
+
+    <!-- ─── 6. Iterating Collections ──────────────────────────────────────────── -->
+    <h2>6. Iterating Collections</h2>
+    <p>
+      Java offers several ways to walk through a collection. Choose the style that best
+      fits your use case.
+    </p>
+
+    <h3>6.1 Enhanced for-each</h3>
+    <p>The simplest and most readable form. Works on anything that is <code>Iterable</code>.</p>
+
+    <pre><code class="language-java">List&lt;String&gt; names = List.of("Alice", "Bob", "Carol");
+
+for (String name : names) {
+    System.out.println(name);
+}</code></pre>
+
+    <h3>6.2 Iterator</h3>
+    <p>
+      Use the explicit <code>Iterator</code> when you need to <strong>remove elements</strong>
+      during iteration (the for-each loop does not support this safely).
+    </p>
+
+    <pre><code class="language-java">import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+public class IteratorDemo {
+    public static void main(String[] args) {
+        List&lt;Integer&gt; nums = new ArrayList&lt;&gt;(List.of(1, 2, 3, 4, 5, 6));
+        Iterator&lt;Integer&gt; it = nums.iterator();
+
+        while (it.hasNext()) {
+            int n = it.next();
+            if (n % 2 == 0) {
+                it.remove(); // safe removal during iteration
+            }
+        }
+
+        System.out.println(nums); // [1, 3, 5]
+    }
+}</code></pre>
+
+    <h3>6.3 forEach with Lambda</h3>
+    <p>
+      Clean and concise. Defined on <code>Iterable</code> and available on every collection.
+      Cannot break early (use a stream with <code>findFirst()</code> / <code>anyMatch()</code>
+      for that).
+    </p>
+
+    <pre><code class="language-java">List&lt;String&gt; fruits = List.of("Apple", "Banana", "Cherry");
+
+// Basic lambda
+fruits.forEach(f -> System.out.println(f));
+
+// Method reference — identical behaviour
+fruits.forEach(System.out::println);
+
+// On a Map
+Map&lt;String, Integer&gt; prices = Map.of("Apple", 3, "Banana", 1);
+prices.forEach((fruit, price) ->
+    System.out.printf("%s costs $%d%n", fruit, price));</code></pre>
+
+    <h3>6.4 ListIterator — Bidirectional</h3>
+    <p>
+      Only available on <code>List</code>. Allows forward <em>and</em> backward traversal,
+      plus in-place <code>set()</code> and <code>add()</code>.
+    </p>
+
+    <pre><code class="language-java">import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
+
+public class ListIteratorDemo {
+    public static void main(String[] args) {
+        List&lt;String&gt; list = new ArrayList&lt;&gt;(List.of("a", "b", "c"));
+        ListIterator&lt;String&gt; li = list.listIterator(list.size()); // start at end
+
+        // Iterate backwards
+        while (li.hasPrevious()) {
+            System.out.print(li.previous() + " "); // c b a
+        }
+
+        // Forward iteration with in-place replacement
+        ListIterator&lt;String&gt; li2 = list.listIterator();
+        while (li2.hasNext()) {
+            li2.set(li2.next().toUpperCase());
+        }
+        System.out.println(list); // [A, B, C]
+    }
+}</code></pre>
+
+    <!-- ─── 7. Sorting ─────────────────────────────────────────────────────────── -->
+    <h2>7. Sorting — Comparable and Comparator</h2>
+
+    <h3>7.1 Comparable — Natural Ordering</h3>
+    <p>
+      Implement <code>Comparable&lt;T&gt;</code> in your class to define its <em>natural</em>
+      ordering. <code>Collections.sort()</code> and <code>TreeSet</code> / <code>TreeMap</code>
+      use this by default.
+    </p>
+
+    <pre><code class="language-java">public class Student implements Comparable&lt;Student&gt; {
+    private final String name;
+    private final double gpa;
+
+    public Student(String name, double gpa) {
+        this.name = name;
+        this.gpa  = gpa;
+    }
+
+    // Natural order: descending GPA
+    @Override
+    public int compareTo(Student other) {
+        return Double.compare(other.gpa, this.gpa); // reversed for highest-first
+    }
+
+    @Override
+    public String toString() {
+        return name + "(" + gpa + ")";
+    }
+}
+
+// Usage
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+List&lt;Student&gt; students = new ArrayList&lt;&gt;();
+students.add(new Student("Alice", 3.8));
+students.add(new Student("Bob",   3.5));
+students.add(new Student("Carol", 3.9));
+
+Collections.sort(students);
+System.out.println(students); // [Carol(3.9), Alice(3.8), Bob(3.5)]</code></pre>
+
+    <h3>7.2 Comparator — External / Ad-Hoc Ordering</h3>
+    <p>
+      <code>Comparator&lt;T&gt;</code> lets you define <em>multiple</em> orderings without
+      touching the class. Since Java 8, you can build sophisticated comparators using the
+      fluent factory methods on <code>Comparator</code>.
+    </p>
+
+    <pre><code class="language-java">import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+public class ComparatorDemo {
+    record Person(String name, int age, String city) {}
+
+    public static void main(String[] args) {
+        List&lt;Person&gt; people = new ArrayList&lt;&gt;(List.of(
+            new Person("Alice", 30, "New York"),
+            new Person("Bob",   25, "Boston"),
+            new Person("Carol", 30, "Austin"),
+            new Person("Dave",  25, "Denver")
+        ));
+
+        // Sort by age ascending, then name ascending
+        Comparator&lt;Person&gt; byAgeTheByName =
+            Comparator.comparingInt(Person::age)
+                      .thenComparing(Person::name);
+
+        people.sort(byAgeTheByName);
+        people.forEach(System.out::println);
+        // Person[name=Bob,  age=25, city=Boston]
+        // Person[name=Dave, age=25, city=Denver]
+        // Person[name=Alice, age=30, city=New York]
+        // Person[name=Carol, age=30, city=Austin]
+
+        // Reversed: oldest first
+        people.sort(Comparator.comparingInt(Person::age).reversed());
+
+        // Sort strings case-insensitively
+        List&lt;String&gt; names = new ArrayList&lt;&gt;(List.of("banana", "Apple", "cherry"));
+        names.sort(String.CASE_INSENSITIVE_ORDER);
+        System.out.println(names); // [Apple, banana, cherry]
+    }
+}</code></pre>
+
+    <h3>7.3 Sorting Arrays</h3>
+    <pre><code class="language-java">import java.util.Arrays;
+
+int[]    ints   = {5, 3, 8, 1};
+String[] words  = {"banana", "apple", "cherry"};
+
+Arrays.sort(ints);                                    // [1, 3, 5, 8]
+Arrays.sort(words);                                   // [apple, banana, cherry]
+Arrays.sort(words, Comparator.reverseOrder());        // [cherry, banana, apple]
+Arrays.sort(words, 0, 2, String.CASE_INSENSITIVE_ORDER); // partial range sort</code></pre>
+
+    <!-- ─── 8. Collections Utility Class ──────────────────────────────────────── -->
+    <h2>8. Collections Utility Class</h2>
+    <p>
+      <code>java.util.Collections</code> is a utility class (all static methods) that acts as an
+      algorithm library for collections.
+    </p>
+
+    <h3>8.1 Sorting and Searching</h3>
+    <pre><code class="language-java">import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+List&lt;Integer&gt; nums = new ArrayList&lt;&gt;(List.of(3, 1, 4, 1, 5, 9, 2, 6));
+
+Collections.sort(nums);                          // [1, 1, 2, 3, 4, 5, 6, 9]
+Collections.sort(nums, Comparator.reverseOrder()); // descending
+
+// Binary search — list MUST be sorted first
+Collections.sort(nums);
+int idx = Collections.binarySearch(nums, 5);    // index of 5</code></pre>
+
+    <h3>8.2 Min, Max, Frequency, Disjoint</h3>
+    <pre><code class="language-java">List&lt;Integer&gt; data = List.of(3, 7, 2, 9, 4, 7, 7);
+
+System.out.println(Collections.min(data));         // 2
+System.out.println(Collections.max(data));         // 9
+System.out.println(Collections.frequency(data, 7)); // 3
+
+List&lt;String&gt; a = List.of("cat", "dog");
+List&lt;String&gt; b = List.of("fish", "bird");
+System.out.println(Collections.disjoint(a, b));    // true — no common elements</code></pre>
+
+    <h3>8.3 Shuffle, Reverse, Rotate, Swap</h3>
+    <pre><code class="language-java">List&lt;Integer&gt; list = new ArrayList&lt;&gt;(List.of(1, 2, 3, 4, 5));
+
+Collections.shuffle(list);                   // random permutation
+Collections.reverse(list);                   // reverses in place
+Collections.rotate(list, 2);                 // rotates right by 2 positions
+Collections.swap(list, 0, list.size() - 1); // swap first and last
+Collections.fill(list, 0);                   // fill all with 0</code></pre>
+
+    <h3>8.4 Unmodifiable and Synchronized Wrappers</h3>
+    <pre><code class="language-java">import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+// Unmodifiable wrappers — defensive copies for API boundaries
+List&lt;String&gt; mutable = new ArrayList&lt;&gt;(List.of("a", "b", "c"));
+List&lt;String&gt; readOnly = Collections.unmodifiableList(mutable);
+// readOnly.add("d"); // throws UnsupportedOperationException
+
+// Synchronized wrappers — for basic thread safety
+// (prefer java.util.concurrent classes for real concurrency)
+Map&lt;String, Integer&gt; syncMap =
+    Collections.synchronizedMap(new HashMap&lt;&gt;());
+
+// Singleton and empty collections — efficient immutable stubs
+List&lt;String&gt; single  = Collections.singletonList("only");
+List&lt;String&gt; empty   = Collections.emptyList();
+Map&lt;String, Integer&gt; emptyMap = Collections.emptyMap();</code></pre>
+
+    <h3>8.5 nCopies and addAll</h3>
+    <pre><code class="language-java">// Create a list of n identical elements
+List&lt;String&gt; zeros = Collections.nCopies(5, "zero");
+System.out.println(zeros); // [zero, zero, zero, zero, zero]
+
+// Bulk-add array elements to a collection
+List&lt;String&gt; target = new ArrayList&lt;&gt;();
+Collections.addAll(target, "x", "y", "z");</code></pre>
+
+    <!-- ─── 9. Immutable Collections (Java 9+) ───────────────────────────────── -->
+    <h2>9. Immutable Collections (Java 9+)</h2>
+    <p>
+      Java 9 introduced concise factory methods on <code>List</code>, <code>Set</code>, and
+      <code>Map</code> for creating <strong>compact, immutable</strong> collections. These are
+      ideal for constants, test data, and read-only API results.
+    </p>
+
+    <pre><code class="language-java">// Immutable List — preserves order, allows duplicates
+List&lt;String&gt; colors = List.of("Red", "Green", "Blue");
+
+// Immutable Set — no duplicates, no guaranteed order
+Set&lt;Integer&gt; primes = Set.of(2, 3, 5, 7, 11);
+
+// Immutable Map — up to 10 pairs via Map.of(), more via Map.ofEntries()
+Map&lt;String, String&gt; iso = Map.of(
+    "US", "United States",
+    "DE", "Germany",
+    "JP", "Japan"
+);
+
+// For more than 10 entries:
+Map&lt;String, Integer&gt; large = Map.ofEntries(
+    Map.entry("a", 1),
+    Map.entry("b", 2),
+    Map.entry("c", 3)
+    // ... up to any size
+);
+
+// Mutations throw UnsupportedOperationException
+// colors.add("Yellow"); // ❌ throws
+
+// Copying to a mutable collection
+List&lt;String&gt; mutableColors = new ArrayList&lt;&gt;(colors);</code></pre>
+
+    <!-- ─── 10. Choosing the Right Collection ────────────────────────────────── -->
+    <h2>10. Choosing the Right Collection</h2>
+
+    <table class="topic-table">
+      <thead>
+        <tr>
+          <th>Need</th>
+          <th>Best Choice</th>
+          <th>Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>General ordered list</td>
+          <td><code>ArrayList</code></td>
+          <td>O(1) random access, compact memory</td>
+        </tr>
+        <tr>
+          <td>Frequent head/tail inserts</td>
+          <td><code>ArrayDeque</code></td>
+          <td>O(1) at both ends, better cache than LinkedList</td>
+        </tr>
+        <tr>
+          <td>Unique elements, O(1) ops</td>
+          <td><code>HashSet</code></td>
+          <td>Hash-based, fastest membership test</td>
+        </tr>
+        <tr>
+          <td>Unique + insertion order</td>
+          <td><code>LinkedHashSet</code></td>
+          <td>Ordered iteration with O(1) ops</td>
+        </tr>
+        <tr>
+          <td>Sorted unique elements</td>
+          <td><code>TreeSet</code></td>
+          <td>O(log n), range queries via NavigableSet</td>
+        </tr>
+        <tr>
+          <td>Key-value, O(1) ops</td>
+          <td><code>HashMap</code></td>
+          <td>General-purpose map</td>
+        </tr>
+        <tr>
+          <td>Key-value + insertion order</td>
+          <td><code>LinkedHashMap</code></td>
+          <td>Predictable iteration; LRU cache pattern</td>
+        </tr>
+        <tr>
+          <td>Sorted key-value</td>
+          <td><code>TreeMap</code></td>
+          <td>O(log n), range queries via NavigableMap</td>
+        </tr>
+        <tr>
+          <td>Priority-based processing</td>
+          <td><code>PriorityQueue</code></td>
+          <td>Min-heap; configurable via Comparator</td>
+        </tr>
+        <tr>
+          <td>Stack (LIFO)</td>
+          <td><code>ArrayDeque</code></td>
+          <td>Prefer over legacy <code>Stack</code> class</td>
+        </tr>
+        <tr>
+          <td>Immutable constant data</td>
+          <td><code>List.of()</code> / <code>Set.of()</code></td>
+          <td>Thread-safe, minimal overhead (Java 9+)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ─── Summary ───────────────────────────────────────────────────────────── -->
+    <h2>Summary</h2>
+    <ul>
+      <li>The JCF revolves around two root interfaces — <strong>Collection</strong> and <strong>Map</strong>.</li>
+      <li>Use <strong>ArrayList</strong> by default for lists; switch to <strong>ArrayDeque</strong> for stack/queue behaviour.</li>
+      <li><strong>HashSet</strong> for fast uniqueness checks, <strong>TreeSet</strong> when you need sorted order.</li>
+      <li><strong>HashMap</strong> for general key-value storage; <strong>TreeMap</strong> for sorted keys.</li>
+      <li>Prefer <code>forEach</code> with lambdas for clean iteration; use <code>Iterator.remove()</code> when modifying during traversal.</li>
+      <li>Implement <strong>Comparable</strong> for natural order; use <strong>Comparator</strong> for flexible, ad-hoc ordering.</li>
+      <li>The <strong>Collections</strong> utility class provides algorithms (sort, shuffle, min, max, frequency) and wrappers (unmodifiable, synchronized).</li>
+      <li>Use <code>List.of()</code>, <code>Set.of()</code>, and <code>Map.of()</code> for concise immutable collections in Java 9+.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="../js/topic.js"></script>
+</body>
+</html>
