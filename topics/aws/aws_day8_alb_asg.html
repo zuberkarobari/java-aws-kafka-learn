@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 8 — ALB & Auto Scaling Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#E6F1FB;color:#0C447C;border:1px solid #85B7EB}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #185FA5;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#E6F1FB;color:#0C447C;border-color:#85B7EB;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #185FA5;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-blue{background:#E6F1FB;color:#0C447C}.p-green{background:#E1F5EE;color:#085041}
+.p-amber{background:#FAEEDA;color:#633806}.p-coral{background:#FAECE7;color:#712B13}
+.p-purple{background:#EEEDFE;color:#3C3489}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+.code-block{background:#1a1a18;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.code-block code{font-family:monospace;font-size:12px;line-height:1.7;color:#e8e6e0;display:block;white-space:pre}
+.k{color:#9FE1CB}.v{color:#FAC775}.s{color:#F0997B}.c{color:#666;font-style:italic}.cmd-g{color:#97C459}
+.comp-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+.comp-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.comp-card{background:#fff;border:1px solid #eee;border-radius:10px;padding:1rem}
+.comp-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.comp-body{font-size:12px;color:#555;line-height:1.65}
+.comp-card.hl{border-color:#185FA5;background:#E6F1FB}
+.comp-card.hl .comp-title{color:#0C447C}
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+
+/* scaling viz */
+.scaling-viz{background:#f5f5f2;border-radius:10px;padding:1rem;margin:12px 0}
+.scaling-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.inst-box{background:#E6F1FB;border:1px solid #85B7EB;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;color:#0C447C}
+.inst-box.new{background:#E1F5EE;border-color:#5DCAA5;color:#085041}
+.inst-box.term{background:#FAECE7;border-color:#F0997B;color:#712B13;text-decoration:line-through;opacity:0.6}
+.scaling-label{font-size:11px;color:#888;min-width:80px}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 8 of 30</span>
+    <span class="tag">ALB & Auto Scaling</span>
+    <span class="tag">Phase 2 — Application Deployment</span>
+    <span class="tag">High availability · Zero-downtime deployments</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('alb',this)">ALB internals</button>
+    <button class="ntab" onclick="show('lb-types',this)">LB types compared</button>
+    <button class="ntab" onclick="show('asg',this)">Auto Scaling deep</button>
+    <button class="ntab" onclick="show('scaling-policies',this)">Scaling policies</button>
+    <button class="ntab" onclick="show('deployments',this)">Zero-downtime deploy</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- ALB INTERNALS -->
+  <div id="p-alb" class="panel active">
+    <div class="lede"><strong>The Application Load Balancer is not a simple round-robin traffic distributor. It is a Layer 7 HTTP proxy with its own connection pool, TLS termination engine, routing decision engine, and health monitoring system. Every misunderstanding of how it works — connection draining, slow start, header injection, X-Forwarded-For — causes production bugs that are maddening to debug without this foundation.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('alb',0,this)">1 · How ALB works internally</button>
+      <button class="cbtn" onclick="showC('alb',1,this)">2 · Listeners and rules</button>
+      <button class="cbtn" onclick="showC('alb',2,this)">3 · Target groups</button>
+      <button class="cbtn" onclick="showC('alb',3,this)">4 · Health checks deep</button>
+      <button class="cbtn" onclick="showC('alb',4,this)">5 · TLS termination</button>
+    </div>
+
+    <div id="alb0" class="cpanel active">
+      <div class="ch">How the ALB works at the packet and connection level</div>
+      <div class="csub">Two separate TCP connections, Layer 7 processing, and why this changes everything about how you design your app</div>
+      <div class="cb">
+        <p>The ALB operates at Layer 7 (HTTP/HTTPS). Unlike a traditional load balancer that just forwards packets, the ALB <strong>terminates the client's TCP connection</strong> and establishes a <strong>separate TCP connection</strong> to the backend EC2 instance. This is not a proxy pass-through — it is a full proxy. Two completely independent TCP connections exist for every request.</p>
+        <p><strong>What happens when a request arrives at the ALB:</strong></p>
+        <p>1. Client establishes a TCP connection to the ALB's IP (the ALB has ENIs in each AZ with IP addresses from your public subnets). The ALB terminates TLS if the listener is HTTPS — decrypting the request using the ACM certificate you've configured.</p>
+        <p>2. The ALB parses the HTTP request — reading method, host header, path, headers, and for POST requests, optionally the body. It evaluates your listener rules in priority order to determine the target group.</p>
+        <p>3. The ALB selects a healthy target from the target group using the configured algorithm (round robin by default, or least outstanding requests). It maintains a connection pool to backend targets — if a connection to the target already exists in the pool, it reuses it. If not, it establishes a new TCP connection.</p>
+        <p>4. The ALB forwards the HTTP request to the target over the backend connection, adding headers including <span class="mono">X-Forwarded-For</span> (original client IP), <span class="mono">X-Forwarded-Proto</span> (original protocol — http or https), and <span class="mono">X-Forwarded-Port</span> (original port). The target receives these headers on its own separate TCP connection from the ALB's private IP.</p>
+        <div class="mechbox"><strong>The X-Forwarded-For header — why your app sees the ALB's IP, not the client's:</strong> Your Spring Boot app running on EC2 sees all requests coming from the ALB's private IP (e.g. 10.0.1.x). Without reading the X-Forwarded-For header, <span class="mono">request.getRemoteAddr()</span> returns the ALB's IP for every request — useless for rate limiting, geo-blocking, audit logging, or any feature that needs the real client IP. In Spring Boot, configure <span class="mono">server.forward-headers-strategy=native</span> (or framework for Spring Cloud Gateway) to tell Spring to trust and parse the X-Forwarded headers. Now <span class="mono">request.getRemoteAddr()</span> returns the real client IP. Security consideration: only trust X-Forwarded-For from known trusted proxies (your ALB's IP range) — an external client can forge this header if the ALB is bypassed.</div>
+        <p><strong>ALB connection pooling to backends:</strong> The ALB maintains persistent TCP connections to healthy targets. When a request arrives, the ALB reuses an existing connection if one is available. This means your Spring Boot app's connection counter from the ALB will be lower than the number of concurrent requests — multiple requests share connections. This also means if you restart the Spring Boot app and close the TCP connection, the ALB detects the closed connection and opens a new one for the next request. The ALB does not need to wait for the health check interval — connection reset is detected immediately.</p>
+        <div class="failbox"><strong>The ALB request header size limit that breaks JWT tokens:</strong> The ALB has a maximum header size of 16KB total for all request headers combined. JWT tokens, especially those with many claims or nested permissions, can be several KB. When a JWT token is passed in the Authorization header alongside other headers (Cookie, User-Agent, Accept-Language, etc.), the total can exceed 16KB. The ALB rejects the request with HTTP 460 (no targets available to route) or 400 (bad request), depending on which limit is hit. Clients see a generic error. This is almost impossible to diagnose without knowing about the ALB header limit. Solutions: reduce JWT payload size (remove unnecessary claims), use opaque tokens with server-side session storage, or pass tokens in the request body for mutations.</div>
+      </div>
+    </div>
+
+    <div id="alb1" class="cpanel">
+      <div class="ch">Listeners and routing rules — the ALB's decision engine</div>
+      <div class="csub">How the ALB decides which target group receives each request — and the rule types that enable microservices routing</div>
+      <div class="cb">
+        <p>A listener is a process that checks for connection requests using a protocol and port. An ALB can have multiple listeners (e.g. port 80 and port 443). Each listener has an ordered list of rules. Rules are evaluated in priority order (lowest number first). The default rule (priority 65535) is a catch-all that routes to a default target group or returns a fixed response.</p>
+        <p><strong>Rule condition types — what you can match on:</strong></p>
+        <p><strong>Host header</strong> — match the HTTP Host header value. <span class="mono">api.getwork.app</span> routes to the API target group, <span class="mono">admin.getwork.app</span> routes to the admin target group. This allows a single ALB to serve multiple domains — no need for a separate ALB per service.</p>
+        <p><strong>Path pattern</strong> — match the URL path using wildcards. <span class="mono">/api/v1/*</span> routes to API v1 target group, <span class="mono">/api/v2/*</span> routes to API v2. This is the canonical microservices routing pattern: one ALB, path-based routing to different service target groups.</p>
+        <p><strong>HTTP method</strong> — match GET, POST, DELETE, etc. Useful for routing writes to write-capable instances and reads to read-optimised instances.</p>
+        <p><strong>HTTP header</strong> — match any request header value. Route requests with <span class="mono">X-API-Version: 2.0</span> to a new service version while all other requests go to the stable version. This is the foundation of header-based canary deployments.</p>
+        <p><strong>Query string parameter</strong> — match specific query parameters. <span class="mono">feature=new</span> routes to the feature flag target group.</p>
+        <p><strong>Source IP</strong> — match client IP CIDR ranges. Internal/corporate IPs route to internal services; external IPs route to public services.</p>
+        <div class="prodbox"><strong>The microservices routing architecture with a single ALB:</strong> Rather than having a separate ALB per microservice (one for auth service, one for job service, one for worker service), use one ALB with path-based routing:<br>
+          <span class="mono">/api/auth/*</span> → auth-service target group (port 8081)<br>
+          <span class="mono">/api/jobs/*</span> → job-service target group (port 8082)<br>
+          <span class="mono">/api/workers/*</span> → worker-service target group (port 8083)<br>
+          <span class="mono">/*</span> (default) → frontend target group (port 3000)<br>
+          One ALB, one DNS name, one TLS certificate — all services routed by path. Saves ~$16-20/month per eliminated ALB and simplifies TLS certificate management. This is the architecture your Hotel Microservices system and GetWork should use.</div>
+        <div class="mechbox"><strong>Rule actions beyond forwarding:</strong> Rules can do more than forward to a target group. <strong>Redirect</strong>: permanently redirect HTTP to HTTPS (301/302) — configure this on the port 80 listener to force HTTPS without touching application code. <strong>Fixed response</strong>: return a static HTTP response (status code, content-type, body). Use for returning a 403 for blocked paths, a maintenance page, or a health check response without any backend. <strong>Forward to multiple target groups</strong> with weights — route 90% to stable, 10% to canary, without code changes. This is weighted target group routing for blue-green deployments.</div>
+      </div>
+    </div>
+
+    <div id="alb2" class="cpanel">
+      <div class="ch">Target groups — the bridge between ALB and your EC2 instances</div>
+      <div class="csub">Registration, deregistration delay, slow start, and the algorithm choices that affect latency distribution</div>
+      <div class="cb">
+        <p>A target group is a logical collection of targets (EC2 instances, containers, Lambda functions, or IP addresses) that the ALB routes requests to. The target group defines the protocol (HTTP/HTTPS/gRPC), port, and health check configuration. It also defines the routing algorithm.</p>
+        <p><strong>Target types:</strong> Instance (EC2 instance ID — traffic goes to the instance's primary ENI on the specified port), IP (specific IP addresses — used for containers with their own IPs, or for routing to resources outside the VPC), Lambda (a specific Lambda function — the ALB serialises the HTTP request into a JSON event and invokes the function), and Application Load Balancer (for chained ALB configurations).</p>
+        <p><strong>Routing algorithms:</strong></p>
+        <p><strong>Round robin (default)</strong> — distributes requests evenly across all healthy targets sequentially. Each target gets equal share. Works well when all targets are homogeneous (same instance type, same JVM warm state). Problem: a cold instance that was just added by Auto Scaling receives the same traffic volume as a warm, JIT-compiled instance — leading to latency spikes as the new instance warms up. Slow Start Mode addresses this.</p>
+        <p><strong>Least outstanding requests (LOR)</strong> — routes each new request to the target with the fewest in-flight requests. Works better when request processing time varies significantly — prevents a slow target from receiving new requests while it's still processing a backlog. Ideal for: mixed workloads where some requests are fast and some are slow, or when instances have different processing capacities.</p>
+        <div class="mechbox"><strong>Slow Start Mode — protecting new instances from being overwhelmed:</strong> When a new instance is registered in a target group, it immediately receives a full share of traffic under round robin. If the JVM hasn't JIT-compiled the hot paths yet, or if caches haven't been populated, the first few hundred requests take 10-50x longer than steady-state. Clients experience latency spikes, some requests time out, and health checks may even fail the new instance before it stabilises — causing it to be deregistered and replaced, creating an infinite loop. Slow Start Mode (configurable 30-900 seconds) gradually ramps up the traffic share given to new targets. In the first 30 seconds, the new target receives 10% of its eventual traffic share. By 60 seconds, 50%. After the slow start duration, it receives a full share. This gives the JVM time to warm up before handling production load.</div>
+        <p><strong>Deregistration delay (connection draining):</strong> When a target is deregistered (during Auto Scaling scale-in, or a rolling deployment), the ALB stops sending new requests to it immediately. But in-flight requests may still be processing. The deregistration delay (default 300 seconds, configurable 0-3600) is the time the ALB waits for in-flight requests to complete before forcibly closing connections. If your Spring Boot endpoints complete within 30 seconds, set this to 60 seconds — there's no reason to wait 300 seconds. If your app processes long-running jobs (minutes), increase this value. During this window, the instance shows in the console as "draining" — it accepts no new requests but completes existing ones gracefully.</p>
+        <div class="failbox"><strong>The deregistration delay causing slow deployments:</strong> Default deregistration delay is 300 seconds. A blue-green deployment with 10 instances per group waits 300 seconds per batch × multiple batches. A 20-instance rolling deployment takes 20-30 minutes when it could take 5 minutes with a 60-second drain time. Most Spring Boot API applications complete requests in under 1 second. Setting deregistration delay to 30-60 seconds is safe for most APIs and dramatically speeds up deployments. The only reason to keep the default 300 seconds: your application has long-lived WebSocket connections or long-running streaming responses that you need to allow to complete gracefully.</div>
+      </div>
+    </div>
+
+    <div id="alb3" class="cpanel">
+      <div class="ch">Health checks — the mechanism that determines what's "healthy"</div>
+      <div class="csub">What the ALB actually checks, the timing parameters that cause false positives and false negatives, and the Spring Boot Actuator integration</div>
+      <div class="cb">
+        <p>The ALB performs health checks by sending HTTP requests to each registered target at regular intervals. Based on the responses, the ALB maintains a health status for each target: healthy, unhealthy, or initial (newly registered, not yet evaluated). Only healthy targets receive traffic.</p>
+        <p><strong>Health check configuration parameters and what they mean:</strong></p>
+        <p><strong>Protocol and path</strong> — which endpoint to call. For Spring Boot: <span class="mono">HTTP</span> protocol, path <span class="mono">/actuator/health</span>. The Actuator health endpoint returns 200 OK with body <span class="mono">{"status":"UP"}</span> when all health indicators are healthy. If any component (database, Redis, external dependency) is down, Actuator returns 503 — the ALB marks the instance unhealthy and stops routing to it. This is powerful: database connectivity issues automatically remove the instance from rotation without any manual intervention.</p>
+        <p><strong>Port</strong> — which port to check. Default: the same port as the target group traffic. Override: use a different port for health checks — useful when your app exposes health on a management port separate from the main API port.</p>
+        <p><strong>Healthy threshold</strong> — how many consecutive successful checks are needed to declare a target healthy after it was unhealthy (default: 5). A newly registered instance must pass 5 consecutive health checks before receiving traffic. This prevents a briefly healthy instance from receiving traffic before it's truly ready.</p>
+        <p><strong>Unhealthy threshold</strong> — how many consecutive failed checks are needed to declare a target unhealthy (default: 2). Two consecutive failures are enough to remove the instance from rotation. This is fast enough to detect a crashed instance but not so sensitive that a single slow health check response causes unnecessary deregistration.</p>
+        <p><strong>Interval</strong> — time between checks (default: 30 seconds). Reducing to 10 seconds makes the ALB detect failures faster (20 seconds to detect with 2 failures) but increases load on your instances. For production: 15-30 seconds is usually the right balance.</p>
+        <p><strong>Timeout</strong> — how long to wait for a health check response (default: 5 seconds, max: 120). Must be less than interval. If your Spring Boot startup includes a slow database connection check in the health endpoint, ensure this is longer than the database connection timeout.</p>
+        <div class="mechbox"><strong>Spring Boot Actuator health endpoint configuration for ALB:</strong></div>
+        <div class="code-block"><code><span class="c"># application.properties — configure Actuator for ALB health checks</span>
+
+<span class="c"># Expose health endpoint (required for ALB)</span>
+<span class="v">management.endpoints.web.exposure.include</span>=health,info,metrics
+<span class="v">management.endpoint.health.show-details</span>=never  <span class="c"># Don't expose internal details to public</span>
+<span class="v">management.endpoint.health.show-components</span>=never
+
+<span class="c"># Separate management port (health check on 8081, app on 8080)</span>
+<span class="v">management.server.port</span>=8081
+
+<span class="c"># Liveness vs Readiness probes (Spring Boot 2.3+)</span>
+<span class="c"># /actuator/health/liveness — is the app alive? (returns 200 if JVM is running)</span>
+<span class="c"># /actuator/health/readiness — is the app ready to serve traffic?</span>
+<span class="c"># (returns 200 only when all readiness indicators are healthy)</span>
+<span class="v">management.health.livenessstate.enabled</span>=true
+<span class="v">management.health.readinessstate.enabled</span>=true
+
+<span class="c"># Use readiness endpoint for ALB health check (not liveness)</span>
+<span class="c"># ALB health check path: /actuator/health/readiness</span>
+<span class="c"># Readiness fails if DB is down — ALB stops routing new requests</span>
+<span class="c"># Liveness stays healthy even if DB is down — process isn't dead</span></code></div>
+        <div class="failbox"><strong>The liveness vs readiness confusion that causes cascading failures:</strong> Using <span class="mono">/actuator/health</span> (combined health) as the ALB health check path means: if your database goes down, every instance fails its health check, the ALB removes all instances from rotation, and your application becomes completely unavailable — even for requests that don't need the database. The correct pattern: use <span class="mono">/actuator/health/readiness</span> for the ALB health check. If the database is down, readiness fails on all instances, and the ALB correctly removes all instances (because none can serve requests that need the DB). But use <span class="mono">/actuator/health/liveness</span> for Auto Scaling lifecycle hooks — the ASG should not replace instances that have a healthy JVM just because the database is down (replacing them won't fix the database). This distinction prevents mass instance replacement during database outages.</div>
+      </div>
+    </div>
+
+    <div id="alb4" class="cpanel">
+      <div class="ch">TLS termination at the ALB — ACM certificates and the security model</div>
+      <div class="csub">Why terminating TLS at the ALB is correct, what end-to-end TLS means, and the SNI-based multi-certificate pattern</div>
+      <div class="cb">
+        <p>When you attach an HTTPS listener to the ALB, the ALB terminates TLS from the client. The client's HTTPS connection ends at the ALB — the ALB decrypts the traffic, inspects the HTTP request (necessary for Layer 7 routing), and forwards the plaintext HTTP request to the backend EC2 target over a new TCP connection inside your VPC.</p>
+        <p><strong>Why TLS termination at the ALB is the correct architecture for most workloads:</strong> Your VPC is a private network. Traffic between the ALB and your EC2 instances never traverses the public internet — it travels over your private VPC network on dedicated EBS/network fabric. The threat model for internet-facing TLS is: protect against attackers on the public internet. That threat ends at the ALB. Re-encrypting from ALB to EC2 adds latency, certificate management complexity, and computational overhead (TLS handshake + encryption/decryption twice) with no material security benefit for most workloads.</p>
+        <p><strong>ACM (AWS Certificate Manager):</strong> ACM provides free SSL/TLS certificates for domains you validate. Certificates are automatically renewed by AWS — no manual certificate rotation, no expiry alerts, no emergency at 3AM when a certificate expires. Certificates provisioned in ACM can only be used with AWS services (ALB, CloudFront, API Gateway) — you cannot export them to use elsewhere. This is intentional: ACM manages the private key and never exposes it. Certificates are validated by DNS (add a CNAME record AWS specifies) or email. DNS validation is preferred — it enables automatic renewal without any manual action after initial setup.</p>
+        <div class="mechbox"><strong>SNI (Server Name Indication) — one ALB, multiple TLS certificates:</strong> An HTTPS listener can be associated with multiple certificates using SNI. When a client connects, it includes the target hostname in the TLS ClientHello message (the SNI extension). The ALB reads the SNI hostname and selects the matching certificate. This allows a single ALB to serve TLS for api.getwork.app, admin.getwork.app, and dashboard.getwork.app — each with its own certificate — without needing a separate ALB per domain. The default certificate is used for clients that don't send SNI (very old browsers/clients). The smart certificate selection (routing HTTPS to the right cert) happens at the TLS layer, before any HTTP-level routing rules are evaluated.</div>
+        <p><strong>End-to-end TLS (ALB to EC2 encrypted):</strong> Some compliance requirements (PCI-DSS in-transit encryption for cardholder data environments, HIPAA) may require encryption all the way to the backend instance. Configure the target group with HTTPS protocol and install a certificate on your EC2. The ALB presents a certificate to the EC2 (using its own SNI configuration) and establishes an HTTPS connection. You can configure whether the ALB validates the backend certificate (recommended) or trusts any certificate. For self-signed certificates on EC2: set the ALB to ignore certificate validation (convenient but reduces security). For ACM Private CA certificates on EC2: the ALB can validate them (full end-to-end trust chain).</p>
+        <div class="failbox"><strong>The HTTP to HTTPS redirect — a rule, not a setting:</strong> There is no checkbox on the ALB to "force HTTPS." HTTP-to-HTTPS redirect is implemented as a listener rule on the port 80 listener. Many teams wonder why their site still works over HTTP even though they "set up HTTPS" — they created the HTTPS listener and certificate but never added the redirect rule on port 80. Configure port 80 listener with a single rule: redirect to HTTPS with status code 301. Now all HTTP requests are permanently redirected to HTTPS before the ALB processes them. This is a one-rule configuration, not a setting you toggle.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('lb-types',document.querySelectorAll('.ntab')[1])">Load balancer types compared →</button>
+  </div>
+
+  <!-- LB TYPES -->
+  <div id="p-lb-types" class="panel">
+    <div class="lede"><strong>AWS has four load balancer types: ALB, NLB, CLB (legacy), and GWLB. Each operates at a different OSI layer with different capabilities and use cases. Choosing the wrong one causes architectural problems that are expensive to fix later — you cannot change a load balancer's type after creation.</strong></div>
+
+    <div class="comp-grid">
+      <div class="comp-card hl">
+        <div class="comp-title">ALB — Application Load Balancer</div>
+        <div class="comp-body">
+          <strong>Layer 7 (HTTP/HTTPS/gRPC)</strong><br><br>
+          Terminates TCP + TLS. Full HTTP parsing. Content-based routing (host, path, headers, methods, query params, source IP). WebSocket support. HTTP/2 to clients, HTTP/1.1 to targets.<br><br>
+          Sticky sessions via cookies. Connection draining. Slow start. Weighted target groups (A/B testing, canary).<br><br>
+          WAF integration. Lambda targets. ECS service integration (dynamic port mapping).<br><br>
+          <strong>Use when:</strong> Web applications, REST APIs, microservices, anything HTTP-based. This is your default for almost everything in the 30-day plan.
+        </div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-title">NLB — Network Load Balancer</div>
+        <div class="comp-body">
+          <strong>Layer 4 (TCP/UDP/TLS)</strong><br><br>
+          Does NOT terminate TCP — passes TCP connections through to targets. Ultra-low latency (~100µs vs ~1ms for ALB). Handles millions of requests per second. Static IP addresses per AZ (ALB has dynamic IPs with a DNS name only).<br><br>
+          Source IP preservation: your EC2 sees the real client IP, not the NLB's IP (because NLB doesn't terminate the connection). This requires Security Groups to allow the internet CIDR, not just the NLB.<br><br>
+          <strong>Use when:</strong> Non-HTTP protocols (MQTT, gRPC over raw TCP, proprietary binary protocols), extremely latency-sensitive applications (trading systems, real-time gaming), applications requiring static IPs for whitelisting, PrivateLink (exposing services to other VPCs).
+        </div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-title">GWLB — Gateway Load Balancer</div>
+        <div class="comp-body">
+          <strong>Layer 3 (IP packets)</strong><br><br>
+          Distributes traffic to a fleet of network virtual appliances (firewalls, IDS/IPS, deep packet inspection tools). Traffic passes through the appliances transparently — client IPs are preserved at the IP level.<br><br>
+          Uses GENEVE encapsulation protocol. Operates transparently in the network path — clients and servers are unaware it exists.<br><br>
+          <strong>Use when:</strong> You need inline traffic inspection by third-party network security appliances (Palo Alto, Check Point, Fortinet). Enterprise security compliance requiring deep packet inspection of all VPC traffic. Not relevant for most application development — this is a security infrastructure pattern.
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1.2rem">
+      <div class="mechbox"><strong>Why NLB preserves source IP but ALB doesn't — the connection model difference:</strong> The NLB operates at Layer 4 — it doesn't terminate TCP connections. It translates destination IP and port but preserves the source IP. Your EC2's kernel receives a TCP SYN packet with the real client IP as source. This means Security Groups on the EC2 must allow the client IP ranges (0.0.0.0/0 for internet-facing). You cannot use "from NLB Security Group" as the source rule — NLB doesn't have a Security Group in the traditional sense (it was added later and works differently). The ALB terminates TCP and opens a new connection from the ALB's private IP to the EC2. Security Group can whitelist the ALB's Security Group ID. X-Forwarded-For carries the real client IP at the HTTP layer.</div>
+    </div>
+
+    <div class="mechbox"><strong>The static IP requirement — a real enterprise constraint:</strong> ALBs use DNS names with dynamic IP addresses. The DNS name resolves to one or more IPs that change when the ALB scales. Third-party SaaS providers, financial trading partners, and enterprise firewalls often require whitelisting by IP address — DNS-based whitelisting is not supported by their systems. The solution: use an NLB (which has static Elastic IPs per AZ) for the entry point, then optionally route to an ALB internally. Or use AWS Global Accelerator, which provides static anycast IPs fronting an ALB. For your JP Morgan project: if any third-party payment network or market data provider requires IP whitelisting, an NLB or Global Accelerator is required in the architecture.</div>
+
+    <div class="comp-grid-2" style="margin-top:1rem">
+      <div class="comp-card">
+        <div class="comp-title">When ALB is wrong for your use case</div>
+        <div class="comp-body">
+          Your app uses raw TCP (e.g. custom binary protocol over TCP). Use NLB.<br><br>
+          Your app uses UDP (DNS, QUIC, game servers, VoIP). Use NLB — ALB doesn't support UDP.<br><br>
+          A partner requires a static IP for whitelisting and won't accept a DNS hostname. Use NLB.<br><br>
+          You need sub-millisecond load balancing latency (financial trading). Use NLB.<br><br>
+          You're exposing a service via AWS PrivateLink to other VPCs. PrivateLink requires NLB as the endpoint service.
+        </div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-title">ALB vs NLB cost difference</div>
+        <div class="comp-body">
+          ALB: $0.008/LCU-hour + $0.018/hour. LCU (Load Balancer Capacity Unit) charges for new connections/second, active connections, bandwidth, and rule evaluations. Typical web app: 1-3 LCUs = $0.026-0.042/hr = ~$19-30/month.<br><br>
+          NLB: $0.006/NLCU-hour + $0.018/hour. Generally cheaper for high-connection-count TCP workloads because NLB doesn't do expensive HTTP parsing. For the same traffic, NLB is often 20-40% cheaper.<br><br>
+          For most web applications: the difference is negligible. The feature set (routing rules, WAF, ACM integration) justifies ALB's slight premium.
+        </div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('asg',document.querySelectorAll('.ntab')[2])">Auto Scaling deep dive →</button>
+  </div>
+
+  <!-- AUTO SCALING DEEP -->
+  <div id="p-asg" class="panel">
+    <div class="lede"><strong>Auto Scaling Groups are more than "add instances when CPU is high." The mechanics of how the ASG makes scaling decisions, how it interacts with the ALB, how lifecycle hooks give you control points, and how instance refresh enables zero-downtime deployments — these are the topics that determine whether your production fleet behaves predictably under load or surprises you at 2AM.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('asg',0,this)">1 · ASG internals</button>
+      <button class="cbtn" onclick="showC('asg',1,this)">2 · Lifecycle hooks</button>
+      <button class="cbtn" onclick="showC('asg',2,this)">3 · Instance refresh</button>
+      <button class="cbtn" onclick="showC('asg',3,this)">4 · Warm pools</button>
+    </div>
+
+    <div id="asg0" class="cpanel active">
+      <div class="ch">How the Auto Scaling Group makes decisions</div>
+      <div class="csub">The desired capacity model, the scaling cooldown, and the AZ rebalancing mechanic that engineers forget exists</div>
+      <div class="cb">
+        <p>An Auto Scaling Group has three capacity settings: <strong>minimum</strong> (the floor — ASG will never scale below this), <strong>maximum</strong> (the ceiling — ASG will never exceed this), and <strong>desired</strong> (the current target — ASG is always working to reach exactly desired capacity). Scaling policies change the desired capacity; the ASG acts to match actual capacity to desired.</p>
+        <p><strong>What happens when desired capacity changes:</strong> If desired > actual (scale out): the ASG selects an AZ to launch in (the AZ with the fewest instances, to maintain balance), selects a Launch Template version, launches an instance, waits for it to pass health checks, registers it with the target group. If desired < actual (scale in): the ASG selects an instance to terminate using the termination policy (default: oldest launch configuration first, then closest to billing hour, then random). The instance is deregistered from the target group, connection draining completes, then the instance is terminated.</p>
+        <div class="mechbox"><strong>AZ rebalancing — the surprise scale-out that costs money:</strong> The ASG continuously monitors instance distribution across configured AZs. If more instances are in one AZ than others (due to spot interruptions, AZ failures, or manual termination), the ASG triggers a rebalancing action — it launches new instances in underrepresented AZs before terminating excess instances in overrepresented AZs. This means your instance count temporarily exceeds desired capacity during rebalancing. If you have minimum=2, desired=2, maximum=2, and both instances are in 1a (perhaps because 1b had a brief issue), the ASG cannot rebalance — maximum prevents launching a third instance. Always set maximum > desired to give the ASG room to rebalance. A common production setting: minimum=2, desired=2, maximum=4 — gives 2 instances of headroom for rebalancing and burst scaling.</div>
+        <p><strong>Scaling cooldowns:</strong> After a scaling activity completes, the ASG waits for a cooldown period before evaluating scaling policies again. Default: 300 seconds. During cooldown, no new scaling activities are triggered by simple scaling policies (step and target tracking policies are not affected by cooldowns — they have their own warm-up settings). The cooldown prevents over-scaling: after adding 2 instances to handle a traffic spike, the ASG waits 300 seconds for the new instances to stabilise before deciding if more are needed. If you set cooldown too short (30 seconds) and instances take 90 seconds to fully start serving traffic, the ASG may trigger another scale-out before the first batch of new instances is effective, leading to over-provisioning.</p>
+        <div class="failbox"><strong>The max capacity ceiling that prevents emergency scaling:</strong> A team sets maximum=4 for their ASG. During a flash sale, traffic spikes 10x and 4 instances aren't enough. The ASG cannot scale beyond 4 — maximum is a hard ceiling, not a suggestion. Engineers scramble to increase maximum in the console while users see errors. The lesson: maximum should be set based on the highest traffic you could ever receive (even in a DDoS scenario) plus a safety margin. There is no cost to having a high maximum — you only pay for instances that are actually running. Maximum is a safety rail (prevent runaway scaling costs) and an emergency capacity reservation, not a conservative operating target.</div>
+      </div>
+    </div>
+
+    <div id="asg1" class="cpanel">
+      <div class="ch">Lifecycle hooks — control points in the instance lifecycle</div>
+      <div class="csub">The mechanism for safely bootstrapping and safely draining instances — without these, your deployments have race conditions</div>
+      <div class="cb">
+        <p>Lifecycle hooks give you the ability to pause an ASG action at critical points in the instance lifecycle and perform custom actions before the action completes. There are two hook types: <strong>EC2_INSTANCE_LAUNCHING</strong> (instance has launched but not yet registered with the ALB target group) and <strong>EC2_INSTANCE_TERMINATING</strong> (instance is scheduled for termination but not yet terminated).</p>
+        <p>When a lifecycle hook fires, the instance enters a "wait" state. The ASG sends a notification to an SNS topic or SQS queue. Your Lambda function or script processes the notification (runs health checks, uploads logs, deregisters from service discovery, etc.). When complete, your code calls <span class="mono">aws autoscaling complete-lifecycle-action</span> with CONTINUE (proceed) or ABANDON (terminate the instance — treat as unhealthy). If no action is taken, the default action (CONTINUE or ABANDON, configurable) fires after the heartbeat timeout (default 1 hour, configurable).</p>
+        <div class="prodbox"><strong>Launch lifecycle hook — the correct pattern for pre-traffic validation:</strong> Without lifecycle hooks, the ASG registers an instance with the ALB target group as soon as the instance passes its EC2 health check (instance running, status checks OK). But the EC2 status check passes when the OS is running — your Spring Boot app may still be starting (taking 30-90 seconds for JVM initialisation, Spring context loading, database connection pool warm-up). During this window, the ALB health check is failing (app not ready), but new requests might be sent if the health check hasn't been updated yet. Lifecycle hook on launch: instance launches → hook fires → Lambda checks <span class="mono">/actuator/health/readiness</span> directly on the instance → only when readiness returns 200 does Lambda call CompleteLifecycleAction CONTINUE → ASG registers instance with ALB. This eliminates the race condition between instance registration and application readiness.</div>
+        <div class="prodbox"><strong>Termination lifecycle hook — the safe drain pattern:</strong> Without a termination hook, the ASG starts terminating an instance the moment scale-in is triggered. The ALB deregistration delay (connection draining) handles graceful request completion, but your application may have background jobs, scheduled tasks, or distributed locks that need to be cleanly released before termination. Termination lifecycle hook: instance scheduled for termination → hook fires → Lambda or SSM Run Command sends SIGTERM to your application → application finishes in-flight requests, releases distributed locks, uploads final logs, reports completion metrics → Lambda calls CompleteLifecycleAction CONTINUE → instance terminates. This is how you achieve zero in-flight request loss during scale-in events.</div>
+        <div class="mechbox"><strong>Lifecycle hook integration with SSM and Lambda:</strong> The recommended pattern for lifecycle hook processing uses EventBridge (receives lifecycle hook notifications) → Lambda → SSM Run Command (to run a script on the instance). EventBridge routes the lifecycle event to Lambda with the instance ID, lifecycle action token, and ASG name. Lambda uses SSM to run a validation/cleanup script on the instance, waits for the script to complete, then calls CompleteLifecycleAction. This serverless pattern requires no dedicated "hook processor" server and handles any concurrency of simultaneous lifecycle events.</div>
+      </div>
+    </div>
+
+    <div id="asg2" class="cpanel">
+      <div class="ch">Instance refresh — zero-downtime rolling deployments</div>
+      <div class="csub">The correct mechanism for updating your fleet to a new AMI or Launch Template version without downtime</div>
+      <div class="cb">
+        <p>Instance Refresh is the ASG mechanism for replacing all instances in a group with instances from an updated Launch Template — a rolling deployment. It is the production-correct alternative to terminating all instances at once (causes downtime) or creating a parallel ASG (complex blue-green).</p>
+        <p><strong>How Instance Refresh works:</strong> You trigger a refresh, specifying the minimum healthy percentage (e.g. 90% — at no point will less than 90% of desired capacity be healthy and in service). The ASG calculates how many instances it can replace simultaneously while maintaining the minimum percentage. It terminates the batch, waits for replacement instances to become healthy, then terminates the next batch — rolling through the entire fleet.</p>
+        <div class="scaling-viz">
+          <div style="font-size:12px;font-weight:600;color:#444;margin-bottom:10px">Instance Refresh with MinHealthyPercentage=80%, Desired=5</div>
+          <div class="scaling-row">
+            <span class="scaling-label">Start (5 old):</span>
+            <div class="inst-box">old-1</div><div class="inst-box">old-2</div><div class="inst-box">old-3</div><div class="inst-box">old-4</div><div class="inst-box">old-5</div>
+          </div>
+          <div class="scaling-row">
+            <span class="scaling-label">Batch 1 (1 replaced, 4 healthy = 80%):</span>
+            <div class="inst-box term">old-1</div><div class="inst-box">old-2</div><div class="inst-box">old-3</div><div class="inst-box">old-4</div><div class="inst-box">old-5</div><div class="inst-box new">new-1</div>
+          </div>
+          <div class="scaling-row">
+            <span class="scaling-label">Batch 2 (2 replaced, 4 healthy = 80%):</span>
+            <div class="inst-box term">old-2</div><div class="inst-box term">old-3</div><div class="inst-box">old-4</div><div class="inst-box">old-5</div><div class="inst-box new">new-1</div><div class="inst-box new">new-2</div><div class="inst-box new">new-3</div>
+          </div>
+          <div class="scaling-row">
+            <span class="scaling-label">Complete (all new):</span>
+            <div class="inst-box new">new-1</div><div class="inst-box new">new-2</div><div class="inst-box new">new-3</div><div class="inst-box new">new-4</div><div class="inst-box new">new-5</div>
+          </div>
+        </div>
+        <div class="mechbox"><strong>Instance Refresh checkpoints — pausing mid-deployment for validation:</strong> Configure checkpoints at specific percentage thresholds. Example: checkpoint at 20% (when 20% of instances are replaced, pause for 30 minutes). During the pause, validate the new version: check error rates in CloudWatch, check latency metrics, check logs for exceptions. If metrics look good, resume the refresh to complete. If metrics are bad, cancel the refresh (the remaining 80% of instances are still on the old version — partial rollback is complete immediately) and trigger another refresh with the previous Launch Template version to roll back the 20% that was updated. Checkpoints give you a staged rollout with human validation gates without requiring a complex blue-green setup.</div>
+        <div class="failbox"><strong>The instance refresh that never completes:</strong> An engineer triggers an instance refresh with MinHealthyPercentage=100%. The ASG must maintain 100% healthy capacity at all times. To replace one instance, it must first launch a replacement (bringing capacity to desired+1), then terminate the old instance. But the ASG maximum is set equal to desired — there's no room to launch an additional instance. The refresh triggers but immediately fails with "Not enough capacity to replace instances." Solution: either reduce MinHealthyPercentage below 100% (allowing brief capacity reduction during replacement), or increase maximum above desired before triggering the refresh. For zero-downtime with 100% capacity: set maximum = desired + number_in_batch, so replacement instances can launch before old ones terminate.</div>
+      </div>
+    </div>
+
+    <div id="asg3" class="cpanel">
+      <div class="ch">Warm Pools — pre-initialised instances waiting to scale out</div>
+      <div class="csub">The solution to slow scale-out when your application takes 2-5 minutes to initialise</div>
+      <div class="cb">
+        <p>The fundamental problem with Auto Scaling for applications with long initialisation time (JVM startup, Spring context loading, database connection pool warm-up, cache pre-population): the time from "scaling trigger fires" to "new instance is serving traffic" might be 3-5 minutes. During a sudden traffic spike, your existing instances are overwhelmed for 3-5 minutes while new instances initialise. By the time the new instances are ready, the spike may have subsided or users have already experienced timeouts.</p>
+        <p>Warm Pools solve this by maintaining a pool of pre-initialised, stopped or running instances that are ready to join the ASG on demand. Instead of launching a new instance from scratch (which takes time), the ASG picks an instance from the warm pool and registers it with the target group — taking seconds instead of minutes.</p>
+        <p><strong>Warm Pool states:</strong> Instances in the warm pool can be in one of two states. <strong>Stopped</strong> — instance is stopped (no compute cost, just EBS storage cost). On scale-out, the instance is started, completes any outstanding user data, and joins the ASG. Start time: 60-90 seconds. Still faster than launching from scratch (no AMI instantiation). <strong>Running</strong> — instance is running but not registered with the ALB. On scale-out, it registers with the target group immediately. Near-instant scale-out, but you pay full EC2 running cost for warm pool instances.</p>
+        <div class="mechbox"><strong>Warm Pool lifecycle hooks for pre-initialisation:</strong> The warm pool has its own lifecycle hooks — separate from the main ASG lifecycle hooks. When an instance is added to the warm pool (launched for the first time), the warm pool launch hook fires. Your Lambda function runs the time-consuming initialisation: download and unpack the application, warm up the JVM by running synthetic requests against a mock endpoint, pre-populate caches from S3 or database. When initialisation completes, CompleteLifecycleAction CONTINUE — the instance is placed in the warm pool in the stopped state. When a scale-out event occurs, the instance starts (boot from existing EBS state — 60 seconds), and is immediately registered with the ALB. The 3-5 minute initialisation happened in the warm pool before it was needed.</div>
+        <div class="prodbox"><strong>Warm Pool for GetWork — the math:</strong> Your GetWork Spring Boot backend takes 90 seconds to initialise (JVM startup, Spring context, DB pool, cache warm-up). Without Warm Pool: a traffic spike triggers scale-out, new instances take 90 seconds to become healthy, existing instances are at 100% CPU for 90 seconds. With Warm Pool of 2 stopped instances: traffic spike triggers scale-out, the two warm pool instances start (60 seconds to start from stopped state), they immediately register as healthy. Your 90-second initialisation window becomes a 60-second start window. Cost: 2 × stopped t3.small instances = EBS cost only (~$0.001/hr) — effectively free. For a Spring Boot application with a warm pool, you get near-instant scale-out for the first two scale events at negligible cost.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('scaling-policies',document.querySelectorAll('.ntab')[3])">Scaling policies — the algorithms that drive capacity changes →</button>
+  </div>
+
+  <!-- SCALING POLICIES -->
+  <div id="p-scaling-policies" class="panel">
+    <div class="lede"><strong>The difference between a scaling policy that works and one that causes flapping (constant scale-in/scale-out oscillation), over-provisioning, or under-provisioning is entirely in the policy type, the metric selection, and the threshold calibration. Most engineers use the default CPU-based target tracking — but CPU is often the wrong metric for a Spring Boot application serving HTTP requests.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('sp',0,this)">1 · Policy types</button>
+      <button class="cbtn" onclick="showC('sp',1,this)">2 · Target tracking deep</button>
+      <button class="cbtn" onclick="showC('sp',2,this)">3 · Metric selection</button>
+      <button class="cbtn" onclick="showC('sp',3,this)">4 · Scheduled scaling</button>
+    </div>
+
+    <div id="sp0" class="cpanel active">
+      <div class="ch">Scaling policy types — three algorithms with different trade-offs</div>
+      <div class="csub">Simple, step, and target tracking — knowing when each is appropriate prevents scaling failures</div>
+      <div class="cb">
+        <p><strong>Simple scaling</strong> — the original policy type, now rarely the right choice. Trigger: a CloudWatch alarm threshold is breached. Action: add N instances or add N% capacity. Cooldown: a fixed cooldown period applies after each scaling action. Problem: it reacts to a binary alarm state (above threshold / below threshold) with a fixed response, ignoring the magnitude of the breach. A 50% CPU spike and a 95% CPU spike both trigger the same "add 2 instances" action, regardless of how many instances are actually needed. The cooldown prevents rapid re-evaluation — the policy is blind for 300 seconds after each action.</p>
+        <p><strong>Step scaling</strong> — an improvement over simple scaling. Multiple steps define different responses based on how far the alarm threshold has been breached. Example: CPU 70-80% → add 1 instance; CPU 80-90% → add 2 instances; CPU 90%+ → add 4 instances. Responds proportionally to the magnitude of the load increase. Does not have a traditional cooldown — instead uses a warm-up period for new instances. More responsive than simple scaling for large load spikes.</p>
+        <p><strong>Target tracking</strong> — the modern, recommended approach. You specify a target metric value (e.g. target ALB request count per target = 1000 req/s per instance). The policy continuously adjusts desired capacity to maintain the target metric at the specified value. The algorithm (PID-like) automatically calculates how many instances are needed. AWS manages the scale-out and scale-in CloudWatch alarms internally. You don't specify alarm thresholds — you just say "I want this metric to stay around X." This is the correct approach for most web applications.</p>
+        <div class="mechbox"><strong>Why target tracking is superior for most workloads:</strong> With simple/step scaling, you guess "I need 2 more instances when CPU hits 70%." What if your instances have different sizes and CPU means different things? What if a deployment changed the app's CPU profile? What if 70% CPU is fine on your current instance type but concerning on a smaller one? Target tracking inverts the question: instead of "at what metric value should I scale?", you ask "what is the right load per instance?" — a much more stable property of your application. If your Spring Boot instance handles 1,000 req/s comfortably, set the target at 800 req/s per instance (20% headroom). The policy ensures you always have enough instances to keep per-instance request rate near 800.</div>
+        <div class="failbox"><strong>The scaling flap caused by wrong metric selection:</strong> An engineer sets target tracking on CPU at 50%. The Spring Boot app is I/O-bound (most time waiting for database responses). During normal load, CPU is 15%. A traffic spike comes — CPU goes to 20% but instances are at capacity on database connections (800ms average response time, 1000 concurrent connections queued). Target tracking sees CPU well below 50% — no scale-out is triggered. The instances are overwhelmed at the database layer, not the CPU layer. Users see slow responses. CPU-based scaling was the wrong metric for an I/O-bound application. The correct metric: ALB RequestCountPerTarget or a custom metric for database connection queue depth.</div>
+      </div>
+    </div>
+
+    <div id="sp1" class="cpanel">
+      <div class="ch">Target tracking internals — how it calculates the required instance count</div>
+      <div class="csub">The algorithm behind the policy and the scale-in protection that prevents thrashing</div>
+      <div class="cb">
+        <p>Target tracking works by maintaining two internal CloudWatch alarms: a scale-out alarm (metric > target + buffer) and a scale-in alarm (metric < target − buffer). These alarms are managed by AWS — you cannot see or edit them directly. The policy periodically recalculates the required instance count using this formula:</p>
+        <p>required_instances = ceil(current_metric_value × current_instance_count / target_value)</p>
+        <p>Example: target = 1000 req/s per instance. Current: 3 instances serving 3,500 req/s. Current load per instance = 3,500/3 = 1,167 req/s (above target). Required: ceil(3,500 / 1,000) = 4 instances. ASG sets desired = 4. Scaling out.</p>
+        <p>Example: target = 1000 req/s. Current: 4 instances serving 1,200 req/s. Load per instance = 300 req/s (well below target). Required: ceil(1,200 / 1,000) = 2 instances. But scale-in is conservative — the policy doesn't immediately scale to 2. It waits for 15 minutes of continuous below-target metric before scaling in. This prevents briefly reduced traffic from causing a scale-in that leaves the fleet under-provisioned when traffic recovers.</p>
+        <div class="mechbox"><strong>Scale-in protection — the built-in flapping prevention:</strong> Target tracking has a 15-minute scale-in delay. If the metric drops below target, the policy waits 15 minutes of sustained below-target metrics before reducing capacity. This means you may be paying for "too many" instances for up to 15 minutes after a traffic spike subsides. This is intentional — it's far better to over-provision for 15 minutes than to scale in prematurely and then immediately scale out again (thrashing) when traffic recovers. You can configure individual instances to be protected from scale-in (useful for instances running stateful work that should complete before termination) using instance scale-in protection.</div>
+        <div class="prodbox"><strong>Combining target tracking with scheduled scaling:</strong> For predictable traffic patterns (higher traffic during business hours, weekly spikes on Monday mornings from your GetWork construction workers looking for jobs), combine scheduled scaling (increase minimum capacity before expected peak) with target tracking (handles unexpected additional variation). Scheduled: at 8:00 AM IST weekdays, set minimum = 4. At 8:00 PM IST, set minimum = 2. Target tracking: maintain ALBRequestCountPerTarget = 800. The minimum prevents scale-in below 4 during business hours even if traffic is temporarily low. Target tracking handles unexpected spikes above the scheduled baseline. This hybrid approach handles both predictable and unpredictable load patterns.</div>
+      </div>
+    </div>
+
+    <div id="sp2" class="cpanel">
+      <div class="ch">The right metrics for scaling a Spring Boot application</div>
+      <div class="csub">Why CPU is often wrong and what to use instead for I/O-bound applications</div>
+      <div class="cb">
+        <p>The pre-defined metrics available for target tracking: <span class="mono">ASGAverageCPUUtilization</span>, <span class="mono">ASGAverageNetworkIn</span>, <span class="mono">ASGAverageNetworkOut</span>, <span class="mono">ALBRequestCountPerTarget</span>. Custom metrics are also supported via CloudWatch.</p>
+        <p><strong>CPU utilisation:</strong> Correct when your application is genuinely CPU-bound — image processing, data transformation, heavy computation. Wrong for I/O-bound applications that spend most time waiting for database responses or external API calls. A CPU-bound Spring Boot batch processing service: CPU scaling is correct. A CRUD API that mostly waits for RDS: CPU scaling misses the real bottleneck.</p>
+        <p><strong>ALBRequestCountPerTarget:</strong> The best metric for most HTTP API applications. It directly measures how many requests each instance is handling. Set the target to 80% of the requests-per-second your application handles at acceptable latency. If your load testing shows an instance handles 1,000 req/s with p99 latency < 200ms, set target to 800 req/s per target (20% headroom). This metric is directly tied to the resource your users experience — request rate — rather than an internal proxy (CPU) that may or may not correlate.</p>
+        <p><strong>Custom metrics for database-bound applications:</strong> Publish a custom metric: average database connection wait time from your connection pool metrics (HikariCP exposes this via Micrometer). If connection wait time exceeds a threshold, your instances are waiting for database connections — scaling more EC2 instances won't help if the bottleneck is RDS. But if you're using connection pooling and the pool is exhausted, scaling may be appropriate. Custom metrics allow you to scale on the actual bottleneck metric rather than a proxy.</p>
+        <div class="prodbox"><strong>The three-metric strategy for a production Spring Boot application:</strong><br>
+          Primary scaling metric: <span class="mono">ALBRequestCountPerTarget</span> — main scaling driver, directly tied to request load.<br>
+          Fast response scale-out: Step scaling policy on <span class="mono">ASGAverageCPUUtilization</span> > 85% — adds instances immediately for CPU spikes, in parallel with the request count policy.<br>
+          Scheduled baseline: scheduled scaling to set minimum instances during known peak windows.<br>
+          This three-layer approach handles the typical production case: gradual load increases (request count policy), sudden CPU spikes (step policy), and predictable daily patterns (scheduled). None alone is sufficient; together they cover the spectrum.</div>
+      </div>
+    </div>
+
+    <div id="sp3" class="cpanel">
+      <div class="ch">Scheduled scaling — deterministic capacity management</div>
+      <div class="csub">When you know traffic patterns in advance, scheduled scaling is more reliable than reactive policies</div>
+      <div class="cb">
+        <p>Scheduled scaling actions adjust the ASG's minimum, maximum, or desired capacity at specified times using cron expressions. They run ahead of time — before the load arrives — eliminating the lag between metric threshold breach, alarm evaluation, and instance initialisation.</p>
+        <div class="code-block"><code><span class="c"># Scale up before Mumbai business hours (0530 UTC = 1100 IST)</span>
+aws autoscaling put-scheduled-update-group-action \
+  --auto-scaling-group-name getwork-asg \
+  --scheduled-action-name "business-hours-scale-up" \
+  --recurrence "30 5 * * MON-FRI" \
+  --min-size 4 \
+  --desired-capacity 4 \
+  --max-size 20
+
+<span class="c"># Scale down after evening peak (1430 UTC = 2000 IST)</span>
+aws autoscaling put-scheduled-update-group-action \
+  --auto-scaling-group-name getwork-asg \
+  --scheduled-action-name "evening-scale-down" \
+  --recurrence "30 14 * * MON-FRI" \
+  --min-size 2 \
+  --desired-capacity 2 \
+  --max-size 20
+
+<span class="c"># Scale down for weekends (Friday 1430 UTC to Monday 0530 UTC)</span>
+aws autoscaling put-scheduled-update-group-action \
+  --auto-scaling-group-name getwork-asg \
+  --scheduled-action-name "weekend-minimum" \
+  --recurrence "30 14 * * FRI" \
+  --min-size 1 \
+  --desired-capacity 1 \
+  --max-size 10</code></div>
+        <div class="mechbox"><strong>Scheduled scaling timezone:</strong> All scheduled scaling actions use UTC. The console now supports timezone selection for scheduled actions, but the CLI still uses UTC. For Bangalore (IST = UTC+5:30), 9:00 AM IST = 03:30 UTC. Always convert and validate — a common mistake is configuring 9:00 UTC thinking it's 9:00 AM IST, resulting in scale-up at 2:30 PM IST instead of 9:00 AM.</div>
+        <div class="failbox"><strong>The scheduled action that conflicts with target tracking:</strong> An engineer sets up target tracking (target CPU = 50%) and also a scheduled action to set desired=1 at midnight to save costs. At midnight, the scheduled action sets desired=1. If there's still moderate traffic, the single instance may have CPU at 80% — above the target tracking threshold. Target tracking immediately fires and scales out to 2-3 instances. The scheduled action effect is immediately undone by the target tracking policy. Scheduled actions and reactive policies interact: scheduled actions set minimum/maximum and desired, reactive policies may immediately undo the desired change if the metric doesn't justify it. The correct pattern: scheduled actions should set the minimum, not desired. If minimum=1 at midnight, target tracking can still scale out to 2+ if load justifies it, but won't scale below 1.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('deployments',document.querySelectorAll('.ntab')[4])">Zero-downtime deployment patterns →</button>
+  </div>
+
+  <!-- ZERO-DOWNTIME DEPLOYMENTS -->
+  <div id="p-deployments" class="panel">
+    <div class="lede"><strong>Deploying a new version of your Spring Boot application without dropping a single request requires orchestrating the ALB, ASG, and EC2 in a specific sequence. There are three production patterns — rolling updates, blue-green, and canary — each with different risk profiles, rollback speeds, and cost implications. Knowing which to use when is an architectural judgement that senior engineers are expected to have.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('dep',0,this)">1 · Rolling update</button>
+      <button class="cbtn" onclick="showC('dep',1,this)">2 · Blue-green</button>
+      <button class="cbtn" onclick="showC('dep',2,this)">3 · Canary</button>
+      <button class="cbtn" onclick="showC('dep',3,this)">4 · Comparison</button>
+    </div>
+
+    <div id="dep0" class="cpanel active">
+      <div class="ch">Rolling update — replacing instances in batches</div>
+      <div class="csub">The simplest zero-downtime pattern — done correctly via Instance Refresh</div>
+      <div class="cb">
+        <p>A rolling update replaces instances in the existing ASG one batch at a time, always maintaining a minimum healthy instance count. The production mechanism is ASG Instance Refresh (Day 7 lab). The key parameters are MinHealthyPercentage (how much capacity to keep healthy during the update) and the batch size (derived from desired capacity and min healthy %).</p>
+        <p><strong>The exact sequence for a correct rolling update:</strong></p>
+        <p>1. CI/CD pipeline builds a new AMI with the new application version, tagged with the version number and deployment timestamp. Runs automated tests against the AMI (if using EC2 Image Builder with test components).</p>
+        <p>2. CI/CD creates a new Launch Template version referencing the new AMI. The previous version remains and is still the $Default.</p>
+        <p>3. CI/CD calls <span class="mono">aws autoscaling start-instance-refresh</span> with the new Launch Template version, MinHealthyPercentage=80%, and a checkpoint at 20% for human validation.</p>
+        <p>4. ASG terminates the first batch (20% of instances), launches replacements with the new AMI. New instances pass health checks. ALB health check uses readiness endpoint — new instances only receive traffic when Spring Boot is fully ready.</p>
+        <p>5. At the 20% checkpoint, CI/CD or monitoring pipeline checks error rates and p99 latency against pre-deployment baseline. If metrics are healthy, continues. If degraded, cancels — 80% of fleet is still on old version.</p>
+        <p>6. Rolling continues until all instances are replaced. Total time: (number_of_batches × instance_warmup_time) + (number_of_batches × monitoring_window).</p>
+        <div class="mechbox"><strong>The connection draining requirement for zero request loss:</strong> During a rolling update, the ALB stops sending new requests to an instance being replaced (it's deregistered from the target group). The deregistration delay (connection draining) allows in-flight requests to complete. If your deregistration delay is 30 seconds and your p99 request duration is 2 seconds, there is no gap — all in-flight requests complete during draining. If your deregistration delay is 30 seconds but you have a long-running SSE (Server-Sent Events) connection or WebSocket that's been open for 10 minutes, that connection is forcibly closed when draining ends. Set deregistration delay > max expected request duration for all endpoint types your application serves.</div>
+      </div>
+    </div>
+
+    <div id="dep1" class="cpanel">
+      <div class="ch">Blue-green deployment — parallel fleet swap</div>
+      <div class="csub">The fastest rollback, highest cost, and most complex pattern — correct for high-risk releases</div>
+      <div class="cb">
+        <p>Blue-green maintains two identical fleets (blue = current production, green = new version). Traffic is switched from blue to green instantaneously by changing the ALB target group routing — a listener rule update that takes effect in seconds. Rollback is equally instant: switch back to blue. No rolling, no batches, no warmup during the actual cutover.</p>
+        <p><strong>The blue-green sequence:</strong></p>
+        <p>1. Maintain the blue ASG at full production capacity serving 100% of traffic through the ALB's target group.</p>
+        <p>2. Launch the green ASG with the new AMI. Scale it to full production capacity. Register the green instances with a green target group. The green target group is NOT yet receiving any ALB traffic — but instances are running and have been serving internal smoke test traffic to verify functionality.</p>
+        <p>3. Validate green: run automated acceptance tests against the green target group using a test listener rule (route requests with a specific header <span class="mono">X-Deploy-Target: green</span> to the green group). Verify all critical paths work.</p>
+        <p>4. Cutover: modify the ALB listener rule to route 100% of production traffic to the green target group. This takes effect within seconds across all ALB nodes. Users experience zero interruption.</p>
+        <p>5. Monitor green for 15-30 minutes. If healthy, terminate the blue ASG (saving the double-fleet cost). If unhealthy, instantly revert the ALB rule to route back to blue — complete rollback in under 10 seconds.</p>
+        <div class="failbox"><strong>The database migration problem with blue-green:</strong> Blue-green works cleanly for stateless applications. It breaks for releases that include database schema changes. If version 2 (green) requires a new column that version 1 (blue) doesn't know about, and your migration runs when green starts, you now have: green instances using the new schema, blue instances potentially confused by the new column. If you need to roll back, blue instances may fail with unexpected schema. Solution: additive-only database migrations — add new columns, never remove old ones during a release. Blue and green must both be able to run against the same schema simultaneously. Remove old columns only after blue is decommissioned and the migration is confirmed permanent. Expand-contract pattern for database changes.</div>
+        <div class="mechbox"><strong>Cost of blue-green:</strong> You run two full fleets simultaneously during the deployment and validation window. If your production fleet is 10 × m5.large (~$0.20/hr each), running blue + green for 1 hour costs $4.00 extra. For a 2-hour validation window: $8.00 extra per deployment. At 10 deployments per week, that's $80/week or ~$320/month in deployment overhead. This is acceptable for a high-value production service but may not be justified for a low-traffic internal tool. Rolling updates have zero additional cost.</div>
+      </div>
+    </div>
+
+    <div id="dep2" class="cpanel">
+      <div class="ch">Canary deployment — routing a percentage of traffic to the new version</div>
+      <div class="csub">Progressive exposure with metrics-gated promotion — the pattern used by Netflix, Amazon, and every high-scale team</div>
+      <div class="cb">
+        <p>A canary deployment routes a small percentage of real production traffic to the new version before committing to a full rollout. Unlike blue-green (where you validate with test traffic) or rolling (where you replace instances before validating), canary exposes the new version to real users with real workloads and monitors how it performs relative to the baseline.</p>
+        <p><strong>The ALB-based canary pattern using weighted target groups:</strong></p>
+        <p>1. Green ASG running new version, registered with green target group. Both blue and green target groups have healthy instances.</p>
+        <p>2. ALB forward rule configured with weighted target groups: blue target group weight=95, green target group weight=5. 5% of requests go to the new version.</p>
+        <p>3. Monitor: compare error rate, p99 latency, and business metrics (conversion rate, API success rate) between instances receiving blue traffic and instances receiving green traffic. CloudWatch Container Insights or application metrics with target-group-level dimensions enable this comparison.</p>
+        <p>4. If 5% is healthy for 30 minutes: adjust weights to 80/20. Then 50/50. Then 10/90. Then 0/100. Progressive rollout with continuous monitoring.</p>
+        <p>5. If any step shows degradation: set weight back to 100/0. Instant rollback — no instances need to be replaced. Green ASG continues running (ready to be re-enabled) or is terminated depending on urgency.</p>
+        <div class="prodbox"><strong>Canary with automatic promotion and rollback using CloudWatch Alarms:</strong> The sophisticated production pattern: configure a CloudWatch alarm on the green target group's error rate. If error rate > threshold for 5 minutes, EventBridge triggers a Lambda that automatically sets ALB weights back to 100% blue. If error rate < threshold for 30 minutes, Lambda automatically increases green weight by 10%. This fully automated progressive rollout requires no human intervention for healthy deployments and no manual action for automatic rollbacks — just monitoring dashboards and alerting if the Lambda-driven rollout fails for non-automatic reasons (e.g. the alarm never clears).</div>
+        <div class="mechbox"><strong>Canary vs blue-green vs rolling — the decision framework:</strong> Use canary when: real production traffic is needed to validate (user behaviour with the new version differs from test scenarios), you want the lowest blast radius for a risky change, and you can afford the 1-2 hours of gradual promotion. Use blue-green when: you need instant rollback capability, the change is high-risk but well-tested, and you can afford the double-fleet cost. Use rolling when: the change is low-risk (dependency updates, configuration changes), deployment speed matters, and you want the simplest operational process.</div>
+      </div>
+    </div>
+
+    <div id="dep3" class="cpanel">
+      <div class="ch">Deployment pattern comparison</div>
+      <div class="csub">Choosing the right pattern for each type of change</div>
+      <div class="cb">
+        <div class="comp-grid">
+          <div class="comp-card">
+            <div class="comp-title">Rolling update</div>
+            <div class="comp-body">
+              <strong>Rollback speed:</strong> Slow — must roll forward or trigger another full refresh with old AMI (30-60 min)<br><br>
+              <strong>Cost overhead:</strong> None — same fleet<br><br>
+              <strong>Risk during deployment:</strong> Medium — both old and new versions serve traffic simultaneously during rollout<br><br>
+              <strong>Best for:</strong> Low-risk changes, frequent deployments, cost-sensitive environments<br><br>
+              <strong>Mechanism:</strong> ASG Instance Refresh with MinHealthyPercentage
+            </div>
+          </div>
+          <div class="comp-card hl">
+            <div class="comp-title">Blue-green</div>
+            <div class="comp-body">
+              <strong>Rollback speed:</strong> Instant — flip ALB rule in seconds<br><br>
+              <strong>Cost overhead:</strong> 100% — double fleet during validation window (1-2 hrs)<br><br>
+              <strong>Risk during deployment:</strong> Low — only validated versions serve traffic<br><br>
+              <strong>Best for:</strong> High-risk releases, schema changes (with care), frequent rollback scenarios<br><br>
+              <strong>Mechanism:</strong> Two ASGs + ALB weighted target groups
+            </div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-title">Canary</div>
+            <div class="comp-body">
+              <strong>Rollback speed:</strong> Fast — flip ALB weight in seconds<br><br>
+              <strong>Cost overhead:</strong> 5-20% — canary fleet is small<br><br>
+              <strong>Risk during deployment:</strong> Very low — only small % of users see new version<br><br>
+              <strong>Best for:</strong> High-scale applications, changes affecting user experience, A/B testing<br><br>
+              <strong>Mechanism:</strong> ALB weighted target groups with automated metric gates
+            </div>
+          </div>
+        </div>
+        <div class="mechbox"><strong>The "version compatibility window" all three patterns create:</strong> During any non-instant deployment, your ALB simultaneously routes traffic to instances running version N and version N+1 of your application. If version N+1 introduces a breaking change to a shared resource (a database record format, a queue message schema, a Redis cache key structure), instances running version N may fail when they read data written by version N+1 instances. This is not unique to any deployment pattern — it's an inherent property of rolling upgrades. Solution: backward-compatible changes during any deployment that runs both versions simultaneously. V+1 must be able to read data written by V and write data that V can read. When the rollout is complete and V is gone, you can migrate to V+1's preferred format in a subsequent release.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[5])">Interview prep →</button>
+  </div>
+
+  <!-- INTERVIEW PREP -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>ALB and Auto Scaling interview questions test your understanding of the full system — not individual components. Questions at senior level require you to connect ALB health checks to ASG lifecycle, deployment strategies to database migrations, and scaling policies to the right metrics for the specific application type.</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">Your Auto Scaling Group keeps launching and terminating instances in a loop. What are the possible causes and how do you diagnose each?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is a "thrashing" or "flapping" pattern — the ASG oscillates between scale-out and scale-in. There are four distinct root causes, each with a different diagnostic path.</p>
+          <p><strong>Cause 1 — Health check failure loop.</strong> New instances launch, fail their ALB health check (Spring Boot app not ready, health endpoint returns 5xx, security group blocks the health check port), get marked unhealthy by the ASG, get terminated, and new ones launch. Check: ASG activity history in the console. If instances are being terminated with "Instance failed EC2 health checks" or "Instance failed ELB health checks" within the first 5 minutes of launch, this is the cause. Diagnosis: SSH into a failing instance during its brief running period. Run <span class="mono">curl http://localhost:8080/actuator/health</span>. Check <span class="mono">sudo journalctl -u app-service -n 50</span> for startup failures. Check the security group allows the ALB's traffic on the health check port.</p>
+          <p><strong>Cause 2 — Scaling cooldown too short.</strong> Traffic spike triggers scale-out (+2 instances). Cooldown is 30 seconds. 30 seconds later, the new instances haven't fully warmed up yet — they're handling requests but at higher CPU than steady state because the JVM isn't JIT-compiled yet. Metric is still above threshold. Another scale-out triggers. Then load drops, scale-in fires. Then metric rises briefly as remaining instances absorb load. Oscillation. Diagnosis: check ASG activity history for rapid alternating scale-out and scale-in events within minutes. Fix: increase cooldown to 2-3 minutes, or switch to target tracking (which has built-in 15-minute scale-in delay).</p>
+          <p><strong>Cause 3 — Scaling policy conflict.</strong> Two policies exist: a scale-out policy triggered by CPU > 50% and a scale-in policy triggered by CPU < 30%. With only 2 instances, one is at 60% and one is at 20% — average is 40%. Scale-out triggers (average 40% > "threshold" ... wait, this doesn't trigger at 50%). Actually: if both policies have equal thresholds and the application's CPU oscillates around the threshold value, or if multiple policies have conflicting desired capacity calculations, thrashing can occur. Diagnosis: review all scaling policies attached to the ASG. Check for conflicting scale-out and scale-in thresholds that have insufficient separation (e.g., scale out at 60%, scale in at 55% — only 5% gap). Fix: ensure at least 15-20% gap between scale-out and scale-in thresholds, or use target tracking which handles this automatically.</p>
+          <p><strong>Cause 4 — Instance type unavailability causing rebalancing loops.</strong> For Spot ASGs: Spot interruptions in one AZ cause rebalancing. If the target AZ consistently has Spot interruptions, the ASG keeps launching in that AZ (to rebalance) and those instances keep getting interrupted. Diagnosis: check ASG activity history for "Spot instance interrupted" events followed by launch events. Fix: configure the ASG to use multiple instance types (attribute-based selection) and multiple AZs, enabling the ASG to use whichever AZ/type has available Spot capacity.</p>
+          <span class="tip"><strong>Why this answer works:</strong> Four distinct causes, each with a specific diagnostic step and fix. The health check failure loop and the scaling cooldown issues are the most common real-world scenarios. The specific commands (curl the health endpoint, journalctl) show operational experience.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">Explain how an ALB health check works and how you'd configure it correctly for a Spring Boot application.</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>The ALB sends HTTP requests to each registered target at regular intervals (the health check interval, default 30 seconds). Based on the HTTP response status code, the ALB maintains a health status for each target. Healthy threshold (default 5 consecutive successes) determines when an unhealthy target is returned to service. Unhealthy threshold (default 2 consecutive failures) determines when a healthy target is removed from rotation.</p>
+          <p>For Spring Boot, the correct configuration uses Spring Actuator. The health check path should be <span class="mono">/actuator/health/readiness</span>, not <span class="mono">/actuator/health</span>. This distinction is critical. The readiness endpoint returns 200 only when the application is ready to serve traffic — after Spring context is fully loaded, database connections are established, and any required external dependencies have been verified. The combined <span class="mono">/actuator/health</span> endpoint includes liveness (is the process alive) in addition to readiness, which can confuse the ALB's intent.</p>
+          <p>For the health check parameters: interval at 15 seconds (faster than the 30-second default gives 30-second detection time with unhealthy threshold of 2). Timeout at 5 seconds — if the application doesn't respond in 5 seconds, something is wrong. Healthy threshold at 3 (not 5 — reduces time for new instances to become available from 150 seconds to 45 seconds). Unhealthy threshold at 2 (keep default — fast failure detection). Matcher should be HTTP 200 specifically, not the default 200-499 range which would accept 4xx responses as healthy.</p>
+          <p>The healthy threshold reduction deserves emphasis: default threshold of 5 means a new instance must pass 5 × 15-second checks = 75 seconds minimum before receiving production traffic. With threshold of 3: 45 seconds. For auto scaling scale-out events, this 30-second difference matters for how quickly capacity relief reaches your production traffic.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The readiness vs liveness distinction is the depth marker — most engineers don't know this exists. The healthy threshold optimisation from 5 to 3 shows operational awareness. The matcher detail (200 only, not 200-499) shows attention to security — an application returning 401 for misconfigured auth shouldn't be considered "healthy."</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">How would you design a zero-downtime deployment for a Spring Boot microservice with 10 instances behind an ALB?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>The approach depends on the risk level of the change. For a typical feature release, I'd use Instance Refresh (rolling update). For a high-risk change with significant schema modifications, I'd use blue-green.</p>
+          <p><strong>For a standard rolling update:</strong> CI/CD pipeline bakes a new AMI with the new JAR, creates Launch Template version N+1, then calls StartInstanceRefresh with MinHealthyPercentage=80% (meaning at most 2 instances are replaced simultaneously from 10, keeping 8+ healthy). A checkpoint is set at 20% (after 2 instances are replaced) where the pipeline validates error rate and p99 latency against the pre-deployment baseline — if metrics are degraded, cancel and the 8 remaining instances are still on the old version. If healthy, continue. Total deployment time: ~20-25 minutes for 10 instances with a 90-second warmup per instance.</p>
+          <p><strong>Critical configuration for zero dropped requests:</strong> Deregistration delay set to 60 seconds (my application's p99 request duration is under 5 seconds — 60 seconds is more than sufficient). Health check uses <span class="mono">/actuator/health/readiness</span> so new instances only receive traffic when Spring is fully ready. Slow Start Mode (120 seconds) on the target group so new instances receive gradual traffic ramp-up rather than full load immediately. Lifecycle hook on EC2_INSTANCE_LAUNCHING that waits for the readiness endpoint to return 200 before calling CompleteLifecycleAction — this adds a layer of validation beyond the ALB health check.</p>
+          <p><strong>For the database migration case:</strong> Use the expand-contract pattern. Deployment 1: add new columns, deploy new code that writes to both old and new columns. Deployment 2 (after all old instances are gone): stop writing to old columns, read from new columns only. Deployment 3: drop old columns. Blue-green is used for Deployment 1 (the riskiest) — instant rollback capability is critical when old and new code must simultaneously work against the same schema.</p>
+          <span class="tip"><strong>Why this answer works:</strong> Specific percentages, specific timing, the deregistration delay justification, the expand-contract pattern for database migrations — these details show you've designed and operated rolling deployments in production, not just described them theoretically.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">What is the difference between ALB and NLB? When would you use an NLB over an ALB for a financial services application?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>ALB operates at Layer 7 (HTTP/HTTPS). It terminates TCP and TLS connections, fully parses HTTP requests, routes based on content (host header, path, HTTP method, request headers), and forwards using a new TCP connection to the backend. This full HTTP parsing enables sophisticated routing but adds ~1ms latency and means the ALB sees the plaintext request content (relevant for TLS termination security models).</p>
+          <p>NLB operates at Layer 4 (TCP/UDP/TLS). It passes TCP connections through to backends without terminating them — it translates the destination IP and port but preserves the source IP. The backend EC2 instance establishes the TCP connection directly with the client. This pass-through model gives sub-millisecond latency and preserves the client's real IP without requiring X-Forwarded-For headers. NLB also has static Elastic IPs per AZ — the NLB's IP never changes.</p>
+          <p>For a financial services application at JP Morgan, I'd use NLB in two specific scenarios. First: a trading system connection to a market data feed or execution venue. These often use proprietary binary protocols over TCP or UDP, not HTTP. ALB doesn't support these protocols. NLB passes through any TCP/UDP connection without understanding the protocol. Second: a third-party risk management or compliance system that requires IP whitelisting. Market data vendors and clearinghouses frequently whitelist by IP, not DNS hostname. The ALB's IP can change — the NLB's Elastic IP is static and permanent. When the vendor asks "what IP will your connections come from?", the answer with NLB is a specific IP address; with ALB it's "it varies, check the DNS."</p>
+          <span class="tip"><strong>Why this answer works:</strong> The JP Morgan context is used authentically — proprietary binary protocols and IP whitelisting are real financial services constraints that justify NLB. The latency difference (1ms vs sub-ms) is quantified rather than vague. The source IP preservation mechanic is explained at the connection level.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q5</span>
+          <span class="iq-q">What is connection draining (deregistration delay) and what value would you set for a Spring Boot API? What if it has WebSocket connections?</span>
+          <span class="iq-d d-e">Easy</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>When an instance is deregistered from an ALB target group (during scale-in, rolling deployment, or explicit removal), the ALB immediately stops sending new requests to that instance. However, requests that were in-flight when the deregistration was triggered may still be processing on the instance. Connection draining (formally called "deregistration delay") is the time window the ALB waits before forcibly terminating those in-flight connections. During this window, the instance status is "draining" — it accepts no new requests but may still be handling existing ones.</p>
+          <p>For a typical Spring Boot REST API where endpoints complete within 1-5 seconds, I'd set deregistration delay to 30-60 seconds. This gives 6-12x the typical request duration as a safety margin for slow requests and database queries that might take longer than average. The default 300 seconds would make rolling deployments 5 minutes per batch unnecessarily — that's pure waste for an application that never has requests taking more than a few seconds.</p>
+          <p>For WebSocket connections, the calculation changes fundamentally. A WebSocket connection is a long-lived persistent connection — it might be open for minutes, hours, or days. If deregistration delay is 60 seconds, all WebSocket connections on the draining instance are forcibly closed after 60 seconds, regardless of any active communication on them. Clients experience disconnection. For applications with WebSockets: either set a very long deregistration delay (e.g. 1800 seconds — 30 minutes, matching the maximum expected WebSocket session duration) or implement graceful WebSocket disconnection in your application: when you detect that the instance is about to be terminated (via the lifecycle hook or SIGTERM signal), send a WebSocket close frame to all connected clients, allowing them to reconnect to a different instance before the deregistration delay expires. The second approach is architecturally cleaner.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The specific numbers (30-60 seconds for REST, with reasoning) show operational experience. The WebSocket lifecycle is a depth question that many engineers haven't thought through — acknowledging that WebSocket and REST have fundamentally different requirements shows architectural maturity. The graceful close frame approach is the production-grade solution.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[6])">Start the lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab builds the complete HA architecture: an ALB with HTTP-to-HTTPS redirect, health check configured against the Spring Boot readiness endpoint, an Auto Scaling Group using your Day 7 Launch Template with target tracking scaling. By the end, your application survives instance failures automatically, scales with load, and deploys without downtime.</strong></div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create an Application Load Balancer with two listeners</div>
+          <div class="sb">Create an ALB in your Day 4 VPC, across both public subnets. Create two listeners: port 80 (redirect to HTTPS) and port 443 (HTTPS — skip certificate for lab, use HTTP for now). Create an ALB security group first.</div>
+          <code class="cmd">VPC_ID=vpc-your-vpc-id
+PUB_SUBNET_1A=subnet-your-public-1a
+PUB_SUBNET_1B=subnet-your-public-1b
+
+# ALB security group (internet-facing)
+ALB_SG=$(aws ec2 create-security-group \
+  --group-name alb-sg \
+  --description "ALB Security Group" \
+  --vpc-id $VPC_ID \
+  --query 'GroupId' --output text)
+
+aws ec2 authorize-security-group-ingress --group-id $ALB_SG \
+  --protocol tcp --port 80 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress --group-id $ALB_SG \
+  --protocol tcp --port 443 --cidr 0.0.0.0/0
+
+# Create the ALB (must span at least 2 AZs)
+ALB_ARN=$(aws elbv2 create-load-balancer \
+  --name getwork-alb \
+  --subnets $PUB_SUBNET_1A $PUB_SUBNET_1B \
+  --security-groups $ALB_SG \
+  --scheme internet-facing \
+  --type application \
+  --ip-address-type ipv4 \
+  --query 'LoadBalancers[0].LoadBalancerArn' \
+  --output text --region ap-south-1)
+
+echo "ALB ARN: $ALB_ARN"
+ALB_DNS=$(aws elbv2 describe-load-balancers \
+  --load-balancer-arns $ALB_ARN \
+  --query 'LoadBalancers[0].DNSName' \
+  --output text --region ap-south-1)
+echo "ALB DNS: $ALB_DNS"</code>
+          <div class="snote">The ALB must span at least 2 subnets in different AZs. This is why Day 4 created subnets in both 1a and 1b. Without multi-AZ, ALB creation fails.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create a target group with production health check configuration</div>
+          <div class="sb">Create the target group with the health check settings we discussed — 15-second interval, 3 healthy threshold, readiness-appropriate path, and 60-second deregistration delay.</div>
+          <code class="cmd"># Create target group with production-grade health check settings
+TG_ARN=$(aws elbv2 create-target-group \
+  --name getwork-app-tg \
+  --protocol HTTP \
+  --port 8080 \
+  --vpc-id $VPC_ID \
+  --health-check-protocol HTTP \
+  --health-check-path /actuator/health \
+  --health-check-interval-seconds 15 \
+  --health-check-timeout-seconds 5 \
+  --healthy-threshold-count 3 \
+  --unhealthy-threshold-count 2 \
+  --matcher HttpCode=200 \
+  --target-type instance \
+  --query 'TargetGroups[0].TargetGroupArn' \
+  --output text --region ap-south-1)
+
+echo "Target Group ARN: $TG_ARN"
+
+# Configure deregistration delay (connection draining) — 60s for REST API
+aws elbv2 modify-target-group-attributes \
+  --target-group-arn $TG_ARN \
+  --attributes \
+    Key=deregistration_delay.timeout_seconds,Value=60 \
+    Key=slow_start.duration_seconds,Value=120 \
+  --region ap-south-1
+
+# Create HTTP listener (port 80) — redirect all traffic to HTTPS
+# For this lab, we'll use port 80 forwarding (no TLS cert required)
+aws elbv2 create-listener \
+  --load-balancer-arn $ALB_ARN \
+  --protocol HTTP \
+  --port 80 \
+  --default-actions Type=forward,TargetGroupArn=$TG_ARN \
+  --region ap-south-1</code>
+          <div class="snote">Note the --matcher HttpCode=200. This accepts ONLY 200 responses. The default 200-499 would consider a misconfigured app returning 401 as "healthy." In production, use your actual health endpoint; the lab uses /actuator/health since that's what the Day 7 EC2 has.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create an Auto Scaling Group using your Day 7 Launch Template</div>
+          <div class="sb">Create the ASG referencing your Day 7 Launch Template, configured across both private subnets, with the ALB target group attachment. Set min/desired/max appropriately for a development environment.</div>
+          <code class="cmd">PRIV_SUBNET_1A=subnet-your-private-1a
+PRIV_SUBNET_1B=subnet-your-private-1b
+LT_ID=lt-your-launch-template-id  # From Day 7 lab
+
+# Create ASG referencing the Launch Template
+aws autoscaling create-auto-scaling-group \
+  --auto-scaling-group-name getwork-asg \
+  --launch-template "LaunchTemplateId=$LT_ID,Version=\$Latest" \
+  --min-size 1 \
+  --max-size 4 \
+  --desired-capacity 2 \
+  --vpc-zone-identifier "$PRIV_SUBNET_1A,$PRIV_SUBNET_1B" \
+  --target-group-arns $TG_ARN \
+  --health-check-type ELB \
+  --health-check-grace-period 120 \
+  --default-cooldown 180 \
+  --tags Key=Name,Value=getwork-app,PropagateAtLaunch=true \
+  --region ap-south-1
+
+echo "ASG created — instances launching in private subnets..."
+
+# Watch instances launch and register with target group
+watch -n 10 "aws autoscaling describe-auto-scaling-groups \
+  --auto-scaling-group-names getwork-asg \
+  --query 'AutoScalingGroups[0].Instances[*].{ID:InstanceId,State:LifecycleState,Health:HealthStatus}' \
+  --output table --region ap-south-1"</code>
+          <div class="snote">health-check-type ELB means the ASG uses the ALB's health check (your Actuator endpoint) as the source of truth for instance health — not just the EC2 system status check. health-check-grace-period=120 gives instances 2 minutes to pass their first ALB health check before being considered unhealthy by the ASG.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Add a target tracking scaling policy</div>
+          <div class="sb">Attach a target tracking policy based on ALBRequestCountPerTarget. Then manually generate load and observe the ASG scale out automatically.</div>
+          <code class="cmd"># Add target tracking scaling policy
+# Target: 100 requests/second per instance (low for lab testing)
+aws autoscaling put-scaling-policy \
+  --auto-scaling-group-name getwork-asg \
+  --policy-name getwork-request-tracking \
+  --policy-type TargetTrackingScaling \
+  --target-tracking-configuration "{
+    \"TargetValue\": 100,
+    \"PredefinedMetricSpecification\": {
+      \"PredefinedMetricType\": \"ALBRequestCountPerTarget\",
+      \"ResourceLabel\": \"$(echo $ALB_ARN | sed 's|arn:aws:elasticloadbalancing:[^:]*:[^:]*:loadbalancer/||')/targetgroup/$(echo $TG_ARN | sed 's|arn:aws:elasticloadbalancing:[^:]*:[^:]*:targetgroup/||')\"
+    },
+    \"ScaleInCooldown\": 300,
+    \"ScaleOutCooldown\": 60
+  }" --region ap-south-1
+
+# Check policy was created
+aws autoscaling describe-policies \
+  --auto-scaling-group-name getwork-asg \
+  --query 'ScalingPolicies[*].{Name:PolicyName,Type:PolicyType,Status:PolicyStatus}' \
+  --output table --region ap-south-1</code>
+          <div class="snote">The ResourceLabel format is critical — it must reference both the ALB and the target group in a specific format. The sed commands extract the relevant parts from the ARNs. This is one of the trickier AWS CLI operations to get right.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Simulate instance failure and observe ASG self-healing</div>
+          <div class="sb">Terminate one of the ASG's instances manually. Observe that the ASG detects the unhealthy instance and launches a replacement automatically — the self-healing behaviour that makes ASG-based deployments reliable.</div>
+          <code class="cmd"># Get current instances in the ASG
+aws autoscaling describe-auto-scaling-groups \
+  --auto-scaling-group-names getwork-asg \
+  --query 'AutoScalingGroups[0].Instances[*].{ID:InstanceId,AZ:AvailabilityZone,Health:HealthStatus}' \
+  --output table --region ap-south-1
+
+# Terminate one instance (replace INSTANCE_ID with actual ID)
+INSTANCE_ID=i-one-of-your-instances
+aws ec2 terminate-instances --instance-ids $INSTANCE_ID --region ap-south-1
+
+# Watch the ASG detect the termination and launch a replacement
+# Refresh every 10 seconds
+for i in $(seq 1 20); do
+  echo "=== Check $i at $(date +%H:%M:%S) ==="
+  aws autoscaling describe-auto-scaling-groups \
+    --auto-scaling-group-names getwork-asg \
+    --query 'AutoScalingGroups[0].{Desired:DesiredCapacity,Min:MinSize,
+     Instances:Instances[*].{ID:InstanceId,State:LifecycleState,Health:HealthStatus}}' \
+    --output json --region ap-south-1
+  sleep 10
+done</code>
+          <div class="snote">Within 30-60 seconds, the ASG detects the terminated instance and begins launching a replacement to maintain desired capacity. The ALB routes traffic to the remaining healthy instance(s) during the replacement. This self-healing is automatic — no operator intervention required.</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Trigger an Instance Refresh (rolling deployment simulation)</div>
+          <div class="sb">Simulate a deployment by triggering an Instance Refresh. Observe the rolling replacement process and how the ASG maintains minimum healthy percentage throughout.</div>
+          <code class="cmd"># Update Launch Template with a new version (simulate a code change)
+aws ec2 create-launch-template-version \
+  --launch-template-id $LT_ID \
+  --source-version 1 \
+  --version-description "v2 - simulated deployment" \
+  --launch-template-data '{"TagSpecifications":[{"ResourceType":"instance","Tags":[
+    {"Key":"Name","Value":"getwork-app"},
+    {"Key":"AppVersion","Value":"2.0.0"}
+  ]}]}' --region ap-south-1
+
+# Start an Instance Refresh to roll out the new version
+REFRESH_ID=$(aws autoscaling start-instance-refresh \
+  --auto-scaling-group-name getwork-asg \
+  --desired-configuration LaunchTemplate="{LaunchTemplateId=$LT_ID,Version=\$Latest}" \
+  --preferences '{
+    "MinHealthyPercentage": 50,
+    "InstanceWarmup": 90,
+    "CheckpointPercentages": [50],
+    "CheckpointDelay": 120
+  }' \
+  --query 'InstanceRefreshId' --output text --region ap-south-1)
+
+echo "Instance Refresh started: $REFRESH_ID"
+
+# Monitor the refresh progress
+aws autoscaling describe-instance-refreshes \
+  --auto-scaling-group-name getwork-asg \
+  --instance-refresh-ids $REFRESH_ID \
+  --query 'InstanceRefreshes[0].{Status:Status,Progress:PercentageComplete,Trigger:Trigger}' \
+  --output json --region ap-south-1</code>
+          <div class="snote">Watch the checkpoint at 50% — the refresh pauses for 120 seconds (the CheckpointDelay) for you to validate. This is where you'd check error rates and latency in production. To continue: aws autoscaling complete-instance-refresh. To cancel: aws autoscaling cancel-instance-refresh.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s7" onclick="done('s7')">7</div></div>
+        <div class="ls-r">
+          <div class="st">Clean up — stop ASG, delete ALB (keep VPC for Day 9)</div>
+          <div class="sb">Clean up the ALB and ASG to stop costs. Keep the VPC, subnets, and security groups — Day 9 adds RDS to this infrastructure.</div>
+          <code class="cmd"># Set ASG desired to 0 (terminates all instances)
+aws autoscaling update-auto-scaling-group \
+  --auto-scaling-group-name getwork-asg \
+  --min-size 0 --desired-capacity 0 --max-size 0 \
+  --region ap-south-1
+
+# Wait for instances to terminate
+aws autoscaling wait group-in-service \
+  --auto-scaling-group-name getwork-asg --region ap-south-1
+
+# Delete ALB listener, target group, and ALB
+LISTENER_ARN=$(aws elbv2 describe-listeners \
+  --load-balancer-arn $ALB_ARN \
+  --query 'Listeners[0].ListenerArn' --output text --region ap-south-1)
+
+aws elbv2 delete-listener --listener-arn $LISTENER_ARN --region ap-south-1
+aws elbv2 delete-load-balancer --load-balancer-arn $ALB_ARN --region ap-south-1
+aws elbv2 delete-target-group --target-group-arn $TG_ARN --region ap-south-1
+
+# Delete ASG (after instances are terminated)
+aws autoscaling delete-auto-scaling-group \
+  --auto-scaling-group-name getwork-asg \
+  --force-delete --region ap-south-1
+
+echo "Cleanup complete. VPC, subnets, SGs preserved for Day 9."</code>
+          <div class="snote">ALB costs ~$0.02/hr even with no traffic. Setting desired to 0 terminates all instances first (EC2 costs stop), then deleting the ALB stops the fixed LB cost. The NAT Gateway from Day 4 should still be deleted if you left it running.</div>
+          <button class="mbtn" onclick="done('s7')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[7])">Day 8 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Day 8 — ALB & Auto Scaling mechanics</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">ALB is a full proxy</div><div class="cs-d">Terminates client TCP + TLS. Opens a new TCP to the backend. Two separate connections. X-Forwarded-For carries real client IP. Configure server.forward-headers-strategy=native in Spring Boot.</div></div>
+      <div class="cs-item"><div class="cs-t">ALB header size limit</div><div class="cs-d">16KB total header size. Large JWT tokens + other headers can exceed this. Returns HTTP 460. Solutions: reduce JWT payload, use opaque tokens, or pass tokens in request body.</div></div>
+      <div class="cs-item"><div class="cs-t">Deregistration delay</div><div class="cs-d">Default 300s. For REST APIs with p99 < 5s: set to 30-60s. For WebSocket: either extend or implement graceful close. Slow deployments are often caused by leaving at 300s.</div></div>
+      <div class="cs-item"><div class="cs-t">Slow Start Mode</div><div class="cs-d">Gradually ramps new target from 0% to 100% of traffic share over the configured duration (30-900s). Prevents overwhelming cold JVM instances with full production load immediately.</div></div>
+      <div class="cs-item"><div class="cs-t">ALB vs NLB</div><div class="cs-d">ALB: Layer 7, HTTP routing, ~1ms latency. NLB: Layer 4, TCP pass-through, sub-ms, static IPs, source IP preserved. Use NLB for non-HTTP, IP whitelisting, PrivateLink, ultra-low latency.</div></div>
+      <div class="cs-item"><div class="cs-t">ASG desired/min/max</div><div class="cs-d">Always set max > desired — rebalancing needs temporary headroom. min = HA baseline (never go below). desired = normal operating capacity. max = peak capacity ceiling.</div></div>
+      <div class="cs-item"><div class="cs-t">ASG AZ rebalancing</div><div class="cs-d">ASG auto-rebalances across AZs, temporarily exceeding desired capacity. Set max ≥ desired + 2 to allow rebalancing room. Constrained max blocks rebalancing.</div></div>
+      <div class="cs-item"><div class="cs-t">Lifecycle hooks</div><div class="cs-d">Launch hook: validate app is truly ready before ALB receives traffic. Terminate hook: gracefully drain jobs, release locks, upload logs before termination. Both have configurable heartbeat timeout.</div></div>
+      <div class="cs-item"><div class="cs-t">Instance Refresh</div><div class="cs-d">Rolling replacement mechanism. MinHealthyPercentage controls batch size. Checkpoints allow human/automated validation mid-deployment. Cancel = immediate halt, remaining fleet stays on old version.</div></div>
+      <div class="cs-item"><div class="cs-t">Warm Pools</div><div class="cs-d">Pre-initialised stopped/running instances waiting to join ASG. Reduces scale-out time from 3-5min to 60s. Stopped warm pool = EBS cost only (~free). Running = full EC2 cost.</div></div>
+      <div class="cs-item"><div class="cs-t">Target tracking metric</div><div class="cs-d">ALBRequestCountPerTarget is usually better than CPU for HTTP APIs. CPU works for CPU-bound apps. Custom metric for I/O-bound (DB connection wait time). 15-min scale-in delay built in.</div></div>
+      <div class="cs-item"><div class="cs-t">Health check — readiness vs liveness</div><div class="cs-d">ALB health check → /actuator/health/readiness (app ready to serve). ASG lifecycle → /actuator/health/liveness (process alive). Prevents mass termination during DB outages.</div></div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Non-negotiable rules for ALB + ASG production deployments</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      1. ALB health check must use --matcher HttpCode=200, not the default 200-499.<br>
+      2. Use /actuator/health/readiness for ALB health check, not the combined /actuator/health.<br>
+      3. Set deregistration delay to match your application's request duration — not the default 300s.<br>
+      4. Configure Slow Start Mode (90-180s) on target groups for JVM-based applications.<br>
+      5. Add server.forward-headers-strategy=native to Spring Boot — otherwise all requests appear to come from the ALB's IP.<br>
+      6. Set ASG max > desired by at least 2 — ASG rebalancing requires temporary headroom.<br>
+      7. Use health-check-type ELB (not EC2) so the ASG uses ALB readiness as source of truth.<br>
+      8. Use target tracking with ALBRequestCountPerTarget for HTTP APIs, not CPU.<br>
+      9. Instance Refresh MinHealthyPercentage ≤ (1 - 1/desired) × 100 to allow at least 1 instance replacement at a time.<br>
+      10. Set HTTP-to-HTTPS redirect as a listener rule on port 80 — this is not automatic.
+    </div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

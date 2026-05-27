@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise REST API Design - Deep Space Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --space-dark: #030014;
+        --neon-cyan: #22d3ee;
+        --neon-pink: #f472b6;
+        --neon-purple: #a855f7;
+        --neon-red: #f43f5e;
+        --neon-green: #34d399;
+        --neon-orange: #fb923c;
+        --panel-bg: rgba(9, 9, 14, 0.9);
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Flex Layout */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--space-dark); position: relative;
+        box-shadow: 0 0 50px rgba(168, 85, 247, 0.2); border: 1px solid #2e1065;
+        display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* Deep Space Background */
+    .space-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #030014 70%); z-index: 0;
+    }
+    
+    .stars {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 200px 50px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 250px 90px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 300px 150px, #ffffff, rgba(0,0,0,0));
+        background-repeat: repeat; background-size: 400px 200px;
+        opacity: 0.3; animation: drift 60s linear infinite; z-index: 0;
+    }
+
+    @keyframes drift { from { background-position: 0 0; } to { background-position: 0 400px; } }
+
+    /* Header - Fixed Top */
+    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
+        background: linear-gradient(to right, var(--neon-cyan), var(--neon-purple));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 4px; letter-spacing: -0.5px; text-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    }
+    .header p {
+        color: var(--neon-cyan); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Visual Canvas Area - Top Half */
+    .canvas {
+        flex: 1.2; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 15px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scrollable Data Containers in Canvas */
+    .scroll-container {
+        width: 92%; max-height: 95%; overflow-y: auto; overflow-x: hidden;
+        background: var(--panel-bg); border: 1px solid rgba(168, 85, 247, 0.3);
+        border-radius: 8px; padding: 12px; backdrop-filter: blur(8px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .scroll-container::-webkit-scrollbar { width: 4px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: var(--neon-purple); border-radius: 4px; }
+
+    /* Tables */
+    .rest-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #e2e8f0; }
+    .rest-table th { text-align: left; padding: 6px 4px; color: var(--neon-cyan); border-bottom: 1px solid rgba(34, 211, 238, 0.3); text-transform: uppercase;}
+    .rest-table td { padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top;}
+    .rest-table tr:hover td { background: rgba(255,255,255,0.05); }
+    
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;}
+    .b-safe { background: rgba(52, 211, 153, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green);}
+    .b-unsafe { background: rgba(244, 63, 94, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red);}
+    .b-idemp { background: rgba(34, 211, 238, 0.2); color: var(--neon-cyan); border: 1px solid var(--neon-cyan);}
+    .b-nidemp { background: rgba(251, 146, 60, 0.2); color: var(--neon-orange); border: 1px solid var(--neon-orange);}
+
+    /* HTTP Conversation / Diagram */
+    .http-flow { display: flex; flex-direction: column; width: 100%; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+    .msg-client { align-self: flex-start; background: rgba(34, 211, 238, 0.1); border-left: 2px solid var(--neon-cyan); padding: 6px 8px; border-radius: 4px; width: 85%;}
+    .msg-server { align-self: flex-end; background: rgba(168, 85, 247, 0.1); border-right: 2px solid var(--neon-purple); padding: 6px 8px; border-radius: 4px; width: 85%; text-align: right;}
+    .code-hl { color: var(--neon-pink); font-weight: bold;}
+
+    /* Explainer Panel at Bottom - Bottom Half */
+    .explainer-panel {
+        background: rgba(3, 0, 20, 0.95);
+        padding: 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.5); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(168, 85, 247, 0.1); color: var(--neon-purple);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+        padding: 4px 10px; border-radius: 4px; margin-bottom: 10px; text-transform: uppercase;
+        border: 1px solid rgba(168, 85, 247, 0.3); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+        margin-bottom: 8px; letter-spacing: -0.5px;
+    }
+
+    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: #000; border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
+        box-shadow: inset 0 0 20px rgba(0,0,0,1);
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #22d3ee; } 
+    .c-fn { color: #a855f7; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-an { color: #fb923c; } 
+    .c-hi { background: rgba(168, 85, 247, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-purple); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan));
+        color: white; border: 1px solid var(--neon-cyan); padding: 14px 24px; border-radius: 8px;
+        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(168, 85, 247, 0.3); }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="space-bg"></div>
+    <div class="stars"></div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Enterprise REST API</h1>
+        <p>Beyond Textbook Theory</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        
+        <!-- Scene 1: Methods -->
+        <div class="scene-container active" id="scene-1">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px;">Method Contracts</div>
+                <table class="rest-table">
+                    <tr><th>Method</th><th>Properties</th><th>Common Mistake</th></tr>
+                    <tr>
+                        <td>GET</td><td><span class="badge b-safe">Safe</span> <span class="badge b-idemp">Idemp</span></td>
+                        <td>Passing parameters in body.</td>
+                    </tr>
+                    <tr>
+                        <td>POST</td><td><span class="badge b-unsafe">Unsafe</span> <span class="badge b-nidemp">Non-Idemp</span></td>
+                        <td>No idempotency key for payments.</td>
+                    </tr>
+                    <tr>
+                        <td>PUT</td><td><span class="badge b-unsafe">Unsafe</span> <span class="badge b-idemp">Idemp</span></td>
+                        <td>Using for partial updates.</td>
+                    </tr>
+                    <tr>
+                        <td>PATCH</td><td><span class="badge b-unsafe">Unsafe</span> <span class="badge b-nidemp">Non-Idemp</span></td>
+                        <td>Treating it identically to PUT.</td>
+                    </tr>
+                    <tr>
+                        <td>DELETE</td><td><span class="badge b-unsafe">Unsafe</span> <span class="badge b-idemp">Idemp</span></td>
+                        <td>Returning 404 on 2nd call (Breaks Idemp).</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Scene 2: Status Codes -->
+        <div class="scene-container" id="scene-2">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-orange); margin-bottom: 10px;">The 400 vs 422 vs 409 Rule</div>
+                <table class="rest-table">
+                    <tr><th>Code</th><th>Meaning</th><th>Example Scenario</th></tr>
+                    <tr>
+                        <td style="color:var(--neon-red); font-size:14px; font-weight:bold;">400</td>
+                        <td style="color:#fff;">Bad Request<br><span style="color:var(--neon-purple); font-size:8px;">MALFORMED</span></td>
+                        <td>Syntax error, missing curly brace, totally invalid JSON format.</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--neon-orange); font-size:14px; font-weight:bold;">422</td>
+                        <td style="color:#fff;">Unprocessable<br><span style="color:var(--neon-purple); font-size:8px;">VALIDATION</span></td>
+                        <td>Valid JSON, but business rule fails (e.g. <code>age &lt; 0</code>).</td>
+                    </tr>
+                    <tr>
+                        <td style="color:var(--neon-cyan); font-size:14px; font-weight:bold;">409</td>
+                        <td style="color:#fff;">Conflict<br><span style="color:var(--neon-purple); font-size:8px;">STATE</span></td>
+                        <td>Request is perfectly valid, but DB state rejects it (e.g. Email exists).</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Scene 3: URIs -->
+        <div class="scene-container" id="scene-3">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-purple); margin-bottom: 10px;">URI Rules & Versioning</div>
+                <div style="font-family: monospace; font-size: 10px; color: #cbd5e1; margin-bottom: 10px;">
+                    <span style="color:var(--neon-red);">BAD:</span> /createUser <br>
+                    <span style="color:var(--neon-green);">GOOD:</span> POST /users <br><br>
+                    <span style="color:var(--neon-red);">BAD (Deep Nested):</span> /users/1/orders/5/items/2 <br>
+                    <span style="color:var(--neon-green);">GOOD (Flat):</span> GET /orders/5/items/2
+                </div>
+                <table class="rest-table">
+                    <tr><th>Strategy</th><th>Pros / Cons</th></tr>
+                    <tr>
+                        <td style="color:var(--neon-cyan);">URI Path<br><code>/v1/users</code></td>
+                        <td><span style="color:var(--neon-green);">Best for routing. Easy to test in browser.</span></td>
+                    </tr>
+                    <tr>
+                        <td>Query Param<br><code>?v=1</code></td>
+                        <td>Messes up caching mechanisms.</td>
+                    </tr>
+                    <tr>
+                        <td>Header<br><code>X-Version: 1</code></td>
+                        <td>Hard to test in browser without tools like Postman.</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Scene 4: Pagination -->
+        <div class="scene-container" id="scene-4">
+            <div class="scroll-container" style="border-color: var(--neon-cyan);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px;">Offset vs Cursor</div>
+                <div style="font-family: monospace; font-size: 10px; color: #cbd5e1; line-height: 1.5;">
+                    <span style="color:var(--neon-red); font-weight:bold;">OFFSET (O(n)):</span><br>
+                    <code>LIMIT 100 OFFSET 500000</code><br>
+                    <span style="color:#94a3b8;">DB scans and discards 500k rows. Extremely slow.</span><br><br>
+                    
+                    <span style="color:var(--neon-green); font-weight:bold;">CURSOR (O(1)):</span><br>
+                    <code>WHERE (created_at, id) &lt; (?, ?)</code><br>
+                    <span style="color:#94a3b8;">Uses index to jump directly to exact row. ID resolves duplicate timestamps.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 5: Error Responses -->
+        <div class="scene-container" id="scene-5">
+            <div class="scroll-container" style="border-color: var(--neon-pink);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-pink); margin-bottom: 10px;">RFC 7807 Problem Detail</div>
+                <pre style="font-family: monospace; font-size: 10px; color: #e2e8f0; margin: 0;">
+{
+  <span style="color:var(--neon-cyan);">"type"</span>: <span style="color:var(--neon-green);">"https://api.com/errors/invalid"</span>,
+  <span style="color:var(--neon-cyan);">"title"</span>: <span style="color:var(--neon-green);">"Validation Failed"</span>,
+  <span style="color:var(--neon-cyan);">"status"</span>: <span style="color:var(--neon-orange);">422</span>,
+  <span style="color:var(--neon-cyan);">"detail"</span>: <span style="color:var(--neon-green);">"Your request params failed."</span>,
+  <span style="color:var(--neon-cyan);">"instance"</span>: <span style="color:var(--neon-green);">"/users/123"</span>,
+  <span style="color:var(--neon-pink);">"invalid_params"</span>: [
+    {
+      <span style="color:var(--neon-cyan);">"field"</span>: <span style="color:var(--neon-green);">"age"</span>,
+      <span style="color:var(--neon-cyan);">"reason"</span>: <span style="color:var(--neon-green);">"Must be greater than 18"</span>
+    }
+  ]
+}
+                </pre>
+            </div>
+        </div>
+
+        <!-- Scene 6: ETag Caching -->
+        <div class="scene-container" id="scene-6">
+            <div class="scroll-container" style="background: transparent; border:none; box-shadow:none;">
+                <div class="http-flow">
+                    <div class="msg-client">
+                        <span style="color:var(--neon-cyan); font-weight:bold;">CLIENT:</span><br>
+                        GET /users/1 HTTP/1.1
+                    </div>
+                    <div class="msg-server">
+                        <span style="color:var(--neon-purple); font-weight:bold;">SERVER:</span><br>
+                        200 OK<br>
+                        <span class="code-hl">ETag: "W/hash123"</span><br>
+                        {"name": "Zuber"}
+                    </div>
+                    <div style="text-align: center; color: var(--neon-orange);">[ Time Passes... ]</div>
+                    <div class="msg-client">
+                        <span style="color:var(--neon-cyan); font-weight:bold;">CLIENT:</span><br>
+                        GET /users/1 HTTP/1.1<br>
+                        <span class="code-hl">If-None-Match: "W/hash123"</span>
+                    </div>
+                    <div class="msg-server">
+                        <span style="color:var(--neon-green); font-weight:bold;">SERVER (Hash Match!):</span><br>
+                        <span class="code-hl">304 Not Modified</span><br>
+                        <span style="color:#94a3b8;">[Empty Body - Saves Bandwidth]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 7: HATEOAS & Rate Limits -->
+        <div class="scene-container" id="scene-7">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px;">The Truth About HATEOAS</div>
+                <div style="font-style: italic; font-size: 11px; color: #94a3b8; margin-bottom: 20px; border-left: 2px solid var(--neon-cyan); padding-left: 10px;">
+                    "Academics love HATEOAS (Hypermedia links in JSON). But in reality, unless you are building a highly generic, dynamically evolving platform, the overhead of managing dynamic links severely outweighs the benefits for standard mobile/web clients."
+                </div>
+                
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-purple); margin-bottom: 10px;">Standard Rate Limit Headers</div>
+                <div style="font-family: monospace; font-size: 11px; color: #cbd5e1;">
+                    HTTP/1.1 200 OK<br>
+                    <span style="color:var(--neon-cyan);">X-RateLimit-Limit: 100</span><br>
+                    <span style="color:var(--neon-green);">X-RateLimit-Remaining: 99</span><br>
+                    <span style="color:var(--neon-orange);">X-RateLimit-Reset: 16298123</span><br><br>
+                    
+                    HTTP/1.1 <span style="color:var(--neon-red); font-weight:bold;">429 Too Many Requests</span><br>
+                    <span style="color:var(--neon-pink); font-weight:bold;">Retry-After: 60</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[DAY_44_REST_API]</div>
+            <h2 id="explainer-title" class="explainer-title">Beyond Textbook REST</h2>
+            <p id="explainer-text" class="explainer-text">Most APIs aren't RESTful; they just throw JSON around. When operating at tier-1 scale, textbook theory fails against network drops and DB timeouts. Let's learn production API design.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initialize Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setScene(index) {
+        document.querySelectorAll('.scene-container').forEach((el, i) => {
+            if(i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+    }
+
+    const steps = [
+        {
+            badge: "Idempotency 1/7",
+            title: "Methods & Idempotency",
+            text: "Networks fail. Clients retry. If a POST is retried, you charge the user twice. Fix: Enforce an <code>Idempotency-Key</code> header. We lock it in Redis. If we see it again, we bypass logic and return the cached response.",
+            code: `
+<span class="c-kw">public</span> <span class="c-ty">ResponseEntity</span> <span class="c-fn">createPayment</span>(
+    <span class="c-an">@RequestHeader</span>(<span class="c-st">"Idem-Key"</span>) <span class="c-ty">String</span> key,
+    <span class="c-an">@RequestBody</span> <span class="c-ty">PaymentReq</span> req) {
+    
+<span class="c-hi">    <span class="c-ty">boolean</span> isNew = redis.opsForValue()
+        .setIfAbsent(key, <span class="c-st">"RUN"</span>, <span class="c-st">24</span>, HOURS);</span>
+        
+    <span class="c-kw">if</span> (!isNew) <span class="c-kw">return</span> getCached(key);
+    <span class="c-cm">// process and cache...</span>
+}
+            `,
+            action: async () => {
+                setScene(0);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Status Codes 2/7",
+            title: "400 vs 422 vs 409",
+            text: "Stop using <code>400 Bad Request</code> for everything. 400 means malformed JSON syntax. Use <code>422 Unprocessable Entity</code> for business validation failures (e.g. age < 0). Use <code>409 Conflict</code> when DB state rejects valid data (e.g. email exists).",
+            code: ``,
+            action: async () => {
+                setScene(1);
+                codeContainer.style.display = 'none';
+            }
+        },
+        {
+            badge: "Design 3/7",
+            title: "URI Design & Versioning",
+            text: "URIs are nouns (<code>/users</code>), not verbs (<code>/createUser</code>). Keep them FLAT. Avoid deep nesting like <code>/users/1/orders/5/items/2</code>. For versioning, URI path (<code>/v1/users</code>) is the most pragmatic for routing and logging.",
+            code: `
+<span class="c-cm">// Spring Boot Controller</span>
+<span class="c-an">@RestController</span>
+<span class="c-an">@RequestMapping</span>(<span class="c-st">"/v1/orders"</span>)
+<span class="c-kw">public class</span> <span class="c-ty">OrderController</span> {
+
+    <span class="c-an">@GetMapping</span>(<span class="c-st">"/{oId}/items/{iId}"</span>)
+    <span class="c-kw">public</span> <span class="c-ty">Item</span> <span class="c-fn">getItem</span>(<span class="c-an">@PathVariable</span> <span class="c-ty">Long</span> iId) {
+        <span class="c-kw">return</span> service.getItem(iId);
+    }
+}
+            `,
+            action: async () => {
+                setScene(2);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Performance 4/7",
+            title: "Cursor Pagination",
+            text: "<code>OFFSET 500000</code> crashes databases. Use Cursor Pagination with a Tuple <code>(created_at, id)</code> to instantly jump to the row via an index. The '+1 Trick': Request 11 rows for a page of 10. If 11 exist, we know there's a 'next page'.",
+            code: `
+<span class="c-cm">// Spring Data JPA Repository</span>
+<span class="c-an">@Query</span>(<span class="c-st">"SELECT o FROM Order o "</span> +
+<span class="c-hi">       <span class="c-st">"WHERE (o.createdAt, o.id) < (:d, :i) "</span> +</span>
+       <span class="c-st">"ORDER BY o.createdAt DESC, o.id DESC"</span>)
+<span class="c-ty">List</span>&lt;<span class="c-ty">Order</span>&gt; <span class="c-fn">findNextPage</span>(
+    <span class="c-an">@Param</span>(<span class="c-st">"d"</span>) <span class="c-ty">Instant</span> d, 
+    <span class="c-an">@Param</span>(<span class="c-st">"i"</span>) <span class="c-ty">Long</span> i, 
+    <span class="c-ty">Pageable</span> p); <span class="c-cm">// Set size to LIMIT + 1</span>
+
+<span class="c-cm">// Send Base64 cursor to client</span>
+            `,
+            action: async () => {
+                setScene(3);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Security 5/7",
+            title: "RFC 7807 Error Handling",
+            text: "Use the industry standard <code>ProblemDetail</code> JSON format. <strong>Security Rule:</strong> When handling a 500 Internal Server Error, explicitly suppress the exception message. Leaking SQL syntax or stack traces helps hackers map your backend.",
+            code: `
+<span class="c-an">@RestControllerAdvice</span>
+<span class="c-kw">public class</span> <span class="c-ty">GlobalExceptionHandler</span> {
+
+<span class="c-err">    <span class="c-cm">// Catch-all 500: DO NOT LEAK DETAILS!</span></span>
+    <span class="c-an">@ExceptionHandler</span>(<span class="c-ty">Exception</span>.class)
+    <span class="c-kw">public</span> <span class="c-ty">ProblemDetail</span> <span class="c-fn">handle500</span>(<span class="c-ty">Exception</span> ex) {
+        log.error(<span class="c-st">"Trace: "</span>, ex); <span class="c-cm">// Log internally</span>
+<span class="c-hi">        <span class="c-kw">return</span> ProblemDetail.forStatusAndDetail(
+            <span class="c-ty">HttpStatus</span>.INTERNAL_SERVER_ERROR, 
+            <span class="c-st">"An unexpected error occurred."</span>
+        );</span>
+    }
+}
+            `,
+            action: async () => {
+                setScene(4);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Bandwidth 6/7",
+            title: "HTTP Caching (ETags)",
+            text: "Save bandwidth and CPU with ETags (Entity Tags). You return a hash of the data. The client requests again with <code>If-None-Match: hash</code>. If it matches, return <code>304 Not Modified</code> with an empty body.",
+            code: `
+<span class="c-an">@GetMapping</span>(<span class="c-st">"/{id}"</span>)
+<span class="c-kw">public</span> <span class="c-ty">ResponseEntity</span>&lt;<span class="c-ty">User</span>&gt; <span class="c-fn">getUser</span>(<span class="c-an">@PathVariable</span> <span class="c-ty">Long</span> id) {
+    <span class="c-ty">User</span> user = service.getUser(id);
+    <span class="c-ty">String</span> eTag = generateHash(user);
+    
+    <span class="c-kw">return</span> <span class="c-ty">ResponseEntity</span>.ok()
+<span class="c-hi">        .cacheControl(<span class="c-ty">CacheControl</span>.maxAge(<span class="c-st">1</span>, HOURS))
+        .eTag(eTag)</span>
+        .body(user);
+}
+            `,
+            action: async () => {
+                setScene(5);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Operations 7/7",
+            title: "HATEOAS & Rate Limits",
+            text: "HATEOAS is often academic overkill. Focus instead on Rate Limiting. Every API response should include standard limit headers. On a 429 error, ALWAYS include a <code>Retry-After</code> header so clients throttle elegantly.",
+            code: `
+<span class="c-cm">// Spring OncePerRequestFilter attaching limits</span>
+<span class="c-kw">public class</span> <span class="c-ty">RateLimitFilter</span> <span class="c-kw">extends</span> <span class="c-ty">OncePerRequestFilter</span> {
+    <span class="c-hi">@Override</span>
+    <span class="c-kw">protected void</span> <span class="c-fn">doFilterInternal</span>(req, res, chain) {
+        <span class="c-ty">RateLimit</span> limit = limitService.check(req);
+<span class="c-hi">        res.addHeader(<span class="c-st">"X-RateLimit-Limit"</span>, limit.max());
+        res.addHeader(<span class="c-st">"X-RateLimit-Remaining"</span>, limit.rem());</span>
+        
+        <span class="c-kw">if</span> (!limit.isAllowed()) {
+            res.setStatus(<span class="c-st">429</span>);
+<span class="c-hi">            res.addHeader(<span class="c-st">"Retry-After"</span>, limit.reset());</span>
+            <span class="c-kw">return</span>;
+        }
+        chain.doFilter(req, res);
+    }
+}
+            `,
+            action: async () => {
+                setScene(6);
+                codeContainer.style.display = 'block';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            setScene(-1); // Hide all
+            codeContainer.style.display = 'none';
+
+            badge.innerText = "[DAY_44_REST_API]";
+            title.innerText = "Beyond Textbook REST";
+            text.innerHTML = "Most APIs aren't RESTful; they just throw JSON around. When operating at tier-1 scale, textbook theory fails against network drops and DB timeouts. Let's learn production API design.";
+            btnNext.innerText = "Initialize Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

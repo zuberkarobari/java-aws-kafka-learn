@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Boot 3-Tier Architecture</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+    :root {
+        --bg-void: #02040a;
+        --bg-panel: rgba(10, 15, 25, 0.85);
+        --neon-cyan: #00f0ff;
+        --neon-blue: #0044ff;
+        --neon-green: #00ff41;
+        --neon-purple: #bd00ff;
+        --alert-red: #ff003c;
+        --text-bright: #e2f1ff;
+        --text-dim: #6b8ea5;
+        --border-glass: rgba(0, 240, 255, 0.15);
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: var(--text-bright);
+        font-family: 'Rajdhani', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Container with strict flex layout to prevent overlap */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-void); position: relative;
+        box-shadow: 0 0 60px rgba(0, 240, 255, 0.1); 
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 20px; border: 1px solid #112233;
+    }
+
+    /* Hex Grid Background */
+    .hex-grid {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: url("data:image/svg+xml,%3Csvg width='40' height='69.28203230275509' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 17.32050807568877l-20 11.547005383792516L0 17.32050807568877 0 0l20 11.547005383792516L40 0z' fill='none' stroke='rgba(0, 240, 255, 0.05)' stroke-width='1'/%3E%3Cpath d='M20 51.96152422706631l-20-11.547005383792516V28.867513459481283l20 11.547005383792516zM40 51.96152422706631l-20-11.547005383792516V28.867513459481283l20 11.547005383792516z' fill='none' stroke='rgba(0, 240, 255, 0.05)' stroke-width='1'/%3E%3C/svg%3E");
+        z-index: 0; pointer-events: none;
+    }
+
+    /* Header */
+    .header { padding: 20px 24px 5px; text-align: center; z-index: 10; position: relative; flex-shrink: 0;}
+    .sys-log {
+        font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--neon-cyan);
+        text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px;
+        text-shadow: 0 0 5px var(--neon-cyan);
+    }
+    .header h1 {
+        font-family: 'Rajdhani', sans-serif; font-size: 26px; font-weight: 700; color: #fff;
+        margin: 0; letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    /* Center Canvas - Flex scaled to never overlap the bottom panel */
+    .canvas {
+        flex: 1.5; position: relative; z-index: 5; display: flex;
+        flex-direction: column; align-items: center; justify-content: flex-start;
+        padding-top: 10px; overflow-y: auto; scroll-behavior: smooth;
+    }
+    .canvas::-webkit-scrollbar { display: none; }
+
+    /* The Pipeline Structure */
+    .pipeline {
+        position: relative; display: flex; flex-direction: column; align-items: center;
+        width: 100%; padding: 20px 0; gap: 40px;
+    }
+
+    .data-spine {
+        position: absolute; top: 30px; bottom: 30px; left: 50%; width: 2px;
+        background: var(--text-dim); transform: translateX(-50%); z-index: 1; opacity: 0.3;
+    }
+
+    /* Mainframe Nodes */
+    .tier-node {
+        width: 220px; background: rgba(5, 10, 20, 0.9);
+        border: 1px solid var(--text-dim); border-radius: 8px;
+        padding: 12px 15px; text-align: center; z-index: 10; position: relative;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+        transform: scale(0.9); opacity: 0.5; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .tier-node.active {
+        transform: scale(1.05); opacity: 1; border-color: var(--neon-cyan);
+        box-shadow: 0 0 25px rgba(0, 240, 255, 0.2), inset 0 0 10px rgba(0, 240, 255, 0.1);
+    }
+
+    .t-icon { font-size: 20px; margin-bottom: 4px; display: block; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));}
+    .t-title { font-family: 'Share Tech Mono', monospace; font-size: 14px; font-weight: bold; color: #fff; letter-spacing: 1px;}
+    .t-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); margin-top: 4px; text-transform: uppercase;}
+
+    /* Special Node Active Colors */
+    #tier-service.active { border-color: var(--neon-purple); box-shadow: 0 0 25px rgba(189, 0, 255, 0.3), inset 0 0 10px rgba(189, 0, 255, 0.1); }
+    #tier-service.active .t-title { color: var(--neon-purple); }
+    
+    #tier-repo.active { border-color: var(--neon-green); box-shadow: 0 0 25px rgba(0, 255, 65, 0.2), inset 0 0 10px rgba(0, 255, 65, 0.1); }
+    #tier-repo.active .t-title { color: var(--neon-green); }
+
+    /* Animated Data Packet */
+    .packet {
+        position: absolute; background: #fff; color: #000; padding: 4px 10px; border-radius: 4px;
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold;
+        z-index: 20; opacity: 0; transition: top 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s;
+        box-shadow: 0 0 15px rgba(255,255,255,0.8); left: 50%; transform: translate(-50%, -50%);
+        pointer-events: none; border: 1px solid transparent;
+    }
+    
+    .pkt-req { background: var(--neon-cyan); box-shadow: 0 0 20px var(--neon-cyan); }
+    .pkt-dto { background: var(--neon-purple); box-shadow: 0 0 20px var(--neon-purple); color: #fff;}
+    .pkt-entity { background: var(--neon-green); box-shadow: 0 0 20px var(--neon-green); color: #000;}
+
+    /* Golden Boundary visual */
+    .boundary-line {
+        position: absolute; width: 280px; height: 2px; background: var(--alert-red);
+        top: 155px; left: 50%; transform: translateX(-50%); z-index: 5; opacity: 0; transition: opacity 0.5s;
+        box-shadow: 0 0 15px var(--alert-red);
+    }
+    .boundary-text {
+        position: absolute; right: -60px; top: -8px; font-family: monospace; font-size: 8px; color: var(--alert-red);
+        font-weight: bold; background: rgba(0,0,0,0.8); padding: 2px 4px; border-radius: 2px;
+    }
+
+    /* Database Cylinder */
+    .db-cylinder {
+        width: 80px; height: 60px; border: 2px solid var(--text-dim); border-radius: 40px / 15px;
+        position: relative; margin-top: 10px; display: flex; align-items: center; justify-content: center;
+        background: rgba(255,255,255,0.02); opacity: 0.5; transition: all 0.5s;
+    }
+    .db-cylinder::before {
+        content: ''; position: absolute; top: -2px; left: -2px; right: -2px; height: 30px;
+        border: 2px solid var(--text-dim); border-radius: 40px / 15px; border-bottom: none;
+    }
+    .db-cylinder.active {
+        border-color: var(--neon-green); opacity: 1; box-shadow: 0 10px 30px rgba(0, 255, 65, 0.2);
+    }
+    .db-cylinder.active::before { border-color: var(--neon-green); }
+
+    /* Matrix Summary */
+    .matrix-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; gap: 10px; padding: 10px 20px;
+        opacity: 0; pointer-events: none; transition: opacity 0.5s; overflow-y: auto; justify-content: center; z-index: 25;
+        background: rgba(2, 4, 10, 0.95); backdrop-filter: blur(5px);
+    }
+    .m-card {
+        background: rgba(10, 15, 25, 0.9); border: 1px solid var(--border-glass);
+        border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .m-title { font-family: 'Share Tech Mono', monospace; font-weight: 800; font-size: 15px;}
+    .m-desc { font-size: 12px; color: var(--text-bright); line-height: 1.5; font-family: 'Inter', sans-serif;}
+
+    /* Bottom Explainer Panel - strictly sized to prevent overlap */
+    .explainer-panel {
+        background: rgba(5, 8, 15, 0.95); padding: 16px 24px 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; justify-content: flex-end;
+        border-top: 1px solid rgba(0, 240, 255, 0.3); box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+        backdrop-filter: blur(12px); flex-shrink: 0; min-height: 250px;
+    }
+    
+    .explainer-content { flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 8px; }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: var(--neon-cyan); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(0, 240, 255, 0.1); color: var(--neon-cyan);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+        padding: 4px 10px; border-radius: 4px; margin-bottom: 8px; text-transform: uppercase;
+        border: 1px solid rgba(0, 240, 255, 0.3); letter-spacing: 1px;
+    }
+
+    .explainer-title {
+        font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: 800; color: #fff;
+        margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+
+    .explainer-text { font-size: 13px; color: var(--text-dim); line-height: 1.5; margin-bottom: 10px; }
+
+    .code-block {
+        background: #000; border: 1px solid var(--border-glass); border-radius: 8px;
+        padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 5px; overflow-x: auto;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+    
+    .c-kw { color: var(--neon-purple); font-weight: bold; } 
+    .c-ty { color: var(--neon-cyan); } 
+    .c-st { color: var(--neon-green); } 
+    .c-cm { color: #475569; font-style: italic; } 
+    .c-an { color: var(--neon-cyan); font-weight: bold;}
+    
+    .btn-next {
+        background: transparent; color: var(--neon-cyan); border: 1px solid var(--neon-cyan);
+        padding: 12px 24px; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.2s;
+        width: 100%; font-family: 'Share Tech Mono', monospace; text-transform: uppercase; letter-spacing: 2px;
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.2), inset 0 0 10px rgba(0, 240, 255, 0.1);
+        display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px;
+    }
+    .btn-next:active { transform: translateY(2px); background: rgba(0, 240, 255, 0.1); }
+    .btn-next::before { content: '>'; color: #fff; animation: blink 1s infinite; }
+
+    @keyframes blink { 0%, 100% {opacity: 1;} 50% {opacity: 0;} }
+
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="hex-grid"></div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <div class="sys-log">ARCH // SPRING_BOOT_3_TIER</div>
+        <h1>The 3-Tier Architecture</h1>
+    </div>
+
+    <div class="canvas" id="canvas">
+        
+        <div class="pipeline" id="pipeline">
+            <div class="data-spine"></div>
+            
+            <div class="packet" id="packet">REQ</div>
+
+            <div class="boundary-line" id="boundary"><div class="boundary-text">STRICT ISOLATION</div></div>
+
+            <!-- Tier 1 -->
+            <div class="tier-node" id="tier-ctrl">
+                <span class="t-icon">🚪</span>
+                <div class="t-title">Presentation Layer</div>
+                <div class="t-sub">@RestController (Traffic Cop)</div>
+            </div>
+
+            <!-- Tier 2 -->
+            <div class="tier-node" id="tier-service">
+                <span class="t-icon">🧠</span>
+                <div class="t-title">Business Logic Layer</div>
+                <div class="t-sub">@Service (The Brain)</div>
+            </div>
+
+            <!-- Tier 3 -->
+            <div class="tier-node" id="tier-repo">
+                <span class="t-icon">🗄️</span>
+                <div class="t-title">Data Access Layer</div>
+                <div class="t-sub">@Repository (Database Broker)</div>
+            </div>
+
+            <div class="db-cylinder" id="db-cyl">
+                <span style="font-family: monospace; font-size: 10px; font-weight: bold; color: var(--text-dim);" id="db-text">SQL</span>
+            </div>
+        </div>
+
+        <!-- Matrix Summary -->
+        <div class="matrix-container" id="matrix">
+            <div class="m-card">
+                <div class="m-title" style="color:var(--neon-cyan);">1. Controller</div>
+                <div class="m-desc">Handles HTTP routing, extracts JSON/params, maps to DTOs, and returns HTTP status codes. <strong>Never</strong> calculates business rules.</div>
+            </div>
+            <div class="m-card">
+                <div class="m-title" style="color:var(--neon-purple);">2. Service</div>
+                <div class="m-desc">Independent of HTTP. Executes core domain logic, calculates data, and manages <code>@Transactional</code> boundaries.</div>
+            </div>
+            <div class="m-card">
+                <div class="m-title" style="color:var(--neon-green);">3. Repository</div>
+                <div class="m-desc">Strictly translates Java operations into SQL/NoSQL queries. Abstracted via Spring Data JPA.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[INITIALIZATION]</div>
+            <h2 id="explainer-title" class="explainer-title">The Fat Controller Problem</h2>
+            <p id="explainer-text" class="explainer-text">If you put database queries directly inside your REST controllers, your application is a ticking time bomb. Enterprise Spring Boot strictly enforces a 3-Tier Architecture to separate concerns. Let's decrypt the flow.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Execute Trace</button>
+    </div>
+</div>
+
+<script>
+    const btnNext = document.getElementById('btn-next');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const badge = document.getElementById('step-badge');
+    const codeContainer = document.getElementById('code-container');
+    
+    // Canvas Elements
+    const pkt = document.getElementById('packet');
+    const tCtrl = document.getElementById('tier-ctrl');
+    const tSvc = document.getElementById('tier-service');
+    const tRepo = document.getElementById('tier-repo');
+    const dbCyl = document.getElementById('db-cyl');
+    const dbText = document.getElementById('db-text');
+    const boundary = document.getElementById('boundary');
+    const matrix = document.getElementById('matrix');
+    const pipeline = document.getElementById('pipeline');
+
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // Calculate dynamic top positions based on DOM
+    function getPacketTop(elementId) {
+        const el = document.getElementById(elementId);
+        // Returns the center Y of the element relative to the pipeline container
+        return el.offsetTop + (el.offsetHeight / 2);
+    }
+
+    function setPkt(state, txt, topPos) {
+        pkt.innerText = txt;
+        pkt.style.top = topPos + 'px';
+        if(state === 'req') {
+            pkt.className = 'packet pkt-req';
+        } else if (state === 'dto') {
+            pkt.className = 'packet pkt-dto';
+        } else if (state === 'entity') {
+            pkt.className = 'packet pkt-entity';
+        }
+        pkt.style.opacity = '1';
+    }
+
+    const steps = [
+        {
+            badge: "Tier 1/3", title: "The Presentation Layer",
+            text: "Your <code>@RestController</code> acts strictly as a bouncer at the door. It intercepts the HTTP request, validates the JSON payload, maps it to a DTO, and hands it off. <strong>Zero business logic belongs here.</strong>",
+            code: `
+<span class="c-an">@RestController</span>
+<span class="c-kw">public class</span> <span class="c-ty">OrderController</span> {
+    
+    <span class="c-cm">// Purely handles HTTP routing & extraction</span>
+    <span class="c-an">@PostMapping</span>(<span class="c-st">"/orders"</span>)
+    <span class="c-kw">public</span> <span class="c-ty">OrderDto</span> <span class="c-fn">create</span>(<span class="c-an">@RequestBody</span> <span class="c-ty">OrderReq</span> req) {
+        <span class="c-kw">return</span> orderService.process(req);
+    }
+}
+            `,
+            action: async () => {
+                codeContainer.style.display = 'block';
+                
+                // Activate Controller
+                tCtrl.classList.add('active');
+                
+                // Packet arrives at Controller
+                setPkt('req', 'HTTP JSON', 0); // start at top
+                await sleep(100);
+                pkt.style.top = getPacketTop('tier-ctrl') + 'px';
+            }
+        },
+        {
+            badge: "Tier 2/3", title: "The Business Logic Layer",
+            text: "The Controller passes the DTO down to the <code>@Service</code>. This is the true brain. You calculate taxes, enforce rules, and establish <code>@Transactional</code> boundaries so failing operations roll back safely.",
+            code: `
+<span class="c-an">@Service</span>
+<span class="c-kw">public class</span> <span class="c-ty">OrderService</span> {
+    
+    <span class="c-cm">// Guarantees all-or-nothing DB execution</span>
+    <span class="c-an">@Transactional</span>
+    <span class="c-kw">public</span> <span class="c-ty">OrderDto</span> <span class="c-fn">process</span>(<span class="c-ty">OrderReq</span> req) {
+        <span class="c-ty">Order</span> entity = mapper.toEntity(req);
+        <span class="c-cm">// ... enforce complex business rules ...</span>
+        <span class="c-kw">return</span> mapper.toDto(repository.save(entity));
+    }
+}
+            `,
+            action: async () => {
+                tCtrl.classList.remove('active');
+                tSvc.classList.add('active');
+                
+                // Packet transforms to DTO and moves to Service
+                setPkt('dto', 'Req DTO', getPacketTop('tier-ctrl'));
+                await sleep(100);
+                pkt.style.top = getPacketTop('tier-service') + 'px';
+            }
+        },
+        {
+            badge: "Tier 3/3", title: "The Data Access Layer",
+            text: "The Service calls the <code>@Repository</code>. Isolated from the outside world, Spring Data JPA dynamically generates highly-optimized SQL queries at runtime to talk to your database. No manual SQL strings needed.",
+            code: `
+<span class="c-cm">// Spring generates the SQL automatically</span>
+<span class="c-an">@Repository</span>
+<span class="c-kw">public interface</span> <span class="c-ty">OrderRepository</span> 
+       <span class="c-kw">extends</span> <span class="c-ty">JpaRepository</span>&lt;Order, Long&gt; {
+       
+    <span class="c-cm">// Custom query generated from method name!</span>
+    <span class="c-ty">List</span>&lt;Order&gt; <span class="c-fn">findByStatusAndTotalGreaterThan</span>(
+        <span class="c-ty">String</span> status, <span class="c-ty">Double</span> minTotal
+    );
+}
+            `,
+            action: async () => {
+                tSvc.classList.remove('active');
+                tRepo.classList.add('active');
+                
+                // Packet transforms to Entity and moves to Repo
+                setPkt('entity', '@Entity', getPacketTop('tier-service'));
+                await sleep(100);
+                pkt.style.top = getPacketTop('tier-repo') + 'px';
+                
+                await sleep(500);
+                // DB fires up
+                dbCyl.classList.add('active');
+                dbText.style.color = "var(--neon-green)";
+                dbText.innerText = "INSERT INTO...";
+                
+                pkt.style.top = getPacketTop('db-cyl') + 'px';
+            }
+        },
+        {
+            badge: "Critical Pattern", title: "The Security Boundary",
+            text: "As data travels back up, beware the biggest trap: <strong>Never return a raw <code>@Entity</code> to the Controller.</strong> Entities contain sensitive DB structures (like password hashes). The Service MUST map it to a scrubbed Response DTO.",
+            code: `
+<span class="c-cm">// ❌ BAD: Leaking DB structure to API</span>
+<span class="c-kw">return</span> repository.findById(id); 
+
+<span class="c-cm">// ✅ GOOD: Scrubbing sensitive data via DTO</span>
+<span class="c-ty">User</span> entity = repository.findById(id);
+<span class="c-kw">return new</span> <span class="c-ty">UserResponseDto</span>(
+    entity.getName(), 
+    entity.getPublicProfile()
+);
+            `,
+            action: async () => {
+                dbCyl.classList.remove('active');
+                dbText.style.color = "var(--text-dim)";
+                dbText.innerText = "SQL";
+                
+                tRepo.classList.remove('active');
+                tSvc.classList.add('active');
+                
+                // Draw boundary line between Service and Controller
+                boundary.style.top = (getPacketTop('tier-ctrl') + getPacketTop('tier-service')) / 2 + 'px';
+                boundary.style.opacity = '1';
+                
+                // Entity travels up to Service
+                setPkt('entity', '@Entity', getPacketTop('tier-repo'));
+                await sleep(100);
+                pkt.style.top = getPacketTop('tier-service') + 'px';
+                
+                await sleep(800);
+                // Service maps to DTO safely
+                setPkt('dto', 'Safe DTO', getPacketTop('tier-service'));
+            }
+        },
+        {
+            badge: "Completion", title: "The HTTP Response",
+            text: "The safe DTO crosses the boundary back to the Controller. The HttpMessageConverter (Jackson) serializes the Java object into raw JSON, and the HTTP 200 OK response is fired back to the client.",
+            code: ``, // hide code
+            action: async () => {
+                codeContainer.style.display = 'none';
+                tSvc.classList.remove('active');
+                tCtrl.classList.add('active');
+                
+                // DTO crosses boundary
+                setPkt('dto', 'Safe DTO', getPacketTop('tier-service'));
+                await sleep(100);
+                pkt.style.top = getPacketTop('tier-ctrl') + 'px';
+                
+                await sleep(600);
+                // Converts to JSON
+                setPkt('req', '200 OK JSON', getPacketTop('tier-ctrl'));
+                await sleep(100);
+                pkt.style.top = '0px'; // exits top
+                
+                await sleep(500);
+                pkt.style.opacity = '0';
+                boundary.style.opacity = '0';
+            }
+        },
+        {
+            badge: "Summary", title: "The Architecture Matrix",
+            text: "Tier 1: Controller for HTTP Routing. Tier 2: Service for Business Logic. Tier 3: Repository for Database Access. By strictly isolating these layers, your code becomes modular, unit-testable, and ready for enterprise scale.",
+            code: ``,
+            action: async () => {
+                pipeline.style.opacity = '0';
+                pipeline.style.pointerEvents = 'none';
+                
+                await sleep(400);
+                matrix.style.opacity = '1';
+                matrix.style.pointerEvents = 'auto';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Reset Flow
+            currentStep = 0; 
+            
+            matrix.style.opacity = '0';
+            matrix.style.pointerEvents = 'none';
+            pipeline.style.opacity = '1';
+            codeContainer.style.display = 'none';
+            
+            tCtrl.classList.remove('active');
+            tSvc.classList.remove('active');
+            tRepo.classList.remove('active');
+            boundary.style.opacity = '0';
+            pkt.style.opacity = '0';
+            pkt.style.top = '0px';
+            
+            badge.innerText = "[INITIALIZATION]";
+            title.innerText = "The Fat Controller Problem";
+            text.innerHTML = "If you put database queries directly inside your REST controllers, your application is a ticking time bomb. Enterprise Spring Boot strictly enforces a 3-Tier Architecture to separate concerns. Let's decrypt the flow.";
+            btnNext.innerText = "Execute Trace";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const data = steps[currentStep];
+        
+        badge.innerText = data.badge;
+        title.innerText = data.title;
+        text.innerHTML = data.text;
+        
+        if(data.code !== ``) {
+            codeContainer.innerHTML = data.code;
+            codeContainer.style.display = 'block';
+        } else {
+            codeContainer.style.display = 'none';
+        }
+
+        btnNext.innerHTML = currentStep === steps.length - 1 ? "Reboot System" : "Next Tier <span style='font-family:sans-serif;'>→</span>";
+
+        await data.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

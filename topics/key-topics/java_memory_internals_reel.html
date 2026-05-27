@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Memory Management - Aurora Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --bg-color: #020617; /* Dark Slate */
+        --neon-cyan: #2dd4bf; /* Teal */
+        --neon-pink: #f472b6; /* Pink */
+        --neon-purple: #818cf8; /* Indigo */
+        --neon-red: #f43f5e; /* Rose */
+        --neon-green: #34d399; /* Emerald */
+        --neon-orange: #fb923c; /* Orange */
+        --panel-bg: rgba(255, 255, 255, 0.03);
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Flex Layout ensures no overlapping */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-color); position: relative;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255,255,255,0.1);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 16px;
+    }
+
+    /* Vibrant Aurora Background */
+    .aurora-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        overflow: hidden; z-index: 0; background: var(--bg-color);
+    }
+    
+    .orb {
+        position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.45;
+        animation: float 15s infinite ease-in-out alternate;
+    }
+    .orb-1 { width: 300px; height: 300px; background: #3b82f6; top: -50px; left: -100px; }
+    .orb-2 { width: 350px; height: 350px; background: #8b5cf6; bottom: -50px; right: -100px; animation-delay: -5s; }
+    .orb-3 { width: 250px; height: 250px; background: #14b8a6; top: 40%; left: 20%; animation-delay: -10s; }
+
+    @keyframes float {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(30px, -30px) scale(1.1); }
+    }
+
+    /* Header - Fixed Top */
+    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
+        background: linear-gradient(135deg, #ffffff, #94a3b8);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 4px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--neon-cyan); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Visual Canvas Area - Top Half */
+    .canvas {
+        flex: 1.2; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 15px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scrollable Data Containers in Canvas (Frosted Glass) */
+    .scroll-container {
+        width: 90%; max-height: 95%; overflow-y: auto; overflow-x: hidden;
+        background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px; padding: 15px; backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .scroll-container::-webkit-scrollbar { width: 4px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    /* Scene 1: Stack vs Heap */
+    .mem-split { display: flex; width: 100%; gap: 15px; justify-content: center;}
+    .stack-col { flex: 1; border: 2px solid var(--neon-purple); border-radius: 8px; padding: 10px; background: rgba(129,140,248,0.1); position: relative;}
+    .heap-col { flex: 1; border: 2px solid var(--neon-cyan); border-radius: 8px; padding: 10px; background: rgba(45,212,191,0.1); position: relative;}
+    
+    .stack-frame { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); margin-top: 5px; padding: 5px; border-radius: 4px; font-family: monospace; font-size: 9px;}
+    .heap-obj { position: absolute; background: var(--neon-cyan); color: #000; font-weight: bold; border-radius: 4px; padding: 5px; font-size: 9px; right: 15px; top: 40px; box-shadow: 0 0 10px var(--neon-cyan);}
+    .mem-arrow { position: absolute; height: 2px; background: var(--neon-pink); top: 50px; left: 60px; width: 80px; z-index: 10; box-shadow: 0 0 5px var(--neon-pink);}
+    .mem-arrow::after { content: '▶'; position: absolute; right: -8px; top: -7px; color: var(--neon-pink); font-size: 14px;}
+
+    /* Scene 2: Metaspace */
+    .meta-box { border: 2px dashed var(--neon-orange); padding: 15px; border-radius: 12px; background: rgba(251,146,60,0.1); text-align: center; width: 100%;}
+    .blueprint { background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; font-family: monospace; font-size: 10px; margin-top: 10px; text-align: left; border-left: 2px solid var(--neon-orange);}
+
+    /* Scene 3 & 4 & 5: Generational Heap */
+    .gen-heap { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .gen-row { display: flex; gap: 8px; width: 100%; height: 60px;}
+    .gen-box { border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); padding: 8px; display: flex; flex-direction: column; position: relative; overflow: hidden;}
+    .eden-box { flex: 2; background: rgba(45,212,191,0.1); border-color: var(--neon-cyan);}
+    .surv-box { flex: 1; background: rgba(129,140,248,0.1); border-color: var(--neon-purple);}
+    .old-box { height: 70px; background: rgba(251,146,60,0.1); border-color: var(--neon-orange);}
+    .gen-title { font-family: 'Space Grotesk'; font-size: 10px; font-weight: bold; opacity: 0.8;}
+    
+    .dot-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;}
+    .obj-dot { width: 8px; height: 8px; background: #fff; border-radius: 50%; opacity: 0;}
+    .survivor-dot { background: var(--neon-green); box-shadow: 0 0 5px var(--neon-green);}
+    .old-dot { width: 12px; height: 12px; background: var(--neon-orange); border-radius: 2px; box-shadow: 0 0 5px var(--neon-orange);}
+
+    /* GC Scanners */
+    .gc-scanner { position: absolute; top: 0; left: -10px; width: 2px; height: 100%; background: var(--neon-red); box-shadow: 0 0 15px 5px rgba(244,63,94,0.6); opacity: 0; z-index: 10;}
+    @keyframes scan { 0% { left: 0%; opacity: 1;} 100% { left: 100%; opacity: 0;} }
+
+    .stw-flash { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244,63,94,0.3); z-index: 50; opacity: 0; pointer-events: none; display: flex; align-items: center; justify-content: center;}
+    .stw-text { font-family: 'Space Grotesk'; font-weight: 800; font-size: 24px; color: var(--neon-red); text-shadow: 0 0 20px var(--neon-red); border: 4px solid var(--neon-red); padding: 10px 20px; border-radius: 8px;}
+
+    /* Scene 6: G1GC */
+    .g1-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; width: 100%; margin-top: 10px;}
+    .g1-cell { aspect-ratio: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; transition: all 0.3s;}
+    .g1-eden { background: rgba(45,212,191,0.3); border-color: var(--neon-cyan);}
+    .g1-old { background: rgba(251,146,60,0.3); border-color: var(--neon-orange);}
+    .g1-sweeping { background: var(--neon-red) !important; box-shadow: 0 0 10px var(--neon-red);}
+
+    /* Explainer Panel at Bottom - Bottom Half (Frosted Glass) */
+    .explainer-panel {
+        background: rgba(15, 23, 42, 0.6);
+        padding: 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(24px);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(255, 255, 255, 0.1); color: #fff;
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.2); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+        margin-bottom: 8px; letter-spacing: -0.5px;
+    }
+
+    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #2dd4bf; } 
+    .c-fn { color: #818cf8; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-an { color: #fb923c; } 
+    .c-hi { background: rgba(45, 212, 191, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white; border: none; padding: 14px 24px; border-radius: 12px;
+        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4); }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="aurora-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- The STW Flash Overlay -->
+    <div class="stw-flash" id="stw-flash">
+        <div class="stw-text">STOP THE WORLD</div>
+    </div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Java Memory</h1>
+        <p>The Garbage Collector Engine</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        
+        <!-- Scene 1: Stack vs Heap -->
+        <div class="scene-container active" id="scene-1">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px; text-align:center;">Stack vs Heap</div>
+                
+                <div class="mem-split">
+                    <div class="stack-col">
+                        <div style="font-size:10px; font-weight:bold; color:var(--neon-purple); margin-bottom:5px;">Stack (LIFO)</div>
+                        <div class="stack-frame">main()</div>
+                        <div class="stack-frame">
+                            <span class="c-ty">int</span> x = <span class="c-st">5</span>;<br>
+                            <span class="c-ty">User</span> u = <span id="stack-ref" style="color:var(--neon-pink); font-weight:bold;">0x8A</span>;
+                        </div>
+                        <div class="mem-arrow" id="mem-arrow" style="opacity:0;"></div>
+                    </div>
+                    <div class="heap-col">
+                        <div style="font-size:10px; font-weight:bold; color:var(--neon-cyan); margin-bottom:5px;">Heap (Shared)</div>
+                        <div class="heap-obj" id="heap-obj" style="opacity:0;">{ name: "Zuber" }</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 2: Metaspace -->
+        <div class="scene-container" id="scene-2">
+            <div class="scroll-container" style="border-color: rgba(251,146,60,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-orange); margin-bottom: 10px; text-align:center;">Metaspace (Native OS Memory)</div>
+                
+                <div class="meta-box">
+                    <div style="font-size: 30px;">📐</div>
+                    <div class="blueprint">
+                        <span class="c-kw">public class</span> <span class="c-ty">User</span> {<br>
+                        &nbsp;&nbsp;<span class="c-kw">static int</span> <span class="c-st">TOTAL</span> = 0;<br>
+                        &nbsp;&nbsp;<span class="c-cm">// Bytecode Definitions</span><br>
+                        }
+                    </div>
+                </div>
+                <div style="font-size: 10px; text-align:center; color: #94a3b8; margin-top: 10px;">Replaced PermGen in Java 8 to prevent <code>OutOfMemoryError</code>.</div>
+            </div>
+        </div>
+
+        <!-- Scene 3/4/5: Generational Heap -->
+        <div class="scene-container" id="scene-3">
+            <div class="scroll-container" style="border-color: rgba(52,211,153,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-green); margin-bottom: 10px; text-align:center;" id="gen-header">Generational Hypothesis</div>
+                
+                <div class="gen-heap">
+                    <div class="gen-row">
+                        <div class="gen-box eden-box">
+                            <div class="gen-title" style="color:var(--neon-cyan);">Eden Space</div>
+                            <div class="gc-scanner" id="scan-eden"></div>
+                            <div class="dot-container" id="eden-dots">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                        <div class="gen-box surv-box">
+                            <div class="gen-title" style="color:var(--neon-purple);">S0 / S1</div>
+                            <div class="dot-container" id="surv-dots"></div>
+                        </div>
+                    </div>
+                    <div class="gen-box old-box">
+                        <div class="gen-title" style="color:var(--neon-orange);">Old Generation</div>
+                        <div class="gc-scanner" id="scan-old"></div>
+                        <div class="dot-container" id="old-dots"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 6: G1GC / ZGC -->
+        <div class="scene-container" id="scene-6">
+            <div class="scroll-container" style="border-color: rgba(45,212,191,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px; text-align:center;">Modern Garbage Collection (G1)</div>
+                <div style="font-size: 10px; text-align:center; color: #94a3b8; margin-bottom: 10px;">Breaks monolithic heap into independent regions.</div>
+                
+                <div class="g1-grid" id="g1-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[JVM_INTERNALS]</div>
+            <h2 id="explainer-title" class="explainer-title">The Illusion of Infinite RAM</h2>
+            <p id="explainer-text" class="explainer-text">Unlike C/C++, Java developers rarely write <code>free()</code>. Automated memory management changed the world. But if you don't understand the Garbage Collector engine, your enterprise app will eventually crash. Let's trace it.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initialize Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setScene(index) {
+        document.querySelectorAll('.scene-container').forEach((el, i) => {
+            // Scene 3,4,5 share the same container visually
+            if(i === 2 && (index === 2 || index === 3 || index === 4)) {
+                el.classList.add('active');
+            } else if(i === index) {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
+    }
+
+    // Populate visual elements
+    const edenDots = document.getElementById('eden-dots');
+    for(let i=0; i<15; i++) {
+        edenDots.innerHTML += `<div class="obj-dot" id="e-dot-${i}"></div>`;
+    }
+    const survDots = document.getElementById('surv-dots');
+    
+    const g1Grid = document.getElementById('g1-grid');
+    for(let i=0; i<24; i++) {
+        let cls = 'g1-cell';
+        if(i%5===0) cls += ' g1-old';
+        else if(i%2===0) cls += ' g1-eden';
+        g1Grid.innerHTML += `<div class="${cls}" id="g1-c-${i}"></div>`;
+    }
+
+    const steps = [
+        {
+            badge: "Memory 1/7",
+            title: "Stack vs Heap",
+            text: "<strong>The Stack</strong> is thread-private, incredibly fast, and strictly LIFO. It holds primitives and object <em>references</em>. It auto-cleans when methods end.<br><br><strong>The Heap</strong> is the shared warehouse. The physical object created by <code>new</code> lives here. It requires the Garbage Collector to clean it.",
+            code: `
+<span class="c-cm">// 'u' lives on the Stack.</span>
+<span class="c-cm">// The actual object lives on the Heap.</span>
+<span class="c-ty">User</span> u = <span class="c-kw">new</span> User();
+            `,
+            action: async () => {
+                setScene(0);
+                codeContainer.style.display = 'block';
+                
+                await sleep(500);
+                document.getElementById('heap-obj').style.opacity = '1';
+                
+                await sleep(400);
+                document.getElementById('mem-arrow').style.opacity = '1';
+            }
+        },
+        {
+            badge: "Memory 2/7",
+            title: "Metaspace (Java 8+)",
+            text: "Before Java 8, structural blueprints lived in the Heap (PermGen), causing endless <code>OutOfMemoryError</code> crashes. Modern Java replaced it with <strong>Metaspace</strong>, which lives in Native OS memory. It grows dynamically and holds class definitions, static variables, and compiled bytecode.",
+            code: `
+<span class="c-cm">// JVM Arguments to limit native memory usage</span>
+-XX:MaxMetaspaceSize=256m
+            `,
+            action: async () => {
+                setScene(1);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Architecture 3/7",
+            title: "The Generational Hypothesis",
+            text: "How does Java clean a heap of 10 million objects? Statistics! <strong>'Most objects die young.'</strong> Local variables are useless milliseconds after an API returns. So, Java divides the Heap into the Young Generation (Eden/Survivors) and the Old Generation.",
+            code: `
+<span class="c-cm">// Setting Heap Sizes</span>
+-Xms4g <span class="c-cm">// Initial Heap</span>
+-Xmx4g <span class="c-cm">// Max Heap</span>
+            `,
+            action: async () => {
+                setScene(2);
+                document.getElementById('gen-header').innerText = "Generational Hypothesis";
+                codeContainer.style.display = 'block';
+                
+                // Show objects being born in Eden
+                for(let i=0; i<15; i++) {
+                    await sleep(50);
+                    document.getElementById(`e-dot-${i}`).style.opacity = '1';
+                }
+            }
+        },
+        {
+            badge: "Phase 4/7",
+            title: "Minor GC (Young Gen)",
+            text: "New objects are born in <strong>Eden</strong>. When Eden fills, a <em>Minor GC</em> triggers. It traces active 'GC Roots'. Unreferenced garbage is obliterated. Survivors are evacuated to a Survivor space (S0/S1). This process is blazing fast.",
+            code: `
+<span class="c-cm">// GC Log Output</span>
+[GC (Allocation Failure) 
+  [PSYoungGen: 524288K->1753K(602112K)] 
+  670498K->147763K(1983488K), 0.00512 sec]
+            `,
+            action: async () => {
+                setScene(2);
+                document.getElementById('gen-header').innerText = "Minor Garbage Collection";
+                codeContainer.style.display = 'block';
+                
+                await sleep(500);
+                const scanner = document.getElementById('scan-eden');
+                scanner.style.animation = 'scan 1.5s linear forwards';
+                
+                await sleep(800); // mid-scan
+                
+                // Kill 80%
+                for(let i=0; i<12; i++) {
+                    document.getElementById(`e-dot-${i}`).style.opacity = '0';
+                }
+                
+                await sleep(700);
+                // Evacuate survivors
+                survDots.innerHTML = '';
+                for(let i=0; i<3; i++) {
+                    survDots.innerHTML += `<div class="obj-dot survivor-dot" style="opacity:1;"></div>`;
+                    document.getElementById(`e-dot-${12+i}`).style.opacity = '0';
+                }
+                
+                setTimeout(() => { scanner.style.animation = 'none'; }, 500);
+            }
+        },
+        {
+            badge: "CRITICAL 5/7",
+            title: "Major GC & Stop-The-World",
+            text: "If an object survives enough Minor GCs, it is promoted to the <strong>Old Generation</strong>. When the Old Gen fills, a Major/Full GC occurs. This is an expensive, full-heap sweep. The JVM executes a <strong>Stop-The-World</strong> pause, literally freezing every thread in your app to clean RAM safely.",
+            code: `
+<span class="c-cm">// DREADED FULL GC LOG</span>
+[Full GC (Ergonomics) 
+  [PSYoungGen: 1753K->0K(602112K)] 
+  [ParOldGen: 146010K->112023K(1381376K)] 
+<span class="c-err">  147763K->112023K(1983488K), 1.25 seconds]</span>
+            `,
+            action: async () => {
+                setScene(2);
+                document.getElementById('gen-header').innerText = "Major GC (Stop The World)";
+                codeContainer.style.display = 'block';
+                
+                // Promote to old gen
+                survDots.innerHTML = '';
+                const oldDots = document.getElementById('old-dots');
+                oldDots.innerHTML = `<div class="obj-dot old-dot" style="opacity:1;"></div><div class="obj-dot old-dot" style="opacity:1;"></div><div class="obj-dot old-dot" style="opacity:1;"></div>`;
+                
+                await sleep(1000);
+                
+                // STW Flash
+                const flash = document.getElementById('stw-flash');
+                flash.style.opacity = '1';
+                await sleep(1500);
+                flash.style.opacity = '0';
+            }
+        },
+        {
+            badge: "Modern 6/7",
+            title: "G1GC (Garbage First)",
+            text: "The industry hated multi-second freezes. Java 9 made <strong>G1GC</strong> default. It abandons massive monolithic blocks and chops the heap into hundreds of tiny regions. It tracks regions with the most garbage and cleans them <em>first</em>, meeting strict pause-time targets.",
+            code: `
+<span class="c-cm">// G1GC Configuration</span>
+-XX:+UseG1GC 
+-XX:MaxGCPauseMillis=200
+            `,
+            action: async () => {
+                setScene(5);
+                codeContainer.style.display = 'block';
+                
+                await sleep(800);
+                document.getElementById('g1-c-2').classList.add('g1-sweeping');
+                document.getElementById('g1-c-8').classList.add('g1-sweeping');
+                document.getElementById('g1-c-14').classList.add('g1-sweeping');
+                
+                await sleep(1000);
+                document.getElementById('g1-c-2').className = 'g1-cell';
+                document.getElementById('g1-c-8').className = 'g1-cell';
+                document.getElementById('g1-c-14').className = 'g1-cell';
+            }
+        },
+        {
+            badge: "Future 7/7",
+            title: "ZGC (Zero-Latency)",
+            text: "Modern apps use 128GB+ heaps. Even G1GC struggles. <strong>ZGC (Z Garbage Collector)</strong> performs all heavy lifting (tracing, compaction) <em>concurrently</em> while app threads are running. Using Colored Pointers, it guarantees Stop-The-World pauses under 1 millisecond!",
+            code: `
+<span class="c-cm">// Enable ZGC (Production Ready Java 15+)</span>
+-XX:+UseZGC
+
+<span class="c-cm">// Guarantees sub-millisecond pauses</span>
+<span class="c-cm">// even on Terabyte-sized heaps.</span>
+            `,
+            action: async () => {
+                setScene(5);
+                codeContainer.style.display = 'block';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            setScene(-1); // Hide all
+            codeContainer.style.display = 'none';
+
+            // Reset visuals
+            document.getElementById('heap-obj').style.opacity = '0';
+            document.getElementById('mem-arrow').style.opacity = '0';
+            
+            for(let i=0; i<15; i++) {
+                document.getElementById(`e-dot-${i}`).style.opacity = '0';
+            }
+            survDots.innerHTML = '';
+            document.getElementById('old-dots').innerHTML = '';
+
+            badge.innerText = "[JVM_INTERNALS]";
+            title.innerText = "The Illusion of Infinite RAM";
+            text.innerHTML = "Unlike C/C++, Java developers rarely write <code>free()</code>. Automated memory management changed the world. But if you don't understand the Garbage Collector engine, your enterprise app will eventually crash. Let's trace it.";
+            btnNext.innerText = "Initialize Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

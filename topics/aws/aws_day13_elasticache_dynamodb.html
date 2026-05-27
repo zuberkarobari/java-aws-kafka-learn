@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 13 — ElastiCache & DynamoDB</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #161b27;
+  --surface2: #1e2535;
+  --border: #2a3347;
+  --border2: #3a4a63;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --accent: #38bdf8;
+  --accent-dim: #0c4a6e;
+  --green: #4ade80;
+  --green-dim: #14532d;
+  --amber: #fbbf24;
+  --amber-dim: #451a03;
+  --coral: #f87171;
+  --coral-dim: #450a0a;
+  --purple: #a78bfa;
+  --purple-dim: #2e1065;
+  --tag-bg: #1e2535;
+  --radius: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.day-badge {
+  background: linear-gradient(135deg, #0ea5e9, #6366f1);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.header-sub {
+  font-size: 12px;
+  color: var(--text3);
+  margin-left: auto;
+}
+
+/* ── LAYOUT ── */
+.layout {
+  display: flex;
+  min-height: calc(100vh - 57px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 1.25rem 0;
+  position: sticky;
+  top: 57px;
+  height: calc(100vh - 57px);
+  overflow-y: auto;
+}
+.sidebar-section {
+  padding: 0 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text3);
+  text-transform: uppercase;
+  padding: 0 0.5rem;
+  margin-bottom: 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+}
+.nav-item.active .nav-dot { background: var(--accent); }
+
+/* ── MAIN CONTENT ── */
+.main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 780px;
+  overflow-x: hidden;
+}
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── TOPIC TABS ── */
+.topic-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+}
+.ttab {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text3);
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: none;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.ttab:hover { color: var(--text2); border-color: var(--border2); }
+.ttab.active {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--border2);
+  font-weight: 600;
+}
+.topic { display: none; }
+.topic.active { display: block; }
+
+/* ── SECTION HEADER ── */
+.sec-header {
+  margin-bottom: 1.5rem;
+}
+.sec-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+.sec-sub {
+  font-size: 13px;
+  color: var(--text3);
+  line-height: 1.6;
+}
+.sec-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.sec-tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text3);
+}
+
+/* ── PROSE ── */
+.prose {
+  font-size: 13.5px;
+  color: var(--text2);
+  line-height: 1.8;
+}
+.prose p { margin-bottom: 1rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose .hl { color: var(--accent); font-weight: 600; }
+
+/* ── CALLOUT BOXES ── */
+.callout {
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+  font-size: 13px;
+  line-height: 1.75;
+}
+.callout strong { font-weight: 700; display: block; margin-bottom: 4px; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+.callout.how {
+  background: var(--surface2);
+  border-left: 3px solid var(--accent);
+  color: var(--text2);
+}
+.callout.how strong { color: var(--accent); }
+.callout.fail {
+  background: #1a0f0f;
+  border-left: 3px solid var(--coral);
+  color: #fca5a5;
+}
+.callout.fail strong { color: var(--coral); }
+.callout.prod {
+  background: #0a1f14;
+  border-left: 3px solid var(--green);
+  color: #86efac;
+}
+.callout.prod strong { color: var(--green); }
+.callout.warn {
+  background: #1a1200;
+  border-left: 3px solid var(--amber);
+  color: #fde68a;
+}
+.callout.warn strong { color: var(--amber); }
+
+/* ── INLINE CODE ── */
+code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 11.5px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--accent);
+}
+
+/* ── CODE BLOCKS ── */
+.code-wrap {
+  margin: 1rem 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border2);
+}
+.code-header {
+  background: var(--surface2);
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border2);
+}
+.code-lang {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.code-copy {
+  font-size: 10px;
+  color: var(--text3);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.code-copy:hover { color: var(--text2); }
+pre {
+  background: #090d14;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  margin: 0;
+}
+pre code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: #abb2bf;
+  line-height: 1.7;
+  display: block;
+  white-space: pre;
+}
+.t-k { color: #c678dd; }    /* keyword */
+.t-s { color: #98c379; }    /* string */
+.t-c { color: #5c6370; font-style: italic; } /* comment */
+.t-n { color: #e5c07b; }    /* number / type */
+.t-f { color: #61afef; }    /* function */
+.t-p { color: #56b6c2; }    /* property */
+.t-v { color: #e06c75; }    /* variable */
+.t-a { color: #abb2bf; }    /* annotation */
+
+/* ── COMPARISON GRID ── */
+.compare {
+  display: grid;
+  gap: 10px;
+  margin: 1rem 0;
+}
+.compare.two { grid-template-columns: 1fr 1fr; }
+.compare.three { grid-template-columns: 1fr 1fr 1fr; }
+.compare-card {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+.compare-card.accent { border-color: var(--accent); background: #0c1e2e; }
+.compare-card.accent .compare-title { color: var(--accent); }
+.compare-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+.compare-body { font-size: 12px; color: var(--text2); line-height: 1.65; }
+.compare-body strong { color: var(--text); font-weight: 600; }
+
+/* ── STEP LIST ── */
+.steps { display: flex; flex-direction: column; gap: 0; margin: 1rem 0; }
+.step { display: flex; gap: 0; }
+.step-line { display: flex; flex-direction: column; align-items: center; width: 32px; flex-shrink: 0; }
+.step-num {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+.step.done .step-num { background: var(--green-dim); border-color: var(--green); color: var(--green); cursor: pointer; }
+.step-connector { width: 1px; background: var(--border); flex: 1; min-height: 12px; }
+.step-body { padding: 0 0 1.25rem 12px; flex: 1; }
+.step-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.step-text { font-size: 13px; color: var(--text2); line-height: 1.7; }
+.step-cmd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  background: #090d14;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 8px;
+  color: #abb2bf;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.65;
+  display: block;
+}
+.step-note { font-size: 11px; color: var(--text3); margin-top: 6px; font-style: italic; line-height: 1.5; }
+.step-btn {
+  margin-top: 8px;
+  font-size: 12px;
+  padding: 5px 14px;
+  border-radius: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text3);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.step-btn:hover { border-color: var(--green); color: var(--green); }
+.step.done .step-btn { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+/* ── INTERVIEW Q&A ── */
+.iq-list { display: flex; flex-direction: column; gap: 8px; }
+.iq {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.iq:hover { border-color: var(--border2); }
+.iq.open { border-color: var(--border2); }
+.iq-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+}
+.iq-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  min-width: 20px;
+  padding-top: 2px;
+}
+.iq-q {
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+  line-height: 1.45;
+  color: var(--text);
+}
+.iq-diff {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.diff-e { background: var(--green-dim); color: var(--green); }
+.diff-m { background: var(--amber-dim); color: var(--amber); }
+.diff-h { background: var(--coral-dim); color: var(--coral); }
+.iq-arrow {
+  font-size: 12px;
+  color: var(--text3);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.iq.open .iq-arrow { transform: rotate(180deg); }
+.iq-body {
+  display: none;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+.iq.open .iq-body { display: block; }
+.iq-body p { font-size: 13px; color: var(--text2); line-height: 1.8; margin-bottom: 10px; }
+.iq-body p:last-child { margin-bottom: 0; }
+.iq-body strong { color: var(--text); font-weight: 600; }
+.iq-tip {
+  background: var(--green-dim);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--green);
+  margin-top: 10px;
+  line-height: 1.6;
+}
+
+/* ── CHEATSHEET GRID ── */
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+.cs-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  transition: border-color 0.15s;
+}
+.cs-card:hover { border-color: var(--border2); }
+.cs-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+.cs-desc {
+  font-size: 11.5px;
+  color: var(--text3);
+  line-height: 1.55;
+}
+
+/* ── RULES BOX ── */
+.rules {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+.rule {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.rule:last-child { border-bottom: none; }
+.rule-n {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 18px;
+  padding-top: 1px;
+}
+
+/* ── DIVIDER ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+/* ── PROGRESS BAR ── */
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 1.5rem 1.5rem 1rem;
+}
+.progress-label { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0ea5e9, #6366f1);
+  border-radius: 4px;
+  width: 43%;
+  transition: width 0.3s;
+}
+
+/* ── NEXT BUTTON ── */
+.next-btn {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.next-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ── MOBILE ── */
+@media (max-width: 680px) {
+  .sidebar { display: none; }
+  .main { padding: 1.25rem; max-width: 100%; }
+  .compare.two, .compare.three { grid-template-columns: 1fr; }
+  .topic-tabs { gap: 4px; }
+  .ttab { padding: 5px 10px; font-size: 11px; }
+}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+
+<!-- HEADER -->
+<div class="header">
+  <span class="day-badge">Day 13 / 30</span>
+  <span class="header-title">ElastiCache & DynamoDB</span>
+  <span class="header-sub">Phase 3 · Caching + NoSQL</span>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-row">
+  <span class="progress-label">Phase 3</span>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <span class="progress-label">Days 11–13 of 30</span>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR NAV -->
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">ElastiCache</div>
+      <button class="nav-item active" onclick="nav('elasticache',this)"><span class="nav-dot"></span>Redis internals</button>
+      <button class="nav-item" onclick="nav('cluster',this)"><span class="nav-dot"></span>Cluster vs replication</button>
+      <button class="nav-item" onclick="nav('springcache',this)"><span class="nav-dot"></span>Spring Boot caching</button>
+      <button class="nav-item" onclick="nav('patterns',this)"><span class="nav-dot"></span>Cache patterns</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">DynamoDB</div>
+      <button class="nav-item" onclick="nav('dynamo',this)"><span class="nav-dot"></span>DynamoDB internals</button>
+      <button class="nav-item" onclick="nav('keys',this)"><span class="nav-dot"></span>Key design</button>
+      <button class="nav-item" onclick="nav('reads',this)"><span class="nav-dot"></span>Reads, writes, GSIs</button>
+      <button class="nav-item" onclick="nav('springdynamo',this)"><span class="nav-dot"></span>Spring integration</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Practice</div>
+      <button class="nav-item" onclick="nav('interview',this)"><span class="nav-dot"></span>Interview prep</button>
+      <button class="nav-item" onclick="nav('lab',this)"><span class="nav-dot"></span>Lab</button>
+      <button class="nav-item" onclick="nav('cheatsheet',this)"><span class="nav-dot"></span>Cheatsheet</button>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ELASTICACHE INTERNALS -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-elasticache" class="section active">
+      <div class="sec-header">
+        <div class="sec-title">ElastiCache for Redis — what it actually is</div>
+        <div class="sec-sub">ElastiCache is a managed in-memory data store. Redis is the engine. Understanding how Redis stores data in RAM, why it's orders of magnitude faster than RDS, and what happens on node failure is the foundation for using it correctly.</div>
+        <div class="sec-tags">
+          <span class="sec-tag">in-memory</span>
+          <span class="sec-tag">microsecond latency</span>
+          <span class="sec-tag">caching layer</span>
+        </div>
+      </div>
+
+      <div class="topic-tabs">
+        <button class="ttab active" onclick="topic('ec',0,this)">Architecture</button>
+        <button class="ttab" onclick="topic('ec',1,this)">Data structures</button>
+        <button class="ttab" onclick="topic('ec',2,this)">Persistence</button>
+        <button class="ttab" onclick="topic('ec',3,this)">Eviction</button>
+      </div>
+
+      <div id="ec0" class="topic active">
+        <div class="prose">
+          <p>Redis stores all data in RAM. A GET or SET operation requires no disk I/O — the data is already in memory. This is why Redis delivers <strong>sub-millisecond latency</strong> (typically 100–500µs) compared to RDS MySQL's 1–10ms for a simple lookup. The difference is not incremental — it is structural.</p>
+          <p>ElastiCache is AWS's managed Redis service. It runs Redis on EC2 instances inside your VPC, handles patching, automatic failover, CloudWatch metrics, and backup. You cannot SSH into ElastiCache nodes. You connect via the Redis protocol on port 6379 from your Spring Boot application.</p>
+        </div>
+
+        <div class="callout how">
+          <strong>How Redis handles a GET command internally</strong>
+          When your Spring Boot app sends <code>GET job:123</code>: Redis computes a 64-bit hash of the key, uses the lower bits to locate the hash table slot, traverses the slot's linked list to find the key, and returns the value. The entire operation: one memory read, one hash computation, one pointer dereference. On modern hardware this takes ~200 nanoseconds. No network disk round-trip. No query parser. No query planner. No row deserialisation. This is what makes Redis fundamentally different from a relational database — it is not a simpler database, it is a completely different data access model.
+        </div>
+
+        <div class="prose">
+          <p>ElastiCache runs Redis inside your VPC's private subnets. Your EC2 or Fargate tasks connect to the ElastiCache endpoint on port 6379. The Security Group on the ElastiCache cluster must allow inbound 6379 from your application's Security Group — the same chaining pattern you built on Day 4.</p>
+          <p>ElastiCache supports <strong>Redis 7.x</strong> — the current stable version. Always use the most recent supported version. Redis versions below 6 lack ACL authentication (Role-Based Access Control). Redis 7 added multi-part transactions and improved cluster mode stability.</p>
+        </div>
+
+        <div class="callout fail">
+          <strong>The ElastiCache node that isn't in your VPC</strong>
+          The most common first-time ElastiCache setup failure: the cache is created in the wrong subnet group (or no subnet group), and your application can't reach it. ElastiCache requires a subnet group — a collection of subnets, like an RDS subnet group. The nodes are placed in those subnets. If you create the cluster without specifying a subnet group, it goes into the default VPC. Your Spring Boot app in the custom VPC from Day 4 cannot reach it. Always create a dedicated ElastiCache subnet group using your private subnets before creating the cluster.
+        </div>
+      </div>
+
+      <div id="ec1" class="topic">
+        <div class="prose">
+          <p>Redis is not a simple key-value store. It supports multiple data structure types, each with different operations and use cases. Choosing the right type for each use case determines whether Redis helps or becomes a bottleneck.</p>
+        </div>
+
+        <div class="compare two">
+          <div class="compare-card">
+            <div class="compare-title">String</div>
+            <div class="compare-body">
+              The fundamental type. Can hold text, JSON, integers, or binary data (up to 512MB). <br><br>
+              <strong>GetWork use:</strong> Cache a serialised job listing as JSON. <code>SET job:123 {json} EX 300</code> — expires in 300 seconds.<br><br>
+              <strong>Operations:</strong> GET, SET, INCR (atomic counter), GETSET (swap and return old), SETNX (set if not exists — distributed lock foundation).
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">Hash</div>
+            <div class="compare-body">
+              A map of field → value pairs, all under one key. Like a row in a database table.<br><br>
+              <strong>GetWork use:</strong> Cache worker profile fields. <code>HSET worker:42 name "Ravi" city "Mumbai" rating "4.8"</code>. Read one field with HGET, all fields with HGETALL.<br><br>
+              <strong>Advantage over String:</strong> Update individual fields without serialising/deserialising the entire object.
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">List</div>
+            <div class="compare-body">
+              Ordered list, supports O(1) push/pop from both ends. Works as a queue or stack.<br><br>
+              <strong>GetWork use:</strong> Recent job activity feed. <code>LPUSH activity:worker:42 "Applied to job 789"</code>. Read last 20 with <code>LRANGE activity:worker:42 0 19</code>.<br><br>
+              <strong>Caution:</strong> LRANGE on a large list is O(N). Cap list size with LTRIM after each LPUSH.
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">Sorted Set</div>
+            <div class="compare-body">
+              Members with a float score, sorted by score. O(log N) for inserts/reads by rank.<br><br>
+              <strong>GetWork use:</strong> Top-rated workers in a city. Score = rating. <code>ZADD workers:mumbai 4.8 "worker:42"</code>. Read top 10: <code>ZREVRANGE workers:mumbai 0 9 WITHSCORES</code>.<br><br>
+              <strong>Also used for:</strong> Rate limiting (score = timestamp), leaderboards, scheduled task queues.
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">Set</div>
+            <div class="compare-body">
+              Unordered collection of unique strings. O(1) add/remove/check membership.<br><br>
+              <strong>GetWork use:</strong> Track which workers have viewed a job. <code>SADD job:123:views worker:42</code>. Check: <code>SISMEMBER job:123:views worker:42</code>. Count: <code>SCARD job:123:views</code>.<br><br>
+              Set operations: SUNION (union), SINTER (intersection), SDIFF (difference).
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">Stream</div>
+            <div class="compare-body">
+              Append-only log with consumer groups. Similar to Kafka topics but inside Redis.<br><br>
+              <strong>GetWork use:</strong> Real-time notification queue. <code>XADD notifications * type job_match workerId 42</code>.<br><br>
+              <strong>For GetWork's Kafka context:</strong> Streams are Redis-native alternative to Kafka for low-volume event sourcing. Your Deloitte Kafka experience directly applies.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="ec2" class="topic">
+        <div class="prose">
+          <p>Redis is primarily an in-memory store. If the Redis node restarts, all data is lost — unless persistence is configured. ElastiCache supports two Redis persistence mechanisms.</p>
+          <p><strong>RDB (Redis Database Backup):</strong> Point-in-time snapshots of the entire dataset at configured intervals. Fast to restore (load one file). Data between the last snapshot and the crash is lost. Good for cache use cases where some data loss is acceptable.</p>
+          <p><strong>AOF (Append-Only File):</strong> Every write command is appended to a log file. On restart, Redis replays the log. More durable (near-zero data loss) but slower and produces larger files. For a pure cache (data also lives in RDS), AOF is usually unnecessary overhead.</p>
+        </div>
+        <div class="callout how">
+          <strong>When you need persistence vs when you don't</strong>
+          For GetWork's use case — caching job listings that live primarily in RDS — persistence is optional. If Redis crashes, the cache is empty; the next request to the Spring Boot app misses the cache and reads from RDS. Performance degrades temporarily but no data is lost. The cache repopulates over the next few minutes as requests come in. This is the correct design for a <strong>read-aside cache</strong>. Only enable AOF persistence for Redis use cases where Redis is the <em>primary</em> store (session state, real-time leaderboards, counters) — not for caches backed by a database.
+        </div>
+        <div class="callout fail">
+          <strong>The AOF file that grows unboundedly</strong>
+          AOF records every write command. After months of operation on a write-heavy cluster, the AOF file can be hundreds of GB. Redis rewriting (AOF compaction) runs periodically but can cause a brief performance spike during rewrite. In ElastiCache, you don't manage the AOF file directly — but enabling AOF persistence on a large, write-heavy cluster does increase storage requirements and costs. Benchmark with and without AOF before enabling it on any cache that has significant write volume.
+        </div>
+      </div>
+
+      <div id="ec3" class="topic">
+        <div class="prose">
+          <p>Redis evicts keys from memory when the memory limit (<code>maxmemory</code>) is reached. ElastiCache sets maxmemory to the instance's available RAM. Choosing the right eviction policy determines whether Redis evicts intelligently or causes cache stampedes.</p>
+        </div>
+        <div class="compare two">
+          <div class="compare-card accent">
+            <div class="compare-title">allkeys-lru (recommended for cache)</div>
+            <div class="compare-body">
+              Evicts the Least Recently Used key from all keys when memory is full. The most appropriate policy for a general-purpose cache.<br><br>
+              Your Spring Boot cache: recently accessed job listings stay warm; old unseen listings are evicted first. The cache naturally contains the working set your users actually access.
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">volatile-lru</div>
+            <div class="compare-body">
+              Evicts LRU only from keys that have a TTL set. Keys without TTL are never evicted.<br><br>
+              Use when you have a mix: some data is permanent (session data, critical counters) and some is cached with TTL. The permanent data survives memory pressure; the TTL-bearing cache data is evicted.
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">noeviction</div>
+            <div class="compare-body">
+              Returns an error when memory is full. Writes fail. Application must handle the error.<br><br>
+              <strong>Never use for a cache.</strong> Appropriate only if Redis is a primary store where you must not silently lose data — but even then, monitor memory aggressively to avoid hitting the limit.
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">allkeys-lfu (Redis 4+)</div>
+            <div class="compare-body">
+              Evicts Least Frequently Used — keys accessed the fewest times overall, not just recently.<br><br>
+              Better than LRU for access patterns where old but frequently referenced data (e.g. a popular static job category) should not be evicted just because it was last accessed 10 minutes ago.
+            </div>
+          </div>
+        </div>
+        <div class="callout warn">
+          <strong>Monitor CacheEvictions in CloudWatch</strong>
+          A rising CacheEvictions metric means your Redis instance is running out of memory and evicting valid cached data. This causes cache miss rate to increase, which increases load on RDS. First response: increase the ElastiCache node size. Second response: review your cache TTLs — are you caching objects that could expire sooner? Third response: review what you're caching — are large, rarely-accessed objects consuming disproportionate memory?
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('cluster',document.querySelector('[onclick=\"nav(\'cluster\',this)\"]'))">Cluster mode vs Replication Group →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- CLUSTER VS REPLICATION -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-cluster" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Cluster mode vs Replication Group</div>
+        <div class="sec-sub">The two ElastiCache Redis deployment modes have fundamentally different scaling models. Choosing wrong means either unnecessary cost or a configuration that can't scale when you need it to.</div>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">Replication Group (non-cluster mode)</div>
+          <div class="compare-body">
+            <strong>Structure:</strong> One primary node + up to 5 read replicas. All nodes hold the entire dataset.<br><br>
+            <strong>Scaling:</strong> Vertical only (upgrade node size). Read scale via replicas (route reads to replica endpoint).<br><br>
+            <strong>Failover:</strong> Automatic — replica is promoted to primary within 30–60 seconds. DNS updates.<br><br>
+            <strong>Use when:</strong> Dataset fits in one node's memory. You want simple primary/replica HA. Most Spring Boot applications start here.<br><br>
+            <strong>Cost:</strong> Pay for each node. 1 primary + 2 replicas = 3 nodes.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Cluster Mode Enabled</div>
+          <div class="compare-body">
+            <strong>Structure:</strong> Data sharded across 1–500 shards. Each shard has 1 primary + up to 5 replicas.<br><br>
+            <strong>Scaling:</strong> Horizontal — add shards to increase total memory and throughput. Each shard holds a partition of the keyspace.<br><br>
+            <strong>Sharding:</strong> Redis uses consistent hashing with 16,384 hash slots distributed across shards. Key routing: <code>CLUSTER KEYSLOT key</code>.<br><br>
+            <strong>Use when:</strong> Dataset exceeds single node memory, or you need horizontal write scaling.<br><br>
+            <strong>Limitation:</strong> Multi-key commands (MGET, MSET) must hash to the same slot — use hash tags: <code>{user:42}:profile</code> forces same slot.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout how">
+        <strong>Failover mechanics — what happens to your Spring Boot connections</strong>
+        When the primary node fails, ElastiCache promotes a replica to primary within 30–60 seconds. The endpoint DNS record is updated. Your Spring Boot application (using Lettuce, the default Redis client in Spring Data Redis) handles this through topology refresh — Lettuce continuously refreshes the cluster topology from the Redis nodes themselves. On failover, the next topology refresh (every 60 seconds by default) returns the new primary. Configure <code>spring.redis.lettuce.cluster.refresh.period=30s</code> to refresh every 30 seconds. Without this, Spring Boot may continue trying to write to the old primary (now a replica that rejects writes) for up to 60 seconds after failover.
+      </div>
+
+      <div class="callout prod">
+        <strong>The recommended setup for GetWork</strong>
+        Start with a replication group: one cache.t4g.small primary node ($0.034/hr in ap-south-1) + one replica in a different AZ for HA. Total: ~$49/month for both nodes. Dataset fits easily — job listings for Hyderabad and Mumbai construction workers will be well under the 1.37GB node memory. Enable cluster mode only when the working set exceeds ~1GB or you need horizontal write throughput that exceeds a single node's ~100,000 operations/second. For most applications that start with a cache, a two-node replication group is the correct starting point.
+      </div>
+
+      <div class="callout fail">
+        <strong>The "MOVED" error in cluster mode that breaks naïve clients</strong>
+        In cluster mode, if you try to access a key that belongs to a shard not connected to your current client connection, Redis returns <code>MOVED 1234 10.0.1.25:6379</code> — telling you which node has slot 1234. Non-cluster-aware clients treat MOVED as an error. Lettuce and Jedis are cluster-aware — they automatically redirect to the correct shard. But if you use a raw Redis client or a library without cluster support, you'll see MOVED errors that look like access failures. Always verify your Redis client library explicitly supports cluster mode before deploying to a cluster-mode ElastiCache.
+      </div>
+
+      <button class="next-btn" onclick="nav('springcache',null)">Spring Boot caching integration →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SPRING BOOT CACHING -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-springcache" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Spring Boot + Redis — the complete integration</div>
+        <div class="sec-sub">Spring Cache abstraction, Lettuce connection pool configuration, and the specific settings that matter for a production ElastiCache deployment.</div>
+      </div>
+
+      <div class="topic-tabs">
+        <button class="ttab active" onclick="topic('sc',0,this)">Dependencies & config</button>
+        <button class="ttab" onclick="topic('sc',1,this)">@Cacheable patterns</button>
+        <button class="ttab" onclick="topic('sc',2,this)">Connection pool</button>
+      </div>
+
+      <div id="sc0" class="topic active">
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">application.properties</span></div>
+          <pre><code><span class="t-c"># ElastiCache connection — use Primary Endpoint for replication group</span>
+<span class="t-p">spring.data.redis.host</span>=your-cluster.abc123.ng.0001.apse1.cache.amazonaws.com
+<span class="t-p">spring.data.redis.port</span>=6379
+<span class="t-p">spring.data.redis.ssl.enabled</span>=true  <span class="t-c"># Always TLS in production</span>
+
+<span class="t-c"># Lettuce connection pool (default client in Spring Boot)</span>
+<span class="t-p">spring.data.redis.lettuce.pool.max-active</span>=16
+<span class="t-p">spring.data.redis.lettuce.pool.max-idle</span>=8
+<span class="t-p">spring.data.redis.lettuce.pool.min-idle</span>=2
+<span class="t-p">spring.data.redis.lettuce.pool.max-wait</span>=-1ms  <span class="t-c"># Wait indefinitely</span>
+
+<span class="t-c"># Topology refresh for replication group HA</span>
+<span class="t-p">spring.data.redis.lettuce.cluster.refresh.adaptive</span>=true
+<span class="t-p">spring.data.redis.lettuce.cluster.refresh.period</span>=30s
+
+<span class="t-c"># Cache default TTL — 10 minutes</span>
+<span class="t-p">spring.cache.redis.time-to-live</span>=600000
+
+<span class="t-c"># pom.xml dependencies</span>
+<span class="t-c"># spring-boot-starter-data-redis (includes Lettuce)</span>
+<span class="t-c"># spring-boot-starter-cache</span></code></pre>
+        </div>
+
+        <div class="callout how">
+          <strong>Primary endpoint vs Reader endpoint</strong>
+          ElastiCache replication groups expose two endpoints. The <strong>primary endpoint</strong> always routes to the current primary node — use this for writes and for the general Spring Boot Redis connection. The <strong>reader endpoint</strong> load-balances across all replicas — only use this for read-only operations (explicitly, via a secondary Redis template). In most Spring Boot applications, using only the primary endpoint is correct — the replica only becomes active on failover. The reader endpoint is an optimisation for read-heavy scenarios where replica read capacity is explicitly needed.
+        </div>
+      </div>
+
+      <div id="sc1" class="topic active" style="display:none">
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">Java — Spring Cache abstraction</span></div>
+          <pre><code><span class="t-a">@Configuration</span>
+<span class="t-a">@EnableCaching</span>
+<span class="t-k">public class</span> <span class="t-n">CacheConfig</span> {
+
+    <span class="t-a">@Bean</span>
+    <span class="t-k">public</span> <span class="t-n">RedisCacheConfiguration</span> <span class="t-f">cacheConfiguration</span>() {
+        <span class="t-k">return</span> <span class="t-n">RedisCacheConfiguration</span>.defaultCacheConfig()
+            .entryTtl(<span class="t-n">Duration</span>.ofMinutes(<span class="t-n">10</span>))          <span class="t-c">// Default TTL</span>
+            .serializeValuesWith(<span class="t-n">RedisSerializationContext</span>
+                .SerializationPair.fromSerializer(
+                    <span class="t-k">new</span> <span class="t-n">GenericJackson2JsonRedisSerializer</span>())) <span class="t-c">// JSON not Java serialisation</span>
+            .disableCachingNullValues();                <span class="t-c">// Don't cache null results</span>
+    }
+
+    <span class="t-a">@Bean</span>
+    <span class="t-k">public</span> <span class="t-n">RedisCacheManagerBuilderCustomizer</span> <span class="t-f">cacheManagerCustomizer</span>() {
+        <span class="t-k">return</span> builder -> builder
+            .withCacheConfiguration(<span class="t-s">"jobs"</span>,
+                <span class="t-n">RedisCacheConfiguration</span>.defaultCacheConfig()
+                    .entryTtl(<span class="t-n">Duration</span>.ofMinutes(<span class="t-n">5</span>)))     <span class="t-c">// Jobs expire in 5 min</span>
+            .withCacheConfiguration(<span class="t-s">"workers"</span>,
+                <span class="t-n">RedisCacheConfiguration</span>.defaultCacheConfig()
+                    .entryTtl(<span class="t-n">Duration</span>.ofMinutes(<span class="t-n">30</span>)))    <span class="t-c">// Worker profiles: 30 min</span>
+            .withCacheConfiguration(<span class="t-s">"categories"</span>,
+                <span class="t-n">RedisCacheConfiguration</span>.defaultCacheConfig()
+                    .entryTtl(<span class="t-n">Duration</span>.ofHours(<span class="t-n">24</span>)));     <span class="t-c">// Static categories: 1 day</span>
+    }
+}
+
+<span class="t-c">// Service layer — annotations handle all cache logic transparently</span>
+<span class="t-a">@Service</span>
+<span class="t-k">public class</span> <span class="t-n">JobService</span> {
+
+    <span class="t-a">@Cacheable</span>(value = <span class="t-s">"jobs"</span>, key = <span class="t-s">"#id"</span>)             <span class="t-c">// Cache on GET</span>
+    <span class="t-k">public</span> <span class="t-n">JobResponse</span> <span class="t-f">getJob</span>(<span class="t-k">Long</span> id) {
+        <span class="t-k">return</span> jobRepository.findById(id)                 <span class="t-c">// Only called on cache miss</span>
+            .map(<span class="t-n">JobResponse</span>::from)
+            .orElseThrow(() -> <span class="t-k">new</span> <span class="t-n">NotFoundException</span>());
+    }
+
+    <span class="t-a">@CachePut</span>(value = <span class="t-s">"jobs"</span>, key = <span class="t-s">"#result.id"</span>)      <span class="t-c">// Update cache on write</span>
+    <span class="t-k">public</span> <span class="t-n">JobResponse</span> <span class="t-f">updateJob</span>(<span class="t-n">UpdateJobRequest</span> req) {
+        <span class="t-n">Job</span> job = jobRepository.save(<span class="t-k">new</span> <span class="t-n">Job</span>(req));
+        <span class="t-k">return</span> <span class="t-n">JobResponse</span>.from(job);                     <span class="t-c">// Also updates cache</span>
+    }
+
+    <span class="t-a">@CacheEvict</span>(value = <span class="t-s">"jobs"</span>, key = <span class="t-s">"#id"</span>)            <span class="t-c">// Remove from cache on delete</span>
+    <span class="t-k">public void</span> <span class="t-f">deleteJob</span>(<span class="t-k">Long</span> id) {
+        jobRepository.deleteById(id);
+    }
+
+    <span class="t-a">@Cacheable</span>(
+        value = <span class="t-s">"jobs"</span>,
+        key = <span class="t-s">"'search:' + #city + ':' + #category"</span>,   <span class="t-c">// Composite key</span>
+        unless = <span class="t-s">"#result.isEmpty()"</span>                     <span class="t-c">// Don't cache empty results</span>
+    )
+    <span class="t-k">public</span> <span class="t-n">List</span>&lt;<span class="t-n">JobResponse</span>&gt; <span class="t-f">searchJobs</span>(<span class="t-n">String</span> city, <span class="t-n">String</span> category) {
+        <span class="t-k">return</span> jobRepository.findByCityAndCategory(city, category)
+            .stream().map(<span class="t-n">JobResponse</span>::from).toList();
+    }
+}</code></pre>
+        </div>
+        <div class="callout fail">
+          <strong>Java serialisation as the cache value serialiser — a silent time bomb</strong>
+          Spring Cache defaults to Java serialisation for Redis values. This works until you deploy a new version of your application that changes a serialised class (adds a field, renames a field). Old cached values with old class structure cannot be deserialised by the new code — every cache hit throws a deserialisation exception, causing cache misses and falling back to the database. Worse: the stale values persist until their TTL expires. Fix: always use <code>GenericJackson2JsonRedisSerializer</code> as shown above. JSON is forward/backward compatible — extra fields are ignored by Jackson. Add <code>@JsonIgnoreProperties(ignoreUnknown = true)</code> to your response classes.
+        </div>
+      </div>
+
+      <div id="sc2" class="topic active" style="display:none">
+        <div class="prose">
+          <p>Lettuce (Spring Boot's default Redis client) uses a single shared connection by default — all threads in your Spring Boot application share one Redis connection. Under high concurrency, this serialises all Redis operations through one TCP connection, causing head-of-line blocking. Enable connection pooling explicitly.</p>
+        </div>
+        <div class="callout how">
+          <strong>Sizing the Lettuce connection pool</strong>
+          Pool size formula: consider your Tomcat thread pool (default 200 threads) and how many can be simultaneously executing Redis operations. For a typical API: at most 20–30% of threads are waiting on Redis simultaneously. Pool size = 16 is usually sufficient for most Spring Boot APIs. For WebFlux (non-blocking): Lettuce's async model allows one connection to handle many concurrent operations. Pool of 4–8 is typically enough for WebFlux + Redis. Add the Apache commons-pool2 dependency to enable Lettuce pooling — it doesn't activate without the dependency on the classpath.
+        </div>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">pom.xml — required for Lettuce pooling</span></div>
+          <pre><code><span class="t-c">&lt;!-- Required to enable spring.redis.lettuce.pool configuration --&gt;</span>
+<span class="t-k">&lt;dependency&gt;</span>
+  <span class="t-p">&lt;groupId&gt;</span>org.apache.commons<span class="t-p">&lt;/groupId&gt;</span>
+  <span class="t-p">&lt;artifactId&gt;</span>commons-pool2<span class="t-p">&lt;/artifactId&gt;</span>
+<span class="t-k">&lt;/dependency&gt;</span>
+<span class="t-c">&lt;!-- Without this dependency, all pool.* properties are silently ignored --&gt;</span></code></pre>
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('patterns',null)">Cache patterns — read-aside, write-through, TTL →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- CACHE PATTERNS -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-patterns" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Cache patterns — read-aside, write-through, and TTL strategy</div>
+        <div class="sec-sub">The pattern you choose determines data freshness, consistency guarantees, and failure behaviour. Most engineers know read-aside. Understanding when to use write-through and how to design TTLs prevents the subtle consistency bugs that cache misuse introduces.</div>
+      </div>
+
+      <div class="compare three">
+        <div class="compare-card">
+          <div class="compare-title">Read-aside (lazy loading)</div>
+          <div class="compare-body">
+            <strong>Flow:</strong> App reads cache → miss → app reads DB → app writes to cache → return.<br><br>
+            <strong>Good:</strong> Only caches data that's actually requested. Simple. Cache can be cleared without affecting correctness.<br><br>
+            <strong>Bad:</strong> First request after TTL expires hits DB (cache miss spike on TTL expiry). Stale data window = TTL duration.<br><br>
+            <strong>Use for:</strong> Job listings, worker profiles, search results. Most Spring Boot caches.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Write-through</div>
+          <div class="compare-body">
+            <strong>Flow:</strong> App writes to cache AND DB in the same operation. Cache always current.<br><br>
+            <strong>Good:</strong> No stale data. Read always hits cache (after first write). No thundering herd.<br><br>
+            <strong>Bad:</strong> Every write has cache latency overhead. Cache may contain data that's never read (waste). Failed cache write must be handled.<br><br>
+            <strong>Use for:</strong> User session data, real-time counters, data that's both read and written frequently.
+          </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-title">Write-behind (write-back)</div>
+          <div class="compare-body">
+            <strong>Flow:</strong> Write to cache immediately, write to DB asynchronously later.<br><br>
+            <strong>Good:</strong> Lowest write latency. Database absorbs batched writes.<br><br>
+            <strong>Bad:</strong> Cache failure before async DB write = data loss. Complex to implement correctly.<br><br>
+            <strong>Use for:</strong> High-frequency counters (view counts), analytics aggregates. Not for financial transactions.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout fail">
+        <strong>The thundering herd on TTL expiry</strong>
+        Your most popular search query — "construction workers in Mumbai" — has its cache entry expire at 12:00:00. At 12:00:01, your ALB is handling 500 concurrent requests. All 500 miss the cache simultaneously, all query RDS, and all try to write the result back to Redis at the same time. RDS handles 500 simultaneous identical queries. This is a thundering herd. Solutions: (1) <strong>Cache stampede protection</strong> — use a distributed lock (Redis SETNX) so only one request rebuilds the cache entry while others wait. (2) <strong>Probabilistic early expiration</strong> — before the TTL expires, a fraction of requests proactively refresh the cache in the background, never letting it go cold. (3) <strong>Jittered TTLs</strong> — instead of <code>TTL=300</code>, use <code>TTL=300 + random(0,60)</code>. This spreads expiry across a 60-second window, preventing synchronized stampedes across multiple cache keys.
+      </div>
+
+      <div class="callout prod">
+        <strong>TTL design for GetWork</strong>
+        Job listings that rarely change: 5 minutes TTL. Popular search results (city + category): 2 minutes + 0–30s jitter. Worker profiles: 30 minutes (profiles change infrequently). Static data (job categories, city list): 24 hours. User session tokens: match session timeout (e.g. 2 hours). Never set TTL=0 (no expiry) for cached DB results — orphaned cache entries after DB deletion become stale data that never clears.
+      </div>
+
+      <button class="next-btn" onclick="nav('dynamo',null)">DynamoDB — distributed NoSQL →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- DYNAMODB INTERNALS -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-dynamo" class="section">
+      <div class="sec-header">
+        <div class="sec-title">DynamoDB — not just a key-value store</div>
+        <div class="sec-sub">DynamoDB is AWS's fully managed distributed NoSQL database. It is not a replacement for RDS. It is a fundamentally different data model optimised for single-digit millisecond performance at any scale, horizontal partitioning, and predictable performance without capacity planning.</div>
+        <div class="sec-tags">
+          <span class="sec-tag">NoSQL</span>
+          <span class="sec-tag">single-digit ms at any scale</span>
+          <span class="sec-tag">serverless</span>
+        </div>
+      </div>
+
+      <div class="topic-tabs">
+        <button class="ttab active" onclick="topic('dyn',0,this)">Architecture</button>
+        <button class="ttab" onclick="topic('dyn',1,this)">Capacity modes</button>
+        <button class="ttab" onclick="topic('dyn',2,this)">Consistency models</button>
+      </div>
+
+      <div id="dyn0" class="topic active">
+        <div class="prose">
+          <p>DynamoDB stores data in <strong>partitions</strong> — horizontal slices of your table distributed across thousands of SSDs in multiple AZs. Each partition holds up to 10GB of data and handles up to 3,000 read units and 1,000 write units per second. DynamoDB automatically splits partitions when they grow beyond these limits — you never configure servers, shards, or cluster topology.</p>
+          <p>The data model: every item (row) in a DynamoDB table must have a <strong>primary key</strong>. The primary key is either a <strong>partition key</strong> alone, or a composite of <strong>partition key + sort key</strong>. DynamoDB uses the partition key to route the item to a specific storage partition. Items with the same partition key but different sort keys are stored together — sorted by sort key — enabling range queries within a partition.</p>
+        </div>
+
+        <div class="callout how">
+          <strong>How DynamoDB routes a read — the path from your query to the data</strong>
+          Your Spring Boot app calls <code>dynamoDb.getItem(tableRequest)</code>. DynamoDB computes a consistent hash of the partition key value and maps it to a partition. The partition is replicated across three AZs. A strongly consistent read goes to the partition leader; an eventually consistent read goes to any replica. The entire operation — hash computation, routing, storage read, network return — completes in 1–5ms regardless of whether the table has 100 items or 100 billion items. This is not possible with a relational database, which requires query planning, index scans, and join execution that scale with data volume.
+        </div>
+
+        <div class="prose">
+          <p><strong>What DynamoDB is excellent at:</strong> Session state storage (get/put by session ID, automatic TTL-based expiry), rate limiting and counters (atomic INCR, conditional writes), product catalogues with millions of items (get by ID, near-instant), time-series data with partition by entity and sort by timestamp, IoT ingestion pipelines, and any workload with a known access pattern that fits within a partition key + sort key model.</p>
+          <p><strong>What DynamoDB struggles with:</strong> Ad-hoc queries across multiple attributes (DynamoDB's query capabilities are limited to the primary key and GSIs — no WHERE clause on arbitrary fields), complex joins, analytical workloads requiring full table scans, and schemas that change frequently and unpredictably.</p>
+        </div>
+
+        <div class="callout warn">
+          <strong>DynamoDB is not a drop-in for RDS</strong>
+          A common architectural mistake: "our system is getting slow, let's switch to DynamoDB." DynamoDB's performance advantage is only realised when your access patterns are designed around its key model. Migrating a relational application's data model directly to DynamoDB and querying it with scan operations produces worse performance than the original RDS at higher cost. The decision to use DynamoDB must come at the beginning of designing a feature's data model — not as a performance escape hatch after a relational model is already built.
+        </div>
+      </div>
+
+      <div id="dyn1" class="topic active" style="display:none">
+        <div class="prose">
+          <p>DynamoDB has two capacity modes that determine how you pay for read and write throughput.</p>
+        </div>
+
+        <div class="compare two">
+          <div class="compare-card accent">
+            <div class="compare-title">On-Demand capacity (recommended to start)</div>
+            <div class="compare-body">
+              <strong>How it works:</strong> DynamoDB automatically scales to handle any traffic level. No capacity planning. You pay per request: $1.25 per million writes, $0.25 per million reads (ap-south-1).<br><br>
+              <strong>When to use:</strong> New tables where traffic is unpredictable. Workloads with large traffic spikes. Tables accessed infrequently. GetWork's early stage.<br><br>
+              <strong>Cost at scale:</strong> At 10M writes/day = $12.50/day. At this scale, provisioned may be cheaper.<br><br>
+              <strong>Switching:</strong> Can switch to provisioned once you understand your traffic pattern.
+            </div>
+          </div>
+          <div class="compare-card">
+            <div class="compare-title">Provisioned capacity</div>
+            <div class="compare-body">
+              <strong>How it works:</strong> You set read capacity units (RCUs) and write capacity units (WCUs). Pay per RCU/WCU per hour — regardless of actual utilisation. 1 RCU = 1 strongly consistent 4KB read/s. 1 WCU = 1 write/s up to 1KB.<br><br>
+              <strong>Auto Scaling:</strong> Enable DynamoDB Auto Scaling to adjust provisioned capacity in response to traffic. Set min and max RCU/WCU. 70% utilisation target is typical.<br><br>
+              <strong>Cost at scale:</strong> Cheaper than on-demand for predictable, sustained traffic. 100 WCU = $0.065/hr = ~$47/month.<br><br>
+              <strong>Throttling:</strong> Requests above provisioned capacity are throttled (not queued) — your application gets a ProvisionedThroughputExceededException.
+            </div>
+          </div>
+        </div>
+
+        <div class="callout fail">
+          <strong>Hot partition throttling with provisioned capacity</strong>
+          You provision 1,000 WCUs across your table. DynamoDB distributes this across partitions. If your workload writes disproportionately to one partition key (all writes going to partition key "Mumbai" while other city partitions are idle), that one partition gets throttled even though your overall WCU usage is below provisioned. The fix is key design — not provisioning more capacity. Partition key must be high-cardinality and evenly accessed. Common anti-pattern: using a date as a partition key, causing all today's writes to flood a single partition while yesterday's partition is idle.
+        </div>
+      </div>
+
+      <div id="dyn2" class="topic active" style="display:none">
+        <div class="prose">
+          <p>DynamoDB offers two consistency models for reads — with significant performance and cost implications.</p>
+          <p><strong>Eventually consistent reads</strong> — the default. DynamoDB reads from any of the three replicas. The replica may be slightly behind the leader (usually milliseconds, occasionally a few seconds). Half the cost of strongly consistent reads. Appropriate for: read-after-write scenarios where the reader is a different request than the writer, analytics, cached lookups.</p>
+          <p><strong>Strongly consistent reads</strong> — DynamoDB reads from the partition leader, guaranteeing the latest data. Twice the cost of eventually consistent. Appropriate for: read-after-write in the same request chain (user creates a session, immediately reads it back), financial record lookups, any scenario where stale data causes a user-visible error.</p>
+        </div>
+        <div class="callout how">
+          <strong>When eventual consistency bites you in practice</strong>
+          A worker submits their profile update at 14:00:00. The write succeeds. At 14:00:00.100 (100ms later), the profile page does a GET to display the confirmation. With eventual consistency, the GET may return the old data because the replica hasn't caught up yet. The worker sees "Your name is still the old name" and thinks their update failed. They submit again. You now have a duplicate update event to handle. For any read that directly follows a write in the same user interaction, use strongly consistent reads or use write-through caching so the latest data is in Redis immediately after the write.
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('keys',null)">Key design — the most important DynamoDB skill →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- KEY DESIGN -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-keys" class="section">
+      <div class="sec-header">
+        <div class="sec-title">DynamoDB key design — the skill that determines everything</div>
+        <div class="sec-sub">DynamoDB's performance, cost, and query capability are entirely determined by your primary key design. A well-designed key model serves all your access patterns efficiently. A poorly designed one requires either full table scans (expensive, slow) or excessive GSIs (complex, costly).</div>
+      </div>
+
+      <div class="prose">
+        <p>The cardinal rule of DynamoDB design: <strong>identify all access patterns before designing the schema</strong>. Unlike relational databases where you design the schema and then write queries, in DynamoDB the access patterns drive the schema — not the other way around.</p>
+        <p><strong>GetWork access patterns to identify first:</strong></p>
+        <p>1. Get a specific job by ID (job detail page)<br>
+        2. List all jobs in a city sorted by post date (browse jobs)<br>
+        3. Get a worker's profile by ID<br>
+        4. List all jobs a specific worker applied to<br>
+        5. Get a session by session token (authentication)<br>
+        6. Check rate limit counter for an IP address</p>
+      </div>
+
+      <div class="callout how">
+        <strong>Single-table design — fitting multiple entity types into one table</strong>
+        Advanced DynamoDB practitioners use a single table for multiple entity types. The partition key encodes the entity type: <code>JOB#123</code>, <code>WORKER#42</code>, <code>APPLICATION#789</code>. Sort key encodes the relationship: item <code>PK=JOB#123 SK=METADATA</code> is the job itself; item <code>PK=JOB#123 SK=APPLICATION#WORKER#42</code> is an application for that job by that worker. A single query to <code>PK=JOB#123</code> returns the job AND all its applications. This is the most space-efficient design but requires deep DynamoDB expertise. For engineers new to DynamoDB, start with one table per entity type and consolidate later.
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">DynamoDB — GetWork session table design</span></div>
+        <pre><code><span class="t-c">// Table: getwork-sessions</span>
+<span class="t-c">// Access pattern: Get session by token (authentication on every request)</span>
+<span class="t-c">// TTL: sessions expire automatically via DynamoDB TTL attribute</span>
+
+<span class="t-c">// Key design:</span>
+<span class="t-c">// PK: sessionToken (String) — high cardinality, even distribution</span>
+<span class="t-c">// SK: none — single item per partition key</span>
+
+<span class="t-c">// Sample item:</span>
+{
+  <span class="t-s">"sessionToken"</span>: <span class="t-s">"eyJhbGciOiJIUzI1NiJ9..."</span>,  <span class="t-c">// PK</span>
+  <span class="t-s">"workerId"</span>: <span class="t-n">42</span>,
+  <span class="t-s">"role"</span>: <span class="t-s">"WORKER"</span>,
+  <span class="t-s">"createdAt"</span>: <span class="t-s">"2024-03-15T10:30:00Z"</span>,
+  <span class="t-s">"expiresAt"</span>: <span class="t-n">1710513000</span>          <span class="t-c">// Unix epoch — DynamoDB TTL attribute</span>
+                                          <span class="t-c">// DynamoDB auto-deletes expired items</span>
+}
+
+<span class="t-c">// Table: getwork-rate-limits</span>
+<span class="t-c">// Access pattern: Check and increment request count per IP per minute</span>
+<span class="t-c">// PK: ipAddress#minuteWindow  e.g. "192.168.1.1#202403151430"</span>
+<span class="t-c">// SK: none</span>
+<span class="t-c">// TTL: minuteWindow + 2 minutes (auto-expire rate limit windows)</span>
+
+<span class="t-c">// Atomic increment with conditional expression:</span>
+<span class="t-f">UpdateItemRequest</span>.builder()
+  .tableName(<span class="t-s">"getwork-rate-limits"</span>)
+  .key(<span class="t-n">Map</span>.of(<span class="t-s">"pk"</span>, <span class="t-f">AttributeValue</span>.fromS(ip + <span class="t-s">"#"</span> + window)))
+  .updateExpression(<span class="t-s">"ADD requestCount :inc SET expiresAt = :ttl"</span>)
+  .conditionExpression(<span class="t-s">"requestCount < :limit OR attribute_not_exists(requestCount)"</span>)
+  .expressionAttributeValues(<span class="t-n">Map</span>.of(
+    <span class="t-s">":inc"</span>, <span class="t-f">AttributeValue</span>.fromN(<span class="t-s">"1"</span>),
+    <span class="t-s">":limit"</span>, <span class="t-f">AttributeValue</span>.fromN(<span class="t-s">"100"</span>),
+    <span class="t-s">":ttl"</span>, <span class="t-f">AttributeValue</span>.fromN(String.valueOf(expiry))
+  ))
+  .build();
+<span class="t-c">// If condition fails → ConditionalCheckFailedException → rate limit exceeded</span>
+<span class="t-c">// This entire operation is atomic — no race condition across concurrent requests</span></code></pre>
+      </div>
+
+      <div class="callout prod">
+        <strong>DynamoDB TTL — free automatic item expiry</strong>
+        DynamoDB TTL is a built-in feature that automatically deletes items when a specified Unix epoch timestamp attribute is in the past. No Lambda, no cron, no DELETE queries. Deletions happen within 48 hours of expiry (usually within minutes for normal table sizes). Items are not immediately deleted at expiry — they remain readable for up to 48 hours. For session tokens where security requires hard expiry, enforce TTL in your application logic (check <code>expiresAt > now()</code>) in addition to relying on DynamoDB's TTL cleanup. Enable TTL with: <code>aws dynamodb update-time-to-live --table-name T --time-to-live-specification Enabled=true,AttributeName=expiresAt</code>
+      </div>
+
+      <button class="next-btn" onclick="nav('reads',null)">Reads, writes, and GSIs →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- READS, WRITES, GSIs -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-reads" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Reads, writes, and Global Secondary Indexes</div>
+        <div class="sec-sub">The DynamoDB operations that matter for a Spring Boot application — GetItem, Query, PutItem, UpdateItem with conditions — and GSIs for access patterns that don't fit the primary key.</div>
+      </div>
+
+      <div class="prose">
+        <p><strong>GetItem</strong> — retrieve a single item by exact primary key. O(1). The fastest operation. Always prefer GetItem over Query when you know the full primary key.</p>
+        <p><strong>Query</strong> — retrieve multiple items with the same partition key, optionally filtering by sort key. Returns items sorted by sort key. Supports filter expressions on non-key attributes (but note: filters are applied <em>after</em> reading — they reduce returned items but not RCUs consumed). Only use filter expressions to reduce network transfer, not to reduce read cost.</p>
+        <p><strong>Scan</strong> — read every item in the table. Expensive. Consumes RCUs proportional to table size. The operation that makes DynamoDB slow and expensive when used for general queries. Never use Scan in a production hot path. Acceptable for: administrative data exports, full-table analytics (run off-peak), seeding test data.</p>
+        <p><strong>PutItem</strong> — create or replace an item. Use a condition expression (<code>attribute_not_exists(pk)</code>) to prevent overwriting existing items — essential for insert-only semantics.</p>
+        <p><strong>UpdateItem</strong> — update specific attributes of an existing item. Does not require reading the item first. Supports atomic ADD (increment), SET, REMOVE, and DELETE operations. Supports conditional expressions for optimistic locking.</p>
+      </div>
+
+      <div class="callout how">
+        <strong>Global Secondary Indexes (GSIs) — query by non-key attributes</strong>
+        A GSI creates an alternate view of your table with a different partition key and sort key. DynamoDB projects (copies) specified attributes from the base table into the GSI. The GSI is maintained automatically as items are written to the base table. Reads from a GSI behave like reads from the base table: GetItem and Query. GSI writes consume WCUs from the base table. GSI reads consume RCUs from the GSI's allocated capacity (for provisioned mode) or are charged per-request (on-demand).<br><br>
+        GetWork example: base table <code>workers</code> has PK=workerId. GSI: PK=city, SK=rating. Query: "give me workers in Mumbai sorted by rating descending" — a query impossible on the base table but trivial on this GSI. Up to 20 GSIs per table. Each GSI costs additional storage (projected attributes) and write capacity.
+      </div>
+
+      <div class="callout fail">
+        <strong>The GSI that can't be queried because of uneven key distribution</strong>
+        You create a GSI with PK=status (ACTIVE, INACTIVE, PENDING). Your table has 10 million workers, 9.8 million of which are ACTIVE. The "ACTIVE" partition in your GSI holds 9.8 million items. A Query on this GSI for status=ACTIVE returns a result set so large it requires many paginated calls and is functionally equivalent to a Scan. This is a hot partition problem in the GSI. GSI partition keys must have the same high-cardinality property as base table partition keys. Use composite GSI keys to increase cardinality: PK = city+status (e.g. "Mumbai#ACTIVE") instead of status alone.
+      </div>
+
+      <button class="next-btn" onclick="nav('springdynamo',null)">Spring Boot DynamoDB integration →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- SPRING DYNAMO -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-springdynamo" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Spring Boot + DynamoDB Enhanced Client</div>
+        <div class="sec-sub">The AWS SDK v2 DynamoDB Enhanced Client provides a type-safe, annotation-driven mapper between Java objects and DynamoDB items — the correct way to integrate DynamoDB into a Spring Boot application.</div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">Java — DynamoDB session store</span></div>
+        <pre><code><span class="t-c">// Session entity — mapped to DynamoDB table</span>
+<span class="t-a">@DynamoDbBean</span>
+<span class="t-k">public class</span> <span class="t-n">SessionItem</span> {
+    <span class="t-k">private</span> <span class="t-n">String</span> sessionToken;
+    <span class="t-k">private</span> <span class="t-n">Long</span> workerId;
+    <span class="t-k">private</span> <span class="t-n">String</span> role;
+    <span class="t-k">private</span> <span class="t-n">Instant</span> createdAt;
+    <span class="t-k">private</span> <span class="t-n">Long</span> expiresAt;         <span class="t-c">// Unix epoch for DynamoDB TTL</span>
+
+    <span class="t-a">@DynamoDbPartitionKey</span>
+    <span class="t-k">public</span> <span class="t-n">String</span> <span class="t-f">getSessionToken</span>() { <span class="t-k">return</span> sessionToken; }
+
+    <span class="t-c">// getters, setters...</span>
+}
+
+<span class="t-c">// DynamoDB configuration bean</span>
+<span class="t-a">@Configuration</span>
+<span class="t-k">public class</span> <span class="t-n">DynamoDbConfig</span> {
+
+    <span class="t-a">@Bean</span>
+    <span class="t-k">public</span> <span class="t-n">DynamoDbEnhancedClient</span> <span class="t-f">dynamoDbEnhancedClient</span>(
+            <span class="t-a">@Value</span>(<span class="t-s">"${aws.region:ap-south-1}"</span>) <span class="t-n">String</span> region) {
+        <span class="t-k">return</span> <span class="t-n">DynamoDbEnhancedClient</span>.builder()
+            .dynamoDbClient(<span class="t-n">DynamoDbClient</span>.builder()
+                .region(<span class="t-n">Region</span>.of(region))
+                .credentialsProvider(<span class="t-n">DefaultCredentialsProvider</span>.create())
+                .build())
+            .build();
+    }
+}
+
+<span class="t-c">// Session repository using Enhanced Client</span>
+<span class="t-a">@Repository</span>
+<span class="t-k">public class</span> <span class="t-n">SessionRepository</span> {
+    <span class="t-k">private final</span> <span class="t-n">DynamoDbTable</span>&lt;<span class="t-n">SessionItem</span>&gt; table;
+
+    <span class="t-k">public</span> <span class="t-n">SessionRepository</span>(<span class="t-n">DynamoDbEnhancedClient</span> client) {
+        <span class="t-k">this</span>.table = client.table(<span class="t-s">"getwork-sessions"</span>,
+            <span class="t-n">TableSchema</span>.fromBean(<span class="t-n">SessionItem</span>.<span class="t-k">class</span>));
+    }
+
+    <span class="t-k">public</span> <span class="t-n">Optional</span>&lt;<span class="t-n">SessionItem</span>&gt; <span class="t-f">findByToken</span>(<span class="t-n">String</span> token) {
+        <span class="t-n">SessionItem</span> key = <span class="t-k">new</span> <span class="t-n">SessionItem</span>();
+        key.setSessionToken(token);
+        <span class="t-n">SessionItem</span> item = table.getItem(r -> r.key(k -> k.partitionValue(token)));
+        <span class="t-k">if</span> (item == <span class="t-k">null</span>) <span class="t-k">return</span> <span class="t-n">Optional</span>.empty();
+        <span class="t-c">// Application-level TTL check (DynamoDB TTL cleanup can lag 48hrs)</span>
+        <span class="t-k">if</span> (item.getExpiresAt() &lt; <span class="t-n">Instant</span>.now().getEpochSecond())
+            <span class="t-k">return</span> <span class="t-n">Optional</span>.empty();
+        <span class="t-k">return</span> <span class="t-n">Optional</span>.of(item);
+    }
+
+    <span class="t-k">public void</span> <span class="t-f">save</span>(<span class="t-n">SessionItem</span> session) {
+        table.putItem(session);
+    }
+
+    <span class="t-k">public void</span> <span class="t-f">delete</span>(<span class="t-n">String</span> token) {
+        table.deleteItem(r -> r.key(k -> k.partitionValue(token)));
+    }
+}
+
+<span class="t-c">// WebFlux reactive version — use DynamoDbAsyncClient instead</span>
+<span class="t-k">public</span> <span class="t-n">Mono</span>&lt;<span class="t-n">SessionItem</span>&gt; <span class="t-f">findByTokenAsync</span>(<span class="t-n">String</span> token) {
+    <span class="t-k">return</span> <span class="t-n">Mono</span>.fromFuture(
+        asyncTable.getItem(r -> r.key(k -> k.partitionValue(token)))
+    ).filter(item -> item.getExpiresAt() &gt; <span class="t-n">Instant</span>.now().getEpochSecond());
+}</code></pre>
+      </div>
+
+      <div class="callout prod">
+        <strong>DynamoDB for GetWork — the right use cases</strong>
+        Session storage: perfect. Each session is a single GetItem by token. High read/write throughput. TTL for automatic expiry. No SQL needed.<br>
+        Rate limiting: perfect. Atomic counter updates with condition expressions. TTL per window. No locks needed.<br>
+        View counters: perfect. Atomic ADD operation. No read-modify-write pattern needed.<br><br>
+        NOT good for DynamoDB: complex job search with multiple filter criteria, reporting queries, anything requiring JOINs. Keep these in RDS.
+      </div>
+
+      <button class="next-btn" onclick="nav('interview',null)">Interview prep →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- INTERVIEW PREP -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-interview" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Interview prep</div>
+        <div class="sec-sub">ElastiCache and DynamoDB questions test architectural judgement — knowing when to use each service, what the failure modes are, and how they integrate with a Spring Boot application.</div>
+      </div>
+
+      <div class="iq-list">
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q1</span>
+            <span class="iq-q">Your RDS database is CPU-bound. Should you add Redis caching or scale up the RDS instance? How do you decide?</span>
+            <span class="iq-diff diff-h">Hard</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>This depends on why the RDS CPU is high. High CPU can come from two distinct sources and the fix differs for each.</p>
+            <p><strong>If CPU is high due to repeated identical reads:</strong> The same queries are executing over and over — user profile lookups, job listing fetches, popular search results. Adding Redis caching eliminates these repeated queries. The RDS CPU drops because it's no longer executing queries that Redis can serve. This is the correct use case for caching — it changes the load profile, not just the capacity.</p>
+            <p><strong>If CPU is high due to complex or long-running queries:</strong> The queries are slow because of missing indexes, inefficient joins, or large aggregations. Adding Redis in front of these doesn't help — cache hits only occur after the first execution. A cache miss still causes the expensive query. Scaling up RDS gives the query more CPU to work with but doesn't address the underlying inefficiency. The correct fix: add indexes, optimise queries with <code>EXPLAIN</code>, and use read replicas to distribute the analytical workload.</p>
+            <p>The diagnostic: check RDS Performance Insights. If the top SQL queries are identical short queries appearing thousands of times per minute (repeated reads), caching helps. If the top queries are unique slow queries with high per-execution CPU, caching doesn't help — you need query optimisation and potentially read replicas.</p>
+            <p>In practice: do both. Cache the repeated reads (reduces 80% of query volume), and simultaneously optimise the expensive queries. Neither alone is as effective as both together.</p>
+            <div class="iq-tip">Why this works: distinguishes between load reduction (caching's strength) and query optimisation (indexing's strength). Shows you know how to diagnose the actual problem rather than applying a blanket "add cache" answer.</div>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q2</span>
+            <span class="iq-q">What is the thundering herd problem with cache TTL expiry? How do you prevent it?</span>
+            <span class="iq-diff diff-m">Medium</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>When a heavily-accessed cache entry expires, multiple concurrent requests miss the cache simultaneously. All of them query the database to rebuild the cache. The database receives a spike of identical queries all at once — multiplied by however many application instances are running. This is the thundering herd: a brief moment where what was previously handled by one cache read becomes dozens or hundreds of database queries.</p>
+            <p>For GetWork, this is realistic: "construction workers available in Mumbai today" is a popular search cached with TTL=300. At expiry, 200+ concurrent users might all miss the cache in the same second.</p>
+            <p><strong>Prevention approach 1 — Jittered TTLs:</strong> Instead of <code>TTL=300</code>, use <code>TTL=300 + random(0,60)</code>. Entries for different keys expire at different times within a 60-second window. This doesn't prevent thundering herd for a single key but prevents multiple popular keys from expiring simultaneously.</p>
+            <p><strong>Prevention approach 2 — Probabilistic early refresh:</strong> Before the TTL expires, a small percentage of requests proactively refresh the cache entry in the background. The cache never goes cold. Spring doesn't have this built-in; implement with a custom <code>@Cacheable</code> aspect that checks remaining TTL.</p>
+            <p><strong>Prevention approach 3 — Cache stampede lock:</strong> When a cache miss occurs, acquire a distributed lock (Redis SETNX with short TTL) before querying the database. Only the lock holder queries the database and rebuilds the cache. Other concurrent requests either wait briefly or return stale data. This guarantees only one DB query per cache miss regardless of concurrency.</p>
+            <div class="iq-tip">Why this works: names the problem precisely, explains the mechanics with a concrete GetWork example, and gives three concrete solutions with their trade-offs.</div>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q3</span>
+            <span class="iq-q">When would you use DynamoDB instead of RDS for a new feature in a Spring Boot application?</span>
+            <span class="iq-diff diff-h">Hard</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>DynamoDB is the right choice when the access pattern is simple, the throughput requirement is extreme, and the data fits a key-value or key-sortedlist model.</p>
+            <p><strong>Session storage:</strong> Every API request authenticates by looking up a session token. Millions of lookups per day. Always by exact token. No joins, no aggregations. DynamoDB GetItem is 1–3ms and scales horizontally without any configuration. RDS for session storage requires a dedicated table, index on token, and connection pool management — at high request volume, the session lookup table becomes a bottleneck.</p>
+            <p><strong>Rate limiting:</strong> Check and increment a counter per IP per time window atomically. DynamoDB's conditional UpdateItem with ADD is an atomic operation — no race conditions, no distributed locking needed. In RDS, implementing an atomic read-modify-write requires either a transaction (expensive) or application-level locking (complex).</p>
+            <p><strong>Event logs or activity feeds:</strong> Append-only logs accessed by entity ID sorted by time. DynamoDB: partition key = entity ID, sort key = timestamp. Query "last 50 events for worker 42" is a single Query with LIMIT=50. In RDS, this requires a table with a composite index and a SELECT with ORDER BY LIMIT — functional but adds connection pool pressure at high volume.</p>
+            <p>I would keep in RDS: anything requiring complex queries (job search with multiple filters), financial transactions (strong ACID guarantees), reports and analytics (complex aggregations, JOINs). The rule: if the schema has more than 2-3 access patterns and they vary, RDS is more maintainable. If there are 1-2 access patterns and they're simple gets by key, DynamoDB is likely the better fit.</p>
+            <div class="iq-tip">Why this works: gives concrete use cases rather than abstract criteria, and explicitly states what stays in RDS — showing balanced architectural judgement rather than "DynamoDB is better."</div>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q4</span>
+            <span class="iq-q">What is a DynamoDB hot partition and how do you detect and fix it?</span>
+            <span class="iq-diff diff-m">Medium</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>A hot partition occurs when a disproportionate share of read or write traffic is routed to one DynamoDB partition because the partition key values are not evenly distributed in access frequency. Each DynamoDB partition handles at most 3,000 read units and 1,000 write units per second. If one partition key value receives more traffic than the partition limit, requests are throttled — even if the overall table's provisioned capacity is sufficient.</p>
+            <p><strong>Detection:</strong> CloudWatch metric <code>ConsumedReadCapacityUnits</code> and <code>ConsumedWriteCapacityUnits</code> at the table level will show normal consumption, while individual requests return <code>ProvisionedThroughputExceededException</code>. The table-level metrics look fine because the overall table isn't saturated — only one partition is. Enable CloudWatch Contributor Insights for DynamoDB to see which specific partition key values are generating the most traffic. This makes hot partitions immediately visible.</p>
+            <p><strong>Fix — key design:</strong> The root cause is always a low-cardinality or skewed-access partition key. Fixes: (1) Add a suffix to the partition key to spread load: <code>MUMBAI#0</code>, <code>MUMBAI#1</code>, ..., <code>MUMBAI#9</code>. Randomly select or derive the suffix. Now "Mumbai" traffic is spread across 10 partitions. (2) Use a higher-cardinality partition key: instead of <code>city</code> (few values), use <code>workerId</code> (millions of values). Fetch per-city data via a GSI. (3) Use write sharding: append a random number to the partition key on writes and scatter-gather on reads.</p>
+            <div class="iq-tip">Why this works: explains the partition model (3,000 RCU / 1,000 WCU per partition), the diagnostic subtlety (table-level metrics look fine), and three concrete key design fixes.</div>
+          </div>
+        </div>
+
+      </div>
+      <button class="next-btn" onclick="nav('lab',null)">Start the lab →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- LAB -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-lab" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Lab — ElastiCache + DynamoDB setup</div>
+        <div class="sec-sub">Create an ElastiCache Redis replication group and a DynamoDB table for session storage. Verify connectivity from an EC2 instance. Configure Spring Boot properties for both services.</div>
+      </div>
+
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" id="n1" onclick="markDone(1)">1</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Create ElastiCache subnet group and Redis replication group</div>
+            <div class="step-text">Create a subnet group using your Day 4 private subnets, then launch a Redis 7.x replication group with one primary and one replica across AZs.</div>
+            <code class="step-cmd">REGION=ap-south-1
+VPC_ID=$(aws ec2 describe-vpcs \
+  --filters "Name=tag:Name,Values=getwork-vpc" \
+  --query 'Vpcs[0].VpcId' --output text --region $REGION 2>/dev/null || \
+  aws ec2 describe-vpcs --query 'Vpcs[0].VpcId' --output text --region $REGION)
+
+# Get private subnets
+PRIV_SUBNETS=($(aws ec2 describe-subnets \
+  --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=false" \
+  --query 'Subnets[*].SubnetId' --output text --region $REGION))
+PRIV_1A=${PRIV_SUBNETS[0]}
+PRIV_1B=${PRIV_SUBNETS[1]:-$PRIV_1A}  # fallback if only 1 private subnet
+
+# Create ElastiCache subnet group
+aws elasticache create-cache-subnet-group \
+  --cache-subnet-group-name getwork-cache-subnets \
+  --cache-subnet-group-description "GetWork Redis subnets" \
+  --subnet-ids $PRIV_1A $PRIV_1B \
+  --region $REGION 2>/dev/null || echo "Subnet group exists"
+
+# Security group for ElastiCache
+REDIS_SG=$(aws ec2 create-security-group \
+  --group-name redis-sg \
+  --description "ElastiCache Redis" \
+  --vpc-id $VPC_ID \
+  --query 'GroupId' --output text --region $REGION 2>/dev/null || \
+  aws ec2 describe-security-groups \
+  --filters "Name=group-name,Values=redis-sg" \
+  --query 'SecurityGroups[0].GroupId' --output text --region $REGION)
+
+APP_SG=$(aws ec2 describe-security-groups \
+  --filters "Name=group-name,Values=app-sg" \
+  --query 'SecurityGroups[0].GroupId' --output text --region $REGION 2>/dev/null || echo "")
+
+# Allow 6379 from app-sg (Security Group chaining)
+[ -n "$APP_SG" ] && aws ec2 authorize-security-group-ingress \
+  --group-id $REDIS_SG --protocol tcp --port 6379 \
+  --source-group $APP_SG --region $REGION 2>/dev/null || true
+
+# Create replication group (primary + 1 replica)
+# cache.t4g.micro is Free Tier eligible
+aws elasticache create-replication-group \
+  --replication-group-id getwork-redis \
+  --replication-group-description "GetWork session cache" \
+  --cache-node-type cache.t4g.micro \
+  --engine redis \
+  --engine-version 7.0 \
+  --num-cache-clusters 2 \
+  --cache-subnet-group-name getwork-cache-subnets \
+  --security-group-ids $REDIS_SG \
+  --automatic-failover-enabled \
+  --at-rest-encryption-enabled \
+  --transit-encryption-enabled \
+  --region $REGION
+
+echo "Redis cluster creating (takes ~5 minutes)..."
+echo "Check status: aws elasticache describe-replication-groups \\"
+echo "  --replication-group-id getwork-redis --region $REGION \\"
+echo "  --query 'ReplicationGroups[0].Status'"</code>
+            <div class="step-note">cache.t4g.micro is AWS Free Tier eligible (750 hrs/month for 12 months). at-rest-encryption and transit-encryption are enabled — required for any production cluster and increasingly for compliance in financial services projects.</div>
+            <button class="step-btn" onclick="markDone(1)">Mark complete ✓</button>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" id="n2" onclick="markDone(2)">2</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Get the Redis endpoint and verify connectivity</div>
+            <div class="step-text">Once the cluster is available, retrieve the primary endpoint. SSH into your EC2 (or use SSM Session Manager), install redis-cli, and test the connection.</div>
+            <code class="step-cmd"># Wait for cluster to become available
+aws elasticache wait replication-group-available \
+  --replication-group-id getwork-redis --region $REGION
+echo "Redis ready!"
+
+# Get primary endpoint
+REDIS_ENDPOINT=$(aws elasticache describe-replication-groups \
+  --replication-group-id getwork-redis \
+  --query 'ReplicationGroups[0].NodeGroups[0].PrimaryEndpoint.Address' \
+  --output text --region $REGION)
+echo "Redis endpoint: $REDIS_ENDPOINT"
+
+# Store in SSM Parameter Store for the application
+aws ssm put-parameter \
+  --name /getwork/prod/redis-endpoint \
+  --value "$REDIS_ENDPOINT" \
+  --type String --overwrite --region $REGION
+
+# Verify from your EC2 instance (SSH or SSM Session Manager):
+# sudo dnf install -y redis6
+# redis-cli -h $REDIS_ENDPOINT -p 6379 --tls PING
+# Expected: PONG
+# 
+# Basic operations test:
+# redis-cli -h $REDIS_ENDPOINT -p 6379 --tls SET test:key "hello getwork" EX 60
+# redis-cli -h $REDIS_ENDPOINT -p 6379 --tls GET test:key
+# redis-cli -h $REDIS_ENDPOINT -p 6379 --tls TTL test:key
+# redis-cli -h $REDIS_ENDPOINT -p 6379 --tls INFO server | grep redis_version</code>
+            <div class="step-note">The --tls flag is required because we enabled transit encryption. Without it, redis-cli connects and immediately gets disconnected. In Spring Boot: spring.data.redis.ssl.enabled=true.</div>
+            <button class="step-btn" onclick="markDone(2)">Mark complete ✓</button>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" id="n3" onclick="markDone(3)">3</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Create DynamoDB tables for sessions and rate limiting</div>
+            <div class="step-text">Create two DynamoDB tables with appropriate key designs and TTL enabled. Both use on-demand capacity — appropriate for GetWork's current scale and variable traffic.</div>
+            <code class="step-cmd"># Sessions table — PK: sessionToken
+aws dynamodb create-table \
+  --table-name getwork-sessions \
+  --attribute-definitions AttributeName=sessionToken,AttributeType=S \
+  --key-schema AttributeName=sessionToken,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region $REGION
+
+aws dynamodb wait table-exists \
+  --table-name getwork-sessions --region $REGION
+
+# Enable TTL on the expiresAt attribute
+aws dynamodb update-time-to-live \
+  --table-name getwork-sessions \
+  --time-to-live-specification "Enabled=true,AttributeName=expiresAt" \
+  --region $REGION
+
+echo "Sessions table ready with TTL enabled"
+
+# Rate limiting table — PK: rateLimitKey (ip#window)
+aws dynamodb create-table \
+  --table-name getwork-rate-limits \
+  --attribute-definitions AttributeName=pk,AttributeType=S \
+  --key-schema AttributeName=pk,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region $REGION
+
+aws dynamodb wait table-exists \
+  --table-name getwork-rate-limits --region $REGION
+
+aws dynamodb update-time-to-live \
+  --table-name getwork-rate-limits \
+  --time-to-live-specification "Enabled=true,AttributeName=expiresAt" \
+  --region $REGION
+
+echo "Rate limits table ready"
+
+# Test: write and read a session
+aws dynamodb put-item \
+  --table-name getwork-sessions \
+  --item '{
+    "sessionToken": {"S": "test-token-abc123"},
+    "workerId": {"N": "42"},
+    "role": {"S": "WORKER"},
+    "expiresAt": {"N": "'$(($(date +%s) + 3600))'"} 
+  }' --region $REGION
+
+aws dynamodb get-item \
+  --table-name getwork-sessions \
+  --key '{"sessionToken": {"S": "test-token-abc123"}}' \
+  --region $REGION</code>
+            <div class="step-note">PAY_PER_REQUEST (on-demand) requires zero capacity planning and scales automatically. First 25GB storage and 25 RCU/WCU provisioned are free tier. For GetWork's session volume, you'll likely stay within the free tier for months.</div>
+            <button class="step-btn" onclick="markDone(3)">Mark complete ✓</button>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" id="n4" onclick="markDone(4)">4</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Update Spring Boot configuration and IAM role</div>
+            <div class="step-text">Add ElastiCache and DynamoDB connection properties to application.properties. Add the required DynamoDB permissions to the EC2 instance role from Day 10.</div>
+            <code class="step-cmd">REDIS_ENDPOINT=$(aws ssm get-parameter \
+  --name /getwork/prod/redis-endpoint \
+  --query Parameter.Value --output text --region $REGION)
+
+echo "Add to application-production.properties:"
+echo ""
+echo "# ElastiCache Redis"
+echo "spring.data.redis.host=${REDIS_ENDPOINT}"
+echo "spring.data.redis.port=6379"
+echo "spring.data.redis.ssl.enabled=true"
+echo "spring.data.redis.lettuce.pool.max-active=16"
+echo "spring.data.redis.lettuce.pool.max-idle=8"
+echo "spring.data.redis.lettuce.pool.min-idle=2"
+echo "spring.cache.redis.time-to-live=600000"
+echo ""
+echo "# DynamoDB"
+echo "aws.dynamodb.sessions-table=getwork-sessions"
+echo "aws.dynamodb.rate-limits-table=getwork-rate-limits"
+
+# Add DynamoDB permissions to the instance IAM role
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+DYNAMO_POLICY='{
+  "Version":"2012-10-17",
+  "Statement":[{
+    "Effect":"Allow",
+    "Action":[
+      "dynamodb:GetItem","dynamodb:PutItem",
+      "dynamodb:UpdateItem","dynamodb:DeleteItem","dynamodb:Query"
+    ],
+    "Resource":[
+      "arn:aws:dynamodb:'$REGION':'$ACCOUNT_ID':table/getwork-sessions",
+      "arn:aws:dynamodb:'$REGION':'$ACCOUNT_ID':table/getwork-rate-limits"
+    ]
+  }]
+}'
+
+aws iam put-role-policy \
+  --role-name getwork-app-role \
+  --policy-name dynamodb-access \
+  --policy-document "$DYNAMO_POLICY" 2>/dev/null || echo "Update policy in IAM console"
+
+echo "IAM policy updated — DynamoDB access granted to instance role"</code>
+            <div class="step-note">The DynamoDB permissions are scoped to exactly the two tables the application uses — principle of least privilege applied. No dynamodb:Scan permission — the application should never scan these tables.</div>
+            <button class="step-btn" onclick="markDone(4)">Mark complete ✓</button>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" id="n5" onclick="markDone(5)">5</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Cost cleanup — delete or stop resources</div>
+            <div class="step-text">ElastiCache replication group costs ~$0.034/hr for the cache.t4g.micro. DynamoDB on-demand has no fixed cost. Clean up after the lab.</div>
+            <code class="step-cmd"># Delete ElastiCache replication group (takes ~3 minutes)
+aws elasticache delete-replication-group \
+  --replication-group-id getwork-redis \
+  --region $REGION
+
+# Delete DynamoDB tables (data is lost — table deletion is permanent)
+aws dynamodb delete-table --table-name getwork-sessions --region $REGION
+aws dynamodb delete-table --table-name getwork-rate-limits --region $REGION
+
+# Delete subnet group
+aws elasticache delete-cache-subnet-group \
+  --cache-subnet-group-name getwork-cache-subnets \
+  --region $REGION
+
+# Delete SSM parameter
+aws ssm delete-parameter --name /getwork/prod/redis-endpoint --region $REGION
+
+echo "Day 13 resources deleted"
+echo ""
+echo "Cost while running:"
+echo "  ElastiCache 2x cache.t4g.micro: ~\$0.068/hr"
+echo "  DynamoDB on-demand: ~\$0/hr (charged per request)"
+echo "  Total lab cost for ~1 hour: ~\$0.07"</code>
+            <div class="step-note">ElastiCache does not have a "stop" option — it's always running or deleted. For cost management in non-production environments, delete and recreate as needed. Terraform makes recreation fast (under 2 minutes with existing state).</div>
+            <button class="step-btn" onclick="markDone(5)">Mark complete ✓</button>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="next-btn" onclick="nav('cheatsheet',null)">Day 13 cheatsheet →</button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- CHEATSHEET -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div id="s-cheatsheet" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Day 13 cheatsheet</div>
+        <div class="sec-sub">ElastiCache + DynamoDB production mechanics at a glance.</div>
+      </div>
+
+      <div class="cs-grid">
+        <div class="cs-card"><div class="cs-title">Redis latency</div><div class="cs-desc">100–500µs for GET/SET. All data in RAM — no disk I/O. Compare: RDS 1–10ms. Use Redis for data that must be accessed thousands of times per second.</div></div>
+        <div class="cs-card"><div class="cs-title">allkeys-lru eviction</div><div class="cs-desc">Correct eviction policy for a pure cache. Evicts least recently used when memory full. Watch CacheEvictions in CloudWatch — rising count = time to scale.</div></div>
+        <div class="cs-card"><div class="cs-title">Lettuce topology refresh</div><div class="cs-desc">Set spring.data.redis.lettuce.cluster.refresh.period=30s. Without this, Lettuce may keep writing to a demoted replica for up to 60s after failover.</div></div>
+        <div class="cs-card"><div class="cs-title">JSON not Java serialisation</div><div class="cs-desc">Always use GenericJackson2JsonRedisSerializer. Java serialisation breaks on class structure changes between deployments — cached values become unreadable until TTL expires.</div></div>
+        <div class="cs-card"><div class="cs-title">commons-pool2 required</div><div class="cs-desc">Lettuce pool configuration (spring.redis.lettuce.pool.*) is silently ignored without the Apache commons-pool2 dependency on the classpath.</div></div>
+        <div class="cs-card"><div class="cs-title">Thundering herd</div><div class="cs-desc">Multiple concurrent cache misses hit DB simultaneously. Prevent with: jittered TTLs (TTL + random(0,30)), Redis SETNX lock before DB query, probabilistic early refresh.</div></div>
+        <div class="cs-card"><div class="cs-title">DynamoDB partition limits</div><div class="cs-desc">Each partition: 3,000 RCU/s + 1,000 WCU/s. Hot partition = throttling even when overall table capacity is sufficient. Fix is always key design, not more capacity.</div></div>
+        <div class="cs-card"><div class="cs-title">Scan = expensive</div><div class="cs-desc">DynamoDB Scan reads every item in the table. Consumes RCUs proportional to table size. Never use in a production hot path. Detect with CloudWatch ConsumedReadCapacityUnits spikes.</div></div>
+        <div class="cs-card"><div class="cs-title">DynamoDB TTL</div><div class="cs-desc">Enable on expiresAt Unix epoch attribute. Auto-deletes expired items within 48hrs. Free. Always do application-level TTL check too — deleted items remain readable for up to 48hrs after expiry.</div></div>
+        <div class="cs-card"><div class="cs-title">GSI key cardinality</div><div class="cs-desc">GSI partition keys must be high-cardinality — same rule as base table. Using low-cardinality values (status, city) as GSI PK creates hot partitions in the index.</div></div>
+        <div class="cs-card"><div class="cs-title">executionRoleArn</div><div class="cs-desc">Only needs ECR + CloudWatch Logs + Secrets Manager for injection. Does NOT need your application's DynamoDB/S3/SQS permissions — those go in taskRoleArn. Never combine.</div></div>
+        <div class="cs-card"><div class="cs-title">On-demand vs provisioned</div><div class="cs-desc">On-demand: pay per request, no capacity planning, auto-scales. Provisioned: cheaper at sustained high throughput, throttles on burst. Start on-demand, switch to provisioned when traffic stabilises.</div></div>
+      </div>
+
+      <hr class="divider">
+
+      <div style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px;">Production rules for ElastiCache + DynamoDB</div>
+      <div class="rules">
+        <div class="rule"><span class="rule-n">1</span><span>Always use a Redis cluster subnet group — never rely on default VPC placement for ElastiCache.</span></div>
+        <div class="rule"><span class="rule-n">2</span><span>Enable at-rest encryption and transit encryption on every ElastiCache cluster. Required for any regulated environment.</span></div>
+        <div class="rule"><span class="rule-n">3</span><span>Use GenericJackson2JsonRedisSerializer — never Java serialisation. Add @JsonIgnoreProperties(ignoreUnknown=true) to cached classes.</span></div>
+        <div class="rule"><span class="rule-n">4</span><span>Set topology refresh period ≤ 30 seconds on Lettuce for replication group HA failover recovery.</span></div>
+        <div class="rule"><span class="rule-n">5</span><span>Add commons-pool2 dependency explicitly — Lettuce pooling is silently disabled without it.</span></div>
+        <div class="rule"><span class="rule-n">6</span><span>DynamoDB: enable TTL before the table receives significant data. TTL cannot be retroactively applied to existing items efficiently.</span></div>
+        <div class="rule"><span class="rule-n">7</span><span>Use Contributor Insights to detect hot partitions in DynamoDB. Enable at table creation for production tables.</span></div>
+        <div class="rule"><span class="rule-n">8</span><span>DynamoDB IAM: never grant dynamodb:Scan to application roles. If Scan is needed, run it via a separate admin role.</span></div>
+        <div class="rule"><span class="rule-n">9</span><span>Design cache keys hierarchically: prefix:entity:id. Enables pattern-based invalidation: SCAN prefix:jobs:* for job cache flush.</span></div>
+        <div class="rule"><span class="rule-n">10</span><span>Monitor ElastiCache: CacheHitRate > 80% for healthy cache. CacheEvictions rising = resize. CurrConnections near max = connection pool leak.</span></div>
+      </div>
+
+      <hr class="divider">
+      <div style="background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius); padding: 1rem; font-size: 13px; color: var(--text2); line-height: 1.9;">
+        <span style="font-weight: 700; color: var(--text);">Phase 3 complete. Phase 4 begins: DevOps, Monitoring & Security.</span><br>
+        Day 14: CloudWatch deep dive — custom metrics, log queries, dashboards, anomaly detection.<br>
+        Day 15: CI/CD on AWS — CodePipeline, CodeBuild, CodeDeploy, and your Bitbucket pipeline patterns.<br>
+        Day 16: Secrets Manager rotation + advanced IAM patterns.<br>
+        Day 17: CloudFormation and Terraform on AWS — IaC at depth.
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const sections = {
+  elasticache: 's-elasticache',
+  cluster: 's-cluster',
+  springcache: 's-springcache',
+  patterns: 's-patterns',
+  dynamo: 's-dynamo',
+  keys: 's-keys',
+  reads: 's-reads',
+  springdynamo: 's-springdynamo',
+  interview: 's-interview',
+  lab: 's-lab',
+  cheatsheet: 's-cheatsheet'
+};
+
+function nav(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById(sections[id]);
+  if (sec) sec.classList.add('active');
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    document.querySelectorAll('.nav-item').forEach(n => {
+      if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${id}'`)) {
+        n.classList.add('active');
+      }
+    });
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function topic(prefix, idx, btn) {
+  const panel = btn.closest('.section');
+  panel.querySelectorAll('.topic').forEach(t => t.style.display = 'none');
+  panel.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+  const t = document.getElementById(prefix + idx);
+  if (t) t.style.display = 'block';
+  btn.classList.add('active');
+}
+
+function tog(el) { el.classList.toggle('open'); }
+
+function markDone(n) {
+  const node = document.getElementById('n' + n);
+  if (!node) return;
+  const step = node.closest('.step');
+  step.classList.add('done');
+  node.textContent = '✓';
+}
+
+// Init: show first topic in each section
+document.querySelectorAll('.topic').forEach((t, i) => {
+  if (t.id && t.id.match(/\d+$/)) {
+    const num = parseInt(t.id.match(/\d+$/)[0]);
+    if (num !== 0) t.style.display = 'none';
+  }
+});
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

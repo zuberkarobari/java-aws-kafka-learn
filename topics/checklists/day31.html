@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 31  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 31  ·  STUDY CHECKLIST — Terraform Deep Dive — Modules, State, Workspaces, Variables and Enterprise Patterns</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 31 Checklist</div>
+    <h1 style="margin-top: 0;">Terraform Deep Dive — Modules, State, Workspaces, Variables and Enterprise Patterns</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 31 · STUDY CHECKLIST</h3>
+    <h3>Terraform Deep Dive — Modules, State, Workspaces, Variables and Enterprise Patterns</h3>
+    <h3>State & Backends</h3>
+    <p>Remote state, locking, state operations</p>
+    <h3>Modules</h3>
+    <p>Reusable modules, registry, versioning</p>
+    <h3>Variables & Outputs</h3>
+    <p>Types, validation, sensitive values, locals</p>
+    <h3>Advanced Patterns</h3>
+    <p>Workspaces, count vs for_each, lifecycle rules</p>
+    <p>Note:</p>
+    <p>Terraform questions in senior backend interviews are about infrastructure decisions, not syntax recall. Interviewers want to know: why did you structure your modules that way, how did you handle environment differences, what happens when two engineers run terraform apply at the same time, and how do you manage secrets. Connect every answer to a real decision from the Deloitte Terraform work.</p>
+    <h3>Day 31 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Terraform workflow: init, plan, apply, destroy — what each does and when to use terraform refresh</span></li>
+      <li><span class="checkbox-label">State file: what it contains, why it is sensitive, why you never edit it manually</span></li>
+      <li><span class="checkbox-label">Remote state backends: S3 + DynamoDB — why this combination is the AWS standard</span></li>
+      <li><span class="checkbox-label">State locking: what it prevents, what happens if a lock is not released</span></li>
+      <li><span class="checkbox-label">terraform state commands: list, show, mv, rm — when and why each is needed</span></li>
+      <li><span class="checkbox-label">Modules: structure, input variables, output values, calling child modules</span></li>
+      <li><span class="checkbox-label">Module versioning: source from registry vs local vs git with version pinning</span></li>
+      <li><span class="checkbox-label">Variables: types (string, number, bool, list, map, object, any), validation blocks</span></li>
+      <li><span class="checkbox-label">Sensitive variables: how to mark them, what they affect in plan output and state</span></li>
+      <li><span class="checkbox-label">Locals: when to use locals vs variables</span></li>
+      <li><span class="checkbox-label">Outputs: use in root module vs child module, passing values between modules</span></li>
+      <li><span class="checkbox-label">count vs for_each: why for_each is almost always better, the index stability problem</span></li>
+      <li><span class="checkbox-label">depends_on: when implicit dependency is not enough, the risks of overusing it</span></li>
+      <li><span class="checkbox-label">lifecycle rules: create_before_destroy, prevent_destroy, ignore_changes</span></li>
+      <li><span class="checkbox-label">Workspaces: what they are, when to use them, when NOT to use them</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Terraform State and Remote Backends</h2>
+    <h3>What the State File Is and Why It Matters</h3>
+    <p>What the state file does:</p>
+    <p>Terraform uses a state file (terraform.tfstate) to map the resources in your configuration to the real infrastructure in your cloud provider. Without it, Terraform cannot know whether a resource already exists, what its current properties are, or whether it needs to be created, updated, or destroyed. The state file is the source of truth for Terraform — not the cloud provider's actual state.</p>
+    <p>Why the state file is sensitive:</p>
+    <p>The state file contains the full details of your infrastructure including resource IDs, IP addresses, and — critically — any sensitive values you have set in your configuration such as database passwords, API keys, and connection strings. Even if you mark a variable as sensitive, Terraform still writes its value to the state file in plaintext. This means the state file must be stored securely, access-controlled, and never committed to a source code repository.</p>
+    <h3>Remote State Backend: S3 + DynamoDB</h3>
+    <pre><code class="language-java"># Standard AWS remote backend configuration
+# s3 stores the state file, dynamodb provides the lock table
+terraform {
+  required_version = "&gt;= 1.5.0"
+  backend "s3" {
+    bucket         = "my-company-terraform-state"
+    key            = "payment-service/prod/terraform.tfstate"
+    region         = "ap-south-1"
+    encrypt        = true                  # SSE-S3 encryption at rest
+    dynamodb_table = "terraform-state-lock" # lock table name
+  }
+}
+# The DynamoDB lock table — create this once manually or with a bootstrap module
+# It must have a partition key named LockID of type String
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "terraform-state-lock"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}
+# Why this combination works:
+# S3: durable, versioned storage for the state file.
+# DynamoDB: provides atomic conditional writes for locking.
+# Before any apply, Terraform writes a lock record to DynamoDB.
+# If another terraform process tries to apply, it sees the lock and waits.
+# After apply completes, the lock is released.
+# S3 versioning means you can roll back to a previous state if something goes wrong.
+# State file key naming convention for multi-service repos:
+# &lt;service&gt;/&lt;environment&gt;/terraform.tfstate
+# payment-service/prod/terraform.tfstate
+# payment-service/staging/terraform.tfstate
+# api-gateway/prod/terraform.tfstate</code></pre>
+    <h3>State Operations You Need to Know</h3>
+    <h3>Command</h3>
+    <h3>What it does | When you actually need it</h3>
+    <h3>terraform state list</h3>
+    <p>Lists all resources in the state | Auditing what Terraform manages, finding resource addresses</p>
+    <h3>terraform state show <addr></h3>
+    <p>Shows full details of one resource | Debugging — seeing what Terraform thinks the current state is</p>
+    <h3>terraform state mv <old> <new></h3>
+    <p>Renames a resource in state without touching real infrastructure | Refactoring — renaming a resource in code without destroying and recreating it</p>
+    <h3>terraform state rm <addr></h3>
+    <p>Removes a resource from state without destroying it | Taking a resource out of Terraform management (e.g. an RDS instance you want to manage manually)</p>
+    <h3>terraform import <addr> <id></h3>
+    <p>Imports existing infrastructure into state | Bringing manually created resources under Terraform management</p>
+    <h3>terraform refresh</h3>
+    <p>Updates state to match actual infrastructure | Syncing state after manual changes made outside Terraform. Note: implicit in plan since TF 0.15+</p>
+    <h3>terraform force-unlock <lock-id></h3>
+    <p>Manually releases a stuck lock | After a crashed apply left the DynamoDB lock record — verify the apply actually failed before using this</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is Terraform state and why must you never edit it manually? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Terraform state is the file that maps what is in your configuration to what exists in your infrastructure. It tracks resource IDs, dependencies, metadata, and sensitive values. Terraform uses it to determine what changes need to be made on the next plan or apply. Editing it manually is dangerous for two reasons. First, the JSON structure has internal references and checksums that are easy to corrupt — a broken state file means Terraform cannot run at all until you fix it. Second, if you manually change a resource address or property in the state, Terraform will believe the infrastructure matches that change and may try to make corresponding changes to real infrastructure on the next apply. If you need to restructure the state — renaming resources, moving them between modules — use terraform state mv which handles the internal references correctly. If you need to import existing infrastructure, use terraform import.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — Modules</h2>
+    <h3>Module Structure</h3>
+    <p>What a module is:</p>
+    <p>A module is a directory containing Terraform configuration files. Every Terraform project is technically a module — the root module. Child modules are called from the root module or from other modules. A well-structured module has: variables.tf defining inputs, main.tf defining resources, outputs.tf defining what the module exposes to callers, and versions.tf pinning required provider versions.</p>
+    <pre><code class="language-java"># Module directory structure
+# modules/
+#   ec2-autoscaling/
+#     main.tf         — resource definitions
+#     variables.tf    — input variables
+#     outputs.tf      — output values
+#     versions.tf     — required_providers
+#     README.md       — usage documentation
+# modules/ec2-autoscaling/variables.tf
+variable "name" {
+  description = "Name prefix for all resources created by this module"
+  type        = string
+}
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+  default     = "m6i.large"
+  validation {
+    condition     = contains(["m6i.large","m6i.xlarge","m6i.2xlarge"], var.instance_type)
+    error_message = "Instance type must be m6i.large, m6i.xlarge, or m6i.2xlarge."
+  }
+}
+variable "min_size"     { type = number }
+variable "max_size"     { type = number }
+variable "desired"      { type = number }
+variable "subnet_ids"   { type = list(string) }
+variable "security_group_ids" { type = list(string) }
+variable "iam_instance_profile" { type = string }
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
+# modules/ec2-autoscaling/outputs.tf
+output "asg_name" {
+  description = "Name of the Auto Scaling Group"
+  value       = aws_autoscaling_group.this.name
+}
+output "asg_arn" {
+  description = "ARN of the Auto Scaling Group"
+  value       = aws_autoscaling_group.this.arn
+}
+# Calling the module from a root module
+module "payment_service_asg" {
+  source = "./modules/ec2-autoscaling"
+  name                  = "payment-service-prod"
+  instance_type         = "m6i.large"
+  min_size              = 2
+  max_size              = 10
+  desired               = 3
+  subnet_ids            = module.vpc.private_subnet_ids
+  security_group_ids    = [aws_security_group.payment_app.id]
+  iam_instance_profile  = aws_iam_instance_profile.payment_service.name
+  tags = {
+    Environment = "prod"
+    Service     = "payment"
+    ManagedBy   = "terraform"
+  }
+}
+# Referencing a module output
+resource "aws_autoscaling_policy" "scale_out" {
+  autoscaling_group_name = module.payment_service_asg.asg_name
+  # ...
+}</code></pre>
+    <h3>Module Versioning and Source Types</h3>
+    <h3>Source type</h3>
+    <h3>Example | Use when | Key consideration</h3>
+    <h3>Local path</h3>
+    <p>source = "./modules/vpc" | Module lives in the same repository | Changes in module take effect immediately — no versioning</p>
+    <h3>Terraform Registry</h3>
+    <h3>Git repository</h3>
+    <p>source = "git::https://github.com/org/modules.git//vpc?ref=v2.1.0" | Private internal modules | Use a specific tag or commit hash as ref — never use main or master as the ref</p>
+    <h3>S3 bucket</h3>
+    <p>source = "s3::https://s3.amazonaws.com/bucket/module.zip" | Immutable module artifacts in S3 | Good for enterprise environments where registry access is restricted</p>
+    <p>Why you always pin module versions:</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What is a Terraform module and why do you use them? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A module is a packaged unit of Terraform configuration — a directory with variables, resources, and outputs. You use modules for the same reason you use functions in code: to encapsulate a logical unit, make it reusable, and hide the internal complexity from the caller. Instead of copy-pasting the same EC2 Auto Scaling Group configuration across five services with minor differences, you write one module with input variables for the differences (instance type, min/max size, subnet IDs) and call it five times with different inputs. Changes to the module automatically apply to all callers. The caller does not need to understand how the ASG, launch template, and scaling policies are wired together — they just set the variables they care about. The discipline that makes modules work well: keep modules focused on one logical concern, document inputs and outputs clearly, and always version external modules so your infrastructure is reproducible.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Variables, Locals and Outputs</h2>
+    <h3>Variable Types and Validation</h3>
+    <pre><code class="language-java"># All Terraform variable types
+variable "name"        { type = string }
+variable "port"        { type = number }
+variable "enabled"     { type = bool   }
+variable "az_list"     { type = list(string) }
+variable "tags"        { type = map(string) }
+# Object type — structured config with named fields
+variable "database" {
+  type = object({
+    instance_class    = string
+    allocated_storage = number
+    multi_az          = bool
+    port              = optional(number, 5432) # optional with default
+  })
+}
+# Tuple type — ordered list with mixed types (less common)
+variable "cidr_config" {
+  type = tuple([string, number]) # ["10.0.0.0/16", 3]
+}
+# Validation block — fail fast with a clear message
+variable "environment" {
+  type        = string
+  description = "Deployment environment"
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Environment must be dev, staging, or prod."
+  }
+}
+# Sensitive variable — value hidden in plan output and terminal
+variable "db_password" {
+  type      = string
+  sensitive = true
+  # Value will NOT appear in terraform plan output
+  # BUT it IS written to the state file — secure your state
+}
+# Variable value precedence (highest to lowest):
+# 1. -var flag on the CLI:          terraform apply -var='env=prod'
+# 2. -var-file flag:                terraform apply -var-file=prod.tfvars
+# 3. *.auto.tfvars files            automatically loaded
+# 4. terraform.tfvars               automatically loaded
+# 5. Environment variables:         TF_VAR_environment=prod
+# 6. Default value in variable block</code></pre>
+    <h3>Locals — Computed Values Within a Module</h3>
+    <p>Locals vs variables:</p>
+    <p>Variables are inputs to a module — they come from the caller. Locals are computed values within the module that you do not want to repeat. If you find yourself writing the same expression in three different resource blocks, that expression belongs in a local. Locals also make the configuration more readable by giving meaningful names to complex expressions.</p>
+    <pre><code class="language-java"># locals.tf — or defined in main.tf
+locals {
+  # Derived values you do not want to repeat
+  name_prefix   = "${var.project}-${var.environment}"
+  common_tags   = merge(var.tags, {
+    Project     = var.project
+    Environment = var.environment
+    ManagedBy   = "terraform"
+    LastUpdated = timestamp()  # caution: causes drift on every apply
+  })
+  # Conditional logic
+  is_production = var.environment == "prod"
+  db_instance   = local.is_production ? "db.r6g.large" : "db.t3.medium"
+  # Computed CIDR ranges
+  private_subnets = [
+    cidrsubnet(var.vpc_cidr, 4, 0),  # first /20 subnet
+    cidrsubnet(var.vpc_cidr, 4, 1),  # second /20 subnet
+    cidrsubnet(var.vpc_cidr, 4, 2),  # third /20 subnet
+  ]
+}
+# Using locals in resources
+resource "aws_instance" "app" {
+  instance_type = local.db_instance
+  tags          = local.common_tags
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What is the difference between variables, locals, and outputs in Terraform? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Variables are the inputs to a module — they are defined by the module author and set by whoever calls the module. They create a contract: these are the values I need from you to do my job. Locals are computed values inside a module, not visible to callers. They exist to avoid repetition and to give names to complex expressions. If I am building a name prefix from the project name and environment variable in five places, I make it a local called name_prefix and reference that. Outputs are the values a module exposes to its caller. A VPC module might output the VPC ID and the subnet IDs so the application module can use them without knowing how the VPC was built internally. In the root module, outputs appear in the terminal after apply and can also be read by other Terraform configurations using the remote_state data source. The principle: variables are inputs, locals are internals, outputs are the public interface.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — count vs for_each</h2>
+    <h3>Why for_each Is Almost Always the Right Choice</h3>
+    <p>The count index stability problem:</p>
+    <p>When you use count, Terraform identifies resources by their index: aws_instance.server, aws_instance.server, aws_instance.server. If you remove the middle element, server becomes server, and Terraform sees server as modified and server as destroyed. It will destroy and recreate the wrong resources. With for_each, resources are keyed by a meaningful identifier: aws_instance.server["web"], aws_instance.server["api"]. Removing one key only affects that one resource. Everything else is untouched.</p>
+    <pre><code class="language-java"># BAD: count — fragile index-based identification
+variable "server_names" {
+  type    = list(string)
+  default = ["web", "api", "worker"]
+}
+resource "aws_instance" "server" {
+  count         = length(var.server_names)
+  instance_type = "t3.medium"
+  tags = { Name = var.server_names[count.index] }
+  # Resources are: server[0]=web, server[1]=api, server[2]=worker
+  # Remove 'api' → server[1] is now 'worker', server[2] gone
+  # Terraform plans to modify server[1] and destroy server[2]
+  # Neither is what you wanted
+}
+# GOOD: for_each — stable key-based identification
+variable "servers" {
+  type = map(object({
+    instance_type = string
+    subnet_id     = string
+  }))
+  default = {
+    web    = { instance_type = "t3.small",  subnet_id = "subnet-aaa" }
+    api    = { instance_type = "m6i.large", subnet_id = "subnet-bbb" }
+    worker = { instance_type = "c6i.large", subnet_id = "subnet-ccc" }
+  }
+}
+resource "aws_instance" "server" {
+  for_each      = var.servers
+  instance_type = each.value.instance_type
+  subnet_id     = each.value.subnet_id
+  tags = { Name = each.key }
+  # Resources are: server["web"], server["api"], server["worker"]
+  # Remove 'api' → only server["api"] is destroyed. Others untouched.
+}
+# count is fine for simple replication with no meaningful identity
+# e.g. creating N identical subnets where only the count matters
+resource "aws_subnet" "private" {
+  count             = length(var.availability_zones)
+  vpc_id            = aws_vpc.main.id
+  availability_zone = var.availability_zones[count.index]
+  cidr_block        = cidrsubnet(var.vpc_cidr, 4, count.index)
+}
+# Converting a set to a map for for_each
+# for_each requires a map or set of strings — not a list
+# If you have a list, convert it:
+variable "bucket_names" { type = list(string) }
+resource "aws_s3_bucket" "buckets" {
+  for_each = toset(var.bucket_names) # convert list to set
+  bucket   = each.key
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is the difference between count and for_each and when would you choose count? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Both create multiple instances of a resource. The difference is how Terraform identifies each instance. With count, instances are identified by index — server, server, server. If you remove an element from the middle of your list, all the indices shift and Terraform thinks the wrong resources changed. With for_each, instances are identified by a map key or set member — server['web'], server['api']. Removing one key only affects that one resource. For_each is almost always the right choice for any resource that has meaningful identity. I use count only when resources truly are identical and the only thing that matters is how many there are — like creating three identical read replicas where you do not care which one is which. The practical gotcha with for_each: it requires a map or set of strings, not a list. If your input is a list, convert it with toset().</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — Lifecycle Rules and depends_on</h2>
+    <h3>Lifecycle Rules</h3>
+    <h3>Rule</h3>
+    <h3>What it does | When to use it | Risk</h3>
+    <h3>create_before_destroy</h3>
+    <p>Creates the replacement resource before destroying the old one | Resources that must never have downtime: ALBs, RDS instances, EIPs | Requires that the new resource can coexist with the old one during creation</p>
+    <h3>prevent_destroy</h3>
+    <p>Terraform plan fails if any change would destroy this resource | Production databases, state buckets — prevents accidental destruction | You must temporarily remove it to legitimately decommission the resource</p>
+    <h3>ignore_changes</h3>
+    <p>Tells Terraform to ignore drift on specific attributes | Auto-scaling groups where instance count is managed by AWS, not Terraform | You will never detect legitimate config drift on the ignored attributes</p>
+    <h3>replace_triggered_by</h3>
+    <p>Forces resource replacement when another resource changes | Launch template updates that should trigger ASG instance refresh | Can cause unexpected replacements if the trigger resource changes frequently</p>
+    <pre><code class="language-java"># create_before_destroy — zero downtime resource replacement
+resource "aws_lb" "payment" {
+  name               = "payment-alb-${var.environment}"
+  load_balancer_type = "application"
+  subnets            = var.public_subnet_ids
+  lifecycle {
+    create_before_destroy = true
+    # When ALB config changes requiring replacement:
+    # 1. New ALB is created first
+    # 2. Traffic is cutover to the new ALB
+    # 3. Old ALB is destroyed
+    # Without this: old ALB destroyed first → outage during creation of new one
+  }
+}
+# prevent_destroy — protect critical resources
+resource "aws_db_instance" "payments" {
+  identifier        = "payments-prod"
+  instance_class    = "db.r6g.large"
+  allocated_storage = 100
+  lifecycle {
+    prevent_destroy = true
+    # terraform plan will now FAIL if any change requires destroying this resource
+    # Forces an explicit decision before ever destroying the production database
+  }
+}
+# ignore_changes — ASG desired count managed by AWS autoscaling
+resource "aws_autoscaling_group" "payment" {
+  name         = "payment-asg-prod"
+  min_size     = 2
+  max_size     = 10
+  desired_capacity = 3  # initial value only
+  lifecycle {
+    ignore_changes = [desired_capacity]
+    # AWS autoscaling adjusts desired_capacity based on load
+    # Without ignore_changes, terraform plan would always show a diff
+    # trying to reset desired_capacity back to 3
+  }
+}
+# depends_on — explicit dependency when implicit is not enough
+# Terraform normally infers dependencies from resource references.
+# Use depends_on only when a dependency exists that is not expressed
+# in the configuration — typically IAM permissions that must exist
+# before a resource can be created.
+resource "aws_ecs_service" "payment" {
+  name            = "payment-service"
+  task_definition = aws_ecs_task_definition.payment.arn
+  depends_on = [
+    aws_iam_role_policy_attachment.ecs_task_execution
+    # The IAM policy attachment does not appear in the ECS service resource config,
+    # but the ECS service will fail to create if the IAM role lacks the policy.
+    # depends_on forces Terraform to create the attachment first.
+  ]
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What does create_before_destroy do and when do you need it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">By default, when Terraform needs to replace a resource — because a change requires destroying the old one and creating a new one — it destroys the old resource first, then creates the new one. During the window between destruction and creation, the resource does not exist. For an ALB, that means downtime. For a database, that means data access is interrupted. With create_before_destroy, Terraform reverses the order: it creates the replacement resource first, waits for it to be healthy, and only then destroys the original. This achieves zero-downtime replacement. The requirement is that the old and new resources can coexist simultaneously — they cannot have conflicting names in the same namespace unless you use name_prefix instead of name, which lets AWS auto-generate unique names. I use create_before_destroy on load balancers, Elastic IPs, security groups, and any resource where a gap in existence would cause downtime.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — Workspaces and Multi-Environment Patterns</h2>
+    <h3>Workspaces — What They Are and When Not to Use Them</h3>
+    <p>What workspaces do:</p>
+    <p>Terraform workspaces let a single configuration directory maintain multiple independent state files. The default workspace is always called default. You can create dev, staging, and prod workspaces that each have their own state. Switching workspace with terraform workspace select switches which state file is active.</p>
+    <p>When workspaces are not the right answer:</p>
+    <p>Workspaces are designed for small configuration differences between environments — typically just variable values. They are not appropriate when environments have meaningfully different infrastructure (prod has 3 AZs, dev has 1), when access controls differ (prod state should require MFA, dev should not), or when teams own different environments. For most production systems, separate directories or separate Terraform roots per environment are a better pattern. The Terraform documentation itself says workspaces alone are not sufficient for strong environment isolation.</p>
+    <pre><code class="language-java"># Workspace-aware configuration
+locals {
+  env = terraform.workspace  # 'default', 'dev', 'staging', 'prod'
+  instance_config = {
+    dev     = { instance_type = "t3.medium", min_size = 1, max_size = 2  }
+    staging = { instance_type = "m6i.large", min_size = 2, max_size = 4  }
+    prod    = { instance_type = "m6i.large", min_size = 3, max_size = 10 }
+  }
+}
+# Access workspace-specific values
+resource "aws_autoscaling_group" "app" {
+  min_size         = local.instance_config[local.env].min_size
+  max_size         = local.instance_config[local.env].max_size
+}
+# CLI workspace commands
+# terraform workspace new prod      # create a new workspace
+# terraform workspace select prod   # switch to prod workspace
+# terraform workspace list          # list all workspaces
+# terraform workspace show          # show current workspace
+# Better pattern for most teams: separate directories per environment
+# infrastructure/
+#   modules/         — shared reusable modules
+#     vpc/
+#     ec2-asg/
+#     rds/
+#   environments/
+#     dev/
+#       main.tf      — calls modules with dev-specific values
+#       variables.tf
+#       terraform.tfvars
+#     staging/
+#       main.tf
+#       terraform.tfvars
+#     prod/
+#       main.tf
+#       terraform.tfvars
+# Each environment directory has its own backend config
+# pointing to a separate state file in S3.
+# Environments are completely isolated in state, access, and drift.</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> When would you use Terraform workspaces and when would you avoid them? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Workspaces make sense for small teams managing environments that are structurally identical and only differ in a few variable values — the same number of AZs, the same services, just different instance sizes or replica counts. The workspace name becomes a variable that drives the configuration differences. Where I avoid workspaces: when environments are genuinely different in structure, when different teams own different environments and need separate access controls, or when you want the state for each environment to be in a completely separate S3 path with separate IAM policies. In those cases, separate environment directories with their own backend configurations give you full isolation. At Deloitte, we used the separate-directory pattern because prod state required stricter access than dev and staging, and the environments had different numbers of availability zones. Workspaces would have made it harder to enforce those differences.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write each exercise from memory. After each one, name the operational problem it prevents.</p>
+    <h3>Exercise 1 — Remote State Backend</h3>
+    <p>Task:</p>
+    <p>Write the Terraform backend configuration for an S3 + DynamoDB remote state setup.</p>
+    <p>Include: bucket name with encryption = true, key path using a naming convention for service and environment, region, and dynamodb_table.</p>
+    <p>Write the Terraform for the DynamoDB lock table — hash_key = LockID, billing_mode = PAY_PER_REQUEST.</p>
+    <p>Add an S3 bucket policy that denies any access without MFA for the prod state bucket.</p>
+    <p>Explain: what happens when two engineers run terraform apply simultaneously without the lock table.</p>
+    <h3>Exercise 2 — Reusable VPC Module</h3>
+    <p>Task:</p>
+    <p>Write a VPC module with: variables.tf (vpc_cidr, environment, az_count, tags), main.tf (VPC, public and private subnets, IGW, NAT gateway, route tables), outputs.tf (vpc_id, public_subnet_ids, private_subnet_ids).</p>
+    <p>Use count for subnets keyed by AZ index.</p>
+    <p>Use cidrsubnet() to compute subnet CIDRs from the vpc_cidr variable.</p>
+    <p>Call the module from a root module with environment-specific values.</p>
+    <p>Show: how you would reference the VPC module outputs in a downstream EC2 module.</p>
+    <h3>Exercise 3 — for_each with Map Variable</h3>
+    <p>Task:</p>
+    <p>Define a variable services of type map(object) with fields: port, instance_type, desired_count.</p>
+    <p>Use for_each to create one aws_security_group per service, one aws_autoscaling_group per service.</p>
+    <p>Tag each resource with the service name from each.key.</p>
+    <p>Demonstrate: remove one service from the map and explain exactly what terraform plan shows — compare to what would happen with count.</p>
+    <p>Show the toset() conversion for a list(string) input when you only need a set of strings.</p>
+    <h3>Exercise 4 — Lifecycle Rules</h3>
+    <p>Task:</p>
+    <p>Add create_before_destroy to an aws_lb resource. Explain why you also need name_prefix instead of name.</p>
+    <p>Add prevent_destroy to an aws_db_instance. Show what happens if you try to terraform apply a change that would destroy it.</p>
+    <p>Add ignore_changes = [desired_capacity] to an aws_autoscaling_group. Explain the drift scenario it prevents.</p>
+    <p>Write a replace_triggered_by example: an ASG that should replace instances when a new launch template version is published.</p>
+    <h3>Exercise 5 — Variable Validation and Sensitive Values</h3>
+    <p>Task:</p>
+    <p>Write a variable environment with a validation block that only accepts dev, staging, or prod.</p>
+    <p>Write a variable db_password marked sensitive = true. Show what appears in terraform plan output.</p>
+    <p>Write a variable database of type object({}) with optional fields using optional().</p>
+    <p>Show variable precedence: if the same variable is set in terraform.tfvars AND a -var flag on the CLI, which wins?</p>
+    <p>Explain: if a sensitive variable is in the state file, what does that mean for state file security?</p>
+    <h3>Exercise 6 — Multi-Environment with Separate Directories</h3>
+    <p>Task:</p>
+    <p>Write the directory structure for a multi-environment Terraform setup: modules/vpc, modules/ec2-asg, modules/rds, environments/dev, environments/staging, environments/prod.</p>
+    <p>Each environment directory has its own backend.tf pointing to a different S3 key.</p>
+    <p>Each environment/*/main.tf calls the same modules with different variable values.</p>
+    <p>Show how prod.tfvars differs from dev.tfvars for the same module.</p>
+    <p>Explain why this is better than workspaces for teams where prod is owned by a different group than dev.</p>
+    <h3>Exercise 7 — BOSS: Full Payment Service Infrastructure</h3>
+    <p>Write the complete Terraform for a payment service deployment:</p>
+    <p>Root module calls: vpc module (3 AZs, public + private subnets), ec2-asg module (m6i.large, min 2 max 10 with ignore_changes on desired_capacity and create_before_destroy on the ALB), rds module (Aurora PostgreSQL, Multi-AZ, prevent_destroy). IAM: least-privilege instance role with specific S3, CloudWatch, Secrets Manager, SQS permissions, attached via instance profile. Security groups: ALB (443 from internet), app tier (8080 from ALB SG only), RDS (5432 from app tier SG only). Remote state: S3 backend with DynamoDB locking. All resources tagged with environment, project, and managed_by. Show how you would promote the same code from staging to prod using the separate-directory pattern.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Every answer connects the Terraform concept to a real operational consequence.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What is Terraform state and why does it need to be stored remotely for team usage? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Terraform state is the mapping between your configuration and your real infrastructure. Without it, Terraform cannot know whether a resource already exists, what its properties are, or whether it needs to be created or updated. It needs to be stored remotely when more than one person works on the infrastructure for two reasons. First, consistency — everyone needs to see the same current state. If two engineers each have a local state file and one applies changes, the other's state is now stale. Second, locking — without a remote backend with locking, two engineers can run terraform apply at the same time, both reading the same state, both computing a plan based on it, and then both trying to apply. The second apply will corrupt the state or create duplicate resources. The S3 plus DynamoDB backend solves both: S3 stores the shared state and DynamoDB provides atomic locking so only one apply runs at a time.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What happens when a terraform apply is interrupted mid-run? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Terraform writes the state file only after each individual resource operation completes. If apply is interrupted partway through, the state file reflects what succeeded before the interruption. Some resources will exist in the cloud that were created before the crash. Some resources that were supposed to be created may not exist yet. When you run terraform apply again, Terraform reads the partially-updated state and plans only the remaining work — it will not recreate what already succeeded. The DynamoDB lock is also released on a clean exit. If the process crashes unexpectedly, the lock may stay in DynamoDB. You release it with terraform force-unlock followed by the lock ID from the DynamoDB item — but verify the interrupted apply actually failed and is not still running somewhere before force-unlocking.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> How do you handle secrets in Terraform — for example a database password? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">There are several layers to this. First, never hardcode secrets in .tf files or .tfvars files that get committed to source control. The common approach is to pass them via environment variables (TF_VAR_db_password) or read them from AWS Secrets Manager or Parameter Store using a data source. Mark the variable as sensitive = true so the value is redacted in plan output and logs. The harder problem is that sensitive values still end up in the state file in plaintext. This makes securing the state file itself the critical step — the S3 bucket must have encryption, strict IAM access control, and access logging. In practice on the Deloitte Terraform work, we used the aws_secretsmanager_secret data source to read secrets at apply time rather than passing them as Terraform variables at all. The secret exists only in Secrets Manager and the Terraform code references it by ARN. This way the plaintext value never flows through Terraform variables and never appears in terraform plan output.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> What is the difference between terraform plan and terraform apply? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Terraform plan reads the current state, calls the provider APIs to check the actual state of existing resources, compares both against your configuration, and produces a diff showing what would be created, changed, or destroyed. It does not change anything. Terraform apply executes the changes. In most teams, plan is run in CI on every pull request so engineers can review the proposed changes before merging. Apply is run after merge, often with the saved plan file from the CI run to guarantee that exactly what was reviewed gets applied. Running apply without a saved plan means the plan is recomputed at apply time — which can produce a different result if someone else made changes between the review and the apply. For production changes, I always use terraform plan -out=tfplan and then terraform apply tfplan to guarantee what was reviewed is what gets applied.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> Why would you use terraform state mv and can you give an example? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">terraform state mv renames a resource in the state file without touching the real infrastructure. You need it when you refactor your Terraform code in a way that would otherwise cause a destroy-and-recreate of a live resource. The common case: you decide to move a resource into a module. In the code, the resource address changes from aws_instance.web to module.web_server.aws_instance.app. Terraform sees the old address gone and the new address appearing — it plans to destroy the old instance and create a new one. But the physical infrastructure has not changed. Before applying the refactored code, you run terraform state mv aws_instance.web module.web_server.aws_instance.app. Now the state file reflects the new address. When you run terraform plan, Terraform finds an existing resource at the new address and shows no changes needed. The real instance never gets touched.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is a data source in Terraform and how does it differ from a resource? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A resource block creates, updates, or destroys infrastructure. A data source block reads existing infrastructure and makes its attributes available in your configuration without managing it. You use data sources when you need to reference something that Terraform did not create and should not manage. A common pattern: your VPC was created by a different Terraform root or manually, but your EC2 module needs the VPC ID. You use a data source to look it up by tag or by name. Another pattern: reading the latest AMI ID for a given operating system. You do not want to hardcode an AMI ID because it changes with each release — a data source using aws_ami with filters gives you the current ID at apply time. Data sources are re-evaluated on every terraform plan, so they always reflect the current real state, not a cached value from the last apply.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> When would you use the terraform_remote_state data source? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When one Terraform root needs to read outputs from another Terraform root — typically in a multi-repo or multi-module setup where infrastructure is divided by ownership. For example, the networking team manages the VPC in a separate Terraform root. The application team manages the EC2 instances in a different root. The application team uses terraform_remote_state pointing at the networking team's S3 state file to read the VPC ID and subnet IDs. This avoids hardcoding values that the other team controls and ensures the application team always uses the current infrastructure values. The coupling concern: if the networking team removes an output, the application team's root breaks at plan time. For this reason, some teams prefer using data sources to look up resources by tag instead of reading remote state — it is looser coupling but slightly less explicit.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What is terraform import and what problem does it solve? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When you have existing infrastructure that was created manually or outside Terraform, terraform import brings it under Terraform management without recreating it. You run terraform import <resource_address> <real_resource_id>, where the resource address matches a resource block in your configuration. Terraform reads the real resource from the cloud provider and writes its current state to the state file. From that point on, terraform plan compares your configuration against the imported state and shows only the actual diffs. The typical workflow: write the resource block in your configuration first, run import, then run terraform plan to see if your configuration matches the real resource. If there are differences, update the configuration until plan shows no changes before doing anything else. The limitation: not every resource attribute can be imported — some settings are write-only or computed by the provider and will always show as changes after import.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> How do you structure Terraform code for a team with multiple services and environments? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The structure I have used at Deloitte is: a modules directory at the top level with one sub-directory per logical concern — vpc, ec2-asg, rds, iam-role. Each module is self-contained with its own variables.tf, main.tf, outputs.tf, and versions.tf. Below that, an environments directory with one sub-directory per environment — dev, staging, prod. Each environment directory has its own main.tf that calls the shared modules with environment-specific values, its own terraform.tfvars, and its own backend.tf pointing to a separate state file in S3. This means environments are fully isolated in state and can have different IAM access controls. Prod state requires a role that only the pipeline has. Dev state is accessible to all engineers. Changes to modules are reviewed in PRs like any code change. The environment directories are what gets applied — they are the entry points.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> What is the ignore_changes lifecycle rule and when should you use it with Auto Scaling Groups? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">ignore_changes tells Terraform to ignore drift on specific attributes when running plan. Without it, if AWS changes an attribute that is also in your Terraform config — either because you set it once as an initial value or because Terraform manages it — plan will always show a diff trying to reset it back. The canonical ASG case: you set desired_capacity to 3 as an initial value. AWS autoscaling adjusts it to 7 during a traffic spike. On the next terraform plan, Terraform sees desired_capacity is 7 in reality but 3 in config and plans to reset it to 3. That would undo the autoscaling decision and potentially cause an incident. Adding ignore_changes = [desired_capacity] tells Terraform to never touch that attribute after creation. It will still create the ASG with desired_capacity = 3 on first apply, but it will never interfere with autoscaling after that. Other attributes where this pattern is common: ami on an instance if you are doing in-place upgrades via AWS SSM, and tags if another system manages tags externally.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What are Terraform workspaces and what are their limitations? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Workspaces let you maintain separate state files for a single Terraform configuration directory. You can have dev, staging, and prod workspaces that each track their own infrastructure state. The configuration accesses the current workspace name via terraform.workspace and uses it to drive conditional values. The limitation is that all workspaces share the same configuration code and the same backend configuration — just different state file paths. This means you cannot have different access controls per workspace, cannot have structurally different infrastructure per environment in a clean way without complex conditionals, and there is no enforcement that prevents someone from running prod commands from a dev context accidentally. For teams with strict environment separation requirements, separate directories with separate backends provide stronger isolation. Workspaces are a reasonable choice for small teams where environments are structurally identical and no access control differences are needed.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> How does Terraform figure out the order in which to create resources? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Terraform builds a dependency graph from all resource references in your configuration. If resource B references resource A's ID, Terraform knows A must exist before B can be created. It creates resources in topological order, and it can create independent resources in parallel within the same apply to speed things up. The default concurrency is 10 parallel operations. For the vast majority of cases, the implicit dependency from referencing another resource's attributes is sufficient and is the preferred approach because it is self-documenting. The depends_on meta-argument is for the rare case where a dependency exists that is not expressed through resource attribute references — typically IAM policies that must exist before a service can start, where the service resource does not reference the IAM resource in its configuration. The risk of overusing depends_on is that you can create unnecessary serialisation that slows down apply and can make cycles in the dependency graph that Terraform cannot resolve.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What is a Terraform provider and what does terraform init do? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A provider is a plugin that knows how to communicate with a specific API — AWS, Google Cloud, Kubernetes, GitHub. Providers translate Terraform resource and data source definitions into API calls. Terraform init reads the required_providers block in your configuration, downloads the specified provider versions from the Terraform registry or a private registry, and stores them in the .terraform directory. It also initialises the backend — sets up the S3 bucket connection and verifies the state file is accessible. You run init whenever you add a new provider, change a provider version, or set up a new workspace. The .terraform.lock.hcl file records the exact provider versions and checksums that were installed. Committing this file to source control ensures everyone on the team uses the same provider versions — similar to a package-lock.json in Node.js.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> How do you refactor Terraform code to move a resource into a module without destroying it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Moving a resource into a module changes its address in state — from aws_instance.web to module.web_server.aws_instance.app for example. Terraform would normally plan to destroy the old address and create a new resource at the new address. To avoid that: first update the code to use the module structure, then run terraform state mv <old_address> <new_address> before running apply. The state mv command renames the resource in the state file so Terraform sees a resource already existing at the new address. When you then run terraform plan, it finds the existing resource and shows no changes needed. Verify the plan shows no creates or destroys before applying. If you are moving multiple resources, do all the state mv operations before any apply. Terraform 1.1+ also introduced the moved block in configuration — you can write a moved block in your .tf files that declares the address change, which Terraform handles automatically during plan without needing a CLI command. This is the preferred approach in modern Terraform.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q21:</span> What are the risks of running terraform apply directly on production and how do you mitigate them? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Running apply directly on production without a review step means infrastructure changes go live without a second pair of eyes. The plan output was not reviewed, the diff was not discussed, and there is no audit trail of who approved what. Mitigation: run terraform plan in CI on every pull request and require plan output to be reviewed as part of the PR. Use a saved plan file — terraform plan -out=tfplan — so that apply runs exactly the reviewed plan, not a freshly computed one that might differ. Gate production applies behind a manual approval step in the pipeline. Use Sentinel policies (Terraform Enterprise/Cloud) or Open Policy Agent to enforce guardrails — for example, preventing resources with prevent_destroy from being destroyed even if someone removes the lifecycle block. Keep production Terraform runs in a dedicated pipeline that requires a specific IAM role, separate from the developer access used for dev and staging. At a minimum, require two approvals in the pull request before merging infrastructure changes that touch production.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 31 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you explain why state must be remote and what locking prevents?</span></li>
+      <li><span class="checkbox-label">Can you describe the S3 + DynamoDB backend setup from memory?</span></li>
+      <li><span class="checkbox-label">Can you explain the for_each index stability problem with a concrete example?</span></li>
+      <li><span class="checkbox-label">Can you name the four lifecycle rules and when each applies?</span></li>
+      <li><span class="checkbox-label">Can you describe the multi-environment directory structure you would use for a team?</span></li>
+      <li><span class="checkbox-label">Can you explain the difference between workspaces and separate directories?</span></li>
+      <li><span class="checkbox-label">All 7 exercises — Boss exercise (full payment service infrastructure) done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Remote state: S3 + DynamoDB setup</h3>
+    <p>/5 |</p>
+    <h3>State operations: mv, rm, import, force-unlock</h3>
+    <p>/5 |</p>
+    <h3>Module structure and version pinning</h3>
+    <p>/5 |</p>
+    <h3>Variables: types, validation, sensitive</h3>
+    <p>/5 |</p>
+    <h3>count vs for_each: index stability problem</h3>
+    <p>/5 |</p>
+    <h3>Lifecycle rules: all four and when each applies</h3>
+    <p>/5 |</p>
+    <h3>depends_on: when implicit is not enough</h3>
+    <p>/5 |</p>
+    <h3>Workspaces vs separate directories</h3>
+    <p>/5 |</p>
+    <p>Day 31 complete:</p>
+    <p>Terraform interviews at senior level are about operational judgment. The questions are not testing whether you know the syntax — they are testing whether you have thought through what happens when something goes wrong. State corruption, interrupted applies, secret exposure in state files, two engineers running apply at the same time — these are the scenarios where your answers show depth.</p>
+    <h3>Preview: Day 32 — Docker and Kubernetes</h3>
+    <p>Container internals, Dockerfile best practices for Java services, Kubernetes objects (Pod, Deployment, Service, ConfigMap, Secret, Ingress), resource requests and limits, health probes, rolling deployments, horizontal pod autoscaling, and managing Java microservices in a Kubernetes cluster.</p>
+    <p>Day 31 of 60 · Terraform Deep Dive · Prepared for Md Zuber</p>
+    <p>"Infrastructure as code is not about automating what you do manually. It is about making infrastructure changes reviewable, repeatable, and recoverable."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

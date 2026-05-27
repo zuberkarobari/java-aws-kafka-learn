@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 33  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 33  ·  STUDY CHECKLIST — System Design — URL Shortener End-to-End</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 33 Checklist</div>
+    <h1 style="margin-top: 0;">System Design — URL Shortener End-to-End</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 33 · STUDY CHECKLIST</h3>
+    <h3>System Design — URL Shortener End-to-End</h3>
+    <h3>Requirements</h3>
+    <p>Clarifying questions, functional & non-functional scope</p>
+    <h3>Core Design</h3>
+    <p>Encoding, database schema, redirect flow</p>
+    <h3>Scale & Caching</h3>
+    <p>Read path optimisation, cache strategy, CDN</p>
+    <h3>Deep Dives</h3>
+    <p>Analytics, custom aliases, expiry, rate limiting</p>
+    <p>How to use this day:</p>
+    <p>System design is a conversation, not a monologue. The interviewer wants to see how you think, not just what you know. Work through each section as if you are presenting to a real interviewer — say the trade-off out loud, ask the clarifying question before assuming, and name the specific failure mode each design decision prevents. The URL shortener is a classic entry-level system design question that reveals how well you think about reads vs writes, encoding vs collision, and caching strategy.</p>
+    <h3>Day 33 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Clarifying questions: what to ask before drawing a single box</span></li>
+      <li><span class="checkbox-label">Capacity estimation: 100M URLs/day, read:write ratio, storage size per URL</span></li>
+      <li><span class="checkbox-label">Short code generation: hash-based vs counter-based vs random — trade-offs</span></li>
+      <li><span class="checkbox-label">Base62 encoding: alphabet, why 7 characters gives 62^7 unique codes</span></li>
+      <li><span class="checkbox-label">Collision handling: why hash-based needs it, why counter-based does not</span></li>
+      <li><span class="checkbox-label">Database schema: which fields, which indexes, primary key choice</span></li>
+      <li><span class="checkbox-label">Redirect flow: 301 vs 302, what each means for caching and analytics</span></li>
+      <li><span class="checkbox-label">Cache layer: what to cache, TTL strategy, cache invalidation on expiry</span></li>
+      <li><span class="checkbox-label">Read path: CDN → cache → database — when each layer handles the request</span></li>
+      <li><span class="checkbox-label">Write path: API server → ID generator → database</span></li>
+      <li><span class="checkbox-label">Custom aliases: how they interact with the ID generation strategy</span></li>
+      <li><span class="checkbox-label">Analytics: how to count clicks without hurting redirect latency</span></li>
+      <li><span class="checkbox-label">URL expiry: how to enforce it efficiently</span></li>
+      <li><span class="checkbox-label">Rate limiting: per-user and per-IP limits on URL creation</span></li>
+      <li><span class="checkbox-label">All 7 practice questions — answer out loud before reading the model</span></li>
+    </ul>
+    <h2>Section 1 — Requirements and Clarifying Questions</h2>
+    <h3>The Questions to Ask Before Designing</h3>
+    <p>Why clarifying questions matter:</p>
+    <p>A URL shortener can mean very different things. Is it a public service like bit.ly or an internal tool for a company? Does it need analytics? Can users pick their own short codes? Do URLs expire? Each answer changes the design. Asking these questions first shows the interviewer you think about requirements before jumping to solutions, and it narrows the scope so you are not designing an infinitely complex system in 45 minutes.</p>
+    <h3>Clarifying question</h3>
+    <h3>Why it matters | Typical answer for this exercise</h3>
+    <p>What scale are we designing for?</p>
+    <p>Drives partitioning, caching, and ID generation strategy | 100 million new URLs per day, 10 billion redirects per day</p>
+    <p>What is the read/write ratio?</p>
+    <p>Determines where to invest in optimisation — reads dominate | 100:1 read/write — redirects vastly outnumber URL creations</p>
+    <p>How long should short URLs live?</p>
+    <p>Drives storage, TTL, and expiry handling | URLs live for up to 5 years by default; users can set shorter expiry</p>
+    <p>Can users pick custom aliases?</p>
+    <p>Changes the ID generation strategy | Yes, but falls back to auto-generated if taken</p>
+    <p>Do we need analytics?</p>
+    <p>Adds significant complexity to the redirect path | Yes — click count, referrer, and geo are required</p>
+    <p>What is the maximum URL length?</p>
+    <p>Determines field sizes in the schema | 2048 characters (browser limit)</p>
+    <p>Do we need user accounts?</p>
+    <p>Drives auth, ownership, and per-user rate limiting | Yes — users can manage their URLs</p>
+    <p>Are there forbidden URLs?</p>
+    <p>Phishing and malware URLs should be blocked | Yes — integrate with a safe browsing API</p>
+    <h3>Capacity Estimation</h3>
+    <pre><code class="language-java">// Scale: 100 million URL creations per day
+// Read:write ratio: 100:1
+// Redirects per day: 100M * 100 = 10 billion
+// Write throughput
+// 100M URLs/day = 100,000,000 / 86,400 seconds = ~1,160 writes/second
+// Read throughput
+// 10B redirects/day = 10,000,000,000 / 86,400 = ~115,000 reads/second
+// Peak is typically 2-3x average = ~300,000 reads/second peak
+// Storage per URL record
+// short_code:    7 bytes
+// original_url:  ~200 bytes average (max 2048)
+// user_id:       8 bytes (bigint)
+// created_at:    8 bytes (timestamp)
+// expires_at:    8 bytes (timestamp, nullable)
+// click_count:   8 bytes (bigint)
+// Total:         ~250 bytes per record
+// Storage for 5 years
+// 100M URLs/day * 365 days * 5 years = 182.5 billion URLs
+// 182.5B * 250 bytes = ~45 TB
+// With 3x replication: ~135 TB
+// Short code space
+// Using base62 (a-z, A-Z, 0-9): 62 characters
+// 7 characters: 62^7 = 3.52 trillion unique codes
+// At 100M/day: would take 35,000+ years to exhaust — more than enough</code></pre>
+    <hr class="section-divider" />
+    <h2>Section 2 — Short Code Generation Strategies</h2>
+    <h3>The Three Approaches and Their Trade-offs</h3>
+    <h3>Strategy</h3>
+    <h3>How it works | Collision risk | Predictability | Best for</h3>
+    <h3>Hash-based</h3>
+    <p>MD5 or SHA-256 the URL, take first 7 characters of base62 encoding | Yes — two different URLs can hash to the same prefix. Must check DB and retry. | Non-sequential, cannot be guessed | Simple to implement, but collision handling adds latency</p>
+    <h3>Counter-based</h3>
+    <p>Monotonically increasing ID from a sequence, convert to base62 | None — each ID is unique by construction | Sequential — /abc then /abd. Users can enumerate URLs | Fastest write path, no collision checking needed</p>
+    <h3>Random</h3>
+    <p>Generate a random 7-character base62 string | Probabilistically tiny but must still check DB | Non-sequential, harder to guess than counter | Good security properties but requires DB check on every creation</p>
+    <h3>Pre-generated pool</h3>
+    <p>Batch-generate random codes offline, store in a pool table, consume one per request | None at request time — uniqueness enforced at generation time | Non-sequential | Highest write throughput, no blocking generation at request time</p>
+    <p>The recommended approach for scale:</p>
+    <p>Use a distributed ID generator like Twitter Snowflake or a database sequence to generate unique 64-bit integers, then encode to base62. This gives you zero collision risk, no DB lookups during generation, and the IDs are sortable by time. The non-sequential appearance is easy to achieve by applying a simple bit shuffle to the integer before encoding. This is the approach used by most large-scale URL shorteners in production.</p>
+    <pre><code class="language-java">// Base62 encoding
+// Alphabet: 0-9, a-z, A-Z (62 characters)
+private static final String ALPHABET =
+    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+public String toBase62(long id) {
+    if (id == 0) return String.valueOf(ALPHABET.charAt(0));
+    StringBuilder sb = new StringBuilder();
+    while (id &gt; 0) {
+        sb.append(ALPHABET.charAt((int)(id % 62)));
+        id /= 62;
+    }
+    return sb.reverse().toString();
+}
+public long fromBase62(String code) {
+    long id = 0;
+    for (char c : code.toCharArray()) {
+        id = id * 62 + ALPHABET.indexOf(c);
+    }
+    return id;
+}
+// With a Snowflake ID generator, the flow is:
+// 1. Receive POST /api/urls with the long URL
+// 2. Generate a unique 64-bit Snowflake ID
+// 3. Encode to base62 → 7-character short code
+// 4. Store (short_code, long_url, user_id, created_at, expires_at) in DB
+// 5. Return https://short.ly/{code} to the client
+// Hash-based approach (simpler but has collision handling)
+public String hashUrl(String longUrl) {
+    String hash = DigestUtils.md5DigestAsHex(longUrl.getBytes());
+    String code = toBase62(Long.parseLong(hash.substring(0, 15), 16));
+    return code.substring(0, 7); // take first 7 characters
+}
+// If this code already exists in DB for a different URL:
+// Append a salt to longUrl and rehash until unique
+// Or use a random suffix appended to the hash</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> How do you generate short codes and how do you handle collisions? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">My preferred approach is a distributed ID generator — Twitter Snowflake or a database sequence — that produces unique 64-bit integers. I then base62-encode that integer to get a 7-character code. Since the IDs are unique by construction, there are no collisions to handle. No DB lookup needed during generation. The trade-off is that the codes are roughly sequential — /abc, /abd — which lets users enumerate other users' URLs. To address that, I can XOR the integer with a large random constant before encoding, which makes the output appear non-sequential without any collision risk. The hash-based approach — MD5 the URL, take the first 7 base62 characters — is simpler conceptually but creates a collision problem. Two different URLs can produce the same 7-character prefix. Every write requires a DB lookup to check whether the code is taken. If taken, you retry with a modified input. At low write rates this is fine. At 1,000 writes per second, those extra lookups add latency and DB load that the counter-based approach simply does not have.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Database Schema and Redirect Flow</h2>
+    <h3>Schema Design</h3>
+    <pre><code class="language-java">-- Core URL table
+CREATE TABLE urls (
+    short_code   CHAR(7)      PRIMARY KEY,        -- the 7-char code, e.g. 'abc1234'
+    long_url     VARCHAR(2048) NOT NULL,
+    user_id      BIGINT        NOT NULL REFERENCES users(id),
+    created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    expires_at   TIMESTAMPTZ   NULL,              -- NULL means never expires
+    is_active    BOOLEAN       NOT NULL DEFAULT TRUE,
+    custom_alias VARCHAR(50)   NULL UNIQUE        -- user-chosen alias if any
+);
+-- Index for user's own URLs (my links dashboard)
+CREATE INDEX idx_urls_user_id_created ON urls(user_id, created_at DESC);
+-- Index for expiry cleanup job
+CREATE INDEX idx_urls_expires_at ON urls(expires_at) WHERE expires_at IS NOT NULL;
+-- Separate analytics table to avoid write contention on the urls table
+CREATE TABLE url_clicks (
+    id           BIGSERIAL     PRIMARY KEY,
+    short_code   CHAR(7)       NOT NULL REFERENCES urls(short_code),
+    clicked_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    referrer     VARCHAR(2048) NULL,
+    ip_hash      CHAR(64)      NULL,              -- hashed for privacy
+    user_agent   VARCHAR(512)  NULL,
+    country_code CHAR(2)       NULL
+);
+-- Why NOT store click_count in the urls table:
+-- Every redirect would UPDATE the urls row, creating write contention
+-- with concurrent redirects on the same URL.
+-- Separate table: clicks are inserted (appended), never updated.
+-- Aggregate counts from url_clicks asynchronously.
+-- For a 10B redirect/day system, url_clicks needs partitioning
+-- Partition by month: 10B * 30 days = 300B rows per month — use time partitioning
+CREATE TABLE url_clicks_2024_01 PARTITION OF url_clicks
+    FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');</code></pre>
+    <h3>301 vs 302 Redirect — The Decision That Affects Analytics</h3>
+    <h3>Redirect type</h3>
+    <h3>HTTP semantics | Browser caching behaviour | Impact on analytics</h3>
+    <h3>301 Moved Permanently</h3>
+    <p>The URL has permanently moved to the new location | Browser caches the redirect. Future visits go directly to the long URL without contacting the short URL server. | Click count stops after the first visit — browser never calls your server again</p>
+    <h3>302 Found (Moved Temporarily)</h3>
+    <p>The URL is temporarily at this location | Browser does NOT cache the redirect. Every visit contacts the short URL server. | Every click is counted — you control every redirect request</p>
+    <h3>307 Temporary Redirect</h3>
+    <p>Same as 302 but preserves HTTP method (POST stays POST) | Not cached | Same as 302 for analytics</p>
+    <p>Which to use and why:</p>
+    <p>Use 302 (or 307) if analytics matter. Use 301 only for permanent migrations where you want to offload traffic to the destination and never count again. For a general-purpose URL shortener, 302 is the default because most customers want to know their click counts. The performance argument for 301 — fewer server requests — is addressed by caching at the CDN and application cache layers rather than by giving up analytics.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What is the difference between a 301 and 302 redirect and which would you use for a URL shortener? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A 301 tells the browser the move is permanent. The browser caches the destination and on future visits goes directly to the long URL without contacting your server. A 302 tells the browser the move is temporary. The browser does not cache and contacts your server on every visit. For a URL shortener, the choice depends on whether analytics matter. If you need to count every click, you must use 302 — with 301 the browser caches the redirect and never calls you again after the first visit. If analytics are not required and you want to reduce server load by having browsers bypass your redirect server entirely after the first visit, 301 makes sense. For a general-purpose service, I default to 302. The performance concern with 302 is addressed by aggressive caching at the application and CDN layers, not by giving up the ability to count clicks.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — Full Architecture</h2>
+    <h3>Component Overview</h3>
+    <h3>Component</h3>
+    <h3>Role | Technology choice | Why</h3>
+    <h3>API servers (write)</h3>
+    <p>Accept URL creation requests, generate short codes, write to DB | Spring Boot service, 3-5 instances | Write traffic is 1,160/sec — modest, a few instances handle this easily</p>
+    <h3>Redirect servers (read)</h3>
+    <p>Receive GET /{code}, look up URL, return 302 | Separate Spring Boot service, auto-scaled | Read traffic is 115,000/sec peak — needs independent scaling from writes</p>
+    <h3>ID generator</h3>
+    <p>Produce unique IDs for short codes | Database sequence (simple) or Snowflake (distributed) | Database sequence is simpler; Snowflake avoids DB dependency in ID generation</p>
+    <h3>Primary database</h3>
+    <p>Store URL mappings, user data | PostgreSQL with read replicas | Relational fits the schema; read replicas handle the modest DB reads after cache misses</p>
+    <h3>Cache</h3>
+    <p>Fast short_code → long_url lookup | Redis cluster with consistent hashing | Most URLs accessed immediately after creation then rarely — cache the hot ones</p>
+    <h3>CDN</h3>
+    <p>Cache redirect responses at the edge | CloudFront or Akamai | Serves popular URLs from edge nodes, eliminates redirect server load for hot URLs</p>
+    <h3>Analytics pipeline</h3>
+    <p>Process click events without blocking redirects | Kafka → Flink/Spark | Write clicks to Kafka async; batch-process for counts and reports</p>
+    <h3>Cleanup job</h3>
+    <p>Expire and deactivate expired URLs | Scheduled batch job | Query expired URLs by index, set is_active=false, optionally delete</p>
+    <h3>Read Path — How a Redirect Works</h3>
+    <pre><code class="language-java">// Read path for GET /{shortCode}
+// Each layer handles a subset of requests, falling through to the next
+// Layer 1: CDN (CloudFront edge node)
+// If the short code is in CDN cache: serve redirect immediately
+// Cache TTL: 60 seconds for most URLs (balance freshness vs latency)
+// If expired URL: CDN cannot know — must reach the origin
+// Layer 2: Application cache (Redis)
+// Key: short_code  Value: {longUrl, expiresAt, isActive}
+// Cache hit (most requests): return 302 to longUrl immediately
+// Cache miss: query the database
+// Layer 3: Database read replica
+// SELECT long_url, expires_at, is_active
+// FROM urls WHERE short_code = ?
+// After DB hit: populate Redis cache, return redirect
+@GetMapping("/{shortCode}")
+public ResponseEntity&lt;Void&gt; redirect(@PathVariable String shortCode) {
+    // Check cache first
+    UrlRecord cached = cache.get(shortCode);
+    if (cached != null) {
+        if (!cached.isActive() || cached.isExpired()) {
+            return ResponseEntity.notFound().build();
+        }
+        publishClickEvent(shortCode); // async — does not block redirect
+        return ResponseEntity
+            .status(HttpStatus.FOUND) // 302
+            .header(HttpHeaders.LOCATION, cached.getLongUrl())
+            .build();
+    }
+    // Cache miss — hit the database
+    Optional&lt;UrlRecord&gt; record = urlRepository.findByShortCode(shortCode);
+    if (record.isEmpty() || !record.get().isActive() || record.get().isExpired()) {
+        return ResponseEntity.notFound().build();
+    }
+    UrlRecord url = record.get();
+    cache.put(shortCode, url, ttlFor(url)); // populate cache
+    publishClickEvent(shortCode);            // async
+    return ResponseEntity
+        .status(HttpStatus.FOUND)
+        .header(HttpHeaders.LOCATION, url.getLongUrl())
+        .build();
+}
+// publishClickEvent: write to Kafka, not to DB directly
+// The redirect response is sent BEFORE the click is recorded
+// Kafka consumer batch-inserts clicks and aggregates counts
+private void publishClickEvent(String shortCode) {
+    kafkaTemplate.send("url.clicks",
+        new ClickEvent(shortCode, Instant.now(), getRequestMetadata()));
+}</code></pre>
+    <h3>Write Path — Creating a Short URL</h3>
+    <pre><code class="language-java">// Write path for POST /api/urls
+@PostMapping("/api/urls")
+public ResponseEntity&lt;UrlResponse&gt; createUrl(
+        @RequestBody @Valid CreateUrlRequest request,
+        @AuthenticationPrincipal User user) {
+    // Rate limit check
+    if (!rateLimiter.isAllowed(user.getId())) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+    }
+    // Handle custom alias
+    String shortCode;
+    if (request.getCustomAlias() != null) {
+        shortCode = request.getCustomAlias();
+        if (urlRepository.existsByShortCode(shortCode)) {
+            throw new AliasAlreadyTakenException(shortCode);
+        }
+    } else {
+        // Generate unique ID and encode to base62
+        long id = idGenerator.nextId(); // Snowflake or DB sequence
+        shortCode = base62Encoder.encode(id);
+    }
+    // Validate the long URL is reachable and not malicious
+    urlValidator.validate(request.getLongUrl()); // check safe browsing API
+    UrlRecord record = UrlRecord.builder()
+        .shortCode(shortCode)
+        .longUrl(request.getLongUrl())
+        .userId(user.getId())
+        .expiresAt(request.getExpiresAt())
+        .build();
+    urlRepository.save(record);
+    return ResponseEntity
+        .status(HttpStatus.CREATED)
+        .body(UrlResponse.from(record, baseUrl));
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> Walk me through the full architecture of a URL shortener at scale. [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I split the system into a write path and a read path because they have very different traffic profiles and scaling requirements. The write path handles about 1,200 URL creations per second — a few Spring Boot instances behind a load balancer, each calling a Snowflake ID generator, encoding to base62, and writing to PostgreSQL. Nothing exotic there. The read path is the challenging part — 115,000 redirects per second at average, up to 300,000 at peak. The read path has three layers. First, the CDN caches popular redirects at edge nodes. For a viral URL that gets millions of clicks, most requests never reach my servers. Second, a Redis cache holds the short_code to long_url mapping for hot URLs. Cache hit is a sub-millisecond lookup and an async Kafka publish for analytics. Third, for cache misses, the redirect server queries a PostgreSQL read replica, populates the cache, and returns the redirect. Analytics are completely decoupled from the redirect path — clicks are published to Kafka and a batch consumer aggregates counts and stores them separately. This means a slow analytics pipeline never affects redirect latency.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — Caching Strategy</h2>
+    <h3>What to Cache, How Long, and What to Do on Expiry</h3>
+    <p>The access pattern reality:</p>
+    <p>URL shorteners have a very non-uniform access pattern. A URL created today to share in a tweet will get millions of hits in the next hour, then almost nothing. A URL from two years ago may never be accessed again. Caching the top 20% of URLs by access frequency serves about 80% of all traffic. The cache does not need to be large — Redis holding the hot set is sufficient.</p>
+    <h3>Cache decision</h3>
+    <h3>Approach | Why</h3>
+    <h3>What to cache</h3>
+    <p>short_code → {longUrl, expiresAt, isActive} | Everything needed to serve a redirect in one lookup — no second DB query</p>
+    <h3>Cache TTL</h3>
+    <p>Default: 1 hour. URLs expiring soon: TTL = time remaining until expiry. Permanently deleted/deactivated: TTL = 0 (evict immediately) | Prevents serving stale redirects after deactivation</p>
+    <h3>Cache size</h3>
+    <p>Keep the hot set — LRU eviction policy in Redis | Popular URLs stay in cache; cold ones age out</p>
+    <h3>On URL deletion</h3>
+    <p>Delete the Redis key immediately (cache-aside invalidation) | Prevents serving a deleted URL for up to TTL seconds after deletion</p>
+    <h3>On URL expiry</h3>
+    <p>Two signals: Redis TTL on the cache entry (expires naturally) + periodic cleanup job sets is_active=false | Defence in depth — cache and DB both enforce expiry</p>
+    <h3>Cache miss rate</h3>
+    <p>Aim for less than 5% — anything higher means the cache is too small or TTL is too short | Every cache miss hits the database which is the bottleneck</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is your caching strategy for the URL shortener and how do you handle cache invalidation? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The cache stores the short_code to long_url mapping with everything needed to serve a redirect in a single lookup — the long URL, the expiry time, and the active status. I use cache-aside: on a cache miss, the redirect server queries the DB, populates the cache, and returns the redirect. The TTL is normally one hour, but for URLs close to their expiry time I set the TTL to the remaining lifetime so the cache entry expires at the same moment the URL does. For immediate invalidation — when a user deletes or deactivates a URL — I delete the Redis key synchronously as part of the delete operation. The tricky case is expiry: I have two layers. The Redis TTL handles most cases automatically. A background job also runs periodically and sets is_active=false in the database for expired URLs, which serves as a fallback for any cache entries that were populated with incorrect TTLs. The principle is that serving a redirect to a deleted URL is a correctness problem, not just a performance one, so I treat cache invalidation on deletion as a hard requirement rather than an eventual consistency case.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — Deep Dives</h2>
+    <h3>Analytics Without Hurting Redirect Latency</h3>
+    <p>The problem:</p>
+    <p>If you increment the click_count column on the urls row on every redirect, that is a write on the hottest read path in the system. At 115,000 redirects per second, that is 115,000 writes per second to rows that are also being read 115,000 times per second. Write contention would be severe. The solution is to decouple click recording from click counting.</p>
+    <pre><code class="language-java">// Analytics pipeline — decouple from the redirect path
+// Step 1: Redirect server publishes to Kafka (async, non-blocking)
+kafkaTemplate.send("url.clicks", new ClickEvent(
+    shortCode,
+    Instant.now(),
+    request.getHeader("Referer"),
+    hashIp(request.getRemoteAddr()),  // hashed for privacy
+    request.getHeader("User-Agent"),
+    geoService.getCountry(request.getRemoteAddr())
+));
+// Step 2: Kafka consumer batch-inserts click records
+// Runs separately — does not affect redirect latency
+@KafkaListener(topics = "url.clicks", groupId = "analytics-writer")
+public void processClicks(List&lt;ClickEvent&gt; events) {
+    // Batch insert to url_clicks table
+    clickRepository.saveAll(events.stream()
+        .map(ClickRecord::from)
+        .toList());
+    // Update aggregated counts in Redis for real-time dashboard
+    events.forEach(e -&gt;
+        redisTemplate.opsForValue().increment("clicks:" + e.getShortCode()));
+}
+// Step 3: Periodic job aggregates counts back to the DB
+// Runs every minute — not real-time but close enough
+@Scheduled(fixedDelay = 60000)
+public void syncClickCounts() {
+    // Read all click counters from Redis
+    // Update urls.click_count in a single batch UPDATE
+    // Reset Redis counters
+}
+// For the dashboard query: read from Redis for real-time,
+// fall back to DB count for historical accuracy</code></pre>
+    <h3>Custom Aliases</h3>
+    <p>The custom alias problem:</p>
+    <p>Custom aliases (user wants /my-promo instead of /abc1234) conflict with the auto-generated code space. The simplest solution: treat the custom_alias as an alternative lookup key stored separately. The short_code column always holds the auto-generated code. The custom_alias column holds the user-chosen string with a UNIQUE constraint. The redirect server checks both. Alternatively, use the custom alias directly as the short_code and skip auto-generation — but this requires careful validation (length limit, character whitelist, reserved word blocklist).</p>
+    <h3>URL Expiry and Cleanup</h3>
+    <pre><code class="language-java">// Three layers of expiry enforcement
+// Layer 1: Redis TTL (immediate, for cached entries)
+// When caching a URL, set TTL = min(defaultTTL, timeUntilExpiry)
+long ttlSeconds = url.getExpiresAt() != null
+    ? Duration.between(Instant.now(), url.getExpiresAt()).toSeconds()
+    : 3600; // default 1 hour
+cache.set(shortCode, url, ttlSeconds);
+// Layer 2: Application check on cache miss
+// Even if cache TTL expired correctly, verify on every DB hit
+if (url.getExpiresAt() != null &amp;&amp; url.getExpiresAt().isBefore(Instant.now())) {
+    return ResponseEntity.notFound().build();
+}
+// Layer 3: Background cleanup job
+// Runs every hour — marks expired URLs as is_active = false
+@Scheduled(cron = "0 0 * * * *") // every hour
+public void deactivateExpiredUrls() {
+    int updated = jdbcTemplate.update(
+        "UPDATE urls SET is_active = false" +
+        " WHERE expires_at &lt; NOW() AND is_active = true");
+    log.info("Deactivated {} expired URLs", updated);
+}
+// Why keep is_active = false rows instead of deleting?
+// - Audit trail: users can see their expired URLs
+// - Safer: a bug in deletion could accidentally remove active URLs
+// - Analytics: historical click data is still associated with the record
+// Hard delete in a separate archival job after a retention window (e.g. 1 year)</code></pre>
+    <h3>Rate Limiting</h3>
+    <p>What to rate limit and why:</p>
+    <p>URL creation should be rate limited per user (prevent abuse, scraping) and per IP (protect unauthenticated endpoints). Redirect requests should generally not be rate limited at the application level — a viral URL legitimately gets millions of hits. Redirect rate limiting happens at the CDN and infrastructure level, not the application.</p>
+    <h3>Rate limit</h3>
+    <h3>Limit | Implementation | Response when exceeded</h3>
+    <h3>URL creation per user</h3>
+    <p>100 URLs per hour | Redis token bucket keyed on user ID | 429 Too Many Requests with Retry-After header</p>
+    <h3>URL creation per IP (unauthenticated)</h3>
+    <p>10 URLs per hour | Redis token bucket keyed on IP | 429 with suggestion to create an account for higher limits</p>
+    <h3>Custom alias creation</h3>
+    <p>1 custom alias per 10 minutes per user | Redis sliding window | 429 with clear message about the limit</p>
+    <h3>API access generally</h3>
+    <p>1,000 API calls per hour per API key | Redis token bucket per API key | 429 with X-RateLimit headers showing remaining quota</p>
+    <h3>Design Practice — 7 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer and say your full response out loud — approach, trade-offs, and what you would do differently at different scales — before reading the model. Each answer is written the way you would say it in an interview.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How would you generate unique short codes at scale without collisions? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">My preferred approach is a distributed ID generator — either a database sequence or something like Twitter's Snowflake — that produces unique 64-bit integers. I then base62-encode those integers to get 7-character codes. With a database sequence, the ID is guaranteed unique at generation time, so there are no collisions to handle and no DB lookup needed during generation. At 1,200 writes per second, a single PostgreSQL sequence is not a bottleneck. At much higher scale, a Snowflake ID generator distributes across multiple nodes using a combination of timestamp, worker ID, and sequence number — still unique with no coordination between nodes. The alternative, hash-based generation, takes an MD5 of the long URL and uses the first 7 base62 characters. This is simple but creates collisions — two different URLs can produce the same prefix. Every write requires a DB lookup to check whether the code is taken, and you need a retry strategy. At low write rates this is fine. At high write rates, the extra latency and DB load make the counter-based approach clearly better.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> How do you ensure the redirect is fast for popular URLs? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The read path has three layers and the goal is to handle as much traffic as possible at each layer before it reaches the next. The first and cheapest layer is the CDN. Popular URLs cached at CloudFront edge nodes are served from a data centre that is geographically close to the user without any of my servers being involved. For a URL that goes viral, the CDN absorbs 90%+ of the traffic. The second layer is Redis. For URLs that are not CDN-cached, the redirect server checks Redis before going to the database. Redis lookup is a sub-millisecond network call. The cache stores everything needed for a redirect — the long URL, expiry, and active status — so no second lookup is needed. The third layer is the database, which only sees cache misses. Read replicas handle this load and miss rates should be below 5% for a properly sized cache. The key design principle is that the analytics recording — click count, referrer, geo — is completely async. The Kafka publish happens after the redirect response is sent. Analytics never touch the critical path of the redirect.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What database would you use for the URL mappings and why? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">PostgreSQL. The data is relational — URLs belong to users, clicks belong to URLs, expiry and active state are attributes on the URL record. The access patterns are simple and well-understood: point lookup by short_code for redirects, list query by user_id for the dashboard. These are exactly what a relational database with the right indexes handles well. The primary lookup is a primary key lookup on short_code, which is as fast as a database can get. Read replicas scale the read load. I would consider Cassandra or DynamoDB only if the scale were significantly beyond what PostgreSQL with read replicas can handle — which for a URL shortener is genuinely very high, well into hundreds of thousands of reads per second sustained. The caching layer means the database sees only a fraction of total traffic, so PostgreSQL is entirely appropriate. The analytics data (url_clicks) is partitioned by month because it accumulates at very high volume and needs time-based pruning.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> How do you handle custom aliases and what are the edge cases? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Custom aliases are stored in a separate column on the urls table with a UNIQUE constraint. When a user requests a custom alias, I check whether it already exists in the database before assigning it — no ID generator needed for custom aliases. If it is taken, I return a 409 Conflict with a suggestion for available alternatives. The edge cases worth calling out: reserved words. A user should not be able to claim aliases like 'api', 'admin', 'health', 'login', or any path used by the system. I maintain a blocklist checked before accepting any custom alias. Character restrictions: custom aliases must only contain alphanumeric characters and hyphens — no special characters that could cause URL parsing issues or confuse CDN routing rules. Length limits: I cap custom aliases at 50 characters. And namespace collision with auto-generated codes: since auto-generated codes are exactly 7 lowercase base62 characters and custom aliases allow up to 50 characters with different character rules, they do not naturally overlap — but I still check for uniqueness across both columns to be safe.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> How do you count clicks without slowing down the redirect? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I decouple click recording from click counting entirely. When a redirect happens, the server publishes a ClickEvent to Kafka asynchronously — the publish is fire-and-forget from the perspective of the redirect response. The redirect is returned to the user immediately. A separate Kafka consumer group reads click events, batch-inserts them into the url_clicks table, and also increments a Redis counter for real-time dashboard display. A scheduled job periodically reads the Redis counters and persists them back to the urls table as the official click_count. This means there is a small delay between a click happening and it appearing in the database count, but that is acceptable for analytics. What is not acceptable is adding any synchronous write to the redirect critical path. Even a fast INSERT adds latency and creates lock contention at 115,000 redirects per second. The async Kafka approach keeps the redirect path purely a read operation — Redis lookup and HTTP response.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How would you detect and block malicious URLs? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">There are two layers. First, at creation time: validate the URL against Google Safe Browsing API or a similar service before storing it. This catches known phishing and malware URLs before they are ever shortened. The validation adds a small amount of latency to the write path — a few hundred milliseconds — which is acceptable for URL creation. Second, at redirect time: maintain a blocklist of known-bad short codes in Redis. If a report comes in about a shortened URL pointing to malicious content, I add the short_code to the Redis blocklist and set is_active=false in the database. Subsequent redirects check the blocklist first and return a 451 Unavailable For Legal Reasons or a custom page explaining the URL was blocked. The Redis check is O(1) and adds negligible latency. I also keep a counter of abuse reports per short_code — if a URL receives more than N reports from different users, it is automatically deactivated pending manual review.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What happens to the design when the system needs to support 10 billion URLs — not 100 million per day? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The main challenges at 10 billion stored URLs are storage, database index size, and short code space. For storage: 10 billion URLs at 250 bytes each is 2.5 TB of data, manageable in a PostgreSQL cluster with proper storage provisioning. The index on short_code grows proportionally but B-tree indexes scale well. For the short code space: 62^7 gives 3.52 trillion unique codes, which is more than enough for 10 billion. I could also increase to 8 characters if needed — 62^8 is 218 trillion. For the database itself: at 10 billion rows, vertical scaling alone is not enough. I would shard by short_code prefix — the first character of the short_code determines which shard it lives on. With 62 possible first characters and a few shards per character, the load distributes well. The caching strategy becomes more important, not less: with 10 billion cold URLs, the cache hit rate on new accesses will be lower and read replicas need to handle more cache misses. The analytics table (url_clicks) is the more challenging scale problem — billions of click events per day require Kafka as the ingestion layer and a columnar analytics database like ClickHouse or Redshift for aggregation queries rather than PostgreSQL.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 33 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you state the clarifying questions you would ask before designing?</span></li>
+      <li><span class="checkbox-label">Can you do the capacity math: writes/second, reads/second, storage for 5 years?</span></li>
+      <li><span class="checkbox-label">Can you explain counter-based vs hash-based short code generation with trade-offs?</span></li>
+      <li><span class="checkbox-label">Can you explain 301 vs 302 and why 302 is default for analytics?</span></li>
+      <li><span class="checkbox-label">Can you walk through the read path: CDN → Redis → DB?</span></li>
+      <li><span class="checkbox-label">Can you explain why click counting must be async?</span></li>
+      <li><span class="checkbox-label">Can you explain cache invalidation on URL deletion and expiry?</span></li>
+      <li><span class="checkbox-label">All 7 practice questions answered out loud with trade-offs named?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | What I would improve</h3>
+    <h3>Capacity estimation: writes, reads, storage</h3>
+    <p>/5 |</p>
+    <h3>Short code generation: counter vs hash vs random</h3>
+    <p>/5 |</p>
+    <h3>Base62 encoding implementation</h3>
+    <p>/5 |</p>
+    <h3>Database schema: tables, indexes, partition strategy</h3>
+    <p>/5 |</p>
+    <h3>301 vs 302 and the analytics implication</h3>
+    <p>/5 |</p>
+    <h3>Caching: what to cache, TTL, invalidation</h3>
+    <p>/5 |</p>
+    <h3>Analytics: Kafka decoupling pattern</h3>
+    <p>/5 |</p>
+    <h3>Custom aliases: edge cases and reserved words</h3>
+    <p>/5 |</p>
+    <p>Day 33 complete:</p>
+    <p>The URL shortener is a question that reveals how well you separate the read and write paths. Almost every candidate knows to use a database and a cache. What separates senior answers is knowing why the analytics must be async, why 302 instead of 301, and how the caching strategy interacts with URL expiry and deletion. Those three details show you have thought beyond the happy path.</p>
+    <h3>Preview: Day 34 — System Design: Notification Service</h3>
+    <p>End-to-end design of a multi-channel notification system (push, email, SMS) at scale. Covers fanout architecture, user preference management, delivery tracking, retry and dead letter handling, rate limiting per channel, and the 30-second unsubscribe guarantee.</p>
+    <p>Day 33 of 60 · System Design: URL Shortener · Prepared for Md Zuber</p>
+    <p>"A URL shortener is a read-heavy system. Design it like one."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

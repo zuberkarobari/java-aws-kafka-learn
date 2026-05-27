@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConcurrentHashMap - Aurora Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --bg-color: #020617; /* Dark Slate */
+        --neon-cyan: #2dd4bf; /* Teal */
+        --neon-pink: #f472b6; /* Pink */
+        --neon-purple: #818cf8; /* Indigo */
+        --neon-red: #f43f5e; /* Rose */
+        --neon-green: #34d399; /* Emerald */
+        --neon-orange: #fb923c; /* Orange */
+        --panel-bg: rgba(255, 255, 255, 0.03);
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Flex Layout ensures no overlapping */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-color); position: relative;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255,255,255,0.1);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 16px;
+    }
+
+    /* Vibrant Aurora Background */
+    .aurora-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        overflow: hidden; z-index: 0; background: var(--bg-color);
+    }
+    
+    .orb {
+        position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.45;
+        animation: float 15s infinite ease-in-out alternate;
+    }
+    .orb-1 { width: 300px; height: 300px; background: #3b82f6; top: -50px; left: -100px; }
+    .orb-2 { width: 350px; height: 350px; background: #8b5cf6; bottom: -50px; right: -100px; animation-delay: -5s; }
+    .orb-3 { width: 250px; height: 250px; background: #14b8a6; top: 40%; left: 20%; animation-delay: -10s; }
+
+    @keyframes float {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(30px, -30px) scale(1.1); }
+    }
+
+    /* Header - Fixed Top */
+    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
+        background: linear-gradient(135deg, #ffffff, #94a3b8);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 4px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--neon-cyan); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Visual Canvas Area - Top Half */
+    .canvas {
+        flex: 1.2; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 15px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scrollable Data Containers in Canvas (Frosted Glass) */
+    .scroll-container {
+        width: 90%; max-height: 95%; overflow-y: auto; overflow-x: hidden;
+        background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px; padding: 15px; backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .scroll-container::-webkit-scrollbar { width: 4px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    /* Scene 1: The Crash (HashMap vs HashTable) */
+    .map-comparison { display: flex; width: 100%; gap: 10px; text-align: center; }
+    .map-box { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); }
+    .m-title { font-family: monospace; font-size: 10px; font-weight: bold; margin-bottom: 8px; }
+    .m-red { color: var(--neon-red); }
+    .m-orange { color: var(--neon-orange); }
+
+    /* Scene 2: Java 7 Lock Striping */
+    .segment-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; width: 100%; margin-top: 10px;}
+    .seg-box { aspect-ratio: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 8px; font-family: monospace;}
+    .seg-locked { background: rgba(244,63,94,0.3); border-color: var(--neon-red); color: var(--neon-red); }
+
+    /* Scene 3 & 4: CAS and Synchronized */
+    .bucket-array { display: flex; gap: 5px; margin-top: 20px;}
+    .b-slot { width: 40px; height: 40px; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.3); border-radius: 6px; display: flex; align-items: center; justify-content: center; position: relative;}
+    .b-node { position: absolute; width: 30px; height: 30px; background: var(--neon-cyan); border-radius: 4px; color: #000; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.5s; box-shadow: 0 0 10px var(--neon-cyan);}
+    .b-node-2 { top: 35px; background: var(--neon-purple); box-shadow: 0 0 10px var(--neon-purple);}
+    .cpu-check { position: absolute; top: -30px; font-size: 10px; font-family: monospace; color: var(--neon-green); opacity: 0; white-space: nowrap;}
+    .padlock { position: absolute; top: -15px; right: -15px; font-size: 16px; opacity: 0; filter: drop-shadow(0 0 5px red); transform: scale(0.5); transition: all 0.3s;}
+
+    /* Scene 5: Volatile Reads */
+    .mem-model { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; margin-top: 15px;}
+    .main-mem { padding: 10px 20px; border: 2px solid var(--neon-cyan); border-radius: 8px; background: rgba(45,212,191,0.1); font-family: monospace; font-size: 12px; color: var(--neon-cyan);}
+    .th-reads { display: flex; justify-content: space-between; width: 100%;}
+    .th-cache { padding: 8px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; font-size: 10px; color: var(--neon-purple); text-decoration: line-through;}
+    .v-arrow { color: var(--neon-green); font-size: 16px; font-weight: bold;}
+
+    /* Scene 6: Collaborative Resize */
+    .resize-zone { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 15px;}
+    .r-arr { display: flex; flex-direction: column; gap: 2px; }
+    .r-slot { width: 30px; height: 15px; border: 1px solid rgba(255,255,255,0.2); background: var(--neon-cyan); opacity: 0.8;}
+    .r-fwd { background: var(--neon-orange); border-color: var(--neon-orange); color: #000; font-size: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold;}
+    .r-new { background: rgba(255,255,255,0.1); border-style: dashed; }
+    
+    /* Scene 7: Size Calculation */
+    .adder-grid { display: flex; justify-content: space-between; width: 100%; margin-top: 15px;}
+    .adder-cell { background: rgba(255,255,255,0.05); border: 1px solid var(--neon-purple); padding: 10px; border-radius: 6px; text-align: center; color: var(--neon-purple); font-family: monospace; font-size: 12px;}
+
+    /* Explainer Panel at Bottom - Bottom Half (Frosted Glass) */
+    .explainer-panel {
+        background: rgba(15, 23, 42, 0.6);
+        padding: 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(24px);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(255, 255, 255, 0.1); color: #fff;
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.2); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+        margin-bottom: 8px; letter-spacing: -0.5px;
+    }
+
+    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #2dd4bf; } 
+    .c-fn { color: #818cf8; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-an { color: #fb923c; } 
+    .c-hi { background: rgba(45, 212, 191, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white; border: none; padding: 14px 24px; border-radius: 12px;
+        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4); }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="aurora-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>ConcurrentHashMap</h1>
+        <p>The Ultimate Data Structure</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        
+        <!-- Scene 1: The Problem -->
+        <div class="scene-container active" id="scene-1">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px; text-align:center;">The Concurrency Dilemma</div>
+                
+                <div class="map-comparison">
+                    <div class="map-box">
+                        <div class="m-title m-red">HashMap</div>
+                        <div style="font-size:10px; color:#cbd5e1;">Zero locks. Threads overwrite data. Resizing causes infinite loops and crashes.</div>
+                    </div>
+                    <div class="map-box">
+                        <div class="m-title m-orange">HashTable</div>
+                        <div style="font-size:10px; color:#cbd5e1;">One giant padlock. Only 1 thread can read or write at a time. Horribly slow.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 2: Java 7 Segment Locking -->
+        <div class="scene-container" id="scene-2">
+            <div class="scroll-container" style="border-color: rgba(244,114,182,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-pink); margin-bottom: 10px; text-align:center;">Java 7: Lock Striping</div>
+                <div style="font-size:10px; color:#94a3b8; text-align:center; margin-bottom:10px;">The array was divided into 16 Segments. Each had its own ReentrantLock. High memory overhead.</div>
+                
+                <div class="segment-grid">
+                    <!-- Gen via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 3: Java 8+ CAS -->
+        <div class="scene-container" id="scene-3">
+            <div class="scroll-container" style="border-color: rgba(45,212,191,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 15px; text-align:center;">Java 8: Lock-Free Insertion (CAS)</div>
+                
+                <div class="bucket-array" style="justify-content: center;">
+                    <div class="b-slot"></div>
+                    <div class="b-slot" id="cas-slot">
+                        <div class="cpu-check" id="cas-check">if (== null)</div>
+                        <div class="b-node" id="cas-node">N1</div>
+                    </div>
+                    <div class="b-slot"></div>
+                </div>
+                <div style="text-align: center; font-size: 10px; color: var(--neon-cyan); margin-top: 20px;">Compare-And-Swap: Hardware-level atomic drop.</div>
+            </div>
+        </div>
+
+        <!-- Scene 4: Java 8+ Node Locking -->
+        <div class="scene-container" id="scene-4">
+            <div class="scroll-container" style="border-color: rgba(244,63,94,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-red); margin-bottom: 15px; text-align:center;">Collisions: Node-Level Lock</div>
+                
+                <div class="bucket-array" style="justify-content: center;">
+                    <div class="b-slot"></div>
+                    <div class="b-slot" style="flex-direction: column; justify-content: flex-start; padding-top: 5px;">
+                        <div class="padlock" id="the-lock">🔒</div>
+                        <div class="b-node" style="position:relative; opacity:1; z-index:2;">N1</div>
+                        <div class="b-node b-node-2" id="col-node">N2</div>
+                    </div>
+                    <div class="b-slot"></div>
+                </div>
+                <div style="text-align: center; font-size: 10px; color: #cbd5e1; margin-top: 30px;"><code>synchronized(firstNode)</code><br>Locks ONLY this specific bucket!</div>
+            </div>
+        </div>
+
+        <!-- Scene 5: Volatile Reads -->
+        <div class="scene-container" id="scene-5">
+            <div class="scroll-container" style="border-color: rgba(129,140,248,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-purple); margin-bottom: 5px; text-align:center;">100% Lock-Free Reads</div>
+                
+                <div class="mem-model">
+                    <div class="main-mem" id="main-mem">Main Memory [ N1: "Zuber" ]</div>
+                    
+                    <div class="th-reads">
+                        <div style="text-align:center;">
+                            <div class="v-arrow">↑</div>
+                            <div class="th-cache">CPU 1 Cache</div>
+                            <div style="font-size:10px; font-weight:bold;">Thread A (get)</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div class="v-arrow">↓</div>
+                            <div style="padding:8px; border:1px dashed var(--neon-red); border-radius:6px; font-size:10px; color:var(--neon-red);">Writes Directly</div>
+                            <div style="font-size:10px; font-weight:bold;">Thread B (put)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 6: Collaborative Resize -->
+        <div class="scene-container" id="scene-6">
+            <div class="scroll-container" style="border-color: rgba(251,146,60,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-orange); margin-bottom: 10px; text-align:center;">Collaborative Resizing</div>
+                
+                <div class="resize-zone">
+                    <div class="r-arr" id="old-arr">
+                        <div class="r-slot"></div>
+                        <div class="r-slot"></div>
+                        <div class="r-slot"></div>
+                        <div class="r-slot"></div>
+                    </div>
+                    
+                    <div style="font-size: 12px; font-weight: bold; color: var(--neon-cyan);">➡️ Threads A & B ➡️</div>
+                    
+                    <div class="r-arr" id="new-arr">
+                        <div class="r-slot r-new"></div>
+                        <div class="r-slot r-new"></div>
+                        <div class="r-slot r-new"></div>
+                        <div class="r-slot r-new"></div>
+                        <div class="r-slot r-new"></div>
+                        <div class="r-slot r-new"></div>
+                        <div class="r-slot r-new"></div>
+                        <div class="r-slot r-new"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 7: Size Trick -->
+        <div class="scene-container" id="scene-7">
+            <div class="scroll-container" style="border-color: rgba(52,211,153,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-green); margin-bottom: 10px; text-align:center;">The Size Bottleneck Fix</div>
+                <div style="font-size:10px; color:#94a3b8; text-align:center; margin-bottom:10px;">One <code>size++</code> variable causes massive CPU lock contention. Fix: Striped counters!</div>
+                
+                <div class="adder-grid">
+                    <div class="adder-cell" id="c1">T1: +1</div>
+                    <div class="adder-cell" id="c2">T2: +2</div>
+                    <div class="adder-cell" id="c3">T3: +1</div>
+                </div>
+                <div style="text-align:center; margin-top:10px; font-size:12px; font-weight:bold; color:var(--neon-green);">sum() = 4</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[CORE_JAVA_INTERNALS]</div>
+            <h2 id="explainer-title" class="explainer-title">The Thread-Safe Masterpiece</h2>
+            <p id="explainer-text" class="explainer-text"><code>HashMap</code> crashes in multi-threaded servers. <code>HashTable</code> locks the whole map and is terribly slow. Let's explore how <code>ConcurrentHashMap</code> achieves blazing speed via lock-free operations.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initialize Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setScene(index) {
+        document.querySelectorAll('.scene-container').forEach((el, i) => {
+            if(i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+    }
+
+    // Populate segment grid for scene 2
+    const segGrid = document.querySelector('.segment-grid');
+    for(let i=0; i<16; i++) {
+        segGrid.innerHTML += `<div class="seg-box" id="seg-${i}">S${i}</div>`;
+    }
+
+    const steps = [
+        {
+            badge: "Legacy 1/7",
+            title: "Java 7: Lock Striping",
+            text: "Java 7 used an array of 16 <code>Segment</code> objects, each extending <code>ReentrantLock</code>. Threads could write simultaneously <em>only</em> if they hit different segments. Still caused traffic jams and used massive memory for lock objects. Java 8 threw this away.",
+            code: `
+<span class="c-cm">// Java 7 Internal Structure</span>
+<span class="c-kw">final</span> <span class="c-ty">Segment</span>&lt;K,V&gt;[] segments;
+
+<span class="c-kw">static final class</span> <span class="c-ty">Segment</span>&lt;K,V&gt; <span class="c-kw">extends</span> <span class="c-ty">ReentrantLock</span> {
+    <span class="c-kw">transient volatile</span> <span class="c-ty">HashEntry</span>&lt;K,V&gt;[] table;
+}
+            `,
+            action: async () => {
+                setScene(1);
+                codeContainer.style.display = 'block';
+                
+                await sleep(500);
+                document.getElementById('seg-2').classList.add('seg-locked');
+                document.getElementById('seg-5').classList.add('seg-locked');
+                document.getElementById('seg-11').classList.add('seg-locked');
+            }
+        },
+        {
+            badge: "Modern 2/7",
+            title: "Lock-Free Insert (CAS)",
+            text: "Java 8 uses a single Node array. If the target bucket is completely empty, it inserts without ANY locks! It uses the CPU-level <strong>Compare-And-Swap (CAS)</strong> atomic instruction: 'If this memory address is still null, drop my Node in.'",
+            code: `
+<span class="c-cm">// Java 8+ put() source snippet</span>
+<span class="c-kw">if</span> ((f = tabAt(tab, i = (n - 1) & hash)) == <span class="c-kw">null</span>) {
+<span class="c-hi">    <span class="c-kw">if</span> (casTabAt(tab, i, <span class="c-kw">null</span>, <span class="c-kw">new</span> Node&lt;&gt;(...)))</span>
+        <span class="c-kw">break</span>; <span class="c-cm">// Successfully inserted, lock-free!</span>
+}
+            `,
+            action: async () => {
+                setScene(2);
+                codeContainer.style.display = 'block';
+                
+                const node = document.getElementById('cas-node');
+                const check = document.getElementById('cas-check');
+                
+                node.style.opacity = '0';
+                node.style.transform = 'translateY(-30px)';
+                check.style.opacity = '0';
+                
+                await sleep(500);
+                check.style.opacity = '1';
+                
+                await sleep(600);
+                node.style.opacity = '1';
+                node.style.transform = 'translateY(0)';
+            }
+        },
+        {
+            badge: "Collisions 3/7",
+            title: "Surgical Node Locking",
+            text: "What if the bucket isn't empty? CAS won't work on mutating linked lists. Java locks <em>only the very first node (Head)</em> using a standard <code>synchronized</code> block. If you have 10,000 buckets, 10,000 threads can write simultaneously without blocking!",
+            code: `
+<span class="c-cm">// Collision detected! Lock the specific bucket head</span>
+Node&lt;K,V&gt; f = tabAt(tab, i); <span class="c-cm">// The head node</span>
+
+<span class="c-hi"><span class="c-kw">synchronized</span> (f) { <span class="c-cm">// Surgical lock!</span></span>
+    <span class="c-kw">if</span> (tabAt(tab, i) == f) {
+        <span class="c-cm">// Append to linked list or Red-Black Tree</span>
+    }
+}
+            `,
+            action: async () => {
+                setScene(3);
+                codeContainer.style.display = 'block';
+                
+                const node2 = document.getElementById('col-node');
+                const lock = document.getElementById('the-lock');
+                
+                node2.style.opacity = '0';
+                node2.style.transform = 'translateY(-20px)';
+                lock.style.opacity = '0';
+                lock.style.transform = 'scale(0.5)';
+                
+                await sleep(500);
+                lock.style.opacity = '1';
+                lock.style.transform = 'scale(1)';
+                
+                await sleep(600);
+                node2.style.opacity = '1';
+                node2.style.transform = 'translateY(0)';
+            }
+        },
+        {
+            badge: "Reading 4/7",
+            title: "100% Lock-Free Reads",
+            text: "The <code>get()</code> method contains ZERO locks. How? The `val` and `next` pointers inside the <code>Node</code> class are declared <code>volatile</code>. This guarantees read threads bypass the CPU cache and fetch the absolute freshest data straight from main RAM.",
+            code: `
+<span class="c-cm">// Notice the volatile keywords!</span>
+<span class="c-kw">static class</span> <span class="c-ty">Node</span>&lt;K,V&gt; <span class="c-kw">implements</span> Map.Entry&lt;K,V&gt; {
+    <span class="c-kw">final int</span> hash;
+    <span class="c-kw">final</span> K key;
+<span class="c-hi">    <span class="c-kw">volatile</span> V val;</span>
+<span class="c-hi">    <span class="c-kw">volatile</span> Node&lt;K,V&gt; next;</span>
+}
+
+<span class="c-cm">// get() just loops through nodes. No synchronized!</span>
+            `,
+            action: async () => {
+                setScene(4);
+                codeContainer.style.display = 'block';
+                
+                const mem = document.getElementById('main-mem');
+                
+                await sleep(500);
+                mem.style.boxShadow = '0 0 20px rgba(45,212,191,0.6)';
+                mem.innerText = 'Main Memory [ N1: "New Value" ]';
+            }
+        },
+        {
+            badge: "Resizing 5/7",
+            title: "Collaborative Resizing",
+            text: "When a standard HashMap resizes, it freezes the app. <code>ConcurrentHashMap</code> makes it a team sport. When Thread A moves a bucket to the new array, it leaves a <code>ForwardingNode</code>. If Thread B tries to write and hits it, Thread B pauses and <em>helps</em> move the remaining buckets!",
+            code: `
+<span class="c-cm">// A marker node indicating bucket has been moved</span>
+<span class="c-kw">static final class</span> <span class="c-ty">ForwardingNode</span>&lt;K,V&gt; <span class="c-kw">extends</span> Node&lt;K,V&gt; {
+    <span class="c-kw">final</span> Node&lt;K,V&gt;[] nextTable;
+    <span class="c-cm">// Hash is always set to MOVED (-1)</span>
+}
+
+<span class="c-cm">// If thread sees MOVED, it calls helpTransfer()</span>
+<span class="c-hi"><span class="c-kw">if</span> (fh == MOVED)</span>
+<span class="c-hi">    tab = helpTransfer(tab, f);</span>
+            `,
+            action: async () => {
+                setScene(5);
+                codeContainer.style.display = 'block';
+                
+                const oldSlots = document.querySelectorAll('#old-arr .r-slot');
+                const newSlots = document.querySelectorAll('#new-arr .r-slot');
+                
+                await sleep(500);
+                oldSlots[0].className = 'r-slot r-fwd';
+                oldSlots[0].innerText = 'MOVED';
+                newSlots[0].className = 'r-slot'; // fill new
+                
+                await sleep(600);
+                oldSlots[1].className = 'r-slot r-fwd';
+                oldSlots[1].innerText = 'MOVED';
+                newSlots[1].className = 'r-slot'; 
+            }
+        },
+        {
+            badge: "Metrics 6/7",
+            title: "The Size Calculation",
+            text: "If 1,000 threads update a single <code>size</code> integer, CPU caches constantly invalidate, destroying performance. Java uses an array of <code>CounterCell</code>s (similar to <code>LongAdder</code>). Threads increment their specific cell. <code>size()</code> loops and sums them up.",
+            code: `
+<span class="c-cm">// Counter array to avoid thread contention</span>
+<span class="c-kw">private transient volatile</span> CounterCell[] counterCells;
+
+<span class="c-kw">public int</span> <span class="c-fn">size</span>() {
+    <span class="c-kw">long</span> n = sumCount();
+    <span class="c-kw">return</span> ((n < 0L) ? 0 :
+            (n > (<span class="c-kw">long</span>)Integer.MAX_VALUE) ? Integer.MAX_VALUE :
+            (<span class="c-kw">int</span>)n);
+}
+            `,
+            action: async () => {
+                setScene(6);
+                codeContainer.style.display = 'block';
+                
+                const c1 = document.getElementById('c1');
+                const c2 = document.getElementById('c2');
+                
+                await sleep(500);
+                c1.style.background = 'rgba(129,140,248,0.2)';
+                
+                await sleep(500);
+                c2.style.background = 'rgba(129,140,248,0.2)';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            setScene(-1); // Hide all
+            codeContainer.style.display = 'none';
+
+            // Reset visual elements
+            document.querySelectorAll('.seg-box').forEach(el => el.classList.remove('seg-locked'));
+            document.getElementById('cas-node').style.opacity = '0';
+            document.getElementById('cas-check').style.opacity = '0';
+            document.getElementById('col-node').style.opacity = '0';
+            document.getElementById('the-lock').style.opacity = '0';
+            document.getElementById('main-mem').innerText = 'Main Memory [ N1: "Zuber" ]';
+            document.getElementById('main-mem').style.boxShadow = 'none';
+            
+            const oldSlots = document.querySelectorAll('#old-arr .r-slot');
+            const newSlots = document.querySelectorAll('#new-arr .r-slot');
+            oldSlots.forEach(el => { el.className = 'r-slot'; el.innerText = '';});
+            newSlots.forEach(el => { el.className = 'r-slot r-new';});
+            
+            document.getElementById('c1').style.background = 'rgba(255,255,255,0.05)';
+            document.getElementById('c2').style.background = 'rgba(255,255,255,0.05)';
+
+            badge.innerText = "[CORE_JAVA_INTERNALS]";
+            title.innerText = "The Thread-Safe Masterpiece";
+            text.innerHTML = "<code>HashMap</code> crashes in multi-threaded servers. <code>HashTable</code> locks the whole map and is terribly slow. Let's explore how <code>ConcurrentHashMap</code> achieves blazing speed via lock-free operations.";
+            btnNext.innerText = "Initialize Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 4 — VPC Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#EEEDFE;color:#3C3489;border:1px solid #AFA9EC}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #534AB7;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#EEEDFE;color:#3C3489;border-color:#AFA9EC;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #534AB7;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-purple{background:#EEEDFE;color:#3C3489}.p-green{background:#e0f5ee;color:#085041}
+.p-amber{background:#FAEEDA;color:#633806}.p-coral{background:#FAECE7;color:#712B13}
+.p-blue{background:#e6f1fb;color:#0C447C}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+
+/* comparison grid */
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.comp-card{background:#fff;border:1px solid #eee;border-radius:10px;padding:1rem}
+.comp-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.comp-body{font-size:12px;color:#555;line-height:1.65}
+.comp-card.highlight{border-color:#534AB7;background:#EEEDFE}
+.comp-card.highlight .comp-title{color:#3C3489}
+
+/* flow diagram */
+.flow-wrap{background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;margin:12px 0;overflow-x:auto}
+.flow-row{display:flex;align-items:center;gap:0;flex-wrap:nowrap;min-width:500px}
+.flow-box{background:#fff;border:1px solid #ddd;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;text-align:center;white-space:nowrap;flex-shrink:0}
+.flow-box.purple{background:#EEEDFE;border-color:#AFA9EC;color:#3C3489}
+.flow-box.green{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.flow-box.amber{background:#FAEEDA;border-color:#EF9F27;color:#633806}
+.flow-box.coral{background:#FAECE7;border-color:#D85A30;color:#712B13}
+.flow-box.gray{background:#f5f5f2;border-color:#ccc;color:#444}
+.flow-box.blue{background:#e6f1fb;border-color:#85B7EB;color:#0C447C}
+.flow-arr{font-size:14px;color:#999;padding:0 6px;flex-shrink:0}
+.flow-label{font-size:10px;color:#888;text-align:center;margin-top:3px}
+
+/* CIDR calculator */
+.calc-wrap{background:#fff;border:1px solid #eee;border-radius:10px;padding:1rem;margin:12px 0}
+.calc-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.calc-label{font-size:12px;color:#666;min-width:80px}
+.calc-out{font-family:monospace;font-size:12px;background:#f5f5f2;padding:4px 8px;border-radius:6px;color:#1a1a18;flex:1;min-width:200px}
+.calc-highlight{color:#534AB7;font-weight:600}
+
+/* interview */
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}
+.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+
+/* lab */
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+
+/* cheatsheet */
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+
+/* subnet viz */
+.vpc-viz{background:#e6f1fb;border:2px dashed #85B7EB;border-radius:12px;padding:1rem;margin:12px 0}
+.vpc-label{font-size:11px;font-weight:600;color:#0C447C;margin-bottom:10px}
+.az-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+.az-box{border:1.5px dashed #378ADD;border-radius:8px;padding:8px}
+.az-label{font-size:10px;font-weight:600;color:#185FA5;margin-bottom:6px}
+.subnet-pub{background:#e0f5ee;border:1px solid #1D9E75;border-radius:6px;padding:6px 8px;font-size:11px;font-weight:600;color:#085041;margin-bottom:4px}
+.subnet-priv{background:#FAEEDA;border:1px solid #EF9F27;border-radius:6px;padding:6px 8px;font-size:11px;font-weight:600;color:#633806;margin-bottom:4px}
+.subnet-detail{font-size:10px;color:#666;font-weight:400;margin-top:2px}
+.igw-box{background:#EEEDFE;border:1px solid #7F77DD;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600;color:#3C3489;text-align:center;margin-bottom:8px}
+.nat-box{background:#FAECE7;border:1px solid #D85A30;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600;color:#712B13;text-align:center}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 4 of 30</span>
+    <span class="tag">VPC — Virtual Private Cloud</span>
+    <span class="tag">Internal mechanics</span>
+    <span class="tag">Production failures</span>
+    <span class="tag">Network architecture</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('internals',this)">VPC internals</button>
+    <button class="ntab" onclick="show('routing',this)">Routing & gateways</button>
+    <button class="ntab" onclick="show('security',this)">SGs vs NACLs</button>
+    <button class="ntab" onclick="show('advanced',this)">Advanced networking</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- VPC INTERNALS -->
+  <div id="p-internals" class="panel active">
+    <div class="lede"><strong>A VPC is not just "your private network on AWS." It is a software-defined network that AWS builds on top of physical infrastructure using hypervisor-level isolation, SDN overlays, and virtualised network devices. Understanding what actually happens when packets travel through a VPC is what makes you dangerous in both architecture and debugging scenarios.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('c',0,this)">1 · What VPC actually is</button>
+      <button class="cbtn" onclick="showC('c',1,this)">2 · CIDR blocks</button>
+      <button class="cbtn" onclick="showC('c',2,this)">3 · Subnets</button>
+      <button class="cbtn" onclick="showC('c',3,this)">4 · Default VPC</button>
+      <button class="cbtn" onclick="showC('c',4,this)">5 · Packet journey</button>
+    </div>
+
+    <div id="c0" class="cpanel active">
+      <div class="ch">What a VPC actually is at the infrastructure level</div>
+      <div class="csub">Not just a network — a software-defined isolation boundary built on hypervisor technology</div>
+      <div class="cb">
+        <p>A VPC is a <strong>logically isolated section of the AWS cloud</strong> — but "logically isolated" needs unpacking. When you create a VPC, AWS does not provision physical network hardware for you. Instead, AWS uses a <strong>software-defined networking (SDN) overlay</strong> built on top of its physical infrastructure. Your VPC's network exists as virtualised constructs implemented at the hypervisor level — the same layer that isolates EC2 instances from each other on shared physical hardware.</p>
+        <p>AWS's underlying network fabric uses a system called <strong>Nitro</strong>. Every EC2 instance runs on a Nitro hypervisor, which handles all network packet processing in dedicated hardware (the Nitro card — a custom ASIC, not the CPU). When traffic leaves your EC2, the Nitro card encapsulates the packet in an outer header identifying the VPC, source, and destination. AWS's physical network transports the encapsulated packet to the destination host, where the destination's Nitro card strips the header and delivers the inner packet. Your application never sees this encapsulation — it thinks it's talking to an ordinary IP network.</p>
+        <div class="mechbox"><strong>Why this architecture matters for you:</strong> Because network enforcement happens at the Nitro hardware level — not in software on the same machine — it is extremely difficult to bypass. A compromised EC2 instance cannot sniff traffic destined for other instances, even on the same physical host. The isolation is hardware-enforced. This is fundamentally more secure than a software firewall. This is why AWS can offer the Shared Responsibility Model with confidence — the network isolation between tenants is not a software promise, it is an ASIC-enforced one. This is the depth AWS interviewers want to hear when you discuss VPC security.</div>
+        <p>A VPC spans all Availability Zones within a Region. When you create a VPC, you create it in ap-south-1 and it logically covers ap-south-1a, 1b, and 1c simultaneously. You then create subnets inside the VPC, each of which is bound to a specific AZ. The VPC is a regional construct; subnets are AZ-scoped constructs within it.</p>
+        <p><strong>VPC limits that matter:</strong> Default 5 VPCs per region per account (soft limit, can request increase). Maximum 200 subnets per VPC. Maximum 200 route tables per VPC. Maximum 60 inbound rules and 60 outbound rules per Security Group. Knowing these limits prevents architecture mistakes — a design that requires 300 subnets in one VPC needs to be rethought.</p>
+      </div>
+      <span class="pill p-purple">SDN overlay — no dedicated physical hardware</span>
+      <span class="pill p-green">Nitro ASIC enforces isolation — hardware, not software</span>
+    </div>
+
+    <div id="c1" class="cpanel">
+      <div class="ch">CIDR blocks — the addressing system that everything depends on</div>
+      <div class="csub">Every network design decision flows from CIDR. Get this wrong and you're blocked weeks later.</div>
+      <div class="cb">
+        <p>CIDR (Classless Inter-Domain Routing) notation expresses an IP address range. <span class="mono">10.0.0.0/16</span> means: the network starts at 10.0.0.0, and the first 16 bits are fixed (the network portion). The remaining 16 bits are free to vary — giving you 2^16 = 65,536 IP addresses (65,534 usable after AWS reserves some). The /16 is the prefix length — smaller number means larger network.</p>
+        <div class="calc-wrap">
+          <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:#444">CIDR address space — key sizes to memorise</div>
+          <div class="calc-row"><span class="calc-label">/16 (VPC)</span><span class="calc-out"><span class="calc-highlight">65,536</span> addresses — 65,531 usable. Large VPC. e.g. 10.0.0.0/16</span></div>
+          <div class="calc-row"><span class="calc-label">/20 (subnet)</span><span class="calc-out"><span class="calc-highlight">4,096</span> addresses — 4,091 usable. Large subnet.</span></div>
+          <div class="calc-row"><span class="calc-label">/24 (subnet)</span><span class="calc-out"><span class="calc-highlight">256</span> addresses — 251 usable. Standard subnet size. e.g. 10.0.1.0/24</span></div>
+          <div class="calc-row"><span class="calc-label">/28 (subnet)</span><span class="calc-out"><span class="calc-highlight">16</span> addresses — 11 usable. Smallest practical subnet.</span></div>
+          <div class="calc-row"><span class="calc-label">AWS reserves</span><span class="calc-out">First 4 IPs + last 1 IP in every subnet. In a /24: .0 (network), .1 (router), .2 (DNS), .3 (future), .255 (broadcast) = <span class="calc-highlight">5 reserved</span></span></div>
+        </div>
+        <div class="mechbox"><strong>The CIDR planning mistake that haunts teams for years:</strong> A team creates a VPC with CIDR 10.0.0.0/24 — giving themselves only 256 addresses total. Three months later they need more subnets, more EC2 instances, more RDS instances, and they're completely out of IP space. You cannot resize a VPC CIDR once it's created with resources inside it. You can add secondary CIDR blocks, but the primary range is permanent. Always start with at least /16 for a production VPC. For truly large systems, /8 is not uncommon. The cost of IP addresses on AWS is zero — there is no reason to use a small CIDR range.</div>
+        <p>For private VPCs, use only the three RFC 1918 private ranges: <span class="mono">10.0.0.0/8</span>, <span class="mono">172.16.0.0/12</span>, or <span class="mono">192.168.0.0/16</span>. These addresses are not routable on the public internet. If you pick a public address range for your VPC (like 1.0.0.0/16), you'll be unable to reach actual internet services at those IPs from within your VPC — your VPC will intercept the traffic.</p>
+        <div class="failbox"><strong>The overlapping CIDR disaster — VPC peering failure:</strong> Company A has a VPC at 10.0.0.0/16. Company B has a VPC at 10.0.0.0/16. Both are fine independently. They merge and need to connect their VPCs via VPC Peering. VPC Peering requires non-overlapping CIDR ranges — otherwise the routing table doesn't know which VPC a packet destined for 10.0.1.5 should go to. The only solutions are: redesign one VPC with a new CIDR (massively disruptive for a VPC with hundreds of running resources), or use AWS Transit Gateway with Network Address Translation (complex and expensive). This happens constantly in enterprise mergers and acquisitions. The lesson: document your CIDR allocation strategy across all environments (dev/staging/prod) from day one, and treat it like a schema migration — very hard to change later.</div>
+      </div>
+      <span class="pill p-amber">Start with /16 minimum for any production VPC</span>
+      <span class="pill p-coral">CIDR cannot be changed after VPC creation — plan carefully</span>
+    </div>
+
+    <div id="c2" class="cpanel">
+      <div class="ch">Subnets — public vs private and why the distinction is architectural, not just semantic</div>
+      <div class="csub">A subnet is not "public" because it has a public IP. It's public because of its route table.</div>
+      <div class="cb">
+        <p>A subnet is a range of IP addresses within your VPC, bound to a single Availability Zone. Every subnet has a CIDR that is a subset of the VPC CIDR. Resources launched in a subnet get an IP from that subnet's range.</p>
+        <p>The terms "public subnet" and "private subnet" are not AWS-defined properties. They are architectural designations based entirely on what the subnet's route table points to. A subnet is <strong>public if its route table has a route to an Internet Gateway (IGW)</strong>. A subnet is <strong>private if its route table has no route to an IGW</strong> — traffic to the internet must go through a NAT Gateway instead, or there is no internet access at all.</p>
+        <div class="mechbox"><strong>This distinction matters enormously for security:</strong> If your RDS instance is in a subnet whose route table has a route to an IGW, and the instance is accidentally given a public IP, it is directly reachable from the internet. The fact that it has a Security Group with restricted rules is your only defence. In a properly designed private subnet with no IGW route, the RDS instance cannot be reached from the internet regardless of its Security Group — the routing simply doesn't exist to deliver the packets. Defence in depth: private subnets provide network-layer isolation; Security Groups provide application-layer filtering. Both together is correct. Only one alone is insufficient.</div>
+
+        <div class="vpc-viz">
+          <div class="vpc-label">VPC: 10.0.0.0/16 — ap-south-1</div>
+          <div class="igw-box">Internet Gateway (IGW) — attached to VPC</div>
+          <div class="az-row">
+            <div class="az-box">
+              <div class="az-label">AZ: ap-south-1a</div>
+              <div class="subnet-pub">Public Subnet — 10.0.1.0/24<div class="subnet-detail">Route: 0.0.0.0/0 → IGW | Resources: ALB, NAT GW, Bastion</div></div>
+              <div class="subnet-priv">Private Subnet — 10.0.3.0/24<div class="subnet-detail">Route: 0.0.0.0/0 → NAT GW | Resources: EC2, RDS Primary</div></div>
+            </div>
+            <div class="az-box">
+              <div class="az-label">AZ: ap-south-1b</div>
+              <div class="subnet-pub">Public Subnet — 10.0.2.0/24<div class="subnet-detail">Route: 0.0.0.0/0 → IGW | Resources: ALB (second AZ)</div></div>
+              <div class="subnet-priv">Private Subnet — 10.0.4.0/24<div class="subnet-detail">Route: 0.0.0.0/0 → NAT GW | Resources: EC2, RDS Standby</div></div>
+            </div>
+          </div>
+          <div class="nat-box" style="margin-top:8px">NAT Gateway — lives in public subnet, has Elastic IP, allows private subnet outbound internet</div>
+        </div>
+
+        <p><strong>The standard production subnet design:</strong> For a Spring Boot application — ALB and NAT Gateway in public subnets (they need direct internet access). EC2 instances and RDS databases in private subnets (they should never be directly reachable from the internet). The EC2 in the private subnet can reach the internet through the NAT Gateway for things like downloading packages or calling external APIs — but nothing on the internet can initiate a connection to the EC2 directly.</p>
+        <div class="failbox"><strong>The "auto-assign public IP" trap:</strong> When creating a subnet, AWS has a setting called "Auto-assign public IPv4 address". If this is enabled on a subnet, every EC2 instance launched there automatically gets a public IP. If that subnet's route table also points to an IGW (making it a public subnet), every EC2 launched there is directly reachable from the internet — even if you meant it to be "private". Engineers enable this thinking "I need to SSH in" without realising the implication. The correct approach: keep auto-assign public IP off, use a Bastion Host or AWS Systems Manager Session Manager for SSH access, never expose EC2 directly to the internet in production.</div>
+      </div>
+      <span class="pill p-purple">Public = has IGW route. Private = no IGW route. That's the entire distinction.</span>
+    </div>
+
+    <div id="c3" class="cpanel">
+      <div class="ch">The Default VPC — why it exists and why you should never use it for production</div>
+      <div class="csub">AWS creates this for you automatically — it is optimised for getting started, not for security</div>
+      <div class="cb">
+        <p>Every AWS account comes with a pre-created Default VPC in every region. It has CIDR 172.31.0.0/16, a default subnet in each AZ with auto-assign public IP enabled, an attached Internet Gateway, and a route table sending all traffic to the IGW. Every EC2 you launch without specifying a VPC lands here.</p>
+        <p>The Default VPC is designed for instant gratification — you can launch an EC2 and SSH into it in 2 minutes without understanding networking. This is genuinely useful for learning. For production, it is dangerous by design.</p>
+        <div class="failbox"><strong>Why the Default VPC is dangerous for production:</strong> Every subnet in the Default VPC has auto-assign public IP enabled. Every instance you launch gets a public IP automatically. All subnets route to an IGW by default — there are no private subnets. The Default VPC has no isolation between resources — your dev EC2 and your production RDS are in the same VPC, same network segment. Any engineer with access to the account can launch resources that have public IPs without realising it. There is no network-level separation between environments. If you put production workloads in the Default VPC, a configuration mistake (wrong Security Group, overly permissive IAM, accidental public IP assignment) can directly expose production infrastructure to the internet with no network-layer backstop.</div>
+        <div class="prodbox"><strong>What to do instead:</strong> Create a custom VPC for every environment (dev, staging, prod). Follow the standard design: /16 CIDR, public subnets for load balancers and NAT, private subnets for compute and databases, no auto-assign public IP anywhere. Use Terraform (which you already know from your Deloitte project) to define and provision this consistently. The Default VPC can coexist in the account — just never launch production resources into it. Some teams delete the Default VPC entirely to prevent accidental use, but this can break certain AWS services that default to it.</div>
+      </div>
+      <span class="pill p-coral">Never use Default VPC for production</span>
+      <span class="pill p-green">Create a custom VPC per environment</span>
+    </div>
+
+    <div id="c4" class="cpanel">
+      <div class="ch">The journey of a packet through a VPC</div>
+      <div class="csub">Tracing a single HTTP request from your browser to your Spring Boot app — every hop explained</div>
+      <div class="cb">
+        <p>Understanding the complete packet journey makes debugging network failures systematic rather than trial-and-error. Let's trace a request from a user in Hyderabad to your Spring Boot app running on EC2 in ap-south-1a.</p>
+        <p><strong>Step 1 — DNS resolution:</strong> User's browser queries Route 53 for your domain. Route 53 returns the ALB's DNS name IP address (from the nearest edge location). This step has nothing to do with your VPC yet.</p>
+        <p><strong>Step 2 — Packet reaches AWS edge:</strong> The TCP packet from the user's device traverses the public internet and enters AWS's network at the nearest AWS edge PoP (Point of Presence). AWS's global network backbone carries it to the ap-south-1 region. Much faster and more reliable than routing purely over the public internet.</p>
+        <p><strong>Step 3 — Internet Gateway (IGW):</strong> The packet arrives at your VPC's Internet Gateway. The IGW performs one-to-one NAT — translating the ALB's private IP (10.0.1.x) to the public IP associated with the ALB's Elastic Network Interface. The packet is now inside the VPC.</p>
+        <p><strong>Step 4 — Route table lookup:</strong> The VPC router (an implicit router present in every subnet) looks up the destination IP in the route table. The ALB's ENI is in subnet 10.0.1.0/24 — the local route matches. The packet is delivered to the ALB's ENI.</p>
+        <div class="mechbox"><strong>Step 5 — Security Group evaluation on the ALB:</strong> Before the packet reaches the ALB's software, the Nitro card evaluates the ALB's Security Group. The ALB's SG allows inbound TCP 443 from 0.0.0.0/0 (all internet). The packet passes. Security Groups are evaluated at the Nitro hardware level — not inside the instance. This is why Security Groups add no CPU overhead to your EC2.</div>
+        <p><strong>Step 6 — ALB processing:</strong> The ALB terminates TLS, inspects the HTTP request, matches the routing rule (Host header, path), and selects a healthy target EC2 instance in the target group. It creates a new TCP connection to the EC2's private IP (10.0.3.x in the private subnet).</p>
+        <p><strong>Step 7 — Private subnet routing:</strong> The packet from the ALB to 10.0.3.x matches the local route in the private subnet's route table. Delivered to the EC2's ENI. Security Group on the EC2 evaluates: inbound TCP 8080 from ALB's Security Group ID — allowed. The packet reaches your Spring Boot app's port 8080.</p>
+        <p><strong>Step 8 — Return path:</strong> Your Spring Boot app sends the HTTP response. The response packet goes: EC2 ENI → private subnet route table → (same VPC, local route) → ALB ENI. ALB sends the response back to the user over the existing TLS session through the IGW.</p>
+        <div class="prodbox"><strong>What this means for debugging:</strong> If a user cannot reach your app, you now have a systematic checklist: DNS correct? IGW attached to VPC? Route table has 0.0.0.0/0 → IGW in public subnet? ALB Security Group allows inbound 443? ALB health checks passing? EC2 Security Group allows inbound from ALB SG? Spring Boot actually listening on the right port? Application returning non-500 responses? Check each layer in order — not randomly.</div>
+      </div>
+      <span class="pill p-purple">Security Groups evaluated at Nitro hardware — zero CPU overhead</span>
+      <span class="pill p-blue">Systematic packet tracing = fast debugging</span>
+    </div>
+
+    <button class="next-btn" onclick="show('routing',document.querySelectorAll('.ntab')[1])">Routing & gateways — the traffic directors →</button>
+  </div>
+
+  <!-- ROUTING & GATEWAYS -->
+  <div id="p-routing" class="panel">
+    <div class="lede"><strong>Route tables, IGW, NAT Gateway, and VPC endpoints are the plumbing of your VPC. Most engineers use them without understanding how they actually work. The mechanics explain every routing failure, every unexpected cost, and every security gap.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('r',0,this)">1 · Route tables</button>
+      <button class="cbtn" onclick="showC('r',1,this)">2 · Internet Gateway</button>
+      <button class="cbtn" onclick="showC('r',2,this)">3 · NAT Gateway</button>
+      <button class="cbtn" onclick="showC('r',3,this)">4 · VPC Endpoints</button>
+      <button class="cbtn" onclick="showC('r',4,this)">5 · VPC Peering</button>
+    </div>
+
+    <div id="r0" class="cpanel active">
+      <div class="ch">Route tables — how VPC routing actually makes decisions</div>
+      <div class="csub">Every subnet has exactly one route table. Every packet's path is determined by longest prefix match.</div>
+      <div class="cb">
+        <p>A route table is a set of rules (routes) that determine where network traffic is directed. Every subnet in a VPC is associated with exactly one route table. A route table can be associated with multiple subnets. The VPC has one implicit "main" route table that subnets inherit if you don't explicitly associate them with another.</p>
+        <p>Each route has two parts: a <strong>destination</strong> (a CIDR block — where is the packet going?) and a <strong>target</strong> (a gateway or network interface — how do we get there?). When a packet arrives, the VPC router finds the most specific matching route — this is called <strong>longest prefix match</strong>. A route for 10.0.1.0/24 is more specific than a route for 10.0.0.0/16, which is more specific than 0.0.0.0/0 (the catch-all default route). The most specific matching route wins.</p>
+        <div class="mechbox"><strong>The local route — always present, always wins over everything:</strong> Every route table automatically has a local route: destination = VPC CIDR (e.g. 10.0.0.0/16), target = local. This route cannot be modified or deleted. It means: for any destination within the VPC's own CIDR space, route it locally within the VPC. This is how EC2 instances in different subnets of the same VPC communicate — no gateway needed, the local route handles it. The local route always wins over any other route for intra-VPC traffic because it is more specific than any external route you could add.</div>
+        <p><strong>The 0.0.0.0/0 default route:</strong> This matches any destination not covered by more specific routes. It is the "everything else" route. In a public subnet, 0.0.0.0/0 → IGW: all non-VPC traffic goes to the internet. In a private subnet, 0.0.0.0/0 → NAT Gateway: all non-VPC traffic goes through the NAT. Without a 0.0.0.0/0 route, non-VPC traffic is simply dropped — the instance effectively has no internet access.</p>
+        <div class="failbox"><strong>Route table association mistake — the silent traffic black hole:</strong> An engineer creates a custom route table for private subnets (with 0.0.0.0/0 → NAT Gateway) but forgets to associate it with the actual private subnets. The private subnets remain associated with the main route table, which has 0.0.0.0/0 → IGW. The EC2 instances in the "private" subnet can now reach the internet directly — and be reached from the internet. No error is thrown. The mistake silently breaks the security design. Always verify subnet-to-route-table associations after creating route tables. Use Terraform to make this explicit and reviewable.</div>
+      </div>
+    </div>
+
+    <div id="r1" class="cpanel">
+      <div class="ch">Internet Gateway (IGW) — the VPC's door to the public internet</div>
+      <div class="csub">A horizontally scaled, redundant, highly available VPC component — not a server you manage</div>
+      <div class="cb">
+        <p>The Internet Gateway is a VPC component that enables communication between your VPC and the public internet. It performs two functions: it serves as a target in route tables for internet-bound traffic, and it performs <strong>one-to-one NAT</strong> for instances that have public IPs — translating the instance's private IP to its public IP for outbound traffic, and the reverse for inbound traffic.</p>
+        <p>The IGW is not a server, not a bottleneck, and has no bandwidth limit. It is a horizontally scaled, redundant, highly available AWS-managed component. There is no "IGW capacity" to plan for. There is no "IGW failure" to design around. It either exists and is attached to your VPC, or it doesn't. This is very different from a physical router you manage.</p>
+        <div class="mechbox"><strong>What the IGW actually does at the packet level:</strong> When an EC2 instance with a public IP (say, private IP 10.0.1.50, public IP 13.234.50.100) sends a packet to 8.8.8.8, the packet leaves the EC2 with source IP 10.0.1.50. The route table says 0.0.0.0/0 → IGW. When the packet passes through the IGW, the IGW replaces the source IP with 13.234.50.100 (the public IP). When the response from 8.8.8.8 arrives, the IGW replaces the destination IP with 10.0.1.50 and forwards it to the instance. The private IP address of the instance is never exposed to the public internet.</div>
+        <p><strong>IGW limitations:</strong> Only one IGW can be attached to a VPC at a time. The IGW must be in the same region as the VPC. You cannot route traffic from one VPC through another VPC's IGW — VPC Peering connections do not inherit gateway access.</p>
+        <div class="failbox"><strong>"My EC2 has a public IP but can't reach the internet" — the most common VPC mistake:</strong> This happens when: (1) the route table for the EC2's subnet has no route to the IGW (private subnet), or (2) the IGW exists but is not attached to the VPC, or (3) the Security Group blocks outbound traffic (though the default outbound rule allows all), or (4) the NACL blocks outbound or inbound on the return path. Engineers create an IGW but forget to attach it to the VPC — it exists in the console unattached and does nothing. Always verify: IGW created → IGW attached to VPC → route table has 0.0.0.0/0 → IGW ID → subnet associated with that route table → Security Group allows outbound.</div>
+      </div>
+    </div>
+
+    <div id="r2" class="cpanel">
+      <div class="ch">NAT Gateway — the mechanism, the cost, and the gotchas</div>
+      <div class="csub">How private instances reach the internet — and why NAT Gateway is one of AWS's most expensive surprises</div>
+      <div class="cb">
+        <p>A NAT (Network Address Translation) Gateway allows instances in private subnets to initiate connections to the internet while preventing the internet from initiating connections to those instances. It lives in a public subnet and has an Elastic IP. Private subnet route tables have 0.0.0.0/0 → NAT Gateway.</p>
+        <p><strong>How it works at the packet level:</strong> Your EC2 in a private subnet (IP 10.0.3.50) sends a packet to api.github.com (140.82.x.x). Route table matches 0.0.0.0/0 → NAT Gateway. The NAT Gateway replaces the source IP (10.0.3.50) with its own Elastic IP (e.g. 13.234.60.200) and forwards the packet through the IGW to the internet. The NAT Gateway records the connection in its state table: "this external connection belongs to internal 10.0.3.50". When the response arrives, NAT Gateway looks up its state table, replaces the destination IP with 10.0.3.50, and forwards it to the private subnet. This is <strong>SNAT (Source NAT)</strong> — the internet never sees your private IP.</p>
+        <div class="failbox"><strong>NAT Gateway is AWS's most surprising bill item:</strong> NAT Gateway has two cost components: an hourly charge (~$0.045/hour = ~$32/month) and a per-GB data processing charge (~$0.045/GB). A single NAT Gateway processing 1TB of data per month costs $45 (hourly) + $46 (data) = ~$91/month. Multiply by multiple environments (dev, staging, prod), multiple regions, and this adds up to thousands of dollars monthly. The most common mistake: engineers create a NAT Gateway in every AZ for HA (correct for production) without realising each one has its own hourly charge. In dev environments, many teams use a single NAT Gateway (no HA) to save cost. A NAT Gateway that is created and forgotten (in a dev environment no one uses) silently charges $32/month indefinitely.</div>
+        <div class="mechbox"><strong>NAT Gateway vs NAT Instance — why the old NAT Instance approach died:</strong> Before NAT Gateway, engineers ran a special EC2 instance (a "NAT instance") to perform NAT. It required disabling Source/Destination Check on the instance, manual scaling, manual HA configuration, and patching. NAT Gateway replaced this with a fully managed, auto-scaling service. NAT Gateway is the correct modern approach. However, NAT instances still appear in older AWS documentation and in organisations with legacy infrastructure — you may encounter them in a job.</div>
+        <p><strong>NAT Gateway HA design:</strong> A NAT Gateway lives in one AZ. If that AZ has an outage, instances in other AZs using that NAT Gateway lose internet access (their route table still points to the failed NAT GW). The correct production design: one NAT Gateway per AZ. Each AZ's private subnets have a route table pointing to their local NAT Gateway. Cost doubles (or triples for 3 AZs) but you have true HA. For dev environments, one NAT Gateway is acceptable.</p>
+        <div class="prodbox"><strong>VPC Endpoints as a NAT Gateway cost reduction strategy:</strong> Your EC2 in a private subnet calls the S3 API. Without a VPC Endpoint, this traffic goes: EC2 → NAT Gateway (costs $0.045/GB) → IGW → internet → S3. With an S3 VPC Gateway Endpoint (free), traffic goes: EC2 → VPC Endpoint → S3 directly, never leaving AWS's network. No NAT Gateway processing fee, lower latency, better security. For high-traffic workloads with heavy S3 or DynamoDB access, Gateway Endpoints eliminate significant NAT Gateway data processing costs. This is real money at scale.</div>
+      </div>
+    </div>
+
+    <div id="r3" class="cpanel">
+      <div class="ch">VPC Endpoints — keeping traffic on AWS's private network</div>
+      <div class="csub">Two types, very different mechanics — Gateway Endpoints are free, Interface Endpoints are not</div>
+      <div class="cb">
+        <p>A VPC Endpoint allows resources in your VPC to communicate with AWS services (S3, DynamoDB, SQS, etc.) without the traffic leaving AWS's private network — no internet, no NAT Gateway, no IGW. This matters for security (traffic never touches the public internet), cost (no NAT Gateway data processing fees), and latency (AWS backbone vs public internet).</p>
+        <p>There are two fundamentally different types of VPC Endpoints with very different mechanics:</p>
+        <div class="comp-grid">
+          <div class="comp-card highlight">
+            <div class="comp-title">Gateway Endpoint — free</div>
+            <div class="comp-body">Works only for S3 and DynamoDB. Adds a route to your route table pointing at the endpoint. Traffic is still routed at the network layer. No ENI created. Free — no hourly charge, no per-GB charge. Every VPC should have Gateway Endpoints for S3 and DynamoDB. The only reason not to: you have specific security requirements to block all S3 access from the VPC (rare).</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-title">Interface Endpoint — charged</div>
+            <div class="comp-body">Works for 100+ AWS services (SQS, SNS, KMS, EC2 API, SSM, etc.). Creates an ENI (Elastic Network Interface) in your subnet with a private IP. Traffic to the service is routed to this ENI. Charged per AZ per hour (~$0.01/hr) plus per-GB. For SSM Session Manager (your secure SSH alternative): requires Interface Endpoints for ssm, ssmmessages, and ec2messages services.</div>
+          </div>
+        </div>
+        <div class="mechbox"><strong>The Gateway Endpoint route table mechanic:</strong> When you create an S3 Gateway Endpoint, AWS adds a special route to your route table: destination = <span class="mono">pl-xxxxxx</span> (a "prefix list" — a managed list of S3's IP ranges for that region), target = <span class="mono">vpce-xxxxxx</span> (your endpoint). When your EC2 makes an S3 API call, the destination IP matches this prefix list, the route sends it to the VPC endpoint, and traffic goes over AWS's private backbone directly to S3 — bypassing NAT Gateway entirely. You can also add bucket policies that restrict access to only traffic coming from specific VPC Endpoints — a powerful security control: even if someone's credentials are stolen, they can't exfiltrate data unless they're inside the VPC.</div>
+        <div class="failbox"><strong>SSM Session Manager setup failure — the incomplete endpoint configuration:</strong> An engineer wants to use SSM Session Manager instead of SSH (no open port 22, more secure). They create the ssm Interface Endpoint but the EC2 still can't connect to Session Manager. Why? Session Manager requires three Interface Endpoints: ssm (for the SSM service itself), ssmmessages (for session message routing), and ec2messages (for EC2 agent communication). Missing any one of the three breaks the setup silently. The agent on the EC2 shows "Online" in the SSM console but sessions fail to establish. This is a documented requirement that engineers consistently miss by creating only the "ssm" endpoint.</div>
+      </div>
+    </div>
+
+    <div id="r4" class="cpanel">
+      <div class="ch">VPC Peering — connecting VPCs and why it doesn't scale</div>
+      <div class="csub">Direct VPC-to-VPC connectivity with a critical transitive routing limitation</div>
+      <div class="cb">
+        <p>VPC Peering creates a direct network connection between two VPCs — same account, different accounts, or different regions. Traffic between peered VPCs travels over AWS's private backbone, not the public internet. No bandwidth bottleneck, low latency. The peered VPCs are treated as if they were two subnets in the same network for routing purposes.</p>
+        <p><strong>Requirements:</strong> Non-overlapping CIDR ranges (this is why CIDR planning matters — you cannot peer VPCs with the same address space). You must update route tables in both VPCs to point at the peering connection. You must update Security Groups to allow traffic from the peered VPC's CIDR.</p>
+        <div class="mechbox"><strong>The transitive routing limitation — why VPC Peering breaks at scale:</strong> VPC Peering is NOT transitive. If VPC A is peered with VPC B, and VPC B is peered with VPC C, VPC A cannot communicate with VPC C through VPC B. Each peering relationship is a direct, point-to-point connection. To connect 10 VPCs to each other fully, you need 10×9/2 = 45 separate peering connections. For N VPCs, you need N(N-1)/2 peering connections. At enterprise scale (hundreds of VPCs across accounts and regions), this becomes completely unmanageable.</div>
+        <div class="prodbox"><strong>AWS Transit Gateway — the solution to the VPC Peering scaling problem:</strong> Transit Gateway is a regional hub that acts as a cloud router. You connect each VPC to the Transit Gateway once. The Transit Gateway routes traffic between all connected VPCs. 10 VPCs = 10 Transit Gateway attachments instead of 45 peering connections. Transit Gateway supports transitive routing. It also connects to on-premise networks via VPN or Direct Connect. Cost: ~$0.05/GB data processed + $0.07/hour per attachment. For organisations with many VPCs, Transit Gateway is the correct architecture. For small organisations with 2-3 VPCs, VPC Peering is sufficient and cheaper.</div>
+        <div class="failbox"><strong>The peering route table omission — packets drop silently:</strong> An engineer sets up VPC Peering between VPC A and VPC B. The peering connection shows "Active" in the console. But EC2 instances still can't communicate between the VPCs. Why? Peering connection active ≠ routing configured. You must manually add routes to each VPC's route table: in VPC A's route table, add destination = VPC B's CIDR, target = peering connection ID. In VPC B's route table, add destination = VPC A's CIDR, target = the same peering connection. This step is separate from creating the peering connection and is the most commonly missed step.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('security',document.querySelectorAll('.ntab')[2])">Security Groups vs NACLs — the deep comparison →</button>
+  </div>
+
+  <!-- SGs vs NACLs -->
+  <div id="p-security" class="panel">
+    <div class="lede"><strong>Security Groups and NACLs both filter traffic but operate on fundamentally different principles — stateful vs stateless, instance-level vs subnet-level, allow-only vs allow-and-deny. Getting this wrong produces security holes that are invisible until an incident, or operations failures that are maddening to debug.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('sg',0,this)">1 · Security Groups deep</button>
+      <button class="cbtn" onclick="showC('sg',1,this)">2 · NACLs deep</button>
+      <button class="cbtn" onclick="showC('sg',2,this)">3 · Stateful vs stateless</button>
+      <button class="cbtn" onclick="showC('sg',3,this)">4 · SG chaining pattern</button>
+    </div>
+
+    <div id="sg0" class="cpanel active">
+      <div class="ch">Security Groups — stateful instance-level firewall</div>
+      <div class="csub">Evaluated at the Nitro hardware level — not a software firewall running on the instance</div>
+      <div class="cb">
+        <p>A Security Group is a stateful virtual firewall associated with network interfaces (ENIs). When an EC2 launches, it is associated with one or more Security Groups. The Nitro card evaluates Security Group rules for every packet entering or leaving the ENI — before the packet reaches the instance's operating system. This means a Security Group drop produces no log on the EC2's OS and adds no latency to packets that do pass through.</p>
+        <p><strong>Security Groups are allow-only.</strong> You define what is allowed; everything not explicitly allowed is implicitly denied. You cannot write a deny rule. This is different from traditional firewalls. The consequence: you cannot use a Security Group to explicitly block a specific IP that is otherwise covered by an allow rule. If you allow 0.0.0.0/0 on port 443 and want to block a specific IP, you cannot do it in a Security Group — you need a NACL.</p>
+        <div class="mechbox"><strong>Security Group default rules:</strong> A new Security Group has: inbound — no rules (all inbound traffic denied by default). Outbound — one rule: all traffic to 0.0.0.0/0 allowed. This default outbound rule means your EC2 can reach anything on the internet by default. Most engineers leave this default. In high-security environments (banking, healthcare), you remove the default outbound allow-all and explicitly define only the outbound traffic your application needs — outbound to RDS on port 3306, outbound to S3 VPC Endpoint, outbound to specific third-party APIs. This is "least-privilege networking" — the network equivalent of IAM least-privilege.</div>
+        <p><strong>Security Group rule source/destination:</strong> Rules can specify source/destination as: a CIDR range (0.0.0.0/0 for all, x.x.x.x/32 for a specific IP), or another Security Group ID. Using another Security Group ID as the source is one of the most powerful AWS networking patterns — it means "traffic from any ENI associated with this Security Group". When you allow port 3306 from the EC2's Security Group ID in the RDS Security Group, only EC2 instances associated with that Security Group can reach RDS — not "any IP in the subnet", not "any IP in the VPC". Any new EC2 you launch must explicitly be given the right Security Group to access RDS. This is precise, scalable, and self-documenting.</p>
+        <div class="failbox"><strong>The Security Group rule accumulation problem:</strong> Over 18 months, a production Security Group accumulates 40+ inbound rules — IPs added for "temporary" access that were never removed, rules for decommissioned services, duplicate rules. Nobody knows what half the rules do or why they were added. This "Security Group sprawl" creates both security risks (unknown access pathways) and operational confusion. Every Security Group rule should have a description (AWS allows a description field on each rule — use it). Audit Security Groups quarterly. Use AWS Config rules to alert when Security Groups have rules open to 0.0.0.0/0 on sensitive ports.</div>
+      </div>
+    </div>
+
+    <div id="sg1" class="cpanel">
+      <div class="ch">Network ACLs (NACLs) — stateless subnet-level firewall</div>
+      <div class="csub">Subnet perimeter defence — a blunt instrument that requires understanding TCP state</div>
+      <div class="cb">
+        <p>A Network ACL is a stateless firewall associated with a subnet — not an instance. Every packet entering or leaving a subnet is evaluated against the NACL, regardless of which instance it's destined for. NACLs support both allow and deny rules, evaluated in ascending order by rule number. The first matching rule wins. Rule number 100 is evaluated before rule 200. The implicit last rule (*) denies all traffic not matched by any previous rule.</p>
+        <p><strong>NACLs are stateless</strong> — this is the critical difference from Security Groups. For each connection, NACLs evaluate inbound and outbound packets independently, with no memory of previous packets in the same connection. A TCP connection requires packets in both directions — the initial request AND the response. You must explicitly allow both directions in NACLs.</p>
+        <div class="mechbox"><strong>The ephemeral port problem — where NACL statelessness bites engineers:</strong> When a client connects to your web server on port 443, the client's OS chooses a random "ephemeral port" (also called source port) between 1024 and 65535 for the return traffic. The server's response packets have: source port 443, destination port [the client's ephemeral port, e.g. 52341]. For the response to reach the client, your NACL's outbound rules must allow TCP traffic from port 443 to destination port range 1024-65535. If your NACL only allows outbound TCP 443, the responses are dropped and the connection hangs. This trips every engineer the first time they work with NACLs because Security Groups (stateful) handle this automatically.</div>
+        <p><strong>NACL evaluation order matters critically:</strong> If rule 100 allows all traffic (0.0.0.0/0) and rule 200 denies a specific IP, the deny rule never executes because rule 100 matched first. To block a specific IP, the deny rule must have a lower rule number than the allow-all rule. Example: rule 90 — DENY TCP 1.2.3.4/32, all ports. Rule 100 — ALLOW TCP 0.0.0.0/0, port 443. Traffic from 1.2.3.4 hits rule 90 first and is denied. All other traffic hits rule 100 and is allowed.</p>
+        <div class="failbox"><strong>NACL rule order mistake — the deny that never fires:</strong> An engineer's IP (5.6.7.8) accidentally gets into a production Security Group. They want to block it at the network level using a NACL. They add rule 200: DENY 5.6.7.8/32. But the existing NACL has rule 100: ALLOW 0.0.0.0/0. Rule 100 fires first — traffic from 5.6.7.8 is allowed, the deny at rule 200 never executes. The engineer thinks they've blocked the IP but traffic flows unimpeded. Fix: place the deny rule at a lower number than the conflicting allow rule — e.g. rule 50: DENY 5.6.7.8/32. Rule evaluation order is everything with NACLs.</div>
+      </div>
+    </div>
+
+    <div id="sg2" class="cpanel">
+      <div class="ch">Stateful vs stateless — understanding the fundamental difference</div>
+      <div class="csub">This distinction is the single most important concept in VPC security — tested in every senior interview</div>
+      <div class="cb">
+        <p>Stateful means the firewall tracks connection state. When an allowed inbound connection is established, the firewall automatically allows the return traffic for that connection, regardless of outbound rules. Security Groups are stateful.</p>
+        <p>Stateless means each packet is evaluated independently. No connection state is tracked. The firewall doesn't know that an inbound packet on port 443 is part of the same connection as an outbound packet on port 52341. NACLs are stateless.</p>
+        <div class="comp-grid">
+          <div class="comp-card highlight">
+            <div class="comp-title">Security Groups (stateful)</div>
+            <div class="comp-body">
+              You allow inbound TCP port 8080 from ALB.<br><br>
+              A user connects. SG evaluates the inbound packet — allowed.<br><br>
+              Spring Boot sends a response. SG automatically allows the outbound response, even if your outbound rules only allow port 443.<br><br>
+              Why: SG tracks the connection tuple (src IP, src port, dst IP, dst port, protocol) and automatically permits return packets for established connections.<br><br>
+              You only need to think about one direction per rule — the direction of initiation.
+            </div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-title">NACLs (stateless)</div>
+            <div class="comp-body">
+              You allow inbound TCP port 8080 from 0.0.0.0/0.<br><br>
+              A user connects. NACL evaluates inbound packet — allowed.<br><br>
+              Spring Boot sends a response. NACL evaluates this outbound packet independently. If your outbound rules don't allow TCP to ephemeral ports (1024-65535), the response is dropped.<br><br>
+              Why: NACL doesn't know this outbound packet is a response to an allowed inbound connection.<br><br>
+              You must allow BOTH inbound AND outbound for every connection, including return traffic.
+            </div>
+          </div>
+        </div>
+        <div class="mechbox"><strong>Practical consequence — NACL outbound rules for a web server:</strong><br>
+          Inbound: Allow TCP 0.0.0.0/0 → port 443 (HTTPS requests from internet)<br>
+          Inbound: Allow TCP 0.0.0.0/0 → port 80 (HTTP requests)<br>
+          Inbound: Allow TCP 0.0.0.0/0 → ports 1024-65535 (responses to your outbound requests, e.g. package downloads)<br>
+          Outbound: Allow TCP 0.0.0.0/0 → port 443 (your server calling external APIs)<br>
+          Outbound: Allow TCP 0.0.0.0/0 → ports 1024-65535 (responses to inbound requests — THE ONE ENGINEERS FORGET)<br>
+          Missing the outbound 1024-65535 rule means your server silently drops all HTTP responses. Connections establish but hang waiting for data that never arrives. This takes hours to debug if you don't know about ephemeral ports.
+        </div>
+      </div>
+    </div>
+
+    <div id="sg3" class="cpanel">
+      <div class="ch">Security Group chaining — the production security pattern</div>
+      <div class="csub">Using Security Group references instead of IP ranges — the correct way to layer security</div>
+      <div class="cb">
+        <p>Security Group chaining means using a Security Group ID as the source/destination in a Security Group rule, rather than an IP CIDR range. This is not just a convenience — it is a fundamentally more secure and maintainable architecture.</p>
+        <div class="prodbox"><strong>The canonical three-tier production SG design for your Spring Boot stack:</strong><br><br>
+          <strong>ALB Security Group (alb-sg):</strong><br>
+          Inbound: TCP 443 from 0.0.0.0/0 (HTTPS from internet)<br>
+          Inbound: TCP 80 from 0.0.0.0/0 (HTTP redirect)<br>
+          Outbound: TCP 8080 to [app-sg] (to EC2 instances only)<br><br>
+          <strong>App Security Group (app-sg):</strong><br>
+          Inbound: TCP 8080 from [alb-sg] (ONLY from ALB — not from internet)<br>
+          Inbound: TCP 22 from [bastion-sg] (SSH only from Bastion)<br>
+          Outbound: TCP 3306 to [db-sg] (to RDS only)<br>
+          Outbound: TCP 443 to 0.0.0.0/0 (for external API calls, package downloads)<br><br>
+          <strong>DB Security Group (db-sg):</strong><br>
+          Inbound: TCP 3306 from [app-sg] (ONLY from app servers — nothing else can reach RDS)<br>
+          Outbound: none (databases don't initiate connections)
+        </div>
+        <p>With this design, even if an attacker compromises your EC2, they cannot directly pivot to your RDS unless they're using the EC2's own ENI (which is already compromised). They also cannot reach RDS from a new EC2 they launch in the same VPC unless it has the app-sg Security Group attached. The Security Group IDs become your access tokens for network access.</p>
+        <div class="mechbox"><strong>Why IP-based rules are wrong for internal services:</strong> If your app-sg rule allows inbound 8080 from 10.0.0.0/16 (the whole VPC CIDR), then any resource in the VPC — any EC2, any Lambda with a VPC config, any RDS, any developer's test instance — can send traffic to your app on port 8080. Security Group references constrain access to specifically configured resources. IP ranges constrain access based on network topology, which is far weaker.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('advanced',document.querySelectorAll('.ntab')[3])">Advanced networking — Flow Logs, DNS, and more →</button>
+  </div>
+
+  <!-- ADVANCED NETWORKING -->
+  <div id="p-advanced" class="panel">
+    <div class="lede"><strong>VPC Flow Logs, DNS resolution inside a VPC, VPN and Direct Connect — these are the topics that separate engineers who can configure VPCs from those who can debug them and connect them to the real world.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('a',0,this)">1 · VPC Flow Logs</button>
+      <button class="cbtn" onclick="showC('a',1,this)">2 · DNS in VPC</button>
+      <button class="cbtn" onclick="showC('a',2,this)">3 · VPN & Direct Connect</button>
+      <button class="cbtn" onclick="showC('a',3,this)">4 · Placement Groups</button>
+    </div>
+
+    <div id="a0" class="cpanel active">
+      <div class="ch">VPC Flow Logs — what they capture and what they don't</div>
+      <div class="csub">Network-level audit trail — essential for security investigations and debugging</div>
+      <div class="cb">
+        <p>VPC Flow Logs capture metadata about the IP traffic flowing through your VPC's network interfaces. They can be enabled at three levels: VPC level (all traffic in the VPC), subnet level (all traffic in a subnet), or individual ENI level (a single interface). Logs are published to CloudWatch Logs or S3.</p>
+        <p>A flow log record contains: version, account-id, interface-id, srcaddr, dstaddr, srcport, dstport, protocol, packets, bytes, start time, end time, action (ACCEPT/REJECT), and log-status. The action field is the critical one — ACCEPT means the Security Group or NACL allowed the traffic; REJECT means it was blocked.</p>
+        <div class="mechbox"><strong>What Flow Logs do NOT capture — the gaps engineers assume don't exist:</strong> Traffic to and from the instance metadata service (169.254.169.254). Traffic to and from Amazon Time Sync Service (169.254.169.123). DHCP traffic. Traffic to the VPC router's reserved address. DNS traffic to Route 53 Resolver (169.254.169.253). This means: if your application is making calls to the instance metadata service (to fetch IAM credentials), these calls are invisible in Flow Logs. An attacker who compromises your EC2 and queries the metadata service will not leave a Flow Log trace for those specific requests. For metadata service access auditing, use CloudTrail (which logs the IAM credential issuance) instead.</div>
+        <div class="prodbox"><strong>Using Flow Logs for debugging network connectivity:</strong> Flow Logs are your ground truth when debugging "why can't EC2 A talk to EC2 B?" Procedure: enable Flow Logs on the ENI of the destination EC2. Filter for the source IP of EC2 A. Look at the action field. ACCEPT = packets are arriving, the problem is at the application layer (wrong port, application not listening, application error). REJECT = packets are being dropped at Security Group or NACL level. No records at all = packets never reached the destination ENI — routing issue (wrong route table, subnet not associated correctly). This three-outcome framework eliminates 80% of VPC debugging sessions in under 5 minutes.</div>
+        <div class="failbox"><strong>Flow Logs delivery delay — the debugging confusion:</strong> Flow Logs are not real-time. Logs are aggregated over 10-minute windows (configurable) and delivered to CloudWatch or S3 with additional delay. When actively debugging a connectivity issue, you might not see Flow Log entries for 15-20 minutes after the traffic occurred. Engineers trigger traffic, immediately check Flow Logs, see nothing, conclude "there are no logs" and start troubleshooting in the wrong direction. Always wait at least 15 minutes before concluding there are no Flow Log entries, or use a shorter aggregation window (the default 10-minute window can be reduced to 1 minute for active debugging).</div>
+      </div>
+    </div>
+
+    <div id="a1" class="cpanel">
+      <div class="ch">DNS resolution inside a VPC</div>
+      <div class="csub">How your EC2 resolves domain names — and the split-horizon DNS pattern for hybrid architectures</div>
+      <div class="cb">
+        <p>Every VPC has two DNS-related attributes: <strong>enableDnsSupport</strong> and <strong>enableDnsHostnames</strong>. Both are enabled by default in the Default VPC; enableDnsSupport is enabled in custom VPCs, enableDnsHostnames is disabled by default in custom VPCs.</p>
+        <p><strong>enableDnsSupport:</strong> Enables a DNS server at the VPC's "base + 2" address (e.g. for VPC 10.0.0.0/16, the DNS server is at 10.0.0.2). This DNS server is Route 53 Resolver. All EC2 instances use this by default for DNS resolution. Disable this only if you're providing your own DNS server — almost never the right choice.</p>
+        <p><strong>enableDnsHostnames:</strong> Assigns DNS hostnames (like <span class="mono">ec2-13-234-50-100.ap-south-1.compute.amazonaws.com</span>) to EC2 instances that have public IPs. Must be enabled on the VPC if you want Interface Endpoints to be accessible via DNS names rather than raw IPs — this is a commonly missed requirement when setting up VPC Endpoints.</p>
+        <div class="mechbox"><strong>Route 53 Resolver and Private Hosted Zones — the split-horizon DNS pattern:</strong> You can create a Route 53 Private Hosted Zone for your own domain (e.g. internal.getwork.app) and associate it with your VPC. EC2 instances in the VPC can resolve internal.getwork.app to private IPs. From outside the VPC, internal.getwork.app resolves to public IPs (or doesn't resolve at all if you don't publish it publicly). This is split-horizon DNS — different answers based on where the query originates. Use it for: internal microservice discovery (auth.internal → 10.0.3.50), database endpoints (mysql.internal → RDS private IP), and for ensuring your application always uses private IPs for internal service calls even if the service also has a public endpoint.</div>
+        <div class="failbox"><strong>RDS endpoint resolution in custom VPC — the Interface Endpoint DNS trap:</strong> You create an RDS instance in a private subnet. Your Spring Boot app connects using the RDS endpoint (e.g. my-db.xxxxx.ap-south-1.rds.amazonaws.com). This resolves to the RDS private IP within the VPC — correct. You then decide to set up VPC Endpoints for RDS to force traffic onto the AWS backbone. You create the Interface Endpoint but the EC2 still connects via the public-facing endpoint DNS. Why? enableDnsHostnames is disabled on your custom VPC. Interface Endpoint DNS names only work when enableDnsHostnames is enabled. The EC2 is resolving the old DNS name to the public-facing IP rather than the VPC Endpoint's private IP. Enable enableDnsHostnames on the VPC, and suddenly the RDS endpoint resolves to the Interface Endpoint's private IP.</div>
+      </div>
+    </div>
+
+    <div id="a2" class="cpanel">
+      <div class="ch">VPN and Direct Connect — connecting your VPC to on-premise</div>
+      <div class="csub">How hybrid architectures actually work — critical knowledge for enterprise AWS roles</div>
+      <div class="cb">
+        <p>Most enterprise AWS workloads are hybrid — they need connectivity between AWS VPCs and on-premise data centres. There are two primary mechanisms, with fundamentally different properties.</p>
+        <p><strong>AWS Site-to-Site VPN:</strong> Creates an encrypted IPSec tunnel between your on-premise router and an AWS Virtual Private Gateway (VGW) attached to your VPC. Traffic travels encrypted over the public internet. Setup takes minutes. Two tunnels are provided per VPN connection for HA (if one tunnel has issues, traffic fails over to the second). Bandwidth is limited to 1.25 Gbps per tunnel. Latency is variable — dependent on public internet conditions. Cost: ~$0.05/hr + data transfer. For your JP Morgan project: a VPN connection would allow engineers at JP Morgan's Mumbai office to SSH into private-subnet EC2 instances without a Bastion Host, treating the VPC as an extension of the corporate network.</p>
+        <p><strong>AWS Direct Connect:</strong> A dedicated, private physical fibre connection between your data centre and an AWS Direct Connect location (colocation facility). Traffic never touches the public internet. Consistent latency (typically <10ms for a good circuit). Available in 1 Gbps, 10 Gbps, or 100 Gbps link speeds. Setup takes weeks to months (physical circuit provisioning). Cost: hourly port fee + data transfer. Used by large enterprises for: consistent, predictable latency (financial trading systems), large data transfer volumes (cheaper than internet data transfer at scale), compliance requirements that prohibit data transiting the public internet.</p>
+        <div class="mechbox"><strong>Direct Connect + VPN as a backup — the production HA pattern:</strong> Direct Connect is a physical circuit. If the circuit or the colocation facility has an issue, connectivity to AWS is lost. The production HA pattern: primary connection = Direct Connect (low latency, high bandwidth), backup connection = Site-to-Site VPN (over internet, higher latency but available anywhere). BGP routing is configured to prefer Direct Connect (lower MED/higher local preference). When Direct Connect fails, BGP automatically fails over to the VPN. This provides connectivity continuity at the cost of higher latency during failover — acceptable for most workloads.</div>
+        <div class="failbox"><strong>The BGP route leak in Direct Connect:</strong> A large bank configures Direct Connect. Their on-premise BGP router advertises a very broad route (0.0.0.0/0) to AWS, intending it to be a default route for the Direct Connect connection. AWS VPC receives this advertisement and installs it in route tables. Now all internet-bound traffic from the VPC is routed through the bank's on-premise network rather than the IGW. Every internet API call from EC2 now traverses the Direct Connect circuit, through the bank's data centre, out their internet connection, to the destination. Latency spikes, bandwidth saturates. BGP route filtering — explicitly specifying which prefixes are accepted — is critical for Direct Connect configurations.</div>
+      </div>
+    </div>
+
+    <div id="a3" class="cpanel">
+      <div class="ch">Placement Groups — controlling where EC2 instances land physically</div>
+      <div class="csub">Three strategies with opposite goals — high throughput vs fault isolation vs capacity</div>
+      <div class="cb">
+        <p>By default, AWS places EC2 instances on hardware that minimises the impact of correlated failures — spreading instances across different physical hosts. Placement Groups override this default and give you explicit control over placement for specific performance or availability goals.</p>
+        <p><strong>Cluster Placement Group:</strong> Packs instances close together — ideally on the same physical host rack or adjacent racks. Achieves the lowest possible network latency between instances (single-digit microseconds) and highest throughput (up to 10 Gbps between instances within the group vs ~5 Gbps without). Required for HPC (High Performance Computing), tightly coupled distributed algorithms, and low-latency Kafka clusters where inter-broker replication latency matters. The trade-off: all instances are in the same AZ on adjacent hardware — a single rack failure or network segment failure takes down the entire cluster. Not suitable for workloads that prioritise availability over performance.</p>
+        <p><strong>Spread Placement Group:</strong> Places each instance on distinct underlying hardware. Guarantees that no two instances in the group share a physical host, network switch, or power source. Maximum resilience to correlated hardware failures. Used for critical application components where you need to guarantee independence. Limit: maximum 7 running instances per AZ per spread placement group. For your Hotel Microservices system: placing your 3 primary application instances in a Spread Placement Group guarantees that a single hardware failure can take down at most 1 instance — the other 2 are on physically separate hardware.</p>
+        <p><strong>Partition Placement Group:</strong> Divides instances into logical partitions (up to 7 per AZ). Each partition uses different hardware and power. Instances in the same partition may share hardware. Used for large distributed and replicated workloads where you want correlated failure isolation but need more than 7 instances. Example: a Kafka cluster with 15 brokers — 5 per partition, 3 partitions. A hardware failure takes down at most 5 brokers (one partition). Kafka's replication factor ensures no data loss as long as no two replicas are in the same partition. This is exactly how Apache Kafka is deployed at scale on AWS.</p>
+        <div class="mechbox"><strong>Why this matters for your Kafka background:</strong> Your Infosys VISA Real-Time Payment System used Kafka. In AWS, production Kafka on EC2 should use Partition Placement Groups — brokers in different partitions, replication configured to ensure replicas are never in the same partition. Without this, two Kafka brokers that happen to land on the same physical host will both fail simultaneously when that host has a hardware issue, potentially causing under-replication and data availability issues even with replication factor 3.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[4])">Interview prep — senior level →</button>
+  </div>
+
+  <!-- INTERVIEW PREP -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>VPC is the most commonly deep-dived topic in senior AWS interviews. Every question below requires mechanics, not definitions. An interviewer who asks "what is a VPC" wants to hear about SDN overlays, Nitro enforcement, CIDR planning, and routing decisions — not "it's your private network on AWS."</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">You're asked to design the VPC architecture for a new Spring Boot microservices application at a fintech client. Walk me through every decision you'd make.</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>I'd approach this as a series of explicit decisions, each with a reason.</p>
+          <p><strong>CIDR selection:</strong> 10.0.0.0/16 for production VPC, 10.1.0.0/16 for staging, 10.2.0.0/16 for dev. I'd document this allocation immediately in a CIDR registry document. Non-overlapping ranges are essential for future VPC Peering or Transit Gateway connectivity. /16 gives 65,531 usable IPs — more than enough but not wasteful.</p>
+          <p><strong>Subnet design:</strong> Two public subnets (10.0.1.0/24 in ap-south-1a, 10.0.2.0/24 in ap-south-1b) for the ALB and NAT Gateways. Two private app subnets (10.0.3.0/24 in 1a, 10.0.4.0/24 in 1b) for EC2/ECS. Two private data subnets (10.0.5.0/24 in 1a, 10.0.6.0/24 in 1b) for RDS and ElastiCache. Separate data subnets from app subnets — different Security Group rules, different network ACLs, cleaner blast radius.</p>
+          <p><strong>Gateway design:</strong> One Internet Gateway attached to the VPC. One NAT Gateway per AZ (two total for HA) — each in its respective public subnet. Each AZ's private subnets route 0.0.0.0/0 to their local NAT Gateway. S3 and DynamoDB Gateway Endpoints on all private route tables (free, eliminates NAT Gateway costs for those services).</p>
+          <p><strong>Security Group design:</strong> ALB SG (inbound 443/80 from 0.0.0.0/0, outbound 8080 to app-sg). App SG (inbound 8080 from alb-sg only, inbound 22 from bastion-sg or SSM, outbound 3306 to db-sg, outbound 443 to 0.0.0.0/0). DB SG (inbound 3306 from app-sg only, no outbound needed). All rules use Security Group references, not CIDR ranges, for internal traffic.</p>
+          <p><strong>NACL design:</strong> Default NACLs (allow all) — I'd rely on Security Groups as the primary control. NACLs as a secondary layer only for explicit subnet-level denies (e.g. blocking specific IP ranges identified as threat actors). Reason: NACLs are stateless and operationally complex — Security Groups provide sufficient control for most scenarios with far less risk of misconfiguration.</p>
+          <p><strong>Connectivity:</strong> SSM Interface Endpoints (ssm, ssmmessages, ec2messages) in private subnets — no port 22 open anywhere, use Session Manager for all EC2 access. VPC Flow Logs enabled at VPC level, delivered to S3 for long-term retention and Athena querying. DNS: enableDnsSupport and enableDnsHostnames both enabled. Private Hosted Zone in Route 53 for internal service discovery.</p>
+          <p>Everything provisioned via Terraform — no console clicks for infrastructure. Every Security Group rule has a description. State stored in S3 with DynamoDB locking.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It's a complete architecture with explicit reasoning for every decision. It covers the dimension most engineers miss — separate data subnets, NACL design rationale, SSM instead of SSH, Terraform for reproducibility. The Terraform reference ties it to your actual Deloitte experience, making it credible rather than theoretical.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">An EC2 instance in a private subnet cannot reach the internet. Walk me through your systematic debugging process.</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is a layered problem. I'd check each layer systematically from the bottom up rather than guessing.</p>
+          <p><strong>Layer 1 — Does the instance have an IP?</strong> Verify the EC2 has a private IP assigned. If it doesn't, the subnet may have run out of IPs (check subnet available IP count in console).</p>
+          <p><strong>Layer 2 — Route table:</strong> What route table is associated with this subnet? Does it have a 0.0.0.0/0 route? What is the target? It should be a NAT Gateway ID (nat-xxxxxxxx), not an IGW ID (igw-xxxxxxxx) — that would make it a public subnet. If there's no 0.0.0.0/0 route, internet traffic is simply dropped — add the route. If the route points to a NAT Gateway in the wrong AZ, you'll pay cross-AZ data transfer charges but it should still work (cross-AZ NAT routing functions).</p>
+          <p><strong>Layer 3 — NAT Gateway state:</strong> Is the NAT Gateway in "Available" state? Is it in a public subnet? Does the public subnet's route table have 0.0.0.0/0 → IGW? Does the NAT Gateway have an Elastic IP? A NAT Gateway that is "Available" but in a private subnet without an IGW route will receive packets from the private subnet but cannot forward them to the internet.</p>
+          <p><strong>Layer 4 — Internet Gateway:</strong> Is an IGW attached to the VPC? Check VPC → Internet Gateways. An unattached IGW is the most common cause of "internet doesn't work" after setting up a new VPC.</p>
+          <p><strong>Layer 5 — Security Group outbound:</strong> Check the EC2's Security Group outbound rules. Default is allow all outbound. If someone added a "least privilege" outbound rule and forgot to include the specific port needed, outbound traffic is blocked. Test with <span class="mono">curl https://checkip.amazonaws.com</span> — if it hangs, Security Group or routing. If it returns an error code, routing is working but the application has an error.</p>
+          <p><strong>Layer 6 — NACL:</strong> Check the subnet's NACL. Does it allow outbound TCP 443 to 0.0.0.0/0? Does it allow inbound TCP from 0.0.0.0/0 on ports 1024-65535 (the ephemeral ports for return traffic)? Missing the inbound ephemeral port rule is the classic NACL gotcha.</p>
+          <p><strong>Layer 7 — Confirm with Flow Logs:</strong> Enable VPC Flow Logs on the EC2's ENI, wait 5 minutes, generate some traffic, check logs. ACCEPT records = routing works, problem is application-layer. REJECT records = Security Group or NACL. No records = problem is before the ENI (routing, missing NAT GW, missing IGW).</p>
+          <span class="tip"><strong>Why this answer works:</strong> It's systematic and complete — layer by layer, not random guessing. It demonstrates the specific commands to verify each layer. The Flow Logs step as a ground-truth validation shows production debugging experience. The ephemeral port NACL callout shows depth beyond basic routing knowledge.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">What is the difference between a Security Group and a NACL? When would you use each?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>The fundamental differences are scope, statefulness, and rule types — and these differences determine when you use each.</p>
+          <p><strong>Security Groups</strong> are stateful virtual firewalls operating at the instance (ENI) level. Stateful means: allow an inbound connection, the response traffic is automatically allowed regardless of outbound rules — the firewall tracks connection state. SGs are allow-only — you cannot write deny rules. They are evaluated by AWS Nitro hardware — zero CPU overhead on the instance. Rules can reference other Security Group IDs, not just CIDR ranges. Multiple SGs can be attached to one instance; they are evaluated as a union of all rules.</p>
+          <p><strong>Network ACLs</strong> are stateless firewalls operating at the subnet level — applied to all traffic entering or leaving a subnet, regardless of instance. Stateless means: each packet evaluated independently. Allowing inbound port 443 does NOT automatically allow the response — you must explicitly allow outbound TCP on ephemeral ports 1024-65535. NACLs support both allow and deny rules, evaluated in ascending rule number order. First matching rule wins.</p>
+          <p><strong>When to use Security Groups:</strong> Almost always, for almost everything. They are the primary network security control in AWS. Instance-level granularity, SG chaining for zero-trust internal traffic, stateful behaviour eliminates ephemeral port complexity. Use SGs for all inbound and outbound application traffic controls.</p>
+          <p><strong>When to use NACLs:</strong> Subnet-level controls where you need deny rules — blocking specific malicious IP ranges across the entire subnet regardless of which instance they're targeting. Compliance requirements that mandate network-level access control logs separate from Security Groups. As a secondary defence layer when you need belt-and-suspenders security. NACLs should complement Security Groups, not replace them.</p>
+          <p>In practice at my JP Morgan project: Security Groups are our primary control. NACLs are set to default (allow all) on most subnets. We have specific NACL deny rules on the public subnets blocking IP ranges identified as threat intelligence feeds — these are subnet-level blocks that apply regardless of what individual Security Groups allow.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It explains the mechanism, not just the definition. The ephemeral port detail signals you've actually worked with NACLs. The JP Morgan context grounds it in production experience. The "when to use each" section shows you can make architectural decisions, not just recite differences.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">Explain NAT Gateway — how it works, what it costs, and how you'd optimise its cost at scale.</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>NAT Gateway allows instances in private subnets to initiate outbound connections to the internet while blocking inbound connections from the internet. It lives in a public subnet, has an Elastic IP, and private subnet route tables point 0.0.0.0/0 to it.</p>
+          <p><strong>Mechanism:</strong> Source NAT (SNAT). When EC2 in the private subnet (10.0.3.50) sends a packet to an external API, the packet arrives at the NAT Gateway. NAT Gateway replaces the source IP (10.0.3.50) with its Elastic IP (e.g. 13.234.60.200), records the mapping in its state table, and forwards through the IGW. When the response arrives at the Elastic IP, NAT Gateway looks up the state table, replaces the destination IP with 10.0.3.50, and forwards to the private subnet. The external service sees only the Elastic IP — never the private IP.</p>
+          <p><strong>Cost model:</strong> Hourly charge (~$0.045/hr = ~$32/month per NAT GW) plus per-GB data processing charge (~$0.045/GB). This is independent of traffic volume for the hourly part. Three NAT Gateways across 3 AZs = ~$96/month in fixed charges before any data transfer. A prod environment processing 5TB/month through NAT = $225 data processing + $96 hourly = $321/month on NAT alone.</p>
+          <p><strong>Cost optimisation strategies:</strong></p>
+          <p>First: <strong>VPC Gateway Endpoints for S3 and DynamoDB</strong> — free, routes S3 and DynamoDB traffic directly over AWS backbone bypassing NAT Gateway entirely. If your EC2 accesses S3 heavily, this alone can reduce NAT data processing costs by 50-80%.</p>
+          <p>Second: <strong>VPC Interface Endpoints for other AWS services</strong> (SQS, SNS, STS, KMS, etc.) — traffic to these services no longer goes through NAT Gateway. Costs ~$0.01/hr per endpoint per AZ but eliminates NAT data processing charges for that service. At high volume, Interface Endpoints pay for themselves.</p>
+          <p>Third: <strong>Don't create NAT Gateways in dev environments</strong> — dev environments rarely need HA. One NAT Gateway in dev saves $64/month (two fewer NAT GWs).</p>
+          <p>Fourth: <strong>Review what traffic is going through NAT</strong> — use VPC Flow Logs + Athena to find the top destinations by byte volume. If your EC2 is downloading Linux packages frequently (system updates), configure an S3-hosted package mirror inside the VPC. If it's calling specific external APIs, consider caching responses.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The mechanism is explained at the packet level (SNAT, state table) — not just "it translates IPs". The cost model is specific with real numbers. The optimisation strategies are prioritised — Gateway Endpoints first (free and high impact), then Interface Endpoints, then architectural changes. This is the thinking of an engineer who has seen AWS bills and had to justify costs to management.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q5</span>
+          <span class="iq-q">What is VPC Peering and why does it not scale? What is the alternative?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>VPC Peering creates a direct network connection between two VPCs, allowing private IP communication over AWS's backbone without traversing the internet. It requires non-overlapping CIDRs and manual route table updates in both VPCs.</p>
+          <p><strong>Why it doesn't scale — transitive routing:</strong> VPC Peering is strictly point-to-point and non-transitive. If VPC A peers with VPC B and VPC B peers with VPC C, VPC A cannot reach VPC C through VPC B. Each path needs its own direct peering connection. To fully mesh 10 VPCs requires 10×9/2 = 45 peering connections, each with its own route table entries. At 100 VPCs: 4,950 peering connections, each requiring route table management. This is operationally impossible at enterprise scale.</p>
+          <p>Additionally, VPC Peering cannot be used to route traffic to on-premise networks, to the internet, or through VPN/Direct Connect connections. Gateway access is not transitive — if VPC B has a Direct Connect to your data centre, VPC A peered with VPC B cannot use that Direct Connect. Each VPC's peering connections are fully isolated.</p>
+          <p><strong>AWS Transit Gateway — the scalable alternative:</strong> Transit Gateway is a regional network hub. VPCs connect to the TGW with a single attachment. The TGW has a routing table that determines how to route traffic between attachments. 10 VPCs = 10 TGW attachments instead of 45 peering connections. TGW supports transitive routing — VPC A → TGW → VPC B → TGW → on-premise, all via the same hub. TGW also connects to on-premise via VPN or Direct Connect (as a TGW attachment). Cost: $0.05/GB processed + $0.07/hr per attachment. For organisations with many VPCs, Transit Gateway is the correct architecture despite the cost.</p>
+          <p>Rule of thumb: for 2-3 VPCs, peering is simpler and cheaper. For 4+ VPCs, or when on-premise connectivity is needed, Transit Gateway pays off in operational simplicity.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The N(N-1)/2 formula for peering connections is a concrete demonstration that you understand the scalability problem mathematically, not just conceptually. The "gateway access is not transitive" detail shows deep knowledge beyond the basics. The cost rule-of-thumb shows pragmatic thinking.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[5])">Start the lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab builds the production VPC architecture from scratch — the same architecture your Spring Boot app will run in for the rest of the 30-day plan. Every step has an observable outcome so you understand what you're building, not just what commands to run.</strong></div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create the VPC with a /16 CIDR</div>
+          <div class="sb">Create a custom VPC. Do NOT use the Default VPC. Notice that after creation, it has no subnets, no route table entries (other than the implicit local route), and no IGW — you build this from scratch.</div>
+          <code class="cmd">aws ec2 create-vpc \
+  --cidr-block 10.0.0.0/16 \
+  --region ap-south-1 \
+  --tag-specifications 'ResourceType=vpc,Tags=[{Key=Name,Value=production-vpc}]'
+
+# Note the VpcId from the output — you'll use it throughout
+VPC_ID=vpc-xxxxxxxxxxxxxxxxx
+
+# Enable DNS hostnames (required for Interface Endpoints)
+aws ec2 modify-vpc-attribute \
+  --vpc-id $VPC_ID \
+  --enable-dns-hostnames
+
+# Verify
+aws ec2 describe-vpcs --vpc-ids $VPC_ID \
+  --query 'Vpcs[0].{CIDR:CidrBlock,DNS:EnableDnsHostnames}'</code>
+          <div class="snote">The VPC exists but is completely isolated. No internet, no subnets, no routing. You're about to build the infrastructure layer by layer.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create public and private subnets in two AZs</div>
+          <div class="sb">Four subnets total: 2 public (one per AZ for the ALB) and 2 private (one per AZ for EC2 and RDS). Keep auto-assign public IP OFF for all subnets — explicit control over what gets public IPs.</div>
+          <code class="cmd"># Public subnet AZ-1a
+aws ec2 create-subnet \
+  --vpc-id $VPC_ID \
+  --cidr-block 10.0.1.0/24 \
+  --availability-zone ap-south-1a \
+  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=public-1a}]'
+
+# Public subnet AZ-1b
+aws ec2 create-subnet \
+  --vpc-id $VPC_ID \
+  --cidr-block 10.0.2.0/24 \
+  --availability-zone ap-south-1b \
+  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=public-1b}]'
+
+# Private subnet AZ-1a
+aws ec2 create-subnet \
+  --vpc-id $VPC_ID \
+  --cidr-block 10.0.3.0/24 \
+  --availability-zone ap-south-1a \
+  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=private-1a}]'
+
+# Private subnet AZ-1b
+aws ec2 create-subnet \
+  --vpc-id $VPC_ID \
+  --cidr-block 10.0.4.0/24 \
+  --availability-zone ap-south-1b \
+  --tag-specifications 'ResourceType=subnet,Tags=[{Key=Name,Value=private-1b}]'</code>
+          <div class="snote">Note all four subnet IDs. At this point subnets exist but no instance in them can reach anything outside the VPC — there are no routes out yet.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create and attach an Internet Gateway</div>
+          <div class="sb">Create the IGW and attach it to the VPC. This is the door to the internet — but nothing can use it yet because no route table points to it.</div>
+          <code class="cmd">IGW_ID=$(aws ec2 create-internet-gateway \
+  --tag-specifications 'ResourceType=internet-gateway,Tags=[{Key=Name,Value=production-igw}]' \
+  --query 'InternetGateway.InternetGatewayId' \
+  --output text)
+
+echo "IGW ID: $IGW_ID"
+
+# Attach to the VPC — without this step the IGW exists but does nothing
+aws ec2 attach-internet-gateway \
+  --internet-gateway-id $IGW_ID \
+  --vpc-id $VPC_ID
+
+# Verify it's attached
+aws ec2 describe-internet-gateways \
+  --internet-gateway-ids $IGW_ID \
+  --query 'InternetGateways[0].Attachments'</code>
+          <div class="snote">The IGW is now attached but internet still doesn't work — you haven't told any subnet's route table to use it. Route tables are the last piece.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create route tables and associate subnets</div>
+          <div class="sb">Create a public route table pointing to the IGW. Create a private route table (NAT Gateway comes later). Associate each subnet with the correct route table. This is where "public" and "private" actually become meaningful.</div>
+          <code class="cmd"># Create public route table
+PUBLIC_RT=$(aws ec2 create-route-table \
+  --vpc-id $VPC_ID \
+  --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=public-rt}]' \
+  --query 'RouteTable.RouteTableId' --output text)
+
+# Add 0.0.0.0/0 → IGW (this is what makes it "public")
+aws ec2 create-route \
+  --route-table-id $PUBLIC_RT \
+  --destination-cidr-block 0.0.0.0/0 \
+  --gateway-id $IGW_ID
+
+# Associate both public subnets with public route table
+aws ec2 associate-route-table --route-table-id $PUBLIC_RT --subnet-id PUBLIC_SUBNET_1A_ID
+aws ec2 associate-route-table --route-table-id $PUBLIC_RT --subnet-id PUBLIC_SUBNET_1B_ID
+
+# Create private route table (no internet route yet — NAT GW comes next)
+PRIVATE_RT=$(aws ec2 create-route-table \
+  --vpc-id $VPC_ID \
+  --tag-specifications 'ResourceType=route-table,Tags=[{Key=Name,Value=private-rt}]' \
+  --query 'RouteTable.RouteTableId' --output text)
+
+# Associate private subnets
+aws ec2 associate-route-table --route-table-id $PRIVATE_RT --subnet-id PRIVATE_SUBNET_1A_ID
+aws ec2 associate-route-table --route-table-id $PRIVATE_RT --subnet-id PRIVATE_SUBNET_1B_ID</code>
+          <div class="snote">Now public subnets can reach the internet via IGW. Private subnets still have no outbound internet route. EC2 in the public subnet can now reach the internet — EC2 in the private subnet still cannot.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create a NAT Gateway for the private subnets</div>
+          <div class="sb">Allocate an Elastic IP and create a NAT Gateway in the public subnet. Then add a route in the private route table pointing to the NAT Gateway. After this, EC2 in private subnets can reach the internet — but the internet cannot reach them directly.</div>
+          <code class="cmd"># Allocate Elastic IP for NAT Gateway
+EIP_ALLOC=$(aws ec2 allocate-address \
+  --domain vpc \
+  --query 'AllocationId' --output text)
+
+echo "EIP Allocation: $EIP_ALLOC"
+
+# Create NAT Gateway in the public subnet (takes ~2 minutes to become available)
+NAT_GW=$(aws ec2 create-nat-gateway \
+  --subnet-id PUBLIC_SUBNET_1A_ID \
+  --allocation-id $EIP_ALLOC \
+  --tag-specifications 'ResourceType=natgateway,Tags=[{Key=Name,Value=production-nat}]' \
+  --query 'NatGateway.NatGatewayId' --output text)
+
+echo "NAT GW: $NAT_GW — waiting for it to become available..."
+aws ec2 wait nat-gateway-available --nat-gateway-ids $NAT_GW
+echo "NAT Gateway is available"
+
+# Add 0.0.0.0/0 → NAT GW in the private route table
+aws ec2 create-route \
+  --route-table-id $PRIVATE_RT \
+  --destination-cidr-block 0.0.0.0/0 \
+  --nat-gateway-id $NAT_GW</code>
+          <div class="snote">IMPORTANT: Delete this NAT Gateway after the lab — it costs $0.045/hr even when idle. aws ec2 delete-nat-gateway --nat-gateway-id $NAT_GW. Then release the EIP: aws ec2 release-address --allocation-id $EIP_ALLOC</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create the three-tier Security Group chain</div>
+          <div class="sb">Create ALB, app, and database Security Groups with the correct chained rules. Observe how the DB SG references the app SG ID — not a CIDR range.</div>
+          <code class="cmd"># ALB Security Group
+ALB_SG=$(aws ec2 create-security-group \
+  --group-name alb-sg --description "ALB Security Group" \
+  --vpc-id $VPC_ID --query 'GroupId' --output text)
+aws ec2 authorize-security-group-ingress \
+  --group-id $ALB_SG --protocol tcp --port 443 --cidr 0.0.0.0/0
+aws ec2 authorize-security-group-ingress \
+  --group-id $ALB_SG --protocol tcp --port 80 --cidr 0.0.0.0/0
+
+# App Security Group
+APP_SG=$(aws ec2 create-security-group \
+  --group-name app-sg --description "App Server Security Group" \
+  --vpc-id $VPC_ID --query 'GroupId' --output text)
+# Allow inbound ONLY from ALB SG (not from internet directly)
+aws ec2 authorize-security-group-ingress \
+  --group-id $APP_SG --protocol tcp --port 8080 \
+  --source-group $ALB_SG
+
+# DB Security Group
+DB_SG=$(aws ec2 create-security-group \
+  --group-name db-sg --description "Database Security Group" \
+  --vpc-id $VPC_ID --query 'GroupId' --output text)
+# Allow inbound ONLY from App SG (not from ALB, not from internet)
+aws ec2 authorize-security-group-ingress \
+  --group-id $DB_SG --protocol tcp --port 3306 \
+  --source-group $APP_SG
+
+echo "ALB SG: $ALB_SG | App SG: $APP_SG | DB SG: $DB_SG"</code>
+          <div class="snote">Notice the DB SG has no rules allowing access from the internet or even from the ALB directly. Only instances with the app-sg attached can reach the database. This is Security Group chaining — the most important VPC security pattern.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s7" onclick="done('s7')">7</div></div>
+        <div class="ls-r">
+          <div class="st">Add S3 Gateway Endpoint and enable Flow Logs</div>
+          <div class="sb">Add a free S3 Gateway Endpoint to eliminate NAT Gateway costs for S3 traffic. Enable VPC Flow Logs so you can observe traffic. These two steps should be done on every production VPC.</div>
+          <code class="cmd"># Create S3 Gateway Endpoint (free — eliminates NAT GW costs for S3)
+aws ec2 create-vpc-endpoint \
+  --vpc-id $VPC_ID \
+  --service-name com.amazonaws.ap-south-1.s3 \
+  --route-table-ids $PRIVATE_RT \
+  --vpc-endpoint-type Gateway
+
+# Create CloudWatch log group for Flow Logs
+aws logs create-log-group \
+  --log-group-name /aws/vpc/flowlogs \
+  --region ap-south-1
+
+# Create IAM role for Flow Logs (simplified — in prod use Terraform)
+# For this lab, enable via console:
+# VPC console → Your VPC → Flow Logs tab → Create flow log
+# Log destination: CloudWatch Logs
+# Log group: /aws/vpc/flowlogs
+# IAM role: Create new role
+
+echo "S3 Gateway Endpoint created — S3 traffic from private subnets now bypasses NAT GW"
+echo "Enable Flow Logs via console: VPC → Flow Logs → Create"</code>
+          <div class="snote">The S3 Gateway Endpoint adds a managed prefix list route to your private route table automatically. Any S3 API call from an EC2 in the private subnet now routes over AWS backbone directly to S3 — zero NAT Gateway data processing charges for S3 traffic.</div>
+          <button class="mbtn" onclick="done('s7')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="warnbox" style="margin-top:1rem"><strong>Cleanup reminder:</strong> Delete the NAT Gateway and release the Elastic IP after this lab. NAT Gateway charges $0.045/hr continuously. Command: <span class="mono">aws ec2 delete-nat-gateway --nat-gateway-id $NAT_GW</span> then <span class="mono">aws ec2 release-address --allocation-id $EIP_ALLOC</span>. The VPC, subnets, route tables, and Security Groups have no ongoing cost and can remain for future labs.</div>
+
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[6])">Day 4 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Day 4 — VPC mechanics understood at depth</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">VPC at infrastructure level</div><div class="cs-d">SDN overlay on Nitro hypervisor. No dedicated physical hardware. Nitro ASIC enforces isolation — hardware, not software.</div></div>
+      <div class="cs-item"><div class="cs-t">CIDR planning</div><div class="cs-d">Start with /16 minimum. Cannot resize primary CIDR. Non-overlapping ranges across all VPCs mandatory for future peering. Plan from day 1.</div></div>
+      <div class="cs-item"><div class="cs-t">Public vs private subnet</div><div class="cs-d">Not a setting on the subnet. Public = route table has 0.0.0.0/0 → IGW. Private = no IGW route. This is the entire distinction.</div></div>
+      <div class="cs-item"><div class="cs-t">Local route</div><div class="cs-d">Always present in every route table. Cannot be deleted. Routes all intra-VPC traffic without any gateway. Always wins for VPC CIDR destinations.</div></div>
+      <div class="cs-item"><div class="cs-t">Longest prefix match</div><div class="cs-d">Most specific route wins. 10.0.1.0/24 beats 10.0.0.0/16 beats 0.0.0.0/0. Never the most rules wins — the most specific match wins.</div></div>
+      <div class="cs-item"><div class="cs-t">IGW mechanics</div><div class="cs-d">Not a server. No bandwidth limit. Performs one-to-one NAT for public IPs. Must be both created AND attached to the VPC to function.</div></div>
+      <div class="cs-item"><div class="cs-t">NAT Gateway cost</div><div class="cs-d">$0.045/hr (~$32/month) + $0.045/GB processed. Add S3/DynamoDB Gateway Endpoints (free) to eliminate NAT costs for those services.</div></div>
+      <div class="cs-item"><div class="cs-t">Gateway vs Interface Endpoints</div><div class="cs-d">Gateway: free, only S3 + DynamoDB, route table entry. Interface: charged, 100+ services, creates ENI with private IP in your subnet.</div></div>
+      <div class="cs-item"><div class="cs-t">SG chaining</div><div class="cs-d">Use SG ID as source/destination, not CIDR ranges for internal services. ALB SG → App SG → DB SG. Precise, scalable, self-documenting.</div></div>
+      <div class="cs-item"><div class="cs-t">SG vs NACL</div><div class="cs-d">SG: instance-level, stateful, allow-only. NACL: subnet-level, stateless, allow+deny. Always need ephemeral ports (1024-65535) in NACL outbound.</div></div>
+      <div class="cs-item"><div class="cs-t">VPC Peering limit</div><div class="cs-d">Non-transitive. N(N-1)/2 connections for full mesh. No gateway access sharing. Use Transit Gateway for 4+ VPCs or hybrid connectivity.</div></div>
+      <div class="cs-item"><div class="cs-t">Placement Groups</div><div class="cs-d">Cluster: same rack, lowest latency, no HA. Spread: different hardware per instance, max 7/AZ, max HA. Partition: groups of instances on separate hardware — for Kafka.</div></div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Non-negotiable rules for every production VPC</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      1. Never use the Default VPC for production resources.<br>
+      2. Plan CIDR ranges across all environments from day one — overlapping CIDRs cannot be peered.<br>
+      3. Use /16 minimum for any production VPC CIDR.<br>
+      4. Place databases and application servers in private subnets — no IGW route, no direct internet access.<br>
+      5. One NAT Gateway per AZ for production HA. One shared NAT for dev/test to save cost.<br>
+      6. Add S3 and DynamoDB Gateway Endpoints to all private route tables — free and eliminates NAT costs.<br>
+      7. Use Security Group chaining (SG ID references) for internal service-to-service traffic — never CIDR ranges.<br>
+      8. Every Security Group rule must have a description. Audit quarterly.<br>
+      9. Enable VPC Flow Logs at VPC level — deliver to S3 for Athena querying.<br>
+      10. Delete NAT Gateways in non-production environments when not in use.
+    </div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

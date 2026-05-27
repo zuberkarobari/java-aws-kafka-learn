@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Core Concepts Reel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;500;600&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #020617; 
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #reel-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            max-height: 880px;
+            background: #0b1120;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            border: 1px solid #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.1) 0%, transparent 50%),
+                linear-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
+            background-size: 100% 100%, 20px 20px, 20px 20px;
+            background-position: top center, center center, center center;
+        }
+
+        /* Header */
+        .header {
+            padding: 25px 20px 5px;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(to right, #38bdf8, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 11px;
+            font-family: 'Fira Code', monospace;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Visualization Area */
+        .canvas {
+            flex: 1;
+            position: relative;
+            z-index: 5;
+            perspective: 1000px;
+        }
+
+        .scene-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 10px;
+        }
+        
+        .scene-container.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* SCENE 1: Equals */
+        .rule-box {
+            width: 85%;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: all 0.4s ease;
+        }
+        .rule-box.show { opacity: 1; transform: translateX(0); }
+        .rule-num { width: 24px; height: 24px; background: #38bdf8; color: #000; font-weight: bold; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 12px; flex-shrink: 0;}
+        .rule-text { font-size: 12px; color: #e2e8f0; font-family: 'Fira Code', monospace;}
+        .rule-desc { font-size: 10px; color: #94a3b8; margin-top: 2px; font-family: 'Plus Jakarta Sans', sans-serif;}
+
+        /* SCENE 2: HashCode */
+        .hash-formula {
+            background: #1e293b;
+            border: 2px solid #fb923c;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 20px;
+            box-shadow: 0 0 20px rgba(251, 146, 60, 0.2);
+            text-align: center;
+        }
+        .magic-number { font-size: 32px; font-weight: 800; color: #fb923c; text-shadow: 0 0 10px rgba(251, 146, 60, 0.5); margin: 10px 0;}
+        .bitwise { background: #0f172a; padding: 10px; border-radius: 6px; font-family: 'Fira Code', monospace; font-size: 12px; color: #a7f3d0; border: 1px solid #059669;}
+
+        /* SCENE 3: Corruption */
+        .hashmap-visual { width: 100%; display: flex; justify-content: center; gap: 15px; margin-top: 20px;}
+        .hm-bucket { width: 70px; height: 90px; border: 2px dashed #475569; border-radius: 8px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 5px; color: #64748b; font-family: monospace; font-size: 10px;}
+        .obj-token { position: absolute; width: 50px; height: 50px; background: #3b82f6; border-radius: 8px; top: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.5s ease;}
+        
+        .search-beam { position: absolute; width: 60px; height: 120px; background: linear-gradient(to bottom, rgba(239, 68, 68, 0.5), transparent); top: -30px; left: 5px; opacity: 0; pointer-events: none;}
+        .anim-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+        /* SCENE 4 & 5: Comparators */
+        .sort-list { width: 85%; margin-top: 15px; display: flex; flex-direction: column; gap: 5px;}
+        .sort-item { background: #1e293b; border: 1px solid #475569; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; font-family: monospace; font-size: 12px; transition: all 0.5s ease;}
+        
+        /* Explainer Panel at Bottom */
+        .explainer-panel {
+            background: linear-gradient(to top, rgba(2, 6, 23, 1) 85%, rgba(2, 6, 23, 0.95) 95%, transparent);
+            padding: 30px 24px 30px;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            z-index: 30;
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            backdrop-filter: blur(4px);
+            border-top: 1px solid rgba(30, 41, 59, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .step-badge {
+            display: inline-block;
+            background: rgba(15, 23, 42, 0.8);
+            color: #38bdf8;
+            font-family: 'Fira Code', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #334155;
+            align-self: flex-start;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .explainer-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .explainer-text {
+            font-size: 13px;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 16px;
+            flex-grow: 1;
+        }
+        
+        .code-block {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 10px;
+            line-height: 1.5;
+            color: #e2e8f0;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+        
+        .c-kw { color: #c084fc; } 
+        .c-ty { color: #38bdf8; } 
+        .c-fn { color: #60a5fa; } 
+        .c-st { color: #a7f3d0; } 
+        .c-cm { color: #64748b; font-style: italic; } 
+        .c-hi { background: rgba(56, 189, 248, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid #38bdf8;} 
+        .c-err { background: rgba(239, 68, 68, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid #ef4444;} 
+
+        .btn-next {
+            background: linear-gradient(135deg, #0ea5e9, #8b5cf6);
+            color: white;
+            border: 1px solid #818cf8;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(14, 165, 233, 0.4);
+            transition: all 0.2s;
+            width: 100%;
+            font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: auto;
+        }
+
+        .btn-next:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 10px rgba(14, 165, 233, 0.4);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="reel-container">
+        <!-- Header -->
+        <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+            <h1>Java Core Contracts</h1>
+            <p>Equals, HashCode, and Sorting</p>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas" id="canvas">
+            
+            <!-- SCENE 0: Intro -->
+            <div class="scene-container active" id="scene-0">
+                <div style="margin-top: 40px; text-align: center;">
+                    <div style="font-size: 50px; margin-bottom: 10px;">☕</div>
+                    <h3 style="font-family: 'Space Grotesk', sans-serif; color: #e2e8f0; font-size: 18px;">The Object Contracts</h3>
+                    <div style="display:flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; width: 80%;">
+                        <span style="background:#1e3a8a; padding:6px 12px; border-radius:6px; font-size:12px; border:1px solid #3b82f6;">equals()</span>
+                        <span style="background:#7c2d12; padding:6px 12px; border-radius:6px; font-size:12px; border:1px solid #ea580c;">hashCode()</span>
+                        <span style="background:#4c1d95; padding:6px 12px; border-radius:6px; font-size:12px; border:1px solid #8b5cf6;">Comparable</span>
+                        <span style="background:#064e3b; padding:6px 12px; border-radius:6px; font-size:12px; border:1px solid #10b981;">Records</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 1: Equals -->
+            <div class="scene-container" id="scene-1">
+                <div class="rule-box" id="rule-1">
+                    <div class="rule-num">1</div>
+                    <div>
+                        <div class="rule-text">Reflexive</div>
+                        <div class="rule-desc">x.equals(x) == true</div>
+                    </div>
+                </div>
+                <div class="rule-box" id="rule-2">
+                    <div class="rule-num">2</div>
+                    <div>
+                        <div class="rule-text">Symmetric</div>
+                        <div class="rule-desc">If x.equals(y), then y.equals(x)</div>
+                    </div>
+                </div>
+                <div class="rule-box" id="rule-3">
+                    <div class="rule-num">3</div>
+                    <div>
+                        <div class="rule-text">Transitive</div>
+                        <div class="rule-desc">If x=y and y=z, then x=z</div>
+                    </div>
+                </div>
+                <div class="rule-box" id="rule-4">
+                    <div class="rule-num">4</div>
+                    <div>
+                        <div class="rule-text">Consistent</div>
+                        <div class="rule-desc">Always returns same result</div>
+                    </div>
+                </div>
+                <div class="rule-box" id="rule-5">
+                    <div class="rule-num">5</div>
+                    <div>
+                        <div class="rule-text">Non-null</div>
+                        <div class="rule-desc">x.equals(null) == false</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCENE 2: HashCode & 31 -->
+            <div class="scene-container" id="scene-2">
+                <div class="hash-formula">
+                    <div style="color:#cbd5e1; font-size:12px; text-transform:uppercase; letter-spacing:1px; font-weight:bold;">Objects.hash() multiplier</div>
+                    <div class="magic-number">31</div>
+                    <div style="font-size:11px; color:#94a3b8; margin-bottom:15px;">An odd prime number minimizes collisions.</div>
+                    
+                    <div style="color:#cbd5e1; font-size:10px; margin-bottom:5px;">CPU Bitwise Optimization:</div>
+                    <div class="bitwise">31 * i == (i &lt;&lt; 5) - i</div>
+                </div>
+            </div>
+
+            <!-- SCENE 3: Corruption -->
+            <div class="scene-container" id="scene-3">
+                <div class="hashmap-visual">
+                    <div class="hm-bucket">Bucket 5
+                        <div class="obj-token" id="obj-token">"Alice"</div>
+                    </div>
+                    <div class="hm-bucket" id="bucket-9">Bucket 9
+                        <div class="search-beam" id="search-beam"></div>
+                    </div>
+                </div>
+                
+                <div id="corrupt-msg" style="margin-top: 15px; color: #ef4444; font-weight: bold; font-size: 12px; opacity: 0; font-family: monospace;">
+                    map.get("Bob") -> returns NULL!
+                </div>
+            </div>
+
+            <!-- SCENE 4 & 5: Comparators -->
+            <div class="scene-container" id="scene-4">
+                <div style="font-family: monospace; font-size: 12px; color: #a855f7; margin-top: 10px; font-weight: bold; text-align:center;">Employee List</div>
+                
+                <div class="sort-list" id="sort-list">
+                    <div class="sort-item" id="item-1"><span>John</span><span style="color:#38bdf8;">Age: 45</span></div>
+                    <div class="sort-item" id="item-2"><span>Alice</span><span style="color:#38bdf8;">Age: 30</span></div>
+                    <div class="sort-item" id="item-3"><span>Bob</span><span style="color:#38bdf8;">Age: 30</span></div>
+                    <div class="sort-item" id="item-4"><span>Zack</span><span style="color:#38bdf8;">Age: 25</span></div>
+                </div>
+            </div>
+
+            <!-- SCENE 6: Records -->
+            <div class="scene-container" id="scene-6">
+                <div style="font-size: 60px; text-align: center; margin-top: 20px;">✨</div>
+            </div>
+
+        </div>
+
+        <!-- Text Overlay / Explainer -->
+        <div class="explainer-panel">
+            <div id="step-badge" class="step-badge">[OBJECT_METHODS]</div>
+            <h2 id="explainer-title" class="explainer-title">Memory vs Logical Equality</h2>
+            <p id="explainer-text" class="explainer-text">By default, Java's <code>equals()</code> only checks if two objects point to the exact same memory address. To make Java recognize two distinct objects with identical data as "equal", we must override the Object methods.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+
+            <button id="btn-next" class="btn-next" onclick="nextStep()">Start Demo</button>
+        </div>
+    </div>
+
+    <script>
+        const badge = document.getElementById('step-badge');
+        const title = document.getElementById('explainer-title');
+        const text = document.getElementById('explainer-text');
+        const codeContainer = document.getElementById('code-container');
+        const btnNext = document.getElementById('btn-next');
+        let currentStep = 0;
+        let isAnimating = false;
+
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        function setScene(index) {
+            document.querySelectorAll('.scene-container').forEach((el, i) => {
+                if(i === index) el.classList.add('active');
+                else el.classList.remove('active');
+            });
+        }
+
+        const steps = [
+            {
+                badge: "Contract 1/4",
+                title: "The 5 Laws of Equals",
+                text: "When you override <code>equals()</code>, you enter a strict mathematical contract. Break even one rule, and data structures like <code>HashSet</code> and <code>ArrayList</code> will break unpredictably.",
+                code: `
+<span class="c-cm">// If these rules fail, collections corrupt.</span>
+<span class="c-ty">boolean</span> isValid = 
+  a.equals(a) &&                   <span class="c-cm">// Reflexive</span>
+  (a.equals(b) == b.equals(a)) &&  <span class="c-cm">// Symmetric</span>
+  (a.equals(b) && b.equals(c) ? 
+     a.equals(c) : true) &&        <span class="c-cm">// Transitive</span>
+  !a.equals(<span class="c-kw">null</span>);                 <span class="c-cm">// Non-null</span>
+                `,
+                btn: "Next: HashCode Contract",
+                action: async () => {
+                    setScene(1);
+                    codeContainer.style.display = 'block';
+                    
+                    // Cascade animate rules
+                    for(let i=1; i<=5; i++) {
+                        await sleep(200);
+                        document.getElementById(`rule-${i}`).classList.add('show');
+                    }
+                }
+            },
+            {
+                badge: "Contract 2/4",
+                title: "HashCode & The Magic 31",
+                text: "Golden Rule: <strong>If A.equals(B), their hashCodes MUST match.</strong> Modern Java uses <code>Objects.hash()</code>, which continuously multiplies by 31. Why? It's an odd prime that reduces collisions, and the CPU converts it to a blazing-fast bitwise shift.",
+                code: `
+<span class="c-hi">@Override</span>
+<span class="c-kw">public</span> <span class="c-ty">int</span> hashCode() {
+    <span class="c-cm">// Under the hood calculation:</span>
+    <span class="c-ty">int</span> hash = 1;
+    hash = <span class="c-st">31</span> * hash + id;
+    hash = <span class="c-st">31</span> * hash + name.hashCode();
+    <span class="c-kw">return</span> hash;
+}
+                `,
+                btn: "Next: Memory Leak Trap",
+                action: async () => {
+                    setScene(2);
+                }
+            },
+            {
+                badge: "Danger Zone",
+                title: "The Mutable Key Trap",
+                text: "What if you use a mutable field in <code>hashCode()</code>? You put 'Alice' in a Map. She goes to Bucket 5. Later, you change her name to 'Bob'. The Map now looks for 'Bob' in Bucket 9. It returns <code>null</code>. The object is permanently lost in memory!",
+                code: `
+Map&lt;User, String&gt; map = <span class="c-kw">new</span> HashMap&lt;&gt;();
+User u = <span class="c-kw">new</span> User(<span class="c-st">"Alice"</span>); <span class="c-cm">// Hash: 500</span>
+map.put(u, <span class="c-st">"Admin"</span>);        <span class="c-cm">// Goes to Bucket 5</span>
+
+<span class="c-err">u.setName(<span class="c-st">"Bob"</span>);</span>           <span class="c-cm">// Hash becomes 900!</span>
+
+<span class="c-cm">// Map looks in Bucket 9. Returns NULL! Memory leak.</span>
+map.get(u);                 
+                `,
+                btn: "Next: Sorting Contracts",
+                action: async () => {
+                    setScene(3);
+                    const token = document.getElementById('obj-token');
+                    const beam = document.getElementById('search-beam');
+                    const msg = document.getElementById('corrupt-msg');
+                    
+                    // Reset
+                    token.innerText = '"Alice"';
+                    token.style.background = '#3b82f6';
+                    beam.style.opacity = '0';
+                    msg.style.opacity = '0';
+                    document.getElementById('bucket-9').classList.remove('anim-shake');
+                    
+                    await sleep(1000);
+                    
+                    // Mutate
+                    token.innerText = '"Bob"';
+                    token.style.background = '#ef4444'; // Turns red
+                    
+                    await sleep(1000);
+                    
+                    // Search in wrong bucket
+                    beam.style.opacity = '1';
+                    document.getElementById('bucket-9').classList.add('anim-shake');
+                    
+                    await sleep(800);
+                    msg.style.opacity = '1';
+                }
+            },
+            {
+                badge: "Contract 3/4",
+                title: "Comparable vs Comparator",
+                text: "<code>Comparable</code> (compareTo) provides the 'Natural Ordering'—one default way to sort a class. But if you need multiple ways to sort externally, you use <code>Comparator</code>. Before Java 8, this required messy anonymous classes.",
+                code: `
+<span class="c-cm">// Comparable: Modifies the class itself</span>
+<span class="c-kw">public class</span> User <span class="c-kw">implements</span> <span class="c-ty">Comparable&lt;User&gt;</span> {
+    <span class="c-hi">@Override</span>
+    <span class="c-kw">public</span> <span class="c-ty">int</span> compareTo(User o) {
+        <span class="c-kw">return Integer</span>.compare(<span class="c-kw">this</span>.id, o.id);
+    }
+}
+                `,
+                btn: "Next: Fluent Chaining",
+                action: async () => {
+                    setScene(4);
+                    // Reset list positions
+                    document.getElementById('item-1').style.transform = 'translateY(0)';
+                    document.getElementById('item-2').style.transform = 'translateY(0)';
+                    document.getElementById('item-3').style.transform = 'translateY(0)';
+                    document.getElementById('item-4').style.transform = 'translateY(0)';
+                }
+            },
+            {
+                badge: "Fluent API",
+                title: "Chaining Comparators",
+                text: "With Java 8, we get a beautiful fluent API. Want to sort Employees by Age descending, then by Name ascending? It reads like plain English: <code>comparing().reversed().thenComparing()</code>.",
+                code: `
+<span class="c-cm">// Sort: Age Descending -> Name Ascending</span>
+list.sort(
+    <span class="c-hi">Comparator.comparing(User::getAge)</span>
+              <span class="c-hi">.reversed()</span>
+              <span class="c-hi">.thenComparing(User::getName)</span>
+);
+                `,
+                btn: "Next: The Modern Fix",
+                action: async () => {
+                    // Do not change scene, just animate list
+                    const list = document.getElementById('sort-list');
+                    
+                    // Visually swap to show Age Descending -> Name Ascending
+                    // Order should be: John(45), Alice(30), Bob(30), Zack(25)
+                    // Currently in DOM: 1=John(45), 2=Alice(30), 3=Bob(30), 4=Zack(25) -> Actually already sorted! Let's shuffle and resort.
+                    
+                    // Reset for effect
+                    document.getElementById('item-4').style.transform = 'translateY(-110px)'; // Zack goes up
+                    document.getElementById('item-1').style.transform = 'translateY(110px)'; // John goes down
+                    
+                    await sleep(1000);
+                    
+                    // Apply real sort transform
+                    document.getElementById('item-4').style.transform = 'translateY(0)';
+                    document.getElementById('item-1').style.transform = 'translateY(0)';
+                    
+                    document.getElementById('item-2').style.background = '#0f172a';
+                    document.getElementById('item-3').style.background = '#0f172a';
+                    await sleep(400);
+                    document.getElementById('item-2').style.background = '#1e293b';
+                    document.getElementById('item-3').style.background = '#1e293b';
+                }
+            },
+            {
+                badge: "Contract 4/4",
+                title: "Java Records (Java 14+)",
+                text: "Writing equals, hashCode, and toString by hand takes 50 lines of error-prone boilerplate. Modern Java introduces <strong>Records</strong>. One line of code auto-generates flawless, immutable methods at compile time. No more memory leaks!",
+                code: `
+<span class="c-cm">// 50 lines of boilerplate becomes 1 line.</span>
+<span class="c-cm">// All fields are implicitly 'final'.</span>
+<span class="c-cm">// equals(), hashCode(), and toString() are auto-generated.</span>
+
+<span class="c-hi"><span class="c-kw">public record</span> User(String name, <span class="c-ty">int</span> age) {}</span>
+
+<span class="c-cm">// Guaranteed bug-free HashMap keys!</span>
+                `,
+                btn: "Reset Flow",
+                action: async () => {
+                    setScene(6);
+                }
+            }
+        ];
+
+        async function nextStep() {
+            if (isAnimating) return;
+            
+            if (currentStep >= steps.length) {
+                // Reset
+                currentStep = 0;
+                setScene(0);
+                codeContainer.style.display = 'none';
+                
+                // Reset rule boxes
+                for(let i=1; i<=5; i++) {
+                    document.getElementById(`rule-${i}`).classList.remove('show');
+                }
+                
+                badge.innerText = "[OBJECT_METHODS]";
+                title.innerText = "Memory vs Logical Equality";
+                text.innerHTML = "By default, Java's <code>equals()</code> only checks if two objects point to the exact same memory address. To make Java recognize two distinct objects with identical data as 'equal', we must override the Object methods.";
+                btnNext.innerText = "Start Demo";
+                return;
+            }
+
+            isAnimating = true;
+            btnNext.disabled = true;
+
+            const stepData = steps[currentStep];
+            
+            badge.innerText = stepData.badge;
+            title.innerText = stepData.title;
+            text.innerHTML = stepData.text;
+            if (stepData.code) {
+                codeContainer.innerHTML = stepData.code;
+            }
+            btnNext.innerText = stepData.btn;
+
+            await stepData.action();
+            
+            currentStep++;
+            isAnimating = false;
+            btnNext.disabled = false;
+        }
+    </script>
+</body>
+</html>

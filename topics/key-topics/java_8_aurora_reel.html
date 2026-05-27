@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java 8 Features - Aurora Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --bg-color: #020617; /* Dark Slate */
+        --neon-cyan: #2dd4bf; /* Teal */
+        --neon-pink: #f472b6; /* Pink */
+        --neon-purple: #818cf8; /* Indigo */
+        --neon-red: #f43f5e; /* Rose */
+        --neon-green: #34d399; /* Emerald */
+        --neon-orange: #fb923c; /* Orange */
+        --panel-bg: rgba(255, 255, 255, 0.03);
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Flex Layout ensures no overlapping */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-color); position: relative;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255,255,255,0.1);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 16px;
+    }
+
+    /* Vibrant Aurora Background */
+    .aurora-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        overflow: hidden; z-index: 0; background: var(--bg-color);
+    }
+    
+    .orb {
+        position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.45;
+        animation: float 15s infinite ease-in-out alternate;
+    }
+    .orb-1 { width: 300px; height: 300px; background: #3b82f6; top: -50px; left: -100px; }
+    .orb-2 { width: 350px; height: 350px; background: #8b5cf6; bottom: -50px; right: -100px; animation-delay: -5s; }
+    .orb-3 { width: 250px; height: 250px; background: #14b8a6; top: 40%; left: 20%; animation-delay: -10s; }
+
+    @keyframes float {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(30px, -30px) scale(1.1); }
+    }
+
+    /* Header - Fixed Top */
+    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
+        background: linear-gradient(135deg, #ffffff, #94a3b8);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 4px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--neon-cyan); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Visual Canvas Area - Top Half */
+    .canvas {
+        flex: 1.2; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 15px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scrollable Data Containers in Canvas (Frosted Glass) */
+    .scroll-container {
+        width: 90%; max-height: 95%; overflow-y: auto; overflow-x: hidden;
+        background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px; padding: 15px; backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .scroll-container::-webkit-scrollbar { width: 4px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    /* Scene 1: Lambdas & invokedynamic */
+    .bytecode-box { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .bc-node { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center; flex: 1; font-family: monospace; font-size: 10px;}
+    .bc-arrow { color: var(--neon-purple); font-size: 16px; font-weight: bold;}
+    .bc-red { border-color: rgba(244,63,94,0.5); box-shadow: 0 0 15px rgba(244,63,94,0.1); color: var(--neon-red);}
+    .bc-cyan { border-color: rgba(45,212,191,0.5); box-shadow: 0 0 15px rgba(45,212,191,0.1); color: var(--neon-cyan);}
+
+    /* Scene 2: Stream Pipeline */
+    .stream-pipe { display: flex; gap: 5px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; }
+    .s-op { z-index: 2; background: rgba(255,255,255,0.05); border: 1px solid var(--neon-cyan); padding: 5px 8px; border-radius: 12px; font-family: monospace; font-size: 10px; color: var(--neon-cyan); font-weight: bold;}
+    .s-term { border-color: var(--neon-pink); color: var(--neon-pink); }
+    .data-blip { position: absolute; width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; top: 50%; transform: translateY(-50%); left: -10px; opacity: 0; z-index: 1;}
+    .blip-anim { animation: flowPipe 1.5s ease-in-out; }
+    @keyframes flowPipe { 0% { left: -10px; opacity: 1; } 100% { left: 100%; opacity: 0; } }
+
+    /* Scene 3: ForkJoinPool */
+    .pool-container { width: 100%; border: 1px solid rgba(251,146,60,0.5); background: rgba(251,146,60,0.05); border-radius: 8px; padding: 10px; position: relative;}
+    .p-title { position: absolute; top: -10px; left: 10px; background: #1e1b4b; padding: 0 5px; border-radius: 4px; color: var(--neon-orange); font-size: 10px; font-family: monospace; font-weight: bold;}
+    .threads { display: flex; justify-content: space-around; margin-top: 10px;}
+    .th-node { width: 20px; height: 20px; background: var(--neon-green); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #000; font-weight: bold; transition: all 0.5s;}
+    .th-blocked { background: var(--neon-red); box-shadow: 0 0 15px var(--neon-red); }
+
+    /* Scene 5: Diamond Problem */
+    .diamond { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; text-align: center; }
+    .d-top { grid-column: 1 / span 2; }
+    .d-node { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; font-family: monospace; font-size: 10px; }
+    .d-conflict { border-color: rgba(244,63,94,0.5); color: var(--neon-red); box-shadow: 0 0 10px rgba(244,63,94,0.2);}
+
+    /* Scene 7: Date Time */
+    .dt-compare { display: flex; justify-content: space-between; align-items: center; }
+    .dt-box { padding: 10px; border-radius: 8px; font-family: monospace; font-size: 10px; text-align: center; width: 45%; }
+    .dt-old { border: 1px solid rgba(244,63,94,0.3); background: rgba(244,63,94,0.1); color: var(--neon-red); }
+    .dt-new { border: 1px solid rgba(52,211,153,0.3); background: rgba(52,211,153,0.1); color: var(--neon-green); }
+
+    /* Explainer Panel at Bottom - Bottom Half (Frosted Glass) */
+    .explainer-panel {
+        background: rgba(15, 23, 42, 0.6);
+        padding: 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(24px);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(255, 255, 255, 0.1); color: #fff;
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.2); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+        margin-bottom: 8px; letter-spacing: -0.5px;
+    }
+
+    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #2dd4bf; } 
+    .c-fn { color: #818cf8; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-an { color: #fb923c; } 
+    .c-hi { background: rgba(45, 212, 191, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white; border: none; padding: 14px 24px; border-radius: 12px;
+        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4); }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="aurora-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Java 8 Architecture</h1>
+        <p>Beyond Syntactic Sugar</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        
+        <!-- Scene 1: invokedynamic -->
+        <div class="scene-container active" id="scene-1">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px;">Compiler Bytecode</div>
+                
+                <div class="bytecode-box">
+                    <div class="bc-node">Anonymous<br>Inner Class</div>
+                    <div class="bc-arrow">→</div>
+                    <div class="bc-node bc-red">Generates physical<br><code>MyClass$1.class</code> file<br><em>(High Metaspace Cost)</em></div>
+                </div>
+                
+                <div class="bytecode-box">
+                    <div class="bc-node">Lambda<br><code>() -> {}</code></div>
+                    <div class="bc-arrow">→</div>
+                    <div class="bc-node bc-cyan"><code>invokedynamic</code><br>Generated at Runtime<br><em>(Fast & Lightweight)</em></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 2: Lazy Evaluation -->
+        <div class="scene-container" id="scene-2">
+            <div class="scroll-container" style="border-color: rgba(244,114,182,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-pink); margin-bottom: 15px;">Lazy Evaluation Pipeline</div>
+                
+                <div class="stream-pipe">
+                    <div class="s-op">.filter()</div>
+                    <div class="s-op">.map()</div>
+                    <div class="s-op s-term" id="term-op">.findFirst()</div>
+                    <div class="data-blip" id="blip-1"></div>
+                    <div class="data-blip" id="blip-2" style="animation-delay: 0.3s"></div>
+                </div>
+                <div style="text-align: center; font-size: 10px; color: var(--neon-cyan); margin-top: 10px;" id="pipe-msg">Building pipeline recipe... (No Execution)</div>
+            </div>
+        </div>
+
+        <!-- Scene 3: ForkJoinPool Trap -->
+        <div class="scene-container" id="scene-3">
+            <div class="scroll-container" style="border-color: rgba(251,146,60,0.3);">
+                <div class="pool-container">
+                    <div class="p-title">ForkJoinPool.commonPool()</div>
+                    <div class="threads">
+                        <div class="th-node" id="th-1">T1</div>
+                        <div class="th-node" id="th-2">T2</div>
+                        <div class="th-node" id="th-3">T3</div>
+                        <div class="th-node" id="th-4">T4</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 15px; font-size: 24px; opacity: 0;" id="db-alert">⚠️</div>
+                <div style="text-align: center; font-size: 10px; color: var(--neon-red); margin-top: 5px; opacity: 0;" id="db-msg">Blocking DB Call! All parallel streams frozen!</div>
+            </div>
+        </div>
+
+        <!-- Scene 4: Optional -->
+        <div class="scene-container" id="scene-4">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px;">The Optional Monad</div>
+                <div style="font-style: italic; font-size: 11px; color: #94a3b8; margin-bottom: 15px; border-left: 2px solid var(--neon-cyan); padding-left: 10px;">
+                    "Optional is a box. Use it to chain safe operations. But NEVER use it as a class field or argument. It breaks Serialization and creates severe memory overhead."
+                </div>
+                <div style="display:flex; justify-content: center; gap: 10px; align-items: center; margin-bottom: 10px;">
+                    <div style="border: 1px solid var(--neon-green); background: rgba(52,211,153,0.1); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px;">Optional.of(user)</div>
+                    <div style="color:var(--neon-purple); font-weight:bold;">→</div>
+                    <div style="border: 1px dashed var(--neon-cyan); background: rgba(45,212,191,0.1); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 11px;">.map(User::getEmail)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 5: Diamond Problem -->
+        <div class="scene-container" id="scene-5">
+            <div class="scroll-container" style="border-color: rgba(129,140,248,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-purple); margin-bottom: 15px; text-align: center;">The Diamond Problem</div>
+                
+                <div class="diamond">
+                    <div class="d-node">Interface A<br><code>default log()</code></div>
+                    <div class="d-node">Interface B<br><code>default log()</code></div>
+                    <div class="d-node d-top d-conflict" style="margin-top: 10px;">
+                        Class C implements A, B<br>
+                        <span style="font-weight:bold;">Compiler Error: Inherits unrelated defaults!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 6: CompletableFuture -->
+        <div class="scene-container" id="scene-6">
+            <div class="scroll-container" style="border-color: rgba(45,212,191,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 15px; text-align: center;">Async Reactive Pipelines</div>
+                
+                <div style="display:flex; flex-direction: column; gap: 8px; align-items: center; font-family: monospace; font-size: 10px;">
+                    <div style="background: rgba(45,212,191,0.1); border: 1px solid var(--neon-cyan); padding: 8px; border-radius: 6px; width: 80%; text-align:center;">supplyAsync() <br><span style="color:#94a3b8">Fetch DB</span></div>
+                    <div style="color:var(--neon-purple);">↓ thenApply()</div>
+                    <div style="background: rgba(129,140,248,0.1); border: 1px solid var(--neon-purple); padding: 8px; border-radius: 6px; width: 80%; text-align:center;">Process Data <br><span style="color:#94a3b8">Non-Blocking Handoff</span></div>
+                    <div style="color:var(--neon-pink);">↓ thenAccept()</div>
+                    <div style="background: rgba(244,114,182,0.1); border: 1px solid var(--neon-pink); padding: 8px; border-radius: 6px; width: 80%; text-align:center;">Send Email <br><span style="color:#94a3b8">Pool Thread Executes</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 7: Date Time -->
+        <div class="scene-container" id="scene-7">
+            <div class="scroll-container" style="border-color: rgba(52,211,153,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-green); margin-bottom: 15px; text-align: center;">Date/Time API Evolution</div>
+                
+                <div class="dt-compare">
+                    <div class="dt-box dt-old">
+                        <code>java.util.Date</code><br><br>
+                        ❌ Mutable<br>
+                        ❌ Thread-Unsafe<br>
+                        ❌ 0-indexed Months
+                    </div>
+                    <div style="font-weight:bold;">VS</div>
+                    <div class="dt-box dt-new">
+                        <code>java.time.LocalDate</code><br><br>
+                        ✅ 100% Immutable<br>
+                        ✅ Thread-Safe<br>
+                        ✅ Clear API
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[JAVA_8_INTERNALS]</div>
+            <h2 id="explainer-title" class="explainer-title">Beyond Syntactic Sugar</h2>
+            <p id="explainer-text" class="explainer-text">Java 8 wasn't just about writing shorter code; it fundamentally shifted the JVM architecture. To be a senior engineer, you must understand the internal mechanics powering these features.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initialize Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setScene(index) {
+        document.querySelectorAll('.scene-container').forEach((el, i) => {
+            if(i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+    }
+
+    const steps = [
+        {
+            badge: "Engine 1/7",
+            title: "Lambdas & invokedynamic",
+            text: "Lambdas are NOT anonymous inner classes. Anonymous classes create physical <code>.class</code> files and fill up Metaspace memory. Lambdas use the <code>invokedynamic</code> bytecode instruction to dynamically generate the call site at runtime, saving massive memory and startup time.",
+            code: `
+<span class="c-cm">// Anonymous Class (Bloated)</span>
+<span class="c-ty">Runnable</span> r1 = <span class="c-kw">new</span> Runnable() {
+    <span class="c-kw">public void</span> <span class="c-fn">run</span>() { log(); }
+};
+
+<span class="c-cm">// Lambda (invokedynamic - Lightweight)</span>
+<span class="c-ty">Runnable</span> r2 = () -> log();
+            `,
+            action: async () => {
+                setScene(0);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Streams 2/7",
+            title: "Lazy Evaluation",
+            text: "Streams are pipelines, not data structures. <strong>Lazy Evaluation:</strong> Intermediate ops (<code>filter</code>) do absolutely nothing until a Terminal op (<code>findFirst</code>) is hit. This allows 'Short-Circuiting'—stopping processing the instant a match is found.",
+            code: `
+<span class="c-ty">List</span>&lt;<span class="c-ty">User</span>&gt; users = getTenMillionUsers();
+
+<span class="c-ty">User</span> u = users.stream()
+<span class="c-hi">    .filter(user -> user.age > <span class="c-st">18</span>) <span class="c-cm">// Lazy</span></span>
+    .map(User::toUpperCase)      <span class="c-cm">// Lazy</span>
+<span class="c-hi">    .findFirst(); <span class="c-cm">// Terminal! Short-circuits.</span></span>
+            `,
+            action: async () => {
+                setScene(1);
+                codeContainer.style.display = 'block';
+                
+                await sleep(500);
+                document.getElementById('term-op').style.background = 'rgba(244,114,182,0.2)';
+                document.getElementById('pipe-msg').innerText = "Terminal hit! Data flows...";
+                document.getElementById('pipe-msg').style.color = "var(--neon-green)";
+                
+                document.getElementById('blip-1').classList.add('blip-anim');
+                document.getElementById('blip-2').classList.add('blip-anim');
+                setTimeout(() => {
+                    document.getElementById('blip-1').classList.remove('blip-anim');
+                    document.getElementById('blip-2').classList.remove('blip-anim');
+                }, 1600);
+            }
+        },
+        {
+            badge: "Danger 3/7",
+            title: "Parallel Stream Trap",
+            text: "<code>.parallelStream()</code> relies on the JVM's shared <code>ForkJoinPool.commonPool()</code>. If you make a blocking I/O call (HTTP/DB) inside a parallel stream, you exhaust the pool and freeze EVERY parallel stream in your entire application. Use only for CPU-bound math.",
+            code: `
+<span class="c-cm">// FATAL: Blocking HTTP call inside parallelStream</span>
+users.parallelStream().forEach(u -> {
+<span class="c-err">    httpClient.sendEmail(u); <span class="c-cm">// Freezes the JVM</span></span>
+});
+
+<span class="c-cm">// Fix: Use custom ThreadPoolExecutor for I/O</span>
+            `,
+            action: async () => {
+                setScene(2);
+                codeContainer.style.display = 'block';
+                
+                await sleep(800);
+                document.querySelectorAll('.th-node').forEach(el => el.classList.add('th-blocked'));
+                document.getElementById('db-alert').style.opacity = '1';
+                document.getElementById('db-msg').style.opacity = '1';
+            }
+        },
+        {
+            badge: "Rules 4/7",
+            title: "Optional Guidelines",
+            text: "Designed to fix NullPointerExceptions via monad chaining. <strong>Enterprise Rule:</strong> Never use <code>Optional</code> as a class field or method argument. It breaks serialization and creates immense memory garbage. Use strictly as a return type.",
+            code: `
+<span class="c-cm">// Bad: Class Field</span>
+<span class="c-err"><span class="c-kw">private</span> <span class="c-ty">Optional</span>&lt;<span class="c-ty">String</span>&gt; address;</span>
+
+<span class="c-cm">// Good: Method Return Type</span>
+<span class="c-hi"><span class="c-kw">public</span> <span class="c-ty">Optional</span>&lt;<span class="c-ty">User</span>&gt; <span class="c-fn">findById</span>(<span class="c-ty">Long</span> id)</span> { ... }
+
+<span class="c-cm">// Safe Chaining</span>
+<span class="c-ty">String</span> email = findById(<span class="c-st">1</span>)
+    .map(User::getEmail)
+    .orElse(<span class="c-st">"default@a.com"</span>);
+            `,
+            action: async () => {
+                setScene(3);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Interfaces 5/7",
+            title: "Default Methods & Diamonds",
+            text: "Default methods were added for backward compatibility (to add <code>.stream()</code> to <code>Collection</code> without breaking legacy code). But if Class C implements Interface A and B, which both have <code>default log()</code>, Java forces Class C to explicitly override it to resolve the Diamond Problem.",
+            code: `
+<span class="c-kw">public class</span> <span class="c-ty">MyClass</span> <span class="c-kw">implements</span> <span class="c-ty">A, B</span> {
+    <span class="c-cm">// Must override to fix compile error!</span>
+    <span class="c-an">@Override</span>
+    <span class="c-kw">public void</span> <span class="c-fn">log</span>() {
+<span class="c-hi">        A.<span class="c-kw">super</span>.log(); <span class="c-cm">// Explicitly pick A</span></span>
+    }
+}
+            `,
+            action: async () => {
+                setScene(4);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Async 6/7",
+            title: "CompletableFuture",
+            text: "Old Java <code>Future.get()</code> blocked threads. <code>CompletableFuture</code> enables non-blocking reactive chains. Threads execute callbacks asynchronously via thread pools, enabling a single server to handle thousands of concurrent I/O operations.",
+            code: `
+<span class="c-ty">CompletableFuture</span>.supplyAsync(() -> fetchDb())
+<span class="c-hi">    .thenApplyAsync(data -> process(data))</span>
+<span class="c-hi">    .thenAccept(result -> sendEmail(result))</span>
+    .exceptionally(ex -> {
+        logError(ex);
+        <span class="c-kw">return null</span>;
+    });
+            `,
+            action: async () => {
+                setScene(5);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Time 7/7",
+            title: "Date/Time API",
+            text: "<code>java.util.Date</code> was mutable and thread-unsafe (a nightmare). Java 8 introduced <code>java.time</code> (JSR-310). Classes like <code>LocalDate</code> and <code>Instant</code> are 100% immutable. Modifying them returns a completely new object, guaranteeing thread safety.",
+            code: `
+<span class="c-cm">// Immutable. Modifying returns a NEW object.</span>
+<span class="c-ty">LocalDate</span> today = LocalDate.now();
+
+<span class="c-hi"><span class="c-ty">LocalDate</span> nextWeek = today.plusDays(<span class="c-st">7</span>);</span>
+
+<span class="c-cm">// today is completely unchanged. Safe across threads!</span>
+            `,
+            action: async () => {
+                setScene(6);
+                codeContainer.style.display = 'block';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            setScene(-1); // Hide all
+            codeContainer.style.display = 'none';
+
+            // Reset visuals
+            document.querySelectorAll('.th-node').forEach(el => el.classList.remove('th-blocked'));
+            document.getElementById('db-alert').style.opacity = '0';
+            document.getElementById('db-msg').style.opacity = '0';
+            document.getElementById('term-op').style.background = 'rgba(255,255,255,0.05)';
+            document.getElementById('pipe-msg').innerText = "Building pipeline recipe... (No Execution)";
+            document.getElementById('pipe-msg').style.color = "var(--neon-cyan)";
+
+            badge.innerText = "[JAVA_8_INTERNALS]";
+            title.innerText = "Beyond Syntactic Sugar";
+            text.innerHTML = "Java 8 wasn't just about writing shorter code; it fundamentally shifted the JVM architecture. To be a senior engineer, you must understand the internal mechanics powering these features.";
+            btnNext.innerText = "Initialize Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

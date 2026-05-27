@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saga Pattern - Claude Aesthetic</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+        /* Anthropic Claude Palette */
+        --bg-canvas: #F8F7F4;
+        --bg-panel: #FFFFFF;
+        --text-main: #23221F;
+        --text-muted: #737373;
+        --accent-rust: #D97757;
+        --accent-sand: #D3C4B1;
+        --accent-sage: #6B7D6A;
+        --accent-blue: #5C7B99;
+        --border-light: #E8E5DF;
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #E5E0D8; color: var(--text-main);
+        font-family: 'Inter', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Strict Flex Layout */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-canvas); position: relative;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08); border: 1px solid var(--border-light);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 20px;
+    }
+
+    /* Minimalist Background Grid */
+    .grid-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            linear-gradient(var(--border-light) 1px, transparent 1px),
+            linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+        background-size: 30px 30px;
+        opacity: 0.6; z-index: 0;
+    }
+
+    /* Header */
+    .header { padding: 30px 24px 5px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Lora', serif; font-size: 22px; font-weight: 600;
+        color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--accent-rust); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Top Half: Visual Canvas Area */
+    .canvas {
+        flex: 1.3; position: relative; z-index: 5; display: flex;
+        flex-direction: column; align-items: center; justify-content: center; min-height: 0;
+        padding: 10px 0; perspective: 1000px;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Nodes */
+    .node {
+        position: absolute; background: var(--bg-panel); border: 2px solid var(--accent-sand);
+        padding: 12px 16px; border-radius: 12px; font-family: 'Inter', sans-serif;
+        font-weight: 600; font-size: 12px; color: var(--text-main); text-align: center;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.04); transition: all 0.5s ease;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 15;
+    }
+    .node span { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 4px; text-transform: uppercase;}
+    
+    .db-icon { margin-top: 6px; font-size: 16px; opacity: 0.8; }
+    
+    .status-badge {
+        position: absolute; top: -10px; right: -10px; background: var(--accent-sage); color: white;
+        font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 10px; opacity: 0; transition: opacity 0.3s;
+    }
+
+    /* Specific Node Positions */
+    .n-wallet { top: 40px; left: 30px; border-color: var(--accent-blue); width: 120px;}
+    .n-bank { top: 40px; right: 30px; border-color: var(--accent-rust); width: 120px;}
+    .n-broker { top: 160px; left: 50%; transform: translateX(-50%); border-style: dashed; border-color: var(--text-muted); background: var(--bg-canvas); width: 160px;}
+    .n-rewards { top: 260px; left: 30px; border-color: var(--accent-sage); width: 120px;}
+    .n-fraud { top: 260px; right: 30px; border-color: var(--text-main); width: 120px;}
+    
+    .n-coord { top: 160px; left: 50%; transform: translateX(-50%); border-color: var(--text-main); background: #E8E5DF; width: 180px; box-shadow: 0 0 20px rgba(0,0,0,0.1); border-width: 3px;}
+    .state-machine { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-main); background: var(--bg-panel); padding: 4px; border-radius: 4px; margin-top: 8px; border: 1px solid var(--accent-sand); width: 100%;}
+
+    /* Cross Mark for 2PC */
+    .cross-2pc { position: absolute; font-size: 80px; color: var(--accent-rust); opacity: 0; z-index: 20; pointer-events: none; transition: opacity 0.3s;}
+
+    /* Connection Lines */
+    .svg-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none;}
+    .line { fill: none; stroke: var(--border-light); stroke-width: 2; opacity: 0; transition: all 0.5s; }
+    .line.dashed { stroke-dasharray: 4 4; }
+    .line.active { stroke: var(--accent-blue); }
+    .line.err { stroke: var(--accent-rust); }
+
+    /* Data Packets */
+    .packet {
+        position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
+        padding: 4px 8px; border-radius: 4px; opacity: 0; z-index: 20; color: #fff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none; text-align: center;
+    }
+    .pkt-event { background: var(--accent-sage); }
+    .pkt-cmd { background: var(--accent-blue); }
+    .pkt-err { background: var(--accent-rust); }
+    .pkt-comp { background: var(--text-main); } /* Compensation */
+
+    /* Matrix */
+    .matrix-grid { display: flex; flex-direction: column; gap: 10px; width: 90%; }
+    .m-row { display: flex; background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; align-items: center; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);}
+    .m-anno { flex: 1; font-family: 'Lora', serif; font-size: 14px; font-weight: 600; color: var(--text-main);}
+    .m-route { flex: 1.5; font-family: 'Inter', sans-serif; font-size: 11px; color: var(--text-muted); line-height: 1.4;}
+    .m-out { flex: 0.8; font-family: 'JetBrains Mono'; font-size: 10px; font-weight: bold; text-align: right; color: var(--accent-rust);}
+
+    /* Bottom Half: Explainer Panel */
+    .explainer-panel {
+        background: var(--bg-panel); padding: 20px 24px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid var(--border-light); box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+    }
+    
+    .explainer-content { flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 10px; }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: var(--accent-sand); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: var(--bg-canvas); color: var(--accent-rust);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--accent-sand);
+    }
+
+    .explainer-title {
+        font-family: 'Lora', serif; font-size: 19px; font-weight: 600; color: var(--text-main);
+        margin-bottom: 8px; letter-spacing: -0.5px; line-height: 1.2;
+    }
+
+    .explainer-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px; }
+
+    /* Code Block */
+    .code-block {
+        background: #F9F8F6; border: 1px solid var(--border-light); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #3A3A3A; overflow-x: auto;
+    }
+    
+    .c-kw { color: #8F5E4D; font-weight: 500; } 
+    .c-ty { color: #5C7B99; } 
+    .c-st { color: #6B7D6A; } 
+    .c-cm { color: #A3A3A3; font-style: italic; } 
+    .c-an { color: #D97757; } 
+
+    .btn-next {
+        background: var(--text-main); color: var(--bg-canvas); border: none; padding: 14px 24px;
+        border-radius: 8px; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.2s;
+        width: 100%; font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); }
+    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Animations */
+    .node-fail { border-color: var(--accent-rust) !important; background: rgba(217,119,87,0.05) !important; color: var(--accent-rust) !important;}
+    @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="grid-bg"></div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>The Saga Pattern</h1>
+        <p>Distributed Transactions</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        <svg class="svg-lines" id="svg-lines">
+            <!-- Direct connect for 2PC -->
+            <path id="l-direct" class="line dashed" d="M150,70 L270,70"></path>
+            
+            <!-- Broker connections -->
+            <path id="l-w-b" class="line dashed" d="M90,110 L150,160"></path>
+            <path id="l-b-bk" class="line dashed" d="M270,160 L330,110"></path>
+            <path id="l-b-r" class="line dashed" d="M150,230 L90,260"></path>
+            <path id="l-b-f" class="line dashed" d="M270,230 L330,260"></path>
+            
+            <!-- Coordinator connections -->
+            <path id="l-c-w" class="line" d="M210,160 L90,110"></path>
+            <path id="l-c-bk" class="line" d="M210,160 L330,110"></path>
+        </svg>
+
+        <div class="cross-2pc" id="cross-2pc">X</div>
+
+        <!-- Nodes -->
+        <div class="node n-wallet" id="n-wallet">
+            WalletSvc <span>Local DB A</span>
+            <div class="db-icon">🗄️</div>
+            <div class="status-badge" id="s-wallet"></div>
+        </div>
+
+        <div class="node n-bank" id="n-bank">
+            Bank API <span>Local DB B</span>
+            <div class="db-icon">🗄️</div>
+            <div class="status-badge" id="s-bank" style="background: var(--accent-rust);"></div>
+        </div>
+
+        <div class="node n-broker" id="n-broker" style="opacity: 0;">
+            Event Bus <span>Apache Kafka</span>
+        </div>
+
+        <div class="node n-rewards" id="n-rewards" style="opacity: 0;">
+            RewardsSvc <span>Points DB</span>
+        </div>
+
+        <div class="node n-fraud" id="n-fraud" style="opacity: 0;">
+            FraudSvc <span>Risk DB</span>
+        </div>
+
+        <div class="node n-coord" id="n-coord" style="opacity: 0;">
+            Saga Coordinator <span>State Machine</span>
+            <div class="state-machine" id="sm-state">STATE: PENDING</div>
+        </div>
+
+        <div class="packet" id="pkt"></div>
+
+        <!-- Matrix Container (Hidden initially) -->
+        <div class="matrix-grid" id="matrix" style="opacity: 0; position: absolute; z-index: 40; pointer-events: none; transition: opacity 0.5s;">
+            <div class="m-row">
+                <div class="m-anno" style="color: var(--accent-sage);">Choreography</div>
+                <div class="m-route">Event-driven. Decentralized. No single point of failure, but hard to trace.</div>
+                <div class="m-out" style="color: var(--accent-sage);">Simple Flows</div>
+            </div>
+            <div class="m-row">
+                <div class="m-anno" style="color: var(--accent-blue);">Orchestration</div>
+                <div class="m-route">Command-driven. Central brain. Easy to debug, handle rollbacks, and trace state.</div>
+                <div class="m-out" style="color: var(--accent-blue);">Complex / Money</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explainer Panel -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[DISTRIBUTED_DATA]</div>
+            <h2 id="explainer-title" class="explainer-title">The 2PC Problem</h2>
+            <p id="explainer-text" class="explainer-text">In a monolith, transferring money uses one ACID database transaction. In microservices, Wallet and Bank have separate databases. You cannot lock both across a network. Distributed locks (2PC) will freeze your system.</p>
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Enter The Saga</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeBox = document.getElementById('code-container');
+    const btn = document.getElementById('btn-next');
+    const pkt = document.getElementById('pkt');
+
+    // Nodes
+    const nWal = document.getElementById('n-wallet');
+    const nBnk = document.getElementById('n-bank');
+    const nBro = document.getElementById('n-broker');
+    const nRew = document.getElementById('n-rewards');
+    const nFra = document.getElementById('n-fraud');
+    const nCor = document.getElementById('n-coord');
+    
+    // Status/UI
+    const sWal = document.getElementById('s-wallet');
+    const sBnk = document.getElementById('s-bank');
+    const smState = document.getElementById('sm-state');
+    const cross2pc = document.getElementById('cross-2pc');
+    const matrix = document.getElementById('matrix');
+
+    // Lines
+    const lDir = document.getElementById('l-direct');
+    const lWB = document.getElementById('l-w-b');
+    const lBBk = document.getElementById('l-b-bk');
+    const lBR = document.getElementById('l-b-r');
+    const lBF = document.getElementById('l-b-f');
+    const lCW = document.getElementById('l-c-w');
+    const lCBk = document.getElementById('l-c-bk');
+
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setPacket(top, left, txt='', type='pkt-cmd') {
+        pkt.style.transition = 'none';
+        pkt.style.opacity = '1';
+        pkt.className = `packet ${type}`;
+        pkt.innerText = txt;
+        pkt.style.top = top + 'px';
+        pkt.style.left = left + 'px';
+        void pkt.offsetWidth;
+    }
+
+    function animPacket(top, left, duration=600) {
+        pkt.style.transition = `all ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        pkt.style.top = top + 'px';
+        pkt.style.left = left + 'px';
+    }
+
+    function resetVisuals() {
+        pkt.style.opacity = '0';
+        cross2pc.style.opacity = '0';
+        [nWal, nBnk, nBro, nRew, nFra, nCor].forEach(n => {
+            n.classList.remove('node-fail');
+            n.style.animation = 'none';
+        });
+        [lDir, lWB, lBBk, lBR, lBF, lCW, lCBk].forEach(l => {
+            l.style.opacity = '0'; l.classList.remove('active', 'err');
+        });
+        sWal.style.opacity = '0'; sBnk.style.opacity = '0';
+        sBnk.style.background = 'var(--accent-sage)';
+        codeBox.style.display = 'none';
+        matrix.style.opacity = '0';
+    }
+
+    const steps = [
+        // Intro (0) - handled by initial HTML state
+        {
+            b: "Step 1", t: "The Saga Concept", 
+            txt: "Instead of one giant lock, a Saga breaks the transfer into a sequence of <strong>Local Transactions</strong>. Wallet commits locally, releases its lock instantly, and triggers the next step. High availability is maintained.",
+            act: async() => {
+                lDir.style.opacity = '1';
+                await sleep(400);
+                cross2pc.style.opacity = '1';
+                cross2pc.style.top = '50px'; cross2pc.style.left = '190px';
+                await sleep(600);
+                cross2pc.style.opacity = '0';
+                lDir.style.opacity = '0';
+                
+                sWal.innerText = 'COMMIT'; sWal.style.opacity = '1'; sWal.style.background = 'var(--accent-sage)';
+            }
+        },
+        {
+            b: "Step 2", t: "Choreography (The Dance)", 
+            txt: "Approach 1: Decentralized. Wallet deducts, commits, and blindly publishes an event to a Broker (Kafka): <code>WalletDebited</code>. The Bank listens, credits the account, and publishes <code>BankCredited</code>.",
+            act: async() => {
+                nBro.style.opacity = '1'; lWB.style.opacity = '1'; lBBk.style.opacity = '1';
+                sWal.innerText = 'DEDUCTED'; sWal.style.opacity = '1';
+                
+                setPacket(70, 90, 'WalletDebited', 'pkt-event');
+                animPacket(180, 210, 600); // To broker
+                await sleep(600);
+                setPacket(180, 210, 'WalletDebited', 'pkt-event');
+                animPacket(70, 330, 600); // To Bank
+                await sleep(600);
+                
+                pkt.style.opacity = '0';
+                sBnk.innerText = 'CREDITED'; sBnk.style.opacity = '1';
+            }
+        },
+        {
+            b: "Step 3", t: "The Spaghettification Flaw", 
+            txt: "Choreography works for 2 steps. But Fintechs have Rewards, Notifications, and Fraud. Events bounce everywhere. If a transfer fails, nobody knows the overall state. It becomes an untestable plate of spaghetti.",
+            act: async() => {
+                nBro.style.opacity = '1'; nRew.style.opacity = '1'; nFra.style.opacity = '1';
+                lWB.style.opacity = '1'; lBBk.style.opacity = '1'; lBR.style.opacity = '1'; lBF.style.opacity = '1';
+                
+                // Chaos packets
+                setPacket(70, 90, 'Evt1', 'pkt-event'); animPacket(180, 210, 400); await sleep(200);
+                const p2 = pkt.cloneNode(true); document.getElementById('canvas').appendChild(p2);
+                p2.innerText = 'Evt2'; p2.style.top = '180px'; p2.style.left = '210px'; p2.style.opacity = '1';
+                p2.style.transition = 'all 400ms'; p2.style.top = '290px'; p2.style.left = '90px';
+                
+                const p3 = pkt.cloneNode(true); document.getElementById('canvas').appendChild(p3);
+                p3.innerText = 'Evt3'; p3.style.top = '180px'; p3.style.left = '210px'; p3.style.opacity = '1';
+                p3.style.transition = 'all 400ms'; p3.style.top = '290px'; p3.style.left = '330px';
+                
+                await sleep(600);
+                pkt.style.opacity = '0'; p2.remove(); p3.remove();
+            }
+        },
+        {
+            b: "Step 4", t: "Orchestration (The Conductor)", 
+            txt: "To fix this, we introduce a central brain: The <strong>Saga Coordinator</strong>. It issues explicit <em>Commands</em>, not events. It tells Wallet: 'Deduct'. It tells Bank: 'Credit'. It tracks the exact state in its own DB.",
+            act: async() => {
+                nBro.style.opacity = '0'; nRew.style.opacity = '0'; nFra.style.opacity = '0';
+                lWB.style.opacity = '0'; lBBk.style.opacity = '0'; lBR.style.opacity = '0'; lBF.style.opacity = '0';
+                sWal.style.opacity = '0'; sBnk.style.opacity = '0';
+                
+                await sleep(400);
+                nCor.style.opacity = '1';
+                lCW.style.opacity = '1'; lCBk.style.opacity = '1';
+                smState.innerText = 'STATE: INIT';
+            }
+        },
+        {
+            b: "Step 5", t: "The Orchestrated Happy Path", 
+            txt: "1. Coordinator commands Wallet to deduct. Success.<br>2. Updates internal state.<br>3. Commands Bank to credit. Success.<br>4. Marks transaction COMPLETED. Perfectly observable.",
+            c: `// Saga Coordinator Logic\nstate = WALLET_DEDUCTED;\nbankClient.creditAccount(req);\nstate = COMPLETED;`,
+            act: async() => {
+                nCor.style.opacity = '1'; lCW.style.opacity = '1'; lCBk.style.opacity = '1';
+                codeBox.style.display = 'block';
+                
+                // Cmd to Wallet
+                setPacket(180, 210, 'Cmd:Deduct', 'pkt-cmd'); animPacket(70, 90, 500); await sleep(500);
+                sWal.innerText = 'DEDUCTED'; sWal.style.opacity = '1';
+                
+                // Reply to Coord
+                setPacket(70, 90, 'Success', 'pkt-event'); animPacket(180, 210, 500); await sleep(500);
+                smState.innerText = 'STATE: WALLET_OK'; smState.style.color = 'var(--accent-sage)';
+                
+                // Cmd to Bank
+                setPacket(180, 210, 'Cmd:Credit', 'pkt-cmd'); animPacket(70, 330, 500); await sleep(500);
+                sBnk.innerText = 'CREDITED'; sBnk.style.opacity = '1'; sBnk.style.background = 'var(--accent-sage)';
+                
+                // Reply
+                setPacket(70, 330, 'Success', 'pkt-event'); animPacket(180, 210, 500); await sleep(500);
+                pkt.style.opacity = '0';
+                smState.innerText = 'STATE: COMPLETED';
+            }
+        },
+        {
+            b: "Step 6", t: "The Distributed Failure", 
+            txt: "The network is hostile. Wallet deducts ₹500 successfully. Coordinator commands the Bank, but the Bank API is DOWN. It returns 500 Error. The user lost money, but recipient didn't get it. We cannot do an SQL rollback on Wallet!",
+            act: async() => {
+                nCor.style.opacity = '1'; lCW.style.opacity = '1'; lCBk.style.opacity = '1';
+                smState.innerText = 'STATE: INIT'; smState.style.color = 'var(--text-main)';
+                sWal.style.opacity = '0'; sBnk.style.opacity = '0';
+                
+                // Cmd to Wallet
+                setPacket(180, 210, 'Cmd:Deduct', 'pkt-cmd'); animPacket(70, 90, 400); await sleep(400);
+                sWal.innerText = 'DEDUCTED'; sWal.style.opacity = '1';
+                setPacket(70, 90, 'Success', 'pkt-event'); animPacket(180, 210, 400); await sleep(400);
+                smState.innerText = 'STATE: WALLET_OK';
+                
+                // Cmd to Bank
+                setPacket(180, 210, 'Cmd:Credit', 'pkt-cmd'); animPacket(70, 330, 400); await sleep(400);
+                
+                // Fail!
+                nBnk.classList.add('node-fail'); sBnk.innerText = '500 ERR'; sBnk.style.opacity = '1'; sBnk.style.background = 'var(--accent-rust)';
+                setPacket(70, 330, 'Error', 'pkt-err'); animPacket(180, 210, 400); await sleep(400);
+                pkt.style.opacity = '0';
+                smState.innerText = 'STATE: BANK_FAILED'; smState.style.color = 'var(--accent-rust)';
+                lCBk.classList.add('err');
+            }
+        },
+        {
+            b: "Step 7", t: "Compensating Transactions", 
+            txt: "The genius of Saga: <strong>Semantic Rollbacks</strong>. Coordinator detects the failure. It shifts into reverse and issues a <em>Compensation Command</em> to Wallet: 'Refund ₹500'. Wallet executes a new local transaction. Perfect financial consistency restored.",
+            c: `// Failure caught: Trigger Compensation\ncatch (BankException e) {\n  state = COMPENSATING;\n  walletClient.refund(req);\n  state = ABORTED;\n}`,
+            act: async() => {
+                nCor.style.opacity = '1'; lCW.style.opacity = '1'; lCBk.style.opacity = '1'; lCBk.classList.add('err');
+                nBnk.classList.add('node-fail'); sBnk.style.opacity = '1'; sWal.style.opacity = '1';
+                codeBox.style.display = 'block';
+                
+                await sleep(500);
+                smState.innerText = 'STATE: COMPENSATING';
+                
+                // Cmd to Refund
+                setPacket(180, 210, 'Cmd:Refund', 'pkt-comp'); animPacket(70, 90, 600); await sleep(600);
+                sWal.innerText = 'REFUNDED'; sWal.style.background = 'var(--text-main)';
+                
+                setPacket(70, 90, 'Success', 'pkt-event'); animPacket(180, 210, 500); await sleep(500);
+                pkt.style.opacity = '0';
+                smState.innerText = 'STATE: ABORTED_SAFELY'; smState.style.color = 'var(--text-muted)';
+            }
+        },
+        {
+            b: "Summary", t: "The Decision Matrix", 
+            txt: "Use <strong>Choreography</strong> for simple, non-critical flows where decoupling is key. For Fintech, Orders, and complex state machines, ALWAYS use <strong>Orchestration</strong>. It centralizes error handling and guarantees observability.",
+            act: async() => {
+                resetVisuals();
+                matrix.style.opacity = '1';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        if (currentStep >= steps.length) { 
+            currentStep = 0; 
+            resetVisuals();
+            badge.innerText = "[DISTRIBUTED_DATA]";
+            title.innerText = "The 2PC Problem";
+            text.innerHTML = "In a monolith, transferring money uses one ACID database transaction. In microservices, Wallet and Bank have separate databases. You cannot lock both across a network. Distributed locks (2PC) will freeze your system.";
+            btn.innerText = "Enter The Saga";
+            return;
+        } 
+
+        isAnimating = true;
+        btn.disabled = true;
+
+        const sd = steps[currentStep];
+        
+        // Update Text
+        badge.innerText = `[${sd.b}]`;
+        title.innerText = sd.t;
+        text.innerHTML = sd.txt;
+        if (sd.c) {
+            codeBox.innerHTML = sd.c;
+        }
+
+        btn.innerText = currentStep === steps.length - 1 ? "Restart Masterclass" : "Next Frame →";
+
+        resetVisuals();
+
+        // Run step action
+        await sd.act();
+        
+        currentStep++;
+        isAnimating = false;
+        btn.disabled = false;
+    }
+
+    // Init state
+    resetVisuals();
+</script>
+</body>
+</html>

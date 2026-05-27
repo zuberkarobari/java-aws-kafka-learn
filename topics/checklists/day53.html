@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 53  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 53  ·  STUDY CHECKLIST — Full Mock Interview Round 3 — Kafka, AWS and Security Scenario Questions</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 53 Checklist</div>
+    <h1 style="margin-top: 0;">Full Mock Interview Round 3 — Kafka, AWS and Security Scenario Questions</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 53 · STUDY CHECKLIST</h3>
+    <h3>Full Mock Interview Round 3 — Kafka, AWS and Security Scenario Questions</h3>
+    <h3>Kafka Scenarios</h3>
+    <p>Production problems, configuration trade-offs</p>
+    <h3>AWS Scenarios</h3>
+    <p>Architecture decisions, IAM, cost</p>
+    <h3>Security Scenarios</h3>
+    <p>JWT edge cases, OWASP, service-to-service</p>
+    <h3>Scoring</h3>
+    <p>Realistic self-assessment</p>
+    <p>How to use Day 53:</p>
+    <p>These are scenario-based questions, not definition questions. Each has a specific production situation. Answer by naming the problem, the root cause, and the fix — in that order. Score yourself only if you named all three.</p>
+    <h3>Kafka Scenario Questions</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> Your Kafka consumer group has growing lag on partition 2 only, while partitions 0 and 1 have zero lag. What is likely happening and how do you diagnose it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Partition-specific lag means the problem is isolated to one consumer thread or one partition's data, not overall throughput. Most likely causes: that partition's consumer thread is stuck on a poison pill message — an event that always throws an exception, preventing the offset from advancing. Or the consumer thread for that partition is slower than the others — perhaps because that partition has unusually large messages or messages requiring more processing. Diagnosis: check the consumer logs for that specific partition's thread — look for repeated exceptions on the same offset. Check message size for partition 2 — unusually large messages would slow processing. If the same offset keeps failing, the message is the poison pill. Fix: configure @RetryableTopic with a DLT so the failing message is moved out of the way after N retries and processing can continue.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> You have acks=all but you are still losing messages when a broker fails. What is the likely configuration gap? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">acks=all means all in-sync replicas (ISR) must acknowledge. But the ISR can contain as few as 1 replica if others have fallen behind. If min.insync.replicas=1 (the default), acks=all with one ISR member (the leader) provides no redundancy. When that leader fails, the acknowledged message is lost because no follower had replicated it. The fix: set min.insync.replicas=2 at the topic or broker level. This requires at least 2 ISR members to acknowledge before the producer gets success. Combine with a replication.factor of at least 3 (two replicas plus the leader). With this configuration, a single broker failure cannot cause data loss because at least one follower always has the latest messages.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> A team asks whether they should use exactly-once semantics for their event processing pipeline. What questions do you ask before recommending? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I ask four questions. First: what are the consequences of a duplicate? If the consumer is idempotent (storing a result keyed on the event ID), duplicates are harmless and at-least-once is simpler. Second: what are the consequences of losing an event? If loss is unacceptable, exactly-once adds value. Third: what is the throughput requirement? Exactly-once transactions roughly halve throughput — can the pipeline absorb that? Fourth: does the pipeline extend beyond Kafka? Exactly-once within Kafka works well. If the pipeline writes to a database, you need the Outbox pattern or transactional outbox to include the database write in the guarantee. If all four conditions point to exactly-once being needed (duplicates cause real harm, loss is unacceptable, throughput headroom exists, and the sink is Kafka), then recommend it. Otherwise, at-least-once with idempotent consumers is the simpler and safer starting point.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>AWS Scenario Questions</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> Your payment service on EC2 suddenly cannot write to its S3 bucket, but it was working yesterday. Nothing was deployed. What do you check? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">No deployment change means the code is the same, so the issue is likely IAM or network. First: check CloudTrail for recent IAM policy changes on the EC2 instance role or the S3 bucket policy. A bucket policy change that added a Deny rule would block access even if the instance role has Allow. Second: check if the instance role's policy was changed or detached. Third: check whether the S3 bucket's Block Public Access settings or Object Ownership settings changed — these can affect ACL-based access. Fourth: check CloudWatch for any VPC endpoint changes — if the service was accessing S3 via a VPC endpoint and the endpoint policy changed, that could block traffic. The most common cause: a bucket policy Deny rule added by another team or a security automation tool that is more specific than the instance role's Allow. Deny always wins over Allow in AWS IAM.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> A senior engineer proposes running the payment service on Spot instances to save 70% on EC2 costs. What do you say? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Spot instances are the right tool for interruption-tolerant workloads — batch jobs, data processing, stateless workers that can be replaced in seconds. For a payment service that handles financial transactions, Spot instances are inappropriate. Spot instances receive a 2-minute warning before termination and then the instance is gone. During active payment processing, termination mid-transaction can leave transactions in an inconsistent state, corrupt in-flight Kafka messages, or drop connections that clients are waiting on. The correct cost-saving approach for a payment service: Reserved Instances for baseline capacity (1-year commitment, ~30-40% saving), On-Demand for burst capacity. If the team wants more aggressive savings, Savings Plans provide similar savings with more flexibility. Spot could be used for non-payment workloads in the same account — log processing, analytics, build pipelines.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> You need to give a third-party vendor read access to specific objects in your S3 bucket without giving them an IAM user. How do you do it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Three approaches depending on requirements. First: pre-signed URLs — generate a time-limited URL for each specific object. The URL includes the credentials and signature, valid for up to 7 days. The vendor downloads the object using the URL with no AWS credentials. This works for ad-hoc, time-limited access to known objects. Second: S3 bucket policy with aws:PrincipalAccount condition — if the vendor has their own AWS account, add a bucket policy that allows their account's ARN to GetObject on specific prefixes. Cross-account access with no IAM user needed. Third: AWS IAM Identity Center (formerly SSO) — create a permission set and grant it to the vendor. They authenticate via identity federation rather than long-term IAM credentials. For a third-party vendor without an AWS account, pre-signed URLs are the simplest. For a vendor with their own AWS account, bucket policy with their account ARN.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Security Scenario Questions</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> A developer asks: why do we need to validate the 'aud' claim in a JWT if we already check the signature? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The signature proves the token was issued by a trusted identity provider with a valid private key. It does not prove the token was intended for your service. Consider a multi-service system: the mobile app gets a JWT from the auth server scoped to the mobile-api audience. That JWT has a valid signature. If your payment-service does not check the aud claim, an attacker who obtains a mobile-api JWT can use it against payment-service. The payment-service trusts the signature and lets them in, even though the token was never meant for that service. Audience validation enforces that a token issued for Service A cannot be used against Service B, even if both services trust the same identity provider.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> You are code reviewing a PR and see that the developer added X-User-Id as an accepted input header in the API gateway JWT filter. They are reading it from the request and passing it downstream. What is the problem? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The developer is trusting user-supplied input for the user's identity. Any caller can set X-User-Id: admin-123 in their request and the service will treat them as admin-123. The JWT filter's job is to validate the JWT and then inject the authenticated user ID as a trusted header — overwriting any client-supplied value. The correct implementation: remove any incoming X-User-Id, X-Roles, or similar headers from the external request before the JWT filter runs, then inject the gateway-validated values after JWT validation succeeds. The test that catches this: send a request with X-User-Id: admin in the header, verify the downstream service does not see that value, verify it sees the authenticated user's ID from the JWT instead.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> How would you implement service-to-service authentication between your payment service and a fraud service you do not control? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The answer depends on what the fraud service accepts. If they support OAuth2 Client Credentials: register the payment service as a client with the fraud service's auth server, get a client ID and secret, use Spring's OAuth2AuthorizedClientManager to fetch and cache a scoped token, send it in the Authorization header on every fraud service call. This is the standard approach. If the fraud service uses API keys: store the key in AWS Secrets Manager, fetch it at startup via the instance role, add it to WebClient headers. Never hardcode it. If the fraud service uses mTLS: generate a client certificate signed by a CA the fraud service trusts, configure WebClient with the certificate in an SSLContext. The most important part regardless of method: secrets come from Secrets Manager, not environment variables or config files. Rotation should be automatic where possible.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Self-Scoring</h3>
+    <h3>Question</h3>
+    <h3>Score (1-5) | What I missed</h3>
+    <h3>Q1 — Kafka partition-specific lag</h3>
+    <p>/5 |</p>
+    <h3>Q2 — min.insync.replicas gap</h3>
+    <p>/5 |</p>
+    <h3>Q3 — exactly-once decision criteria</h3>
+    <p>/5 |</p>
+    <h3>Q4 — S3 write failure diagnosis</h3>
+    <p>/5 |</p>
+    <h3>Q5 — Spot instances for payments</h3>
+    <p>/5 |</p>
+    <h3>Q6 — Third-party S3 access</h3>
+    <p>/5 |</p>
+    <h3>Q7 — aud claim purpose</h3>
+    <p>/5 |</p>
+    <h3>Q8 — X-User-Id header trust vulnerability</h3>
+    <p>/5 |</p>
+    <h3>Q9 — Service-to-service auth options</h3>
+    <p>/5 |</p>
+    <h3>Total</h3>
+    <p>After scoring:</p>
+    <p>For any question you scored below 4, write the specific concept to re-read. These scenario questions are exactly the format senior technical interviews use.</p>
+    <p>Day 53 of 60 · Mock Interview Round 3 · Prepared for Md Zuber</p>
+    <p>"Scenario questions reveal whether you have operated systems in production, not just read about them."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

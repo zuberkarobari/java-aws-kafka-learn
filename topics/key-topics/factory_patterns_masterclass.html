@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factory Patterns - Deep Space Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --space-dark: #030014;
+        --neon-cyan: #22d3ee;
+        --neon-pink: #f472b6;
+        --neon-purple: #a855f7;
+        --neon-red: #f43f5e;
+        --neon-green: #34d399;
+        --neon-orange: #fb923c;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #000;
+        color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container */
+    #reel-container {
+        width: 100%;
+        max-width: 420px;
+        height: 100vh;
+        max-height: 850px;
+        background: var(--space-dark);
+        position: relative;
+        box-shadow: 0 0 50px rgba(34, 211, 238, 0.2);
+        border: 1px solid #164e63;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* Deep Space Background */
+    .space-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at 50% 20%, #082f49 0%, #030014 60%);
+        z-index: 0;
+    }
+    
+    .stars {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 200px 50px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 250px 90px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 300px 150px, #ffffff, rgba(0,0,0,0));
+        background-repeat: repeat;
+        background-size: 400px 200px;
+        opacity: 0.4;
+        animation: drift 60s linear infinite;
+        z-index: 0;
+    }
+
+    @keyframes drift {
+        from { background-position: 0 0; }
+        to { background-position: 0 400px; }
+    }
+
+    /* Header */
+    .header {
+        padding: 30px 20px 10px;
+        text-align: center;
+        z-index: 10;
+    }
+    
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+        background: linear-gradient(to right, var(--neon-cyan), var(--neon-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
+        text-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+    }
+
+    .header p {
+        color: var(--neon-cyan);
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Visual Canvas Area */
+    .canvas {
+        flex: 1;
+        position: relative;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        perspective: 1000px;
+        padding-bottom: 80px; 
+    }
+
+    /* Architectural Elements */
+    .app-core {
+        position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.9); border: 2px solid var(--neon-cyan);
+        padding: 10px 20px; border-radius: 8px; font-family: 'Space Grotesk'; font-weight: bold;
+        box-shadow: 0 0 20px rgba(34, 211, 238, 0.4); z-index: 20; color: #fff; text-align: center;
+    }
+    .app-core span { font-size: 9px; color: var(--neon-cyan); font-family: 'JetBrains Mono'; display: block; margin-top: 2px;}
+
+    /* Connection Lines */
+    .laser-line {
+        position: absolute; width: 2px; background: var(--neon-cyan);
+        box-shadow: 0 0 10px var(--neon-cyan); opacity: 0; transform-origin: top center; transition: all 0.5s ease;
+    }
+    .laser-red { background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); }
+
+    /* Products */
+    .product-node {
+        position: absolute; padding: 8px 15px; border-radius: 6px;
+        font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: bold;
+        text-align: center; opacity: 0; transition: all 0.5s ease; z-index: 15;
+    }
+    .p-stripe { background: rgba(99, 102, 241, 0.2); border: 2px solid #6366f1; color: #818cf8; box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);}
+    .p-razor { background: rgba(59, 130, 246, 0.2); border: 2px solid #3b82f6; color: #60a5fa; box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);}
+    .p-tax { background: rgba(244, 63, 94, 0.2); border: 2px dashed #f43f5e; color: #fb7185; }
+    .p-curr { background: rgba(16, 185, 129, 0.2); border: 2px dashed #10b981; color: #34d399; }
+
+    /* Factories */
+    .factory-box {
+        position: absolute; width: 140px; border: 2px solid var(--neon-purple);
+        background: rgba(168, 85, 247, 0.1); border-radius: 8px; padding: 10px;
+        text-align: center; opacity: 0; transition: all 0.5s ease; z-index: 10;
+        box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    }
+    .factory-box::before {
+        content: '🏭'; display: block; font-size: 24px; margin-bottom: 5px;
+    }
+    .f-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--neon-purple); font-weight: bold;}
+
+    /* Abstract Factory Plant */
+    .abstract-plant {
+        position: absolute; width: 320px; height: 180px; border: 3px solid var(--neon-orange);
+        background: rgba(251, 146, 60, 0.05); border-radius: 12px; opacity: 0; transition: all 0.5s ease; z-index: 5;
+        top: 60px; left: 50%; transform: translateX(-50%); box-shadow: inset 0 0 30px rgba(251, 146, 60, 0.1);
+        display: flex; flex-direction: column; align-items: center;
+    }
+    .plant-title { font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-orange); margin-top: 10px; text-transform: uppercase; letter-spacing: 1px;}
+    .plant-grid { display: flex; gap: 10px; margin-top: 20px; width: 100%; justify-content: center; }
+    .pg-col { display: flex; flex-direction: column; gap: 10px; align-items: center;}
+
+    /* Bug Icon */
+    .bug-alert {
+        position: absolute; font-size: 40px; opacity: 0; z-index: 40; transition: all 0.3s; filter: drop-shadow(0 0 10px red);
+    }
+
+    /* Matrix Cards */
+    .matrix-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; gap: 12px; padding: 0 20px;
+        opacity: 0; pointer-events: none; transition: opacity 0.5s; overflow-y: auto; justify-content: center;
+    }
+    .m-card {
+        background: rgba(15, 23, 42, 0.9); border: 1px solid var(--neon-cyan);
+        border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 8px;
+        box-shadow: 0 4px 15px rgba(34, 211, 238, 0.15);
+    }
+    .m-card.purple { border-color: var(--neon-purple); box-shadow: 0 4px 15px rgba(168, 85, 247, 0.15); }
+    .m-title { font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 16px; color: var(--neon-cyan);}
+    .m-card.purple .m-title { color: var(--neon-purple); }
+    .m-desc { font-size: 12px; color: #cbd5e1; line-height: 1.5; font-family: 'Plus Jakarta Sans';}
+    .m-pill { display: inline-block; padding: 2px 6px; background: rgba(255,255,255,0.1); border-radius: 4px; font-family: monospace; font-size: 10px; margin-top: 4px;}
+
+    /* Explainer Panel at Bottom */
+    .explainer-panel {
+        background: linear-gradient(to top, rgba(3, 0, 20, 1) 85%, rgba(3, 0, 20, 0.9) 95%, transparent);
+        padding: 24px 20px 30px;
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        z-index: 30;
+        min-height: 480px; 
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(34, 211, 238, 0.3);
+    }
+
+    .step-badge {
+        display: inline-block;
+        background: rgba(34, 211, 238, 0.1);
+        color: var(--neon-cyan);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 1px solid rgba(34, 211, 238, 0.3);
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.15);
+        align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+    }
+
+    .explainer-text {
+        font-size: 12px;
+        color: #cbd5e1;
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: #000;
+        border: 1px solid rgba(34, 211, 238, 0.4);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        line-height: 1.6;
+        color: #e2e8f0;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        box-shadow: inset 0 0 20px rgba(0,0,0,1);
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #22d3ee; } 
+    .c-fn { color: #a855f7; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-hi { background: rgba(34, 211, 238, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, var(--neon-cyan), #0284c7);
+        color: white;
+        border: 1px solid var(--neon-cyan);
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 13px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(34, 211, 238, 0.3);
+        transition: all 0.2s;
+        width: 100%;
+        font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(34, 211, 238, 0.3); }
+    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="space-bg"></div>
+    <div class="stars"></div>
+
+    <!-- Header -->
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Creational Patterns</h1>
+        <p>Factory vs Abstract Factory</p>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas" id="canvas">
+        
+        <div class="app-core" id="app-core">
+            Checkout Service
+            <span id="core-sub">Awaiting Configuration</span>
+        </div>
+
+        <!-- Lines -->
+        <div class="laser-line" id="line-1" style="height:0; left: 50%; top: 55px;"></div>
+        <div class="laser-line" id="line-2a" style="height:0; left: 25%; top: 55px; transform: rotate(30deg);"></div>
+        <div class="laser-line" id="line-2b" style="height:0; left: 75%; top: 55px; transform: rotate(-30deg);"></div>
+
+        <!-- Single Products -->
+        <div class="product-node p-stripe" id="prod-stripe" style="top: 140px; left: 50%; transform: translateX(-50%);">StripeGateway</div>
+        <div class="product-node p-razor" id="prod-razor" style="top: 140px; left: 50%; transform: translateX(-50%);">RazorpayGateway</div>
+
+        <!-- Factory Method Nodes -->
+        <div class="factory-box" id="fac-usa" style="top: 90px; left: 20px;"><div class="f-title">USAGatewayFac</div></div>
+        <div class="factory-box" id="fac-ind" style="top: 90px; right: 20px;"><div class="f-title">IndiaGatewayFac</div></div>
+
+        <!-- Mixed Bag Products (For Bug Scene) -->
+        <div class="product-node p-stripe" id="bug-p1" style="top: 150px; left: 30px;">StripeGateway</div>
+        <div class="product-node p-tax" id="bug-p2" style="top: 190px; left: 160px;">IndiaGST_Tax</div>
+        <div class="product-node p-curr" id="bug-p3" style="top: 150px; right: 30px;">FormatterUSD</div>
+        <div class="bug-alert" id="bug-icon" style="top: 150px; left: 50%; transform: translateX(-50%);">💥</div>
+
+        <!-- Abstract Factory Plant -->
+        <div class="abstract-plant" id="abs-plant">
+            <div class="plant-title" id="plant-title">USA_InfraFactory</div>
+            <div class="plant-grid">
+                <div class="pg-col">
+                    <span style="font-size:8px; color:var(--neon-orange); font-family:monospace;">Gateway</span>
+                    <div class="product-node p-stripe" id="abs-p1" style="position:relative; opacity:1; top:0; left:0; transform:none;">Stripe</div>
+                </div>
+                <div class="pg-col">
+                    <span style="font-size:8px; color:var(--neon-orange); font-family:monospace;">TaxEngine</span>
+                    <div class="product-node p-tax" id="abs-p2" style="position:relative; opacity:1; top:0; left:0; transform:none;">US_Tax</div>
+                </div>
+                <div class="pg-col">
+                    <span style="font-size:8px; color:var(--neon-orange); font-family:monospace;">Currency</span>
+                    <div class="product-node p-curr" id="abs-p3" style="position:relative; opacity:1; top:0; left:0; transform:none;">Fmt_USD</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matrix Container (Hidden until last step) -->
+        <div class="matrix-container" id="matrix-container">
+            <div class="m-card">
+                <div class="m-title">Factory Method</div>
+                <div class="m-desc">Creates <strong>ONE</strong> product. Defines an interface for creation, but lets subclasses decide which exact class to instantiate.</div>
+                <div><span class="m-pill">Uses Inheritance</span> <span class="m-pill">Single Object</span></div>
+            </div>
+            <div class="m-card purple">
+                <div class="m-title">Abstract Factory</div>
+                <div class="m-desc">Creates a <strong>FAMILY</strong> of related products. Ensures components are cohesive and compatible (e.g. US Gateway + US Tax + US Currency).</div>
+                <div><span class="m-pill">Uses Composition</span> <span class="m-pill">Multiple Objects</span></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Text Overlay / Explainer -->
+    <div class="explainer-panel">
+        <div id="step-badge" class="step-badge">[ARCH_PRINCIPLES]</div>
+        <h2 id="explainer-title" class="explainer-title">The Poisonous Keyword</h2>
+        <p id="explainer-text" class="explainer-text">In enterprise architecture, the <code>new</code> keyword is poison. Hardcoding implementations makes your app brittle. Let's trace how a global payment infrastructure evolves using Factory patterns.</p>
+        
+        <div id="code-container" class="code-block" style="display: none;"></div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initialize Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    const steps = [
+        {
+            badge: "Stage 1/6",
+            title: "The Tightly Coupled Mess",
+            text: "Imagine an e-commerce app. The checkout logic directly calls <code>new StripeGateway()</code>. When expanding to India, adding <code>if(India) new Razorpay()</code> pollutes the core logic with regional setup details.",
+            code: `
+<span class="c-kw">public class</span> <span class="c-ty">CheckoutService</span> {
+  <span class="c-kw">public void</span> <span class="c-fn">processOrder</span>() {
+<span class="c-err">    <span class="c-cm">// HARDCODED. Cannot easily swap!</span>
+    <span class="c-ty">StripeGateway</span> gateway = <span class="c-kw">new</span> StripeGateway();</span>
+    gateway.charge();
+  }
+}
+            `,
+            action: async () => {
+                codeContainer.style.display = 'block';
+                document.getElementById('core-sub').innerText = "Direct Dependency";
+                
+                await sleep(300);
+                const l1 = document.getElementById('line-1');
+                l1.style.height = '85px'; l1.style.opacity = '1'; l1.classList.add('laser-red');
+                
+                await sleep(400);
+                document.getElementById('prod-stripe').style.opacity = '1';
+            }
+        },
+        {
+            badge: "Stage 2/6",
+            title: "The Factory Method",
+            text: "The Factory Method defines an interface for creating <strong>one type</strong> of object, letting subclasses decide the class. Our service now calls <code>factory.createGateway()</code>. It doesn't know if it's getting Stripe or Razorpay.",
+            code: `
+<span class="c-kw">public interface</span> <span class="c-ty">PaymentFactory</span> {
+  <span class="c-ty">PaymentGateway</span> <span class="c-fn">createGateway</span>(); <span class="c-cm">// The Factory Method</span>
+}
+
+<span class="c-cm">// Subclass decides the exact product</span>
+<span class="c-kw">public class</span> <span class="c-ty">IndiaFactory</span> <span class="c-kw">implements</span> <span class="c-ty">PaymentFactory</span> {
+  <span class="c-kw">public</span> <span class="c-ty">PaymentGateway</span> <span class="c-fn">createGateway</span>() {
+<span class="c-hi">    <span class="c-kw">return new</span> RazorpayGateway();</span>
+  }
+}
+            `,
+            action: async () => {
+                document.getElementById('core-sub').innerText = "Delegated to Interfaces";
+                
+                // Reset old
+                document.getElementById('line-1').style.opacity = '0';
+                document.getElementById('prod-stripe').style.opacity = '0';
+                document.getElementById('prod-stripe').style.transform = 'translateX(-50%)'; // reset
+                
+                await sleep(400);
+                document.getElementById('fac-usa').style.opacity = '1';
+                document.getElementById('fac-ind').style.opacity = '1';
+                
+                await sleep(400);
+                const pR = document.getElementById('prod-razor');
+                pR.style.opacity = '1';
+                pR.style.top = '160px';
+                pR.style.left = '75%'; // Under India fac
+                
+                document.getElementById('line-1').style.height = '35px';
+                document.getElementById('line-1').style.opacity = '1';
+                document.getElementById('line-1').classList.remove('laser-red');
+            }
+        },
+        {
+            badge: "Stage 3/6",
+            title: "The Multi-Product Problem",
+            text: "Scaling up: We now need Gateways, Tax Calculators, and Currency Formatters. If we use a separate Factory Method for each, a developer might accidentally mix and match them, causing a fatal crash.",
+            code: `
+<span class="c-ty">PaymentFactory</span> gwFac = <span class="c-kw">new</span> USAFactory();
+<span class="c-ty">TaxFactory</span> taxFac = <span class="c-kw">new</span> IndiaTaxFactory();
+
+<span class="c-cm">// DISASTER: Stripe processing Indian GST in USD!</span>
+<span class="c-ty">Gateway</span> gw = gwFac.createGateway();
+<span class="c-ty">TaxEngine</span> tax = taxFac.createTax();
+<span class="c-err">gw.charge( order.total + tax.calculate() );</span>
+            `,
+            action: async () => {
+                // Hide Stage 2
+                document.getElementById('fac-usa').style.opacity = '0';
+                document.getElementById('fac-ind').style.opacity = '0';
+                document.getElementById('prod-razor').style.opacity = '0';
+                document.getElementById('line-1').style.opacity = '0';
+                
+                await sleep(500);
+                document.getElementById('bug-p1').style.opacity = '1';
+                document.getElementById('bug-p2').style.opacity = '1';
+                document.getElementById('bug-p3').style.opacity = '1';
+                
+                await sleep(600);
+                document.getElementById('bug-icon').style.opacity = '1';
+            }
+        },
+        {
+            badge: "Stage 4/6",
+            title: "The Abstract Factory",
+            text: "To ensure related objects are created together, we use an Abstract Factory. It is a factory of factories—a complete manufacturing plant that creates a <strong>family</strong> of matched products.",
+            code: `
+<span class="c-cm">// Creates a FAMILY of related products</span>
+<span class="c-kw">public interface</span> <span class="c-ty">RegionalInfraFactory</span> {
+<span class="c-hi">  <span class="c-ty">PaymentGateway</span> <span class="c-fn">createGateway</span>();
+  <span class="c-ty">TaxEngine</span>      <span class="c-fn">createTaxEngine</span>();
+  <span class="c-ty">Formatter</span>      <span class="c-fn">createFormatter</span>();</span>
+}
+            `,
+            action: async () => {
+                // Clear Bug
+                document.getElementById('bug-p1').style.opacity = '0';
+                document.getElementById('bug-p2').style.opacity = '0';
+                document.getElementById('bug-p3').style.opacity = '0';
+                document.getElementById('bug-icon').style.opacity = '0';
+                
+                await sleep(500);
+                document.getElementById('core-sub').innerText = "Inject Regional Factory";
+                document.getElementById('line-1').style.opacity = '1';
+                document.getElementById('abs-plant').style.opacity = '1';
+            }
+        },
+        {
+            badge: "Stage 5/6",
+            title: "The Concrete Families",
+            text: "We implement <code>India_InfraFactory</code>. When requested, it is mathematically guaranteed to output Razorpay, GST, and INR. It is impossible to mix incompatible parts. The family is locked.",
+            code: `
+<span class="c-kw">public class</span> <span class="c-ty">India_InfraFactory</span> <span class="c-kw">implements</span> <span class="c-ty">RegionalInfraFactory</span> {
+  <span class="c-kw">public</span> <span class="c-ty">PaymentGateway</span> <span class="c-fn">createGateway</span>() {
+    <span class="c-kw">return new</span> Razorpay(); 
+  }
+  <span class="c-kw">public</span> <span class="c-ty">TaxEngine</span> <span class="c-fn">createTaxEngine</span>() {
+    <span class="c-kw">return new</span> GST_Calculator(); 
+  }
+  <span class="c-kw">public</span> <span class="c-ty">Formatter</span> <span class="c-fn">createFormatter</span>() {
+    <span class="c-kw">return new</span> RupeeFormatter(); 
+  }
+}
+            `,
+            action: async () => {
+                // Swap plant contents to India
+                const plant = document.getElementById('abs-plant');
+                plant.style.transform = 'translateX(-50%) scale(1.05)';
+                plant.style.borderColor = 'var(--neon-green)';
+                document.getElementById('plant-title').innerText = "India_InfraFactory";
+                document.getElementById('plant-title').style.color = 'var(--neon-green)';
+                
+                document.getElementById('abs-p1').className = "product-node p-razor";
+                document.getElementById('abs-p1').innerText = "Razorpay";
+                
+                document.getElementById('abs-p2').innerText = "GST_Tax";
+                document.getElementById('abs-p3').innerText = "Fmt_INR";
+                
+                await sleep(300);
+                plant.style.transform = 'translateX(-50%) scale(1)';
+            }
+        },
+        {
+            badge: "Summary",
+            title: "Final Decision Matrix",
+            text: "<strong>Factory Method:</strong> One product, uses Inheritance (subclasses decide).<br><br><strong>Abstract Factory:</strong> A family of related products, uses Composition. You have mastered Enterprise Creational Patterns.",
+            code: ``, // Hide code for matrix
+            action: async () => {
+                document.getElementById('app-core').style.opacity = '0';
+                document.getElementById('line-1').style.opacity = '0';
+                document.getElementById('abs-plant').style.opacity = '0';
+                codeContainer.style.display = 'none';
+                
+                await sleep(400);
+                const matrix = document.getElementById('matrix-container');
+                matrix.style.pointerEvents = 'auto';
+                matrix.style.opacity = '1';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            
+            document.getElementById('app-core').style.opacity = '1';
+            document.getElementById('core-sub').innerText = "Awaiting Configuration";
+            document.getElementById('line-1').style.opacity = '0';
+            document.getElementById('line-1').style.height = '0';
+            document.getElementById('line-1').classList.remove('laser-red');
+            
+            document.getElementById('prod-stripe').style.opacity = '0';
+            document.getElementById('prod-razor').style.opacity = '0';
+            document.getElementById('fac-usa').style.opacity = '0';
+            document.getElementById('fac-ind').style.opacity = '0';
+            
+            document.getElementById('bug-p1').style.opacity = '0';
+            document.getElementById('bug-p2').style.opacity = '0';
+            document.getElementById('bug-p3').style.opacity = '0';
+            document.getElementById('bug-icon').style.opacity = '0';
+            
+            document.getElementById('abs-plant').style.opacity = '0';
+            document.getElementById('abs-plant').style.borderColor = 'var(--neon-orange)';
+            document.getElementById('plant-title').innerText = "USA_InfraFactory";
+            document.getElementById('plant-title').style.color = 'var(--neon-orange)';
+            document.getElementById('abs-p1').className = "product-node p-stripe";
+            document.getElementById('abs-p1').innerText = "Stripe";
+            document.getElementById('abs-p2').innerText = "US_Tax";
+            document.getElementById('abs-p3').innerText = "Fmt_USD";
+
+            document.getElementById('matrix-container').style.opacity = '0';
+            document.getElementById('matrix-container').style.pointerEvents = 'none';
+            codeContainer.style.display = 'none';
+
+            badge.innerText = "[ARCH_PRINCIPLES]";
+            title.innerText = "The Poisonous Keyword";
+            text.innerHTML = "In enterprise architecture, the <code>new</code> keyword is poison. Hardcoding implementations makes your app brittle. Let's trace how a global payment infrastructure evolves using Factory patterns.";
+            btnNext.innerText = "Initialize Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

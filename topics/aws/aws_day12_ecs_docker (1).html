@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 12 — ECS & Docker on AWS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#E6F1FB;color:#0C447C;border:1px solid #85B7EB}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #1251A3;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#E6F1FB;color:#0C447C;border-color:#85B7EB;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #1251A3;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+.code-block{background:#1a1a18;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.code-block code{font-family:monospace;font-size:12px;line-height:1.7;color:#e8e6e0;display:block;white-space:pre}
+.k{color:#9FE1CB}.v{color:#FAC775}.s{color:#F0997B}.c{color:#555;font-style:italic}.cmd-g{color:#97C459}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-blue{background:#E6F1FB;color:#0C447C}.p-green{background:#E1F5EE;color:#085041}
+.p-amber{background:#FAEEDA;color:#633806}.p-coral{background:#FAECE7;color:#712B13}
+.cg-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.cg-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+.cc{background:#fff;border:1px solid #eee;border-radius:10px;padding:1rem}
+.cc-t{font-size:13px;font-weight:600;margin-bottom:6px}
+.cc-b{font-size:12px;color:#555;line-height:1.65}
+.cc.hl{border-color:#1251A3;background:#E6F1FB}
+.cc.hl .cc-t{color:#0C447C}
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 12 of 30</span>
+    <span class="tag">ECS & Docker on AWS</span>
+    <span class="tag">Phase 3 — Advanced Services</span>
+    <span class="tag">Fargate · Task definitions · Service mesh</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('docker',this)">Docker on AWS</button>
+    <button class="ntab" onclick="show('ecs',this)">ECS internals</button>
+    <button class="ntab" onclick="show('fargate',this)">Fargate deep</button>
+    <button class="ntab" onclick="show('tasks',this)">Task definitions</button>
+    <button class="ntab" onclick="show('services',this)">Services & scaling</button>
+    <button class="ntab" onclick="show('ecr',this)">ECR & image pipeline</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- DOCKER ON AWS -->
+  <div id="p-docker" class="panel active">
+    <div class="lede"><strong>Containerising your Spring Boot application is not just packaging it differently. It fundamentally changes how the application is deployed, scaled, and operated. The Dockerfile you write, the base image you choose, the image layering strategy you use, and the runtime configuration model you adopt all determine whether your containers are efficient, secure, and observable — or slow to build, large, and opaque.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('d',0,this)">1 · Docker fundamentals for Spring Boot</button>
+      <button class="cbtn" onclick="showC('d',1,this)">2 · Production Dockerfile</button>
+      <button class="cbtn" onclick="showC('d',2,this)">3 · Image layering strategy</button>
+      <button class="cbtn" onclick="showC('d',3,this)">4 · Container security</button>
+    </div>
+
+    <div id="d0" class="cpanel active">
+      <div class="ch">Docker fundamentals you must understand to use ECS correctly</div>
+      <div class="csub">Layers, image registries, container runtime, and what changes when you move from EC2 to containers</div>
+      <div class="cb">
+        <p>A Docker container is a process running in an isolated namespace on a shared host kernel — not a virtual machine. The container has its own filesystem (from the image), its own network namespace (its own IP address and port space), and its own process namespace (PID 1 in the container is not PID 1 on the host). The host kernel is shared — containers on the same host use the same kernel version. This is the fundamental difference from EC2 VMs (which have their own virtualised kernel via the Nitro hypervisor).</p>
+        <p><strong>Docker images and layers:</strong> A Docker image is a stack of read-only filesystem layers. Each instruction in a Dockerfile creates a new layer. When a container starts, Docker adds a thin writable layer on top. Layers are content-addressed (identified by SHA256 hash of their contents) and are cached — if layer N hasn't changed, Docker reuses it. This is why layer ordering in your Dockerfile matters enormously for build performance.</p>
+        <div class="mechbox"><strong>What changes when you move from EC2 to containers:</strong> On EC2, your Spring Boot JAR runs as a systemd service directly on the host OS. On ECS, your Spring Boot JAR runs inside a container that is started by the ECS agent (on EC2) or by AWS Fargate's managed infrastructure. The application code is identical. What changes: the deployment unit is a container image rather than a JAR file, the configuration model shifts from EC2 user data to task definition environment variables and secrets, log collection goes from CloudWatch Agent to container log drivers, scaling is service-level (ECS service) rather than ASG-level, and health checks are defined in the task definition rather than ALB configuration files. The networking model changes most significantly — containers have their own IP addresses, service-to-service communication happens over the container network, and security groups attach to ENIs at the task level (in Fargate's awsvpc networking mode).</div>
+        <p><strong>What stays the same:</strong> The Spring Boot application code. The RDS MySQL database. The S3 integration. The Secrets Manager credential fetching pattern. The ALB with target groups. The IAM role for AWS access. The VPC networking. The fundamental security model. Containerisation changes the runtime and deployment mechanism — it does not change the application architecture or the AWS services it integrates with.</p>
+      </div>
+    </div>
+
+    <div id="d1" class="cpanel">
+      <div class="ch">Production Dockerfile for Spring Boot — the correct multi-stage build</div>
+      <div class="csub">A Dockerfile that produces a small, secure, fast-starting container image without any build tooling in the final image</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># Stage 1: Build — uses full JDK + Maven to compile and package</span>
+<span class="k">FROM</span> <span class="v">amazoncorretto:17-alpine</span> AS builder
+<span class="k">WORKDIR</span> <span class="v">/build</span>
+
+<span class="c"># Copy dependency specification first (Maven pom.xml)</span>
+<span class="c"># If pom.xml hasn't changed, Docker reuses the cached dependency-download layer</span>
+<span class="k">COPY</span> <span class="v">pom.xml .</span>
+<span class="k">RUN</span> <span class="v">mvn dependency:go-offline -B</span>  <span class="c"># Download all deps — cached if pom.xml unchanged</span>
+
+<span class="c"># Copy source code and build — only runs when source changes</span>
+<span class="k">COPY</span> <span class="v">src ./src</span>
+<span class="k">RUN</span> <span class="v">mvn package -DskipTests -B</span>
+
+<span class="c"># Extract layers from the fat JAR (Spring Boot 2.3+ layered JAR support)</span>
+<span class="c"># This creates separate layers for: dependencies, snapshot-dependencies, spring-boot-loader, application</span>
+<span class="k">RUN</span> <span class="v">java -Djarmode=layertools -jar target/getwork-api.jar extract</span>
+
+<span class="c"># ─────────────────────────────────────────────────────────</span>
+<span class="c"># Stage 2: Runtime — only the JRE + extracted layers</span>
+<span class="c"># No Maven, no JDK, no build tools — significantly smaller image</span>
+<span class="k">FROM</span> <span class="v">amazoncorretto:17-alpine</span>
+
+<span class="c"># Security: create a non-root user to run the application</span>
+<span class="k">RUN</span> <span class="v">addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -s /bin/sh -D appuser</span>
+
+<span class="k">WORKDIR</span> <span class="v">/app</span>
+
+<span class="c"># Copy extracted Spring Boot layers in order of how frequently they change</span>
+<span class="c"># Spring Boot library layer (changes least — only on dependency updates)</span>
+<span class="k">COPY</span> <span class="v">--from=builder /build/dependencies/ ./</span>
+<span class="k">COPY</span> <span class="v">--from=builder /build/snapshot-dependencies/ ./</span>
+<span class="c"># Spring Boot loader (rarely changes)</span>
+<span class="k">COPY</span> <span class="v">--from=builder /build/spring-boot-loader/ ./</span>
+<span class="c"># Application classes (changes most frequently — push to last layer)</span>
+<span class="k">COPY</span> <span class="v">--from=builder /build/application/ ./</span>
+
+<span class="c"># Ownership and permissions</span>
+<span class="k">RUN</span> <span class="v">chown -R appuser:appgroup /app</span>
+<span class="k">USER</span> <span class="v">appuser</span>
+
+<span class="c"># JVM flags optimised for containers:</span>
+<span class="c"># UseContainerSupport: JVM reads cgroup limits (not host memory) for heap sizing</span>
+<span class="c"># MaxRAMPercentage: use 75% of container memory limit for heap</span>
+<span class="c"># ExitOnOutOfMemoryError: crash fast on OOM (ECS restarts, don't hang)</span>
+<span class="k">ENV</span> <span class="v">JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -XX:+UseG1GC"</span>
+<span class="k">ENV</span> <span class="v">SPRING_PROFILES_ACTIVE=production</span>
+
+<span class="c"># Health check at Docker level (ECS uses this before ALB health checks)</span>
+<span class="k">HEALTHCHECK</span> <span class="v">--interval=30s --timeout=5s --start-period=60s --retries=3 \</span>
+  <span class="k">CMD</span> <span class="v">wget -qO- http://localhost:8080/actuator/health/readiness || exit 1</span>
+
+<span class="k">EXPOSE</span> <span class="v">8080</span>
+
+<span class="c"># Start via JarLauncher — loads from extracted layers, faster startup than fat JAR</span>
+<span class="k">ENTRYPOINT</span> <span class="v">["java", "-cp", "BOOT-INF/classes:BOOT-INF/lib/*", \</span>
+  <span class="v">"org.springframework.boot.loader.JarLauncher"]</span></code></div>
+
+        <div class="mechbox"><strong>Why the pom.xml-first copy pattern matters for build time:</strong> Docker layer caching is based on whether the instruction and its input have changed. If you COPY the entire project directory first, any source code change (even a comment) invalidates the dependency download layer, and <span class="mono">mvn dependency:go-offline</span> re-downloads all 200+ dependencies on every build — taking 2-3 minutes per build in CI. By copying only pom.xml first and running dependency:go-offline as its own layer, the cache hit on this layer is high: dependencies only re-download when pom.xml changes (adding/updating dependencies). Typical CI build time: 5-8 minutes without this optimisation, 90 seconds with it (cache hit on the 2GB dependency layer).</div>
+        <div class="prodbox"><strong>UseContainerSupport — the JVM flag that prevents OOM kills:</strong> Before Java 10, the JVM read the host's total memory to size the heap, ignoring cgroup (container) limits. A container limited to 512MB running on a 16GB host would try to allocate an 8GB heap — immediately OOM-killed by the kernel. UseContainerSupport (default since Java 10 with Amazon Corretto 8u191+) makes the JVM read cgroup memory limits. MaxRAMPercentage=75.0 means the heap uses 75% of the container's memory limit. A 512MB container gets a 384MB heap. A 2GB container gets a 1.5GB heap. The same Docker image works correctly on any container size — you control the heap by setting the container's memory limit in the task definition, not by hardcoding JVM flags.</div>
+      </div>
+    </div>
+
+    <div id="d2" class="cpanel">
+      <div class="ch">Image layering strategy — small images, fast builds, efficient registry storage</div>
+      <div class="csub">Layer ordering, .dockerignore, and the Spring Boot layered JAR that makes container deployments fast</div>
+      <div class="cb">
+        <p><strong>The layer caching principle:</strong> Docker caches each layer by the hash of the layer's inputs (the Dockerfile instruction + the files it copies). When any input changes, that layer and all subsequent layers are invalidated. Ordering your Dockerfile instructions from "changes least" to "changes most" maximises cache hits.</p>
+        <p><strong>Spring Boot layered JAR — why fat JAR in a container is wrong:</strong> A traditional Spring Boot fat JAR packages all dependencies (100-200MB of library JARs) + your application classes (a few MB) into a single 100-200MB JAR file. In Docker, this entire JAR is a single layer. Every time you change one line of application code, the entire 200MB layer is pushed to ECR and pulled from ECR on every new container deployment. With the Spring Boot layered JAR approach (enabled by <span class="mono">spring-boot:build-image</span> or the Dockerfile above): the 200MB of library dependencies is a separate layer that rarely changes. Your 2MB application code is the top layer that changes on every deployment. ECR push is 2MB instead of 200MB. Container start pulls 2MB of new layers (rest from cache). Deployment time drops from 3-4 minutes to 20-30 seconds.</p>
+        <div class="code-block"><code><span class="c"># .dockerignore — exclude files that trigger unnecessary layer invalidation</span>
+.git
+.gitignore
+target/          <span class="c"># Maven build output — rebuilt inside Docker anyway</span>
+*.md
+*.txt
+.idea/
+*.iml
+.mvn/wrapper/maven-wrapper.jar
+Dockerfile*
+docker-compose*
+<span class="c"># Don't include test files — they're not in the production image</span>
+src/test/</code></div>
+        <div class="mechbox"><strong>Why .dockerignore is not optional:</strong> Without .dockerignore, COPY . . copies everything including the .git directory (potentially hundreds of MB), target/ (previous build outputs), IDE files, and local configuration. The COPY instruction hashes the entire source tree to determine cache validity — if .git changes (every commit changes the git index), the cache is invalidated on every commit regardless of whether source code changed. With .dockerignore: only relevant source files are considered for cache invalidation. Build times are consistent. The .git directory alone can invalidate every build because git metadata changes on every operation.</div>
+        <p><strong>Alpine vs non-Alpine base images:</strong> <span class="mono">amazoncorretto:17-alpine</span> produces images ~200MB. <span class="mono">amazoncorretto:17</span> (Amazon Linux based) produces images ~500MB. Alpine uses musl libc instead of glibc — this can cause issues with some native libraries that link against glibc. For Spring Boot applications using pure Java (no JNI, no native libraries), Alpine is safe and significantly smaller. For applications using native libraries (some Kafka clients, certain cryptography libraries), use the non-Alpine base to avoid subtle runtime failures.</p>
+      </div>
+    </div>
+
+    <div id="d3" class="cpanel">
+      <div class="ch">Container security — hardening your image and runtime</div>
+      <div class="csub">Non-root user, read-only filesystem, no new privileges — the container security baseline</div>
+      <div class="cb">
+        <p>Container security has multiple layers. The Dockerfile-level controls (covered above: non-root user, minimal base image) are the first layer. The runtime controls are equally important.</p>
+        <p><strong>Non-root USER in Dockerfile (already in the production Dockerfile above):</strong> By default, containers run as root (UID 0) inside the container. Even though container isolation prevents root in the container from being root on the host (with standard runtime configuration), running as root inside is a bad practice. If an attacker exploits your Spring Boot application and escapes to the container namespace, they have root in the container. Running as a non-root user limits blast radius. ECS supports requiring non-root via task definition settings.</p>
+        <p><strong>Read-only root filesystem:</strong> In the ECS task definition, set <span class="mono">readonlyRootFilesystem: true</span>. This makes the container's filesystem read-only except for explicitly defined volume mounts. If an attacker compromises the container, they cannot write malicious files to the filesystem, cannot install tools, and cannot modify application binaries in-place. Spring Boot needs write access to: <span class="mono">/tmp</span> (for temporary files), the working directory for log files (if writing to filesystem — prefer logging to stdout). Mount these as volumes even with read-only root filesystem.</p>
+        <div class="code-block"><code><span class="c"># Task definition security configuration (in the containerDefinitions section)</span>
+{
+  <span class="k">"user"</span>: <span class="v">"1000:1000"</span>,  <span class="c">// Non-root UID:GID matching the Dockerfile USER</span>
+  <span class="k">"readonlyRootFilesystem"</span>: <span class="v">true</span>,
+  <span class="k">"privileged"</span>: <span class="v">false</span>,  <span class="c">// Never true — gives container full host access</span>
+  <span class="k">"linuxParameters"</span>: {
+    <span class="k">"capabilities"</span>: {
+      <span class="k">"drop"</span>: [<span class="v">"ALL"</span>],  <span class="c">// Drop ALL Linux capabilities</span>
+      <span class="k">"add"</span>: []         <span class="c">// Add back only what's needed (usually nothing for Spring Boot)</span>
+    },
+    <span class="k">"initProcessEnabled"</span>: <span class="v">true</span>  <span class="c">// ECS init process manages zombie PID cleanup</span>
+  },
+  <span class="k">"mountPoints"</span>: [
+    {<span class="k">"sourceVolume"</span>: <span class="v">"tmp"</span>, <span class="k">"containerPath"</span>: <span class="v">"/tmp"</span>, <span class="k">"readOnly"</span>: <span class="v">false</span>}
+  ]
+}</code></div>
+        <div class="failbox"><strong>The Spring Boot app that fails with readonlyRootFilesystem=true:</strong> Common failure modes when enabling read-only root filesystem: Tomcat tries to write to its working directory (set <span class="mono">server.tomcat.basedir=/tmp/tomcat</span>), Spring writes temporary files during startup (set <span class="mono">java.io.tmpdir</span> to /tmp in JAVA_OPTS), Hibernate generates proxy class files (configure Hibernate to use in-memory class generation), Log4j2/Logback writes to a log file path (configure logging output to stdout/stderr only — ECS captures stdout). Test with read-only filesystem in your local Docker environment before deploying to ECS: <span class="mono">docker run --read-only --tmpfs /tmp getwork-api:latest</span></div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('ecs',document.querySelectorAll('.ntab')[1])">ECS internals — the orchestration layer →</button>
+  </div>
+
+  <!-- ECS INTERNALS -->
+  <div id="p-ecs" class="panel">
+    <div class="lede"><strong>ECS (Elastic Container Service) is AWS's container orchestration platform. It schedules containers onto infrastructure, manages their lifecycle, integrates them with ALB, handles service discovery, and provides the control plane for rolling deployments. Understanding how ECS makes scheduling decisions, how the ECS agent works on EC2 launch type, and how Fargate abstracts away the infrastructure layer is what makes ECS deployments predictable rather than mysterious.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('e',0,this)">1 · ECS architecture</button>
+      <button class="cbtn" onclick="showC('e',1,this)">2 · EC2 launch type</button>
+      <button class="cbtn" onclick="showC('e',2,this)">3 · ECS vs EKS vs Fargate</button>
+      <button class="cbtn" onclick="showC('e',3,this)">4 · Service discovery</button>
+    </div>
+
+    <div id="e0" class="cpanel active">
+      <div class="ch">ECS architecture — clusters, services, tasks, and the control plane</div>
+      <div class="csub">The four-level hierarchy and how each level relates to the others</div>
+      <div class="cb">
+        <p>ECS has four levels of abstraction, each with distinct responsibilities:</p>
+        <p><strong>Cluster</strong> — the logical grouping of infrastructure. A cluster represents a pool of compute capacity (EC2 instances or Fargate capacity) and the namespace within which services and tasks run. One cluster can contain multiple services. You can have separate clusters for prod, staging, and dev — or one cluster for all environments with service-level isolation. Clusters have no inherent cost — they are logical constructs. Cost comes from the EC2 instances or Fargate tasks running within them.</p>
+        <p><strong>Task Definition</strong> — the blueprint for how to run a container (or group of containers). Specifies: which Docker image to pull, how much CPU and memory to allocate, which ports to expose, environment variables and secrets, IAM execution role, logging configuration, health check, network mode, and storage volumes. A task definition is versioned — each update creates a new revision. Think of it as the equivalent of a Launch Template but for containers.</p>
+        <p><strong>Task</strong> — a running instance of a task definition. A task is one or more containers running together on the same host, sharing network namespace and storage volumes. Tasks are ephemeral — they start, run, and stop. A task that fails is terminated; ECS does not automatically restart individual failed tasks (services do that).</p>
+        <p><strong>Service</strong> — the long-running abstraction that maintains a desired count of tasks from a task definition. A service says "always have 3 running instances of the v47 task definition." If a task fails or is stopped, the service launches a replacement. Services integrate with the ALB (register/deregister tasks from target groups as they start and stop), manage rolling deployments (replace tasks one by one during a deployment), and support auto-scaling (scale the number of tasks based on CloudWatch metrics).</p>
+        <div class="mechbox"><strong>The task definition is not the same as the service — a critical distinction:</strong> A task definition can be used by multiple services. Your getwork-api task definition might power the getwork-api-service (the main API), a separate getwork-batch-service (for batch processing jobs), and one-off tasks (database migration runs). The task definition defines what runs; the service defines how many, how long, and with what scaling. When you deploy a new version, you update the task definition (new revision with new image tag), then update the service to use the new task definition revision — this triggers ECS's rolling deployment.</div>
+      </div>
+    </div>
+
+    <div id="e1" class="cpanel">
+      <div class="ch">EC2 launch type — the ECS agent and how tasks land on instances</div>
+      <div class="csub">What runs on each EC2 instance in an ECS cluster and how the scheduler decides where to place tasks</div>
+      <div class="cb">
+        <p>In the EC2 launch type, you manage a pool of EC2 instances (an Auto Scaling Group) that serve as the underlying compute for ECS tasks. Every EC2 instance in an ECS cluster runs the <strong>ECS agent</strong> — a Docker container that runs alongside your application containers, communicating with the ECS control plane. The ECS agent reports available capacity (CPU, memory, ports) and receives scheduling decisions from ECS.</p>
+        <p><strong>Task placement:</strong> When ECS places a task on a cluster's EC2 instances, it evaluates placement constraints (must be on a t3 instance, must be in AZ ap-south-1a) and placement strategies (spread across AZs for HA, or bin-pack onto fewest instances for cost efficiency). Placement is only relevant for EC2 launch type — Fargate handles its own placement transparently.</p>
+        <p><strong>Container instance capacity:</strong> Each EC2 instance registers its available CPU and memory with ECS. ECS reserves CPU units and memory from this pool for each task. A t3.medium (2 vCPUs = 2048 CPU units, 4GB RAM) can host multiple tasks as long as their combined resource reservations don't exceed the instance's capacity. If a new task can't fit on any existing instance, ECS triggers an ASG scale-out event (via capacity providers) to add more EC2 instances.</p>
+        <div class="mechbox"><strong>ECS CPU units — the non-obvious unit:</strong> ECS measures CPU in "CPU units" where 1 vCPU = 1024 CPU units. A task definition reserving 512 CPU units gets half a vCPU guaranteed. CPU reservation is a soft limit in Docker — the container can use more CPU than reserved if the host isn't busy, but is throttled to the reserved amount when the host is under load. Memory is a hard limit — a container exceeding its memory reservation is killed (OOMKilled). Set CPU reservation low enough to allow flexible scheduling but high enough to guarantee adequate performance. Set memory hard limit conservatively — include headroom for Spring Boot's off-heap memory (Metaspace, thread stacks, direct buffers) beyond the heap.</div>
+        <div class="failbox"><strong>The OOMKill that looks like a JVM crash:</strong> A Spring Boot container is configured with 512MB memory limit. JAVA_OPTS sets MaxRAMPercentage=75.0 → heap = 384MB. At load, the JVM also uses: Metaspace (~100MB for Spring Boot's class loading), thread stacks (~1MB per thread × 200 threads = 200MB), native memory for Netty/NIO buffers. Total JVM memory: 384MB heap + 100MB Metaspace + 200MB thread stacks = 684MB — 33% over the 512MB container limit. The kernel OOMKills the container process. ECS registers it as an exit code 137 (SIGKILL). The container is restarted immediately — and OOMKilled again. Constant restart loop. Logs show nothing (the JVM was killed before it could log). Fix: increase container memory limit to 1024MB for this workload, or reduce thread count. Rule of thumb for Spring Boot containers: memory limit = heap size × 2.5 for MVC (thread-per-request), or heap size × 1.5 for WebFlux (fewer threads).</div>
+      </div>
+    </div>
+
+    <div id="e2" class="cpanel">
+      <div class="ch">ECS vs EKS vs Fargate — when to use each</div>
+      <div class="csub">The honest trade-offs between managed Kubernetes, ECS, and serverless containers</div>
+      <div class="cb">
+        <div class="cg-3">
+          <div class="cc hl">
+            <div class="cc-t">ECS + Fargate</div>
+            <div class="cc-b">
+              <strong>Who it's for:</strong> Teams that want containers without managing infrastructure or Kubernetes.<br><br>
+              <strong>Operations:</strong> No nodes to manage, no Kubernetes version upgrades, no etcd. AWS handles everything below the task level.<br><br>
+              <strong>Best for:</strong> Microservices, APIs, batch jobs, scheduled tasks. Anything where the team wants to focus on the application, not the platform.<br><br>
+              <strong>Limit:</strong> AWS-specific API. Harder to move to another cloud. Less ecosystem than Kubernetes (fewer community tools).
+            </div>
+          </div>
+          <div class="cc">
+            <div class="cc-t">ECS + EC2</div>
+            <div class="cc-b">
+              <strong>Who it's for:</strong> Teams needing container orchestration but wanting control over the underlying EC2 instances (custom AMIs, GPU instances, specific instance types, Spot optimisation).<br><br>
+              <strong>Operations:</strong> You manage the EC2 cluster (patching, scaling). ECS manages container scheduling on top.<br><br>
+              <strong>Best for:</strong> GPU workloads (ML inference), applications requiring custom kernel modules, very cost-sensitive workloads using Spot.<br><br>
+              <strong>Limit:</strong> More operational overhead than Fargate.
+            </div>
+          </div>
+          <div class="cc">
+            <div class="cc-t">EKS</div>
+            <div class="cc-b">
+              <strong>Who it's for:</strong> Teams with Kubernetes expertise, multi-cloud ambitions, or complex service mesh requirements.<br><br>
+              <strong>Operations:</strong> AWS manages the control plane (etcd, API server). You manage worker nodes (EC2 or Fargate via EKS Fargate).<br><br>
+              <strong>Best for:</strong> Large engineering organisations with existing Kubernetes investment, teams using Istio/Linkerd service mesh, workloads requiring advanced scheduling.<br><br>
+              <strong>Limit:</strong> Most complex to operate. Control plane costs ~$72/month. Significant learning curve.
+            </div>
+          </div>
+        </div>
+        <div class="prodbox"><strong>The right choice for your career and for GetWork:</strong> ECS + Fargate is the correct starting point. It has a low operational overhead, integrates natively with every AWS service you've learned (ALB, CloudWatch, IAM, Secrets Manager, ECR), and handles 95% of production container workloads. For your JP Morgan project at Deloitte, the existing infrastructure is likely ECS — learning ECS Fargate is directly applicable to your day job. For GetWork: Fargate scales to zero cost when no tasks are running (unlike EC2 which has fixed hourly costs), is perfect for a growing application, and gives you all the deployment and scaling capabilities without managing servers. EKS is a career investment worth making after ECS — you'll understand why Kubernetes is complex once you appreciate what ECS does for you.</div>
+      </div>
+    </div>
+
+    <div id="e3" class="cpanel">
+      <div class="ch">ECS Service Discovery — how services find each other</div>
+      <div class="csub">AWS Cloud Map integration and the three patterns for container-to-container communication</div>
+      <div class="cb">
+        <p>In ECS, each running task gets its own IP address (in awsvpc network mode — the production mode for Fargate). Unlike EC2 where you have a fixed set of instances with known IPs, container IPs are ephemeral — tasks start and stop constantly, and each time they start they may get a different IP. Service discovery is the mechanism for finding other services by name rather than by IP.</p>
+        <p><strong>Pattern 1 — ALB-based service discovery (recommended):</strong> Each ECS service has an ALB target group. Other services call each other via the ALB's DNS name. Simple, uses existing infrastructure, integrates with health checks and connection draining. For internal communication within the VPC, use a private ALB (internal scheme) or the same ALB with different path-based routing rules. This is the most operationally straightforward approach and leverages everything you already know about ALBs.</p>
+        <p><strong>Pattern 2 — AWS Cloud Map (service mesh light):</strong> Cloud Map is AWS's managed service registry. ECS services can automatically register with Cloud Map when tasks start and deregister when they stop. Other services query Cloud Map via DNS or the API to discover healthy instances. DNS-based discovery: <span class="mono">auth-service.getwork.local</span> resolves to the current IPs of all healthy auth-service tasks. More direct than ALB (no load balancer hop) but requires the calling service to handle load balancing and retry logic itself.</p>
+        <p><strong>Pattern 3 — Amazon ECS Service Connect (modern approach):</strong> Service Connect (released 2022) is a managed service mesh built into ECS. It configures a proxy sidecar container alongside your application container, handling service discovery, load balancing, circuit breaking, and observability between services without requiring an ALB or manual Cloud Map configuration. Think of it as a simplified Istio service mesh built into ECS. For new microservice deployments starting from scratch: Service Connect is the recommended pattern. For existing applications with ALB-based routing: the migration cost may not justify switching.</p>
+        <div class="mechbox"><strong>awsvpc network mode — why it's the only correct choice for production Fargate:</strong> Fargate only supports awsvpc network mode. In awsvpc mode, each task gets its own ENI with its own IP address in your VPC subnets. Security Groups apply at the task level — each service can have its own Security Group with exactly the inbound/outbound rules it needs. Task-level network isolation is the correct security model: the job-service and the payment-service each have their own Security Groups even if they run on the same Fargate infrastructure. Contrast with bridge network mode (EC2 launch type only): containers share the host's network namespace with port mapping. Security Groups apply at the EC2 instance level — all containers on the same EC2 have the same Security Group rules. This is the fundamental networking difference that makes awsvpc the only choice for multi-tenant or security-sensitive ECS deployments.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('fargate',document.querySelectorAll('.ntab')[2])">Fargate deep dive — serverless containers →</button>
+  </div>
+
+  <!-- FARGATE -->
+  <div id="p-fargate" class="panel">
+    <div class="lede"><strong>Fargate is the "serverless containers" runtime for ECS and EKS. You define what to run (task definition) and how much to run (service desired count), and Fargate provides the infrastructure. No EC2 instances to patch, no cluster capacity to manage, no AMIs to maintain. Understanding how Fargate charges, how it handles cold starts, and how its networking model differs from EC2 determines whether it's the right fit for each workload.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('fg',0,this)">1 · Fargate runtime mechanics</button>
+      <button class="cbtn" onclick="showC('fg',1,this)">2 · Networking — awsvpc deep</button>
+      <button class="cbtn" onclick="showC('fg',2,this)">3 · Fargate pricing</button>
+      <button class="cbtn" onclick="showC('fg',3,this)">4 · Fargate vs EC2 launch type cost</button>
+    </div>
+
+    <div id="fg0" class="cpanel active">
+      <div class="ch">How Fargate actually works under the hood</div>
+      <div class="csub">The microVM isolation model, cold start mechanics, and what "serverless" means operationally</div>
+      <div class="cb">
+        <p>Fargate runs each task in a dedicated microVM — a lightweight virtual machine that provides hardware-level isolation between tasks from different customers (and between your own tasks for security). This is similar to how Lambda uses Firecracker microVMs. The microVM boots when a task is scheduled, runs your containers, and is destroyed when the task stops. You never see the microVM — it's an implementation detail that provides the isolation guarantee.</p>
+        <p><strong>What Fargate manages for you:</strong> The microVM lifecycle, the host OS security patching (there's no EC2 instance for you to patch), container runtime installation and maintenance, the ECS agent, network configuration (ENI attachment, IP assignment, security group configuration), and the storage for the container's ephemeral filesystem.</p>
+        <div class="mechbox"><strong>Fargate cold start timing:</strong> When ECS starts a new Fargate task, the sequence is: microVM boot (~1-3 seconds) → ENI attachment and IP assignment (~10-15 seconds) → image pull from ECR (~10-60 seconds, depending on image size) → container startup (your application initialisation time). Total time from "ECS decided to start a task" to "task is passing health checks": 60-120 seconds typically. The image pull time is the dominant variable. A 500MB fat-JAR-based image takes 60 seconds to pull. The same application as a 200MB layered image takes 20-30 seconds. For Sprint Boot, your JVM startup + Spring context initialisation adds 30-60 seconds on top. Warm pool equivalent for Fargate: ECS Service Auto Scaling has a "warm" tier (Fargate Spot or provisioned capacity) — but cold starts are the primary scaling latency concern for Fargate.</div>
+        <p><strong>Fargate Spot:</strong> AWS offers Fargate Spot at 70% discount — the same as EC2 Spot, but for Fargate tasks. The trade-off: AWS can interrupt Fargate Spot tasks with 2-minute warning when it needs capacity back. Suitable for: batch processing, stateless workers, CI/CD jobs, tasks that tolerate interruption. Not suitable for: user-facing APIs, payment processing, anything requiring guaranteed availability. The ECS service can mix Fargate (on-demand) and Fargate Spot in a configurable ratio — the same mixed fleet pattern as EC2 On-Demand + Spot.</p>
+        <div class="prodbox"><strong>GetWork architecture with Fargate:</strong> Main API service: Fargate on-demand (guaranteed availability, 2 tasks minimum). Background job workers (matching algorithm, notification sending): Fargate Spot (70% cheaper, can tolerate occasional interruption and retry). Database migration jobs: Fargate on-demand one-off tasks triggered by deployments. This mixed strategy reduces the cost of batch/background work by 70% while keeping the user-facing API on reliable on-demand capacity.</div>
+      </div>
+    </div>
+
+    <div id="fg1" class="cpanel">
+      <div class="ch">Fargate networking — awsvpc and the ENI management that ECS handles</div>
+      <div class="csub">How each Fargate task gets its own VPC identity, Security Group, and IP address</div>
+      <div class="cb">
+        <p>Every Fargate task runs with awsvpc network mode — the only supported mode. When ECS starts a Fargate task, it attaches a new ENI to the task's microVM, assigns a private IP address from the specified subnet, and configures the specified Security Groups on that ENI. From the VPC's perspective, each Fargate task looks like an EC2 instance with its own network identity.</p>
+        <p><strong>Practical implications:</strong> Each Fargate task consumes one ENI from your VPC's ENI limit. Each task consumes one IP address from your subnet's available CIDR range. If you run 100 Fargate tasks in a /24 subnet (254 usable IPs), you'll exhaust the subnet's IPs quickly (especially when considering your EC2 instances, RDS instances, and ALB ENIs also consuming IPs). Plan your subnet CIDR sizes with the maximum number of Fargate tasks in mind. For a service with max 50 tasks: ensure the subnet has at least 100 available IPs (2x headroom for scaling and rolling deployments).</p>
+        <div class="mechbox"><strong>The Fargate task that can't pull its image because of VPC routing:</strong> ECS Fargate tasks in private subnets need network access to ECR to pull images. ECR is a public-facing service — without a NAT Gateway or an ECR VPC Interface Endpoint, Fargate tasks in private subnets cannot pull images and fail with "CannotPullContainerError: ImagePullError". Solution: either use a NAT Gateway (which you have from Day 4) or create VPC Interface Endpoints for ECR (com.amazonaws.ap-south-1.ecr.api and com.amazonaws.ap-south-1.ecr.dkr) and S3 Gateway Endpoint (ECR uses S3 for image layer storage). The VPC Endpoint approach eliminates NAT Gateway costs for image pulls — significant for large images pulled frequently.</div>
+        <p><strong>Security Group configuration for Fargate tasks:</strong> With awsvpc, each task has its own Security Groups. Your getwork-api ECS service should use a Security Group (ecs-api-sg) that: allows inbound 8080 from alb-sg (the ALB's Security Group — same as the EC2 approach from Days 7-8). Allows inbound from other ECS services that need to call it directly (if using Service Connect or Cloud Map). Allows outbound to db-sg on 3306 (RDS). Allows outbound HTTPS to the internet (for ECR image pull and Secrets Manager calls — through NAT Gateway or Interface Endpoint). This is the same Security Group chaining pattern from Day 4, applied at the task level.</div>
+      </div>
+    </div>
+
+    <div id="fg2" class="cpanel">
+      <div class="ch">Fargate pricing — understanding vCPU-hours and GB-hours</div>
+      <div class="csub">How Fargate charges differ from EC2 and the cost calculation for a production Spring Boot service</div>
+      <div class="cb">
+        <p>Fargate charges per second for CPU and memory consumed by running tasks. Billing stops when the task stops — unlike EC2 where you pay for the running instance even when CPU is idle. The billing granularity is per second after the first minute.</p>
+        <p><strong>Fargate pricing in ap-south-1 (Mumbai):</strong> vCPU: $0.04945 per vCPU-hour. Memory: $0.00541 per GB-hour. A task with 0.5 vCPU and 1GB memory running continuously: vCPU cost = 0.5 × $0.04945 = $0.02473/hr. Memory cost = 1 × $0.00541 = $0.00541/hr. Total: ~$0.030/hr per task = ~$21.60/month per continuously-running task.</p>
+        <p><strong>Comparison with EC2:</strong> A t3.micro EC2 instance in ap-south-1: $0.0116/hr = ~$8.35/month. But one t3.micro can typically run 4-6 small Spring Boot tasks simultaneously (bin-packing). With ECS EC2 launch type and bin-packing: $8.35/month for the EC2 ÷ 4 tasks = ~$2.09/task/month. Fargate is ~10x more expensive per task when EC2 is fully packed. The premium is for operational simplicity (no EC2 management). Whether that premium is justified depends on your team's operational capacity and the cost of engineering time to manage EC2 clusters.</p>
+        <div class="mechbox"><strong>When Fargate is cheaper than EC2:</strong> Fargate charges only when tasks are running. For batch jobs that run for 2 hours per day: Fargate cost = $0.030/hr × 2 hrs/day × 30 days = $1.80/month. EC2 cost for the equivalent instance running 24/7: $8.35/month. Fargate is 4.6x cheaper for this batch job because you only pay for the 2 hours it runs, not the 22 hours it's idle. The crossover point: if a Fargate task runs more than ~8 hours per day continuously, EC2 launch type (properly bin-packed) is cheaper. For always-on production API tasks: EC2 launch type is economically superior. For intermittent or batch tasks: Fargate is cheaper and simpler.</div>
+      </div>
+    </div>
+
+    <div id="fg3" class="cpanel">
+      <div class="ch">Fargate vs EC2 launch type — the honest cost and operations comparison</div>
+      <div class="csub">The decision framework for choosing between the two launch types for production Spring Boot services</div>
+      <div class="cb">
+        <div class="cg-2">
+          <div class="cc">
+            <div class="cc-t">Fargate — choose when</div>
+            <div class="cc-b">
+              Your team is small and can't afford to manage EC2 cluster patching, capacity planning, and ASG configuration on top of application development.<br><br>
+              The application has intermittent or variable traffic — Fargate pays per second of task runtime, not per EC2 hour.<br><br>
+              You're running isolated batch jobs or scheduled tasks that need isolation from the API service.<br><br>
+              You're getting started and want to defer infrastructure management decisions until traffic justifies EC2 optimisation.<br><br>
+              Estimated GetWork monthly cost (2 tasks, 0.5 vCPU, 1GB): ~$43/month.
+            </div>
+          </div>
+          <div class="cc hl">
+            <div class="cc-t">EC2 launch type — choose when</div>
+            <div class="cc-b">
+              You run many tasks continuously and can fill EC2 instances to high utilisation through bin-packing.<br><br>
+              You need GPU instances (not available on Fargate), custom kernel modules, or specific instance types.<br><br>
+              You're optimising costs at scale and have the engineering capacity to manage the EC2 cluster.<br><br>
+              Spot instances are a priority — EC2 Spot offers better availability and pricing control than Fargate Spot for high-volume workloads.<br><br>
+              Estimated cost for the same 2 tasks on t3.small EC2: ~$15/month (EC2 cost shared across tasks).
+            </div>
+          </div>
+        </div>
+        <div class="prodbox"><strong>The pragmatic recommendation for your career and GetWork:</strong> Start with Fargate. It's operationally simpler, directly relevant to most enterprise ECS deployments (JP Morgan almost certainly uses Fargate for many services), and forces you to design stateless containers correctly. When GetWork grows to 20+ containers running continuously, re-evaluate the cost and consider EC2 launch type with Capacity Providers. The architectural patterns (task definitions, services, ALB integration, IAM roles for tasks) are identical between Fargate and EC2 launch type — switching later is straightforward.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('tasks',document.querySelectorAll('.ntab')[3])">Task definitions — the complete specification →</button>
+  </div>
+
+  <!-- TASK DEFINITIONS -->
+  <div id="p-tasks" class="panel">
+    <div class="lede"><strong>The task definition is the most important configuration artifact in ECS. It is the complete specification for how your container runs — from the image and resource limits to the IAM role, secrets injection, logging configuration, and health check. A well-structured task definition makes deployments reproducible and debuggable. A poorly structured one causes mysterious failures that take hours to diagnose.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('t',0,this)">1 · Complete task definition</button>
+      <button class="cbtn" onclick="showC('t',1,this)">2 · Secrets and environment</button>
+      <button class="cbtn" onclick="showC('t',2,this)">3 · Logging configuration</button>
+      <button class="cbtn" onclick="showC('t',3,this)">4 · IAM roles for tasks</button>
+    </div>
+
+    <div id="t0" class="cpanel active">
+      <div class="ch">The complete production task definition for GetWork Spring Boot</div>
+      <div class="csub">Every field that matters, with the reasoning behind each value</div>
+      <div class="cb">
+        <div class="code-block"><code>{
+  <span class="k">"family"</span>: <span class="v">"getwork-api"</span>,
+  <span class="k">"networkMode"</span>: <span class="v">"awsvpc"</span>,         <span class="c">// Required for Fargate, enables task-level SGs</span>
+  <span class="k">"requiresCompatibilities"</span>: [<span class="v">"FARGATE"</span>],
+  <span class="k">"cpu"</span>: <span class="v">"512"</span>,                   <span class="c">// 0.5 vCPU — adequate for most API loads</span>
+  <span class="k">"memory"</span>: <span class="v">"1024"</span>,               <span class="c">// 1GB — heap 768MB + JVM overhead</span>
+  <span class="k">"executionRoleArn"</span>: <span class="v">"arn:aws:iam::ACCOUNT:role/ecsTaskExecutionRole"</span>,
+  <span class="c">  // ↑ Used by ECS AGENT: pull image from ECR, write logs to CloudWatch,</span>
+  <span class="c">  //   fetch secrets from Secrets Manager at task start. NOT your app's role.</span>
+  <span class="k">"taskRoleArn"</span>: <span class="v">"arn:aws:iam::ACCOUNT:role/getwork-app-role"</span>,
+  <span class="c">  // ↑ Used by YOUR APPLICATION: s3:PutObject, secretsmanager:GetSecretValue etc.</span>
+  <span class="c">  //   Same IAM role as the EC2 instance role from Day 10 — same permissions needed.</span>
+  <span class="k">"containerDefinitions"</span>: [{
+    <span class="k">"name"</span>: <span class="v">"getwork-api"</span>,
+    <span class="k">"image"</span>: <span class="v">"ACCOUNT.dkr.ecr.ap-south-1.amazonaws.com/getwork-api:latest"</span>,
+    <span class="k">"cpu"</span>: <span class="v">512</span>,
+    <span class="k">"memory"</span>: <span class="v">1024</span>,
+    <span class="k">"memoryReservation"</span>: <span class="v">768</span>,  <span class="c">// Soft limit — can burst to hard limit (1024)</span>
+    <span class="k">"portMappings"</span>: [
+      {<span class="k">"containerPort"</span>: <span class="v">8080</span>, <span class="k">"protocol"</span>: <span class="v">"tcp"</span>},
+      {<span class="k">"containerPort"</span>: <span class="v">8081</span>, <span class="k">"protocol"</span>: <span class="v">"tcp"</span>}  <span class="c">// Management port for Actuator</span>
+    ],
+    <span class="k">"environment"</span>: [
+      {<span class="k">"name"</span>: <span class="v">"SPRING_PROFILES_ACTIVE"</span>, <span class="k">"value"</span>: <span class="v">"production"</span>},
+      {<span class="k">"name"</span>: <span class="v">"AWS_DEFAULT_REGION"</span>, <span class="k">"value"</span>: <span class="v">"ap-south-1"</span>},
+      {<span class="k">"name"</span>: <span class="v">"JAVA_OPTS"</span>, <span class="k">"value"</span>: <span class="v">"-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"</span>}
+    ],
+    <span class="k">"secrets"</span>: [
+      <span class="c">// Fetched by the ECS execution role at task start — value injected as env var</span>
+      {<span class="k">"name"</span>: <span class="v">"DB_PASSWORD"</span>, <span class="k">"valueFrom"</span>: <span class="v">"arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:/getwork/prod/database:password::"</span>},
+      {<span class="k">"name"</span>: <span class="v">"JWT_SECRET"</span>, <span class="k">"valueFrom"</span>: <span class="v">"arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:/getwork/prod/jwt-secret:value::"}
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/getwork/ecs/api",
+        "awslogs-region": "ap-south-1",
+        "awslogs-stream-prefix": "task",
+        "awslogs-create-group": "true"
+      }
+    },
+    "healthCheck": {
+      "command": ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health/readiness || exit 1"],
+      "interval": 30,
+      "timeout": 5,
+      "retries": 3,
+      "startPeriod": 60   // Grace period for Spring Boot startup
+    },
+    "readonlyRootFilesystem": true,
+    "user": "1000:1000",
+    "linuxParameters": {
+      "capabilities": {"drop": ["ALL"]},
+      "initProcessEnabled": true
+    },
+    "stopTimeout": 30,  // SIGTERM grace period before SIGKILL (match Spring's graceful shutdown)
+    "mountPoints": [
+      {"sourceVolume": "tmp", "containerPath": "/tmp", "readOnly": false}
+    ]
+  }],
+  "volumes": [
+    {"name": "tmp", "host": {}}  // Empty dir for /tmp writes with readonly root
+  ]
+}</span></code></div>
+        <div class="mechbox"><strong>executionRoleArn vs taskRoleArn — the most confused IAM concepts in ECS:</strong> These are two completely different roles serving different identities. The execution role is used by the ECS infrastructure (the ECS agent, Fargate's control plane) to pull your image from ECR, write container logs to CloudWatch, and inject secrets from Secrets Manager/Parameter Store into the container as environment variables at startup. This role must have: ecr:GetAuthorizationToken, ecr:BatchGetImage, logs:CreateLogStream, logs:PutLogEvents, and secretsmanager:GetSecretValue on the relevant secrets. The task role is assumed by the code running inside your container — your Spring Boot application. It's the equivalent of the EC2 instance role from Day 10. It has: s3:PutObject, secretsmanager:GetSecretValue (for runtime secret fetching), and any other AWS SDK calls your application makes. Never combine these two roles. Never give the execution role your application's permissions. They serve different principals with different trust boundaries.</div>
+      </div>
+    </div>
+
+    <div id="t1" class="cpanel">
+      <div class="ch">Secrets and environment variables in task definitions</div>
+      <div class="csub">The two ways to inject sensitive configuration — and why the secrets array is better than environment variables for credentials</div>
+      <div class="cb">
+        <p>ECS task definitions support two methods for passing configuration to containers:</p>
+        <p><strong>environment array</strong> — plain key-value pairs. Values are stored in the task definition JSON in plaintext. Visible in the ECS console, in CloudTrail, and to anyone with ecs:DescribeTaskDefinition permission. Use for: non-sensitive configuration (region, spring profile, JVM flags, feature flags). Never use for credentials, API keys, or any sensitive value.</p>
+        <p><strong>secrets array</strong> — references to Secrets Manager ARNs or Parameter Store paths. The ECS execution role fetches the secret value at task start time and injects it as an environment variable into the container. The secret value is never stored in the task definition JSON — only the ARN reference is stored. The actual value is fetched at runtime and exists only in the container's memory. Anyone inspecting the task definition sees the ARN (which tells them the secret exists) but not the value.</p>
+        <div class="code-block"><code><span class="c">// Task definition secrets — referencing individual JSON keys from Secrets Manager</span>
+<span class="k">"secrets"</span>: [
+  {
+    <span class="c">// Reference the entire secret string as one env var</span>
+    <span class="k">"name"</span>: <span class="v">"DB_SECRET_JSON"</span>,
+    <span class="k">"valueFrom"</span>: <span class="v">"arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:/getwork/prod/database"</span>
+  },
+  {
+    <span class="c">// Reference a specific key from a JSON secret using the :: syntax</span>
+    <span class="c">// format: secretARN:json-key::  (two trailing colons are required)</span>
+    <span class="k">"name"</span>: <span class="v">"DB_HOST"</span>,
+    <span class="k">"valueFrom"</span>: <span class="v">"arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:/getwork/prod/database:host::"</span>
+  },
+  {
+    <span class="k">"name"</span>: <span class="v">"DB_PASSWORD"</span>,
+    <span class="k">"valueFrom"</span>: <span class="v">"arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:/getwork/prod/database:password::"</span>
+  },
+  {
+    <span class="c">// Parameter Store reference (cheaper than Secrets Manager for non-rotated config)</span>
+    <span class="k">"name"</span>: <span class="v">"APP_BUCKET"</span>,
+    <span class="k">"valueFrom"</span>: <span class="v">"arn:aws:ssm:ap-south-1:ACCOUNT:parameter/getwork/prod/app-bucket"</span>
+  }
+]</code></div>
+        <div class="failbox"><strong>Secrets are injected once at task start — rotation doesn't propagate automatically:</strong> When ECS starts a task, it fetches secret values at that moment and injects them as environment variables. If you rotate a secret in Secrets Manager (e.g., rotate the database password), running tasks still use the old value — they were injected at start time, not fetched dynamically. The new password is only used when tasks are replaced (new deployment, scale-in/scale-out). Rolling deployment after secret rotation is the required procedure: rotate the secret in Secrets Manager → trigger a new ECS deployment → new tasks start with the new value → old tasks terminate after connection draining → all tasks now use the new secret. This is why some teams prefer the Spring Boot application to fetch secrets from Secrets Manager SDK at runtime (dynamic fetch) rather than relying on ECS injection (static inject at start). Both patterns work; choose based on how frequently you rotate secrets.</div>
+      </div>
+    </div>
+
+    <div id="t2" class="cpanel">
+      <div class="ch">Logging — getting your Spring Boot logs from containers to CloudWatch</div>
+      <div class="csub">The awslogs driver, structured logging, and the FireLens aggregation pattern</div>
+      <div class="cb">
+        <p>Container logs are written to stdout and stderr. The ECS logging driver collects these streams and forwards them to your configured destination. The <span class="mono">awslogs</span> driver ships directly to CloudWatch Logs — the simplest and most commonly used approach.</p>
+        <p><strong>awslogs driver configuration:</strong> Every container in a task definition has its own <span class="mono">logConfiguration</span>. The <span class="mono">awslogs-stream-prefix</span> + task ID creates the log stream name — each task instance has its own log stream. All tasks of the same service write to the same log group, making it easy to search across all instances with CloudWatch Logs Insights.</p>
+        <div class="code-block"><code><span class="c">// Spring Boot logging configuration for containers — application.properties</span>
+<span class="c">// Output to stdout (ECS logging driver captures stdout)</span>
+
+<span class="c">// Option 1: JSON structured logging (recommended for log aggregation)</span>
+<span class="c">// Add logstash-logback-encoder dependency:</span>
+<span class="c">// &lt;dependency&gt;</span>
+<span class="c">//   &lt;groupId&gt;net.logstash.logback&lt;/groupId&gt;</span>
+<span class="c">//   &lt;artifactId&gt;logstash-logback-encoder&lt;/artifactId&gt;&lt;/dependency&gt;</span>
+
+<span class="c">// logback-spring.xml — JSON logging to stdout only (no file output in containers)</span>
+<span class="v">&lt;configuration&gt;</span>
+  <span class="k">&lt;appender</span> name=<span class="s">"STDOUT"</span> class=<span class="s">"ch.qos.logback.core.ConsoleAppender"</span><span class="k">&gt;</span>
+    <span class="k">&lt;encoder</span> class=<span class="s">"net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder"</span><span class="k">&gt;</span>
+      <span class="k">&lt;providers&gt;</span>
+        <span class="k">&lt;timestamp/&gt;</span>
+        <span class="k">&lt;logLevel/&gt;</span>
+        <span class="k">&lt;loggerName/&gt;</span>
+        <span class="k">&lt;message/&gt;</span>
+        <span class="k">&lt;mdc/&gt;</span>  <span class="c">&lt;!-- Includes trace IDs, user IDs from MDC context --&gt;</span>
+        <span class="k">&lt;stackTrace/&gt;</span>
+      <span class="k">&lt;/providers&gt;</span>
+    <span class="k">&lt;/encoder&gt;</span>
+  <span class="k">&lt;/appender&gt;</span>
+  <span class="k">&lt;root</span> level=<span class="s">"INFO"</span><span class="k">&gt;</span><span class="k">&lt;appender-ref</span> ref=<span class="s">"STDOUT"</span><span class="k">/&gt;&lt;/root&gt;</span>
+<span class="v">&lt;/configuration&gt;</span>
+
+<span class="c">// Result: each log line is a JSON object in CloudWatch</span>
+<span class="c">// {"timestamp":"2024-03-15T10:30:00Z","level":"INFO","logger":"c.g.JobService",</span>
+<span class="c">//  "message":"Job created","traceId":"abc123","userId":"42","jobId":"789"}</span>
+<span class="c">// CloudWatch Logs Insights can query: fields @timestamp, userId, jobId | filter level="ERROR"</span></code></div>
+        <div class="prodbox"><strong>FireLens — for when you need more than CloudWatch:</strong> AWS FireLens is a log routing mechanism built into ECS. It runs a Fluent Bit sidecar container alongside your application containers. Fluent Bit receives your application's logs and can forward them to: CloudWatch Logs, OpenSearch (Elasticsearch), Splunk, Datadog, S3 (for archival). This allows you to send structured logs to CloudWatch for real-time monitoring and simultaneously ship them to S3 in Parquet format for long-term analytics — all from the same container logs. For your JP Morgan project at Deloitte: enterprise logging often requires shipping to a central SIEM (Splunk or similar). FireLens provides this without application code changes.</div>
+      </div>
+    </div>
+
+    <div id="t3" class="cpanel">
+      <div class="ch">IAM roles for ECS tasks — the execution role vs task role distinction in practice</div>
+      <div class="csub">Exactly which permissions each role needs and the common misconfiguration that causes deployment failures</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">/* ECS Task Execution Role — used by ECS infrastructure, NOT your application */</span>
+{
+  <span class="k">"Version"</span>: <span class="v">"2012-10-17"</span>,
+  <span class="k">"Statement"</span>: [
+    {
+      <span class="c">// Pull images from ECR</span>
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: [
+        <span class="v">"ecr:GetAuthorizationToken"</span>,
+        <span class="v">"ecr:BatchCheckLayerAvailability"</span>,
+        <span class="v">"ecr:GetDownloadUrlForLayer"</span>,
+        <span class="v">"ecr:BatchGetImage"</span>
+      ],
+      <span class="k">"Resource"</span>: <span class="v">"*"</span>  <span class="c">// GetAuthorizationToken requires * — cannot scope to specific repo</span>
+    },
+    {
+      <span class="c">// Write container logs to CloudWatch</span>
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: [
+        <span class="v">"logs:CreateLogGroup"</span>, <span class="v">"logs:CreateLogStream"</span>, <span class="v">"logs:PutLogEvents"</span>
+      ],
+      <span class="k">"Resource"</span>: <span class="v">"arn:aws:logs:ap-south-1:ACCOUNT:log-group:/getwork/*:*"</span>
+    },
+    {
+      <span class="c">// Fetch secrets to inject as environment variables at task start</span>
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: <span class="v">"secretsmanager:GetSecretValue"</span>,
+      <span class="k">"Resource"</span>: <span class="v">"arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:/getwork/prod/*"</span>
+    },
+    {
+      <span class="c">// Fetch SSM parameters to inject as env vars at task start</span>
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: [<span class="v">"ssm:GetParameter"</span>, <span class="v">"ssm:GetParameters"</span>],
+      <span class="k">"Resource"</span>: <span class="v">"arn:aws:ssm:ap-south-1:ACCOUNT:parameter/getwork/prod/*"</span>
+    }
+  ]
+}
+<span class="c">/* Task Role — used by YOUR Spring Boot application code (same as EC2 instance role) */</span>
+<span class="c">/* Same policy as the EC2 instance role from Day 10: s3, secretsmanager, cloudwatch, ssm */</span></code></div>
+        <div class="failbox"><strong>The "CannotPullContainerError: AccessDeniedException" that stumps engineers:</strong> Your Fargate task fails to start with "CannotPullContainerError". The ECR repository exists. The image tag is correct. But the task can't pull the image. Root cause: the execution role is missing ECR permissions, or the ECR repository has a resource policy that doesn't allow the execution role's account. Check: does the executionRoleArn have ecr:GetAuthorizationToken, ecr:BatchGetImage, ecr:GetDownloadUrlForLayer? Is ecr:GetAuthorizationToken on Resource: * (it requires *, cannot be scoped to a specific repo)? Is the ECR repository in the same account as the ECS task? If the ECR repository is in a different account, the repository policy must explicitly allow the execution role from the other account. This cross-account ECR pull scenario is common in enterprise setups with centralised image registries.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('services',document.querySelectorAll('.ntab')[4])">ECS Services and scaling →</button>
+  </div>
+
+  <!-- SERVICES AND SCALING -->
+  <div id="p-services" class="panel">
+    <div class="lede"><strong>An ECS Service is the long-running deployment abstraction — it maintains desired task count, integrates with the ALB, manages rolling deployments, and can scale automatically. The deployment configuration (minimum healthy percent, maximum percent, deployment circuit breaker) is what determines whether a bad deployment gets rolled back automatically or causes an extended outage.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('sv',0,this)">1 · Service configuration</button>
+      <button class="cbtn" onclick="showC('sv',1,this)">2 · Rolling deployments</button>
+      <button class="cbtn" onclick="showC('sv',2,this)">3 · Service auto scaling</button>
+    </div>
+
+    <div id="sv0" class="cpanel active">
+      <div class="ch">ECS Service configuration — the key settings that determine deployment behaviour</div>
+      <div class="csub">Desired count, deployment configuration, ALB integration, and the deployment circuit breaker</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># Create a production ECS service via CLI</span>
+aws ecs create-service \
+  --cluster getwork-cluster \
+  --service-name getwork-api \
+  --task-definition getwork-api:7 \         <span class="c"># Specific revision — not :latest</span>
+  --desired-count 2 \
+  --launch-type FARGATE \
+  --network-configuration <span class="s">"awsvpcConfiguration={
+    subnets=[subnet-private-1a,subnet-private-1b],
+    securityGroups=[sg-ecs-api],
+    assignPublicIp=DISABLED}"</span> \          <span class="c"># Private subnets — no public IP needed</span>
+  --load-balancers <span class="s">"targetGroupArn=TG_ARN,
+    containerName=getwork-api,
+    containerPort=8080"</span> \
+  --health-check-grace-period-seconds 120 \ <span class="c"># Grace period for Spring Boot startup</span>
+  --deployment-configuration <span class="s">"
+    deploymentCircuitBreaker={enable=true,rollback=true},
+    minimumHealthyPercent=100,
+    maximumPercent=200"</span> \
+  --enable-ecs-managed-tags \
+  --propagate-tags TASK_DEFINITION \
+  --region ap-south-1</code></div>
+
+        <p><strong>minimumHealthyPercent=100 and maximumPercent=200:</strong> During deployment, ECS keeps 100% of tasks healthy and can launch up to 200% of desired count. For desired=2: always keep 2 running tasks, and can launch up to 4 total. Deployment strategy: start 2 new tasks (now at 4 total), wait for them to be healthy, stop 2 old tasks (back to 2). Zero downtime — no traffic loss. This is the safest deployment strategy but requires paying for 4 tasks briefly during deployment.</p>
+        <p><strong>minimumHealthyPercent=50 and maximumPercent=150:</strong> Alternative for cost efficiency. Can take one task down before new one is ready. For desired=2: can drop to 1 running task during deployment. Brief capacity reduction but cheaper (only 3 tasks max during deployment instead of 4).</p>
+        <div class="mechbox"><strong>The deployment circuit breaker — automatic rollback when deployments fail:</strong> With <span class="mono">deploymentCircuitBreaker.enable=true, rollback=true</span>, ECS monitors new tasks launched during a deployment. If more than a threshold number of tasks fail to enter RUNNING state and pass their health check within the configured grace period, ECS automatically rolls back the deployment to the previous task definition revision. This requires zero operator intervention — a bad image that fails to start triggers an automatic rollback without any manual action. Without this: a bad deployment that fails all new task launches leaves the service in a degraded state indefinitely, with the old tasks still (correctly) being stopped as new (broken) ones fail to replace them. The circuit breaker is not enabled by default — enable it for every production service.</div>
+        <div class="failbox"><strong>The health check grace period that causes constant restarts:</strong> The health-check-grace-period-seconds is the time ECS waits after a task starts before considering ALB health check failures as a reason to stop the task. If grace period is too short (10 seconds) and Spring Boot takes 60 seconds to initialise, the ALB health check fails during startup, ECS marks the task as unhealthy, stops it, and starts a new one — which also takes 60 seconds to start, fails, and is stopped. Constant restart loop. Set grace period to at least 1.5× your application's startup time. For Spring Boot on Fargate: 90-120 seconds is appropriate.</div>
+      </div>
+    </div>
+
+    <div id="sv1" class="cpanel">
+      <div class="ch">ECS rolling deployments — how service updates work</div>
+      <div class="csub">The exact sequence when you update a service to a new task definition revision</div>
+      <div class="cb">
+        <p>When you update an ECS service to point to a new task definition revision (new image, new environment variable, new resource allocation), ECS performs a rolling deployment. The exact sequence with minimumHealthyPercent=100, maximumPercent=200, desired=2:</p>
+        <p><strong>1.</strong> ECS launches 2 new tasks using the new task definition. Now 4 tasks total (2 old, 2 new). ALB target group has 4 registered targets.</p>
+        <p><strong>2.</strong> New tasks go through PENDING → RUNNING → health check evaluation. ALB checks <span class="mono">/actuator/health/readiness</span> every 15 seconds (3 healthy checks needed = 45 seconds minimum).</p>
+        <p><strong>3.</strong> When 2 new tasks are healthy (passing ALB health check), the ALB begins routing traffic to them. All 4 tasks receive traffic at this point.</p>
+        <p><strong>4.</strong> ECS stops the 2 old tasks — connection draining applies (deregistration delay, 60 seconds by default). During drain, old tasks accept no new requests but complete in-flight ones.</p>
+        <p><strong>5.</strong> After drain completes, old tasks stop. 2 new tasks remain. Deployment complete.</p>
+        <p><strong>Total time:</strong> ~2-3 minutes (Fargate task start + image pull + Spring Boot startup + health check evaluation + connection drain). Compare to EC2 rolling deployment (Day 8 Instance Refresh): similar total time but fewer moving parts in ECS.</p>
+        <div class="prodbox"><strong>The ECS deployment notification to Slack/PagerDuty:</strong> Use EventBridge to catch ECS deployment events and notify your team. The event pattern: <span class="mono">{"source":["aws.ecs"],"detail-type":["ECS Service Action"],"detail":{"eventName":["SERVICE_DEPLOYMENT_COMPLETED","SERVICE_DEPLOYMENT_FAILED"]}}</span>. Route to an SNS topic → Slack webhook Lambda. Deployments completing successfully or failing (and triggering circuit breaker rollback) are both actionable events that your team should know about in near-real-time.</div>
+      </div>
+    </div>
+
+    <div id="sv2" class="cpanel">
+      <div class="ch">ECS Service Auto Scaling — scaling task count with demand</div>
+      <div class="csub">Target tracking, step scaling, and scheduled scaling for ECS services</div>
+      <div class="cb">
+        <p>ECS Service Auto Scaling adjusts the desired task count in response to metrics — exactly like ASG scaling for EC2 instances, but at the task level. The same scaling policy types apply: target tracking (recommended), step scaling, and scheduled scaling.</p>
+        <div class="code-block"><code><span class="c"># Register ECS service as a scalable target</span>
+aws application-autoscaling register-scalable-target \
+  --service-namespace ecs \
+  --resource-id service/getwork-cluster/getwork-api \
+  --scalable-dimension ecs:service:DesiredCount \
+  --min-capacity 2 \
+  --max-capacity 20
+
+<span class="c"># Target tracking on ALB RequestCount per target (same metric as EC2 ASG)</span>
+aws application-autoscaling put-scaling-policy \
+  --service-namespace ecs \
+  --resource-id service/getwork-cluster/getwork-api \
+  --scalable-dimension ecs:service:DesiredCount \
+  --policy-name getwork-api-cpu-tracking \
+  --policy-type TargetTrackingScaling \
+  --target-tracking-scaling-policy-configuration <span class="s">'{
+    "TargetValue": 60,
+    "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+    },
+    "ScaleOutCooldown": 60,
+    "ScaleInCooldown": 300,
+    "DisableScaleIn": false
+  }'</span>
+
+<span class="c"># Fargate cold start limitation: scale-out adds tasks, but each task takes</span>
+<span class="c"># 90-120s to become healthy. Plan for 2-minute lag between scaling trigger and capacity.</span>
+<span class="c"># Set scale-out CloudWatch alarm to trigger at 70% CPU (not 90%)</span>
+<span class="c"># to have capacity before you hit the limit, not after.</span></code></div>
+        <div class="mechbox"><strong>ECS auto scaling vs ALB health check vs circuit breaker — three different mechanisms, one flow:</strong> ALB health check: determines whether a specific task receives traffic (individual task health). Circuit breaker: determines whether a deployment is rolled back (deployment health). ECS auto scaling: determines how many tasks are desired (fleet size). These three operate independently. A misconfigured ALB health check causes circuit breaker rollbacks. A successful deployment doesn't prevent ECS auto scaling from reducing task count if CPU drops. Understanding which mechanism to tune for which symptom prevents hours of confused debugging.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('ecr',document.querySelectorAll('.ntab')[5])">ECR — the container image registry →</button>
+  </div>
+
+  <!-- ECR -->
+  <div id="p-ecr" class="panel">
+    <div class="lede"><strong>Amazon ECR (Elastic Container Registry) is the private Docker registry for your container images. It integrates with ECS, IAM, and CloudWatch. Understanding how ECR stores images, how cross-account access works, and how lifecycle policies prevent unbounded storage costs is the operational foundation for a working ECS deployment pipeline.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('ecr',0,this)">1 · ECR mechanics</button>
+      <button class="cbtn" onclick="showC('ecr',1,this)">2 · Image tagging strategy</button>
+      <button class="cbtn" onclick="showC('ecr',2,this)">3 · Lifecycle policies</button>
+      <button class="cbtn" onclick="showC('ecr',3,this)">4 · Image scanning</button>
+    </div>
+
+    <div id="ecr0" class="cpanel active">
+      <div class="ch">ECR mechanics — image storage, authentication, and the push/pull flow</div>
+      <div class="csub">How images are stored, how the AWS CLI authenticates to ECR, and what a repository policy controls</div>
+      <div class="cb">
+        <p>ECR is a private, encrypted Docker registry hosted within your AWS account. Each repository stores images for one service (e.g., <span class="mono">getwork-api</span>). Images are stored as a set of content-addressed layers (same structure as Docker's local image store) in S3 — immutable, versioned, and durable. ECR uses IAM for authentication — Docker login is replaced with a temporary credential exchange.</p>
+        <p><strong>Authentication flow:</strong> To push/pull from ECR, you first authenticate Docker to ECR with a temporary password: <span class="mono">aws ecr get-login-password | docker login --username AWS --password-stdin ACCOUNT.dkr.ecr.ap-south-1.amazonaws.com</span>. The <span class="mono">get-login-password</span> call exchanges your AWS credentials for a 12-hour Docker authentication token. After authentication, Docker push/pull commands work with the ECR hostname. ECS tasks use the execution role to authenticate — the ECS agent calls <span class="mono">GetAuthorizationToken</span> on behalf of your task, which is why that permission is required in the execution role.</p>
+        <div class="mechbox"><strong>The ECR pricing model — it's the same as S3:</strong> ECR charges $0.10/GB-month for private repository storage. A 500MB image stored for one month: $0.05. Data transfer to ECS tasks in the same region: free. Data transfer to different regions: standard S3 transfer rates. For a single microservice with weekly deployments, keeping 10 image versions: 10 × 500MB = 5GB = $0.50/month. At scale with 20 services and 50 versions each: 1TB = $100/month. Lifecycle policies that automatically delete old images are essential to control this cost.</div>
+        <p><strong>ECR repository policy vs IAM policy:</strong> ECR repositories have resource-based policies (like S3 bucket policies). They control which principals can push/pull from the repository. Required for cross-account access: if your CI/CD pipeline runs in Account A but ECS runs in Account B, the ECR repository policy in Account A must allow Account B's execution role to pull. Within the same account: IAM policies on the execution role are sufficient — no repository policy required.</p>
+      </div>
+    </div>
+
+    <div id="ecr1" class="cpanel">
+      <div class="ch">Image tagging strategy — making deployments traceable and rollbacks possible</div>
+      <div class="csub">Why :latest is dangerous and what to use instead for production deployments</div>
+      <div class="cb">
+        <p>Docker image tags are mutable pointers — the <span class="mono">:latest</span> tag on a repository can point to different images over time. Using <span class="mono">:latest</span> in your ECS task definition means: when you deploy a new image, <span class="mono">:latest</span> points to the new image. But existing running tasks with <span class="mono">:latest</span> in their task definition are not automatically updated — ECS only pulls the image when starting a new task. A running task pinned to <span class="mono">:latest</span> in the task definition may actually be running whatever image was <span class="mono">:latest</span> at task start time, not today's <span class="mono">:latest</span>. This creates ambiguity: which image version is running?</p>
+        <p><strong>The correct tagging strategy:</strong></p>
+        <div class="code-block"><code><span class="c"># In CI/CD pipeline — tag with build number or git commit SHA</span>
+IMAGE_TAG=<span class="s">"${BITBUCKET_BUILD_NUMBER}"</span>   <span class="c"># Monotonically increasing — sortable</span>
+<span class="c"># Or: IMAGE_TAG="${BITBUCKET_COMMIT:0:7}"  # Short git SHA — traceable to commit</span>
+
+ECR_REPO="ACCOUNT.dkr.ecr.ap-south-1.amazonaws.com/getwork-api"
+
+<span class="c"># Build and push with specific tag</span>
+docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+docker push ${ECR_REPO}:${IMAGE_TAG}
+
+<span class="c"># Also tag as latest (for human convenience — not used in task definitions)</span>
+docker tag ${ECR_REPO}:${IMAGE_TAG} ${ECR_REPO}:latest
+docker push ${ECR_REPO}:latest
+
+<span class="c"># Update task definition to use the specific tag</span>
+NEW_TASK_DEF=$(aws ecs describe-task-definition \
+  --task-definition getwork-api \
+  --query 'taskDefinition' --output json | \
+  jq --arg image "${ECR_REPO}:${IMAGE_TAG}" \
+     '.containerDefinitions[0].image = $image | del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.placementConstraints,.compatibilities,.registeredAt,.registeredBy)')
+
+NEW_REVISION=$(aws ecs register-task-definition \
+  --cli-input-json "$NEW_TASK_DEF" \
+  --query 'taskDefinition.revision' --output text)
+
+<span class="c"># Update service to new revision</span>
+aws ecs update-service \
+  --cluster getwork-cluster \
+  --service getwork-api \
+  --task-definition getwork-api:${NEW_REVISION} \
+  --force-new-deployment \
+  --region ap-south-1</code></div>
+
+        <div class="prodbox"><strong>Why immutable image tags matter for rollbacks:</strong> With tag-per-build: to roll back to build 142 from build 145, simply update the service to use task definition revision pointing to image tag :142. The image at tag :142 has never changed — it's always the same image. With :latest: the image at :latest changes every deployment. To roll back, you must rebuild the previous version (or push it as :latest again). Rollback time: seconds (update task definition pointer) vs minutes (rebuild and push image). For a financial services application at JP Morgan where rollback speed is a P0 metric, immutable versioned tags are non-negotiable.</div>
+      </div>
+    </div>
+
+    <div id="ecr2" class="cpanel">
+      <div class="ch">ECR lifecycle policies — automatic image cleanup to control storage costs</div>
+      <div class="csub">Rules that automatically delete old images and prevent ECR storage from growing unboundedly</div>
+      <div class="cb">
+        <p>Without lifecycle policies, every image pushed to ECR is retained forever. A service with daily deployments accumulates 365+ images per year. Each image: 200-500MB. 365 × 300MB = ~109GB = ~$10.90/month per service just for old images. With 20 services: $218/month in obsolete image storage.</p>
+        <div class="code-block"><code><span class="c"># Lifecycle policy — keep only the last 10 images per repository</span>
+aws ecr put-lifecycle-policy \
+  --repository-name getwork-api \
+  --lifecycle-policy-text <span class="s">'{
+    "rules": [
+      {
+        "rulePriority": 1,
+        "description": "Keep last 10 tagged images",
+        "selection": {
+          "tagStatus": "tagged",
+          "tagPrefixList": ["v", "build-", "sha-"],
+          "countType": "imageCountMoreThan",
+          "countNumber": 10
+        },
+        "action": {"type": "expire"}
+      },
+      {
+        "rulePriority": 2,
+        "description": "Remove untagged images after 1 day",
+        "selection": {
+          "tagStatus": "untagged",
+          "countType": "sinceImagePushed",
+          "countUnit": "days",
+          "countNumber": 1
+        },
+        "action": {"type": "expire"}
+      }
+    ]
+  }'</span> --region ap-south-1</code></div>
+        <div class="mechbox"><strong>Lifecycle policies run asynchronously:</strong> ECR evaluates lifecycle rules daily, not immediately when a new image is pushed. After pushing image #11, the lifecycle policy won't delete image #1 for up to 24 hours. This means during the evaluation window, you may briefly have 11 images. Plan storage estimates accordingly. The policy also doesn't protect images tagged with <span class="mono">:latest</span> from being deleted if :latest happens to be the oldest in the count-based policy — pin :latest separately with a "keep images tagged with 'latest'" rule at lower priority if you want to preserve it.</div>
+        <div class="failbox"><strong>The lifecycle policy that deletes an image that ECS is actively running:</strong> A lifecycle policy deletes image tag :build-100. But an ECS task that was started last week is still running with image :build-100 pinned in its task definition. ECS doesn't check if an image is in use before deleting it. The running task is unaffected (the image layers are already pulled into the container's filesystem). But if that task restarts (crash, scale-in/scale-out), ECS tries to pull :build-100 from ECR — it's gone. Task fails to start with CannotPullContainerError. Service enters crash loop. Mitigation: ensure your lifecycle policy keeps more versions than your service would ever roll back to (keep last 10 if you'd never roll back more than 10 deployments). Or use image digests (immutable SHA-based references) in task definitions instead of tags.</div>
+      </div>
+    </div>
+
+    <div id="ecr3" class="cpanel">
+      <div class="ch">ECR image scanning — finding vulnerabilities before deployment</div>
+      <div class="csub">Basic and enhanced scanning, how to integrate into CI/CD, and what to do with findings</div>
+      <div class="cb">
+        <p>ECR provides two levels of vulnerability scanning. Basic scanning uses the open-source Clair tool to scan for CVEs in OS packages (not application dependencies). Enhanced scanning uses Amazon Inspector for deeper analysis including OS packages, application packages (Maven, npm, pip), and binary analysis.</p>
+        <p><strong>Enabling scan-on-push:</strong> Configure the ECR repository to scan every image automatically when pushed. After the scan completes (1-5 minutes), findings are available via the ECR API and in the console. The CI/CD pipeline can query findings and fail the build if critical vulnerabilities are found — preventing vulnerable images from reaching production.</p>
+        <div class="code-block"><code><span class="c"># Enable scan-on-push for the repository</span>
+aws ecr put-image-scanning-configuration \
+  --repository-name getwork-api \
+  --image-scanning-configuration scanOnPush=true \
+  --region ap-south-1
+
+<span class="c"># In CI/CD: after push, poll for scan completion and check results</span>
+IMAGE_TAG=${BITBUCKET_BUILD_NUMBER}
+ECR_REPO="ACCOUNT.dkr.ecr.ap-south-1.amazonaws.com/getwork-api"
+
+<span class="c"># Wait for scan to complete</span>
+for i in $(seq 1 20); do
+  STATUS=$(aws ecr describe-image-scan-findings \
+    --repository-name getwork-api \
+    --image-id imageTag=$IMAGE_TAG \
+    --query 'imageScanStatus.status' --output text --region ap-south-1 2>/dev/null)
+  [ "$STATUS" = "COMPLETE" ] && break
+  sleep 15
+done
+
+<span class="c"># Get CRITICAL finding count</span>
+CRITICAL_COUNT=$(aws ecr describe-image-scan-findings \
+  --repository-name getwork-api \
+  --image-id imageTag=$IMAGE_TAG \
+  --query 'imageScanFindings.findingSeverityCounts.CRITICAL // `0`' \
+  --output text --region ap-south-1)
+
+echo "Critical vulnerabilities: $CRITICAL_COUNT"
+[ "$CRITICAL_COUNT" -gt "0" ] && \
+  echo "BUILD FAILED: Critical CVEs found in image" && exit 1
+
+echo "Security scan passed"</code></div>
+        <div class="prodbox"><strong>Security scanning in the JP Morgan context:</strong> A financial institution like JP Morgan has mandatory vulnerability scanning requirements for all container images before production deployment. ECR enhanced scanning provides the compliance evidence: every image has a documented scan result with finding severity counts. The pipeline enforces a gate: no image with CRITICAL or HIGH CVEs reaches production. This is not optional for regulated financial applications — it's an audit requirement. Having this pipeline built and documented is a key deliverable for your Deloitte engagement.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[6])">Interview prep →</button>
+  </div>
+
+  <!-- INTERVIEW PREP -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>ECS interview questions test both container fundamentals (Dockerfile optimisation, image security) and AWS orchestration depth (task definition IAM, deployment configuration, Fargate networking). Senior-level questions require you to connect the container layer to the AWS networking and security model.</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">Explain the difference between executionRoleArn and taskRoleArn in an ECS task definition. What permissions does each need?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>These are two different IAM roles serving different identities in the ECS lifecycle, and confusing them is the most common ECS IAM mistake.</p>
+          <p><strong>executionRoleArn</strong> is assumed by the ECS infrastructure — the ECS agent on EC2 or Fargate's control plane — to perform the setup steps before your application code runs. It needs: ECR permissions to pull the container image (ecr:GetAuthorizationToken, ecr:BatchGetImage, ecr:GetDownloadUrlForLayer), CloudWatch Logs permissions to create log groups and write log streams (logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents), and Secrets Manager / SSM Parameter Store permissions to fetch values that are referenced in the task definition's secrets array (secretsmanager:GetSecretValue, ssm:GetParameter). Your application code never runs under the execution role — it's done with its work by the time your container starts.</p>
+          <p><strong>taskRoleArn</strong> is assumed by the code running inside your container — your Spring Boot application. It's equivalent to the EC2 instance role. It needs whatever AWS API permissions your application requires at runtime: s3:PutObject for image uploads, secretsmanager:GetSecretValue for runtime secret fetching (distinct from ECS injection), cloudwatch:PutMetricData for custom metrics, SQS permissions if your app reads from a queue. The task role credentials are available via IMDS (169.254.170.2 — the ECS metadata endpoint, distinct from EC2's 169.254.169.254).</p>
+          <p>The wrong pattern: giving the execution role your application's permissions (S3, SQS, etc.) or giving the task role ECR and CloudWatch Logs permissions meant for the execution role. Both are security violations of least-privilege. For the execution role, use the AWS managed policy AmazonECSTaskExecutionRolePolicy as a starting point and add only your secrets references. For the task role, mirror your EC2 instance role's policy.</p>
+          <span class="tip"><strong>Why this answer works:</strong> Clear mechanism explanation for each role, specific permission examples for each, the "your application code never runs under execution role" clarification, and the wrong pattern identification.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">Your Fargate service keeps deploying new tasks but they never become healthy. The service is in a crash loop. How do you diagnose this?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is a systematic diagnosis problem. The symptom — tasks start but never pass health checks — has several root causes, each diagnosed differently.</p>
+          <p><strong>Step 1: Check ECS service events.</strong> <span class="mono">aws ecs describe-services --cluster CLUSTER --services SERVICE --query 'services[0].events[0:5]'</span>. The events give plain English descriptions: "Service was unable to place a task" (capacity problem), "Task failed ELB health check" (app not responding correctly), "CannotPullContainerError" (ECR auth or networking issue), "stopped reason: Essential container in task exited" (the container crashed at startup).</p>
+          <p><strong>Step 2: If container crashed — check stopped task logs.</strong> <span class="mono">aws ecs describe-tasks --cluster CLUSTER --tasks TASK_ID</span> shows the stop reason and exit code. Exit code 1: application error, check CloudWatch Logs. Exit code 137: OOMKilled — container exceeded memory limit. Exit code 139: segfault. Exit code 1 with log context: check <span class="mono">aws logs tail /getwork/ecs/api --since 10m</span> for the exception that crashed Spring Boot at startup.</p>
+          <p><strong>Step 3: If image pull failed — check execution role permissions and network connectivity.</strong> "CannotPullContainerError" means ECR authentication failed or the Fargate task cannot reach the ECR endpoint. Verify: execution role has ecr:GetAuthorizationToken. The private subnet has a NAT Gateway or ECR VPC Interface Endpoints. The task's security group allows outbound HTTPS (443).</p>
+          <p><strong>Step 4: If container is running but health check fails — test the health endpoint directly.</strong> Use ECS Exec (if enabled) to shell into the container: <span class="mono">aws ecs execute-command --cluster CLUSTER --task TASK_ID --container getwork-api --interactive --command "/bin/sh"</span>. Inside the container: <span class="mono">curl http://localhost:8080/actuator/health/readiness</span>. See the actual response. Common issues: Spring Boot is still initialising (startup takes longer than grace period), database connection failure at startup is returning 503 on readiness, wrong health check path configured in the task definition.</p>
+          <p><strong>Step 5: Check if the deployment circuit breaker fired.</strong> If the deployment already auto-rolled back, the service events will show "deployment circuit breaker condition triggered." Check the previous healthy task definition revision to understand what changed.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The structured five-step approach with specific CLI commands at each step shows systematic debugging experience. The exit code interpretation (137 = OOM, 139 = segfault, 1 = app error) demonstrates operational depth. The ECS Exec tip shows you know how to get inside a Fargate container for live debugging.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">How does Fargate networking work? Why does each task need its own Security Group?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Fargate uses awsvpc network mode exclusively. When ECS starts a Fargate task, it attaches a dedicated ENI to the task's microVM and assigns it a private IP address from the specified subnet. The task's network identity — IP address and Security Groups — belongs to the ENI, not to any underlying host. From the VPC's perspective, each Fargate task is indistinguishable from an EC2 instance.</p>
+          <p>Each task having its own Security Group is the key security benefit of awsvpc. In the traditional Docker bridge network mode (EC2 launch type), all containers on the same EC2 instance share the host's Security Groups. If the api-service and the admin-service run on the same EC2, they share the same Security Group rules. You can't allow inbound on port 8080 for api-service from the ALB without also allowing inbound to admin-service from the same ALB.</p>
+          <p>With awsvpc/Fargate: the api-service has Security Group ecs-api-sg allowing port 8080 from alb-sg. The admin-service has Security Group ecs-admin-sg allowing port 8081 from admin-alb-sg. Different services have completely isolated Security Group rules even if their underlying Fargate microVMs happen to run on the same AWS infrastructure. This is the principle of least privilege applied at the network level to containers — each service exposes exactly the ports it needs to exactly the sources that should reach it.</p>
+          <p>The operational implication: if you have 50 Fargate tasks across 5 services, you need 5 Security Groups (one per service), not 50. The Security Group attaches to the ENI type for the task family, and all tasks of that family share the same Security Group. When the task stops and its ENI is removed, the Security Group remains for reuse by the next task of that family.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The Security Group isolation comparison between bridge mode (shared host SG) and awsvpc (per-task SG) is the substantive answer. The specific example with api-service and admin-service makes the isolation benefit concrete. The operational implication (5 SGs for 50 tasks) shows you've thought about scale.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">Why is a multi-stage Docker build important for production? Explain the Spring Boot layered JAR approach.</span>
+          <span class="iq-d d-e">Easy</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Multi-stage builds solve two problems: image size and build tool isolation.</p>
+          <p>Without multi-stage: a single Dockerfile that installs Maven, downloads dependencies, compiles the code, and runs the JAR includes Maven (hundreds of MB), the JDK (vs just the JRE needed for runtime), all build tools, and build-time dependencies — all in the final image that runs in production. A 500MB image for a small Spring Boot app, and the image contains Maven which has no business being in a production server.</p>
+          <p>With multi-stage: the builder stage (FROM amazoncorretto:17 AS builder) installs Maven, downloads dependencies, and compiles. The runtime stage (FROM amazoncorretto:17-alpine) contains only the JRE and the compiled application. The build tools never make it to the final image. Image size drops from 500MB to 150-200MB. Fewer components in the image means fewer CVEs found by security scanning.</p>
+          <p>The Spring Boot layered JAR goes further. A standard fat JAR packages all 200MB of library dependencies + 2MB of application code into one layer. Every code change (even one line) replaces the entire 200MB layer in ECR — 200MB push and pull on every deployment. Layered JAR extraction creates separate Docker layers: one for stable library dependencies (200MB, rarely changes), one for snapshot dependencies (5-10MB, changes occasionally), and one for application code (2MB, changes every deployment). Now a typical code-change deployment pushes 2MB to ECR instead of 200MB. Deployment time for the image pull step: 5 seconds instead of 60 seconds. In a fleet of 50 Fargate tasks all pulling the new image simultaneously, this difference is enormous.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The specific size numbers (500MB → 150MB for multi-stage, 200MB → 2MB push for layered JAR) make the benefit concrete. The 50-task scaling implication shows you think about the fleet, not just one container.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[7])">Start the lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab containerises a simple Spring Boot-equivalent application, pushes it to ECR, creates an ECS cluster with a Fargate service behind an ALB, and verifies the full deployment pipeline. By the end, you have a working Fargate service that deploys in under 90 seconds and scales automatically.</strong></div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Install Docker locally and build a Spring Boot container image</div>
+          <div class="sb">Write a production Dockerfile for a simple Spring Boot app (or use a pre-built demo). Build the image locally to understand the layer caching behaviour. Observe how changing application code vs dependencies affects which layers are rebuilt.</div>
+          <code class="cmd">mkdir -p ~/getwork-container && cd ~/getwork-container
+
+# Create a minimal Spring Boot app equivalent for the lab
+# (simulates the Dockerfile pattern without requiring a real Maven project)
+cat > Dockerfile << 'DOCKERFILE'
+FROM amazoncorretto:17-alpine AS builder
+WORKDIR /build
+# Simulate pom.xml layer (cached when deps don't change)
+RUN echo "dependencies-here" > deps.txt
+# Simulate source compilation
+RUN echo '#!/bin/sh
+while true; do
+  echo -e "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 15\r\n\r\n{\"status\":\"UP\"}" \
+    | nc -l -p 8080 -q 1 2>/dev/null
+done' > app.sh && chmod +x app.sh
+
+FROM amazoncorretto:17-alpine
+RUN addgroup -g 1000 appgroup && \
+    adduser -u 1000 -G appgroup -s /bin/sh -D appuser
+WORKDIR /app
+COPY --from=builder /build/app.sh ./
+RUN chown -R appuser:appgroup /app
+USER appuser
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:8080/ | grep -q UP || exit 1
+EXPOSE 8080
+CMD ["/bin/sh", "app.sh"]
+DOCKERFILE
+
+# Build the image
+docker build -t getwork-api:local .
+echo "Image built successfully"
+docker images getwork-api:local
+
+# Test locally
+docker run -d --name getwork-test -p 8080:8080 getwork-api:local
+sleep 3
+curl -sf http://localhost:8080/ && echo "Container responding!"
+docker stop getwork-test && docker rm getwork-test
+
+# Observe layer sizes
+docker history getwork-api:local</code>
+          <div class="snote">The docker history command shows each layer, its size, and the instruction that created it. Notice the final USER change and COPY layers are very small — only the app content layer matters for deployment speed. In a real Spring Boot project, the dependencies layer (200MB) would be separate from the application layer (2MB).</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create an ECR repository, push the image, and configure lifecycle policy</div>
+          <div class="sb">Create a private ECR repository, authenticate Docker to ECR, push the image with a versioned tag, and add a lifecycle policy to prevent storage accumulation.</div>
+          <code class="cmd">REGION=ap-south-1
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+ECR_REPO="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/getwork-api"
+
+# Create ECR repository
+aws ecr create-repository \
+  --repository-name getwork-api \
+  --image-scanning-configuration scanOnPush=true \
+  --encryption-configuration encryptionType=AES256 \
+  --region $REGION 2>/dev/null || echo "Repository already exists"
+
+# Authenticate Docker to ECR (token valid 12 hours)
+aws ecr get-login-password --region $REGION | \
+  docker login --username AWS --password-stdin \
+  ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+
+# Tag and push with build number
+BUILD_NUM=1
+docker tag getwork-api:local ${ECR_REPO}:build-${BUILD_NUM}
+docker tag getwork-api:local ${ECR_REPO}:latest
+docker push ${ECR_REPO}:build-${BUILD_NUM}
+docker push ${ECR_REPO}:latest
+
+echo "Image pushed: ${ECR_REPO}:build-${BUILD_NUM}"
+
+# Add lifecycle policy — keep only 10 tagged images
+aws ecr put-lifecycle-policy \
+  --repository-name getwork-api \
+  --lifecycle-policy-text '{
+    "rules":[
+      {"rulePriority":1,"description":"Keep last 10 tagged builds",
+       "selection":{"tagStatus":"tagged","tagPrefixList":["build-"],
+       "countType":"imageCountMoreThan","countNumber":10},
+       "action":{"type":"expire"}},
+      {"rulePriority":2,"description":"Delete untagged after 1 day",
+       "selection":{"tagStatus":"untagged","countType":"sinceImagePushed",
+       "countUnit":"days","countNumber":1},
+       "action":{"type":"expire"}}
+    ]}' --region $REGION
+
+echo "ECR setup complete"
+aws ecr list-images --repository-name getwork-api \
+  --query 'imageIds[*].{Tag:imageTag,Digest:imageDigest}' \
+  --output table --region $REGION</code>
+          <div class="snote">The ECR authentication token expires after 12 hours — re-run get-login-password for long-running CI sessions. Notice scan-on-push is enabled — a real Spring Boot image would show CVE findings for OS packages that need patching.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create ECS cluster, IAM roles, and task definition</div>
+          <div class="sb">Create an ECS cluster, the execution role and task role, and register the task definition that references your ECR image. This is the complete ECS foundation.</div>
+          <code class="cmd"># Create ECS cluster (Fargate — no EC2 instances to manage)
+aws ecs create-cluster \
+  --cluster-name getwork-cluster \
+  --capacity-providers FARGATE FARGATE_SPOT \
+  --default-capacity-provider-strategy \
+    capacityProvider=FARGATE,weight=1 \
+  --region $REGION 2>/dev/null || echo "Cluster exists"
+
+# Create ECS Task Execution Role (for ECS agent to pull image + write logs)
+aws iam create-role \
+  --role-name ecsTaskExecutionRole \
+  --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}' 2>/dev/null || echo "Role exists"
+
+aws iam attach-role-policy \
+  --role-name ecsTaskExecutionRole \
+  --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy 2>/dev/null
+
+# Register task definition
+TASK_DEF=$(cat << EOF
+{
+  "family": "getwork-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::${ACCOUNT_ID}:role/ecsTaskExecutionRole",
+  "containerDefinitions": [{
+    "name": "getwork-api",
+    "image": "${ECR_REPO}:build-${BUILD_NUM}",
+    "cpu": 256,
+    "memory": 512,
+    "portMappings": [{"containerPort": 8080, "protocol": "tcp"}],
+    "environment": [
+      {"name": "SPRING_PROFILES_ACTIVE", "value": "production"}
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/getwork/ecs/api",
+        "awslogs-region": "${REGION}",
+        "awslogs-stream-prefix": "task",
+        "awslogs-create-group": "true"
+      }
+    },
+    "healthCheck": {
+      "command": ["CMD-SHELL", "wget -qO- http://localhost:8080/ | grep -q UP || exit 1"],
+      "interval": 30, "timeout": 5, "retries": 3, "startPeriod": 30
+    }
+  }]
+}
+EOF
+)
+
+TASK_ARN=$(aws ecs register-task-definition \
+  --cli-input-json "$TASK_DEF" \
+  --query 'taskDefinition.taskDefinitionArn' \
+  --output text --region $REGION)
+
+echo "Task definition registered: $TASK_ARN"</code>
+          <div class="snote">The execution role uses the AWS-managed AmazonECSTaskExecutionRolePolicy which covers ECR and CloudWatch Logs. In production you'd scope this further. No task role is set in this lab since the demo app doesn't call AWS services — a real Spring Boot app needs the task role from Day 10.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create ECS Service with ALB integration and deployment circuit breaker</div>
+          <div class="sb">Create the ALB target group and ECS service. Wire them together. The service uses the deployment circuit breaker to automatically roll back if the deployment fails.</div>
+          <code class="cmd">VPC_ID=$(aws ec2 describe-vpcs \
+  --filters "Name=tag:Name,Values=getwork-vpc" \
+  --query 'Vpcs[0].VpcId' --output text --region $REGION 2>/dev/null || \
+  aws ec2 describe-vpcs --query 'Vpcs[0].VpcId' --output text --region $REGION)
+
+# Get or create subnets and security group
+SUBNETS=$(aws ec2 describe-subnets \
+  --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query 'Subnets[0:2].SubnetId' --output text --region $REGION)
+SUBNET_1=$(echo $SUBNETS | cut -d' ' -f1)
+SUBNET_2=$(echo $SUBNETS | cut -d' ' -f2)
+
+# Create security group for ECS tasks
+ECS_SG=$(aws ec2 create-security-group \
+  --group-name ecs-api-sg \
+  --description "ECS Fargate tasks for getwork-api" \
+  --vpc-id $VPC_ID \
+  --query 'GroupId' --output text --region $REGION 2>/dev/null || \
+  aws ec2 describe-security-groups --filters "Name=group-name,Values=ecs-api-sg" \
+  --query 'SecurityGroups[0].GroupId' --output text --region $REGION)
+
+aws ec2 authorize-security-group-ingress \
+  --group-id $ECS_SG --protocol tcp --port 8080 --cidr 0.0.0.0/0 \
+  --region $REGION 2>/dev/null || true
+
+# Create ALB and target group for ECS (using public subnets)
+ALB_SG=$(aws ec2 create-security-group \
+  --group-name ecs-alb-sg \
+  --description "ALB for ECS" \
+  --vpc-id $VPC_ID \
+  --query 'GroupId' --output text --region $REGION 2>/dev/null || \
+  aws ec2 describe-security-groups --filters "Name=group-name,Values=ecs-alb-sg" \
+  --query 'SecurityGroups[0].GroupId' --output text --region $REGION)
+aws ec2 authorize-security-group-ingress \
+  --group-id $ALB_SG --protocol tcp --port 80 --cidr 0.0.0.0/0 \
+  --region $REGION 2>/dev/null || true
+
+ALB_ARN=$(aws elbv2 create-load-balancer \
+  --name getwork-ecs-alb \
+  --subnets $SUBNET_1 $SUBNET_2 \
+  --security-groups $ALB_SG \
+  --scheme internet-facing --type application \
+  --query 'LoadBalancers[0].LoadBalancerArn' \
+  --output text --region $REGION 2>/dev/null || \
+  aws elbv2 describe-load-balancers --names getwork-ecs-alb \
+  --query 'LoadBalancers[0].LoadBalancerArn' --output text --region $REGION)
+
+TG_ARN=$(aws elbv2 create-target-group \
+  --name getwork-ecs-tg \
+  --protocol HTTP --port 8080 \
+  --vpc-id $VPC_ID \
+  --target-type ip \
+  --health-check-path "/" \
+  --health-check-interval-seconds 30 \
+  --healthy-threshold-count 2 \
+  --query 'TargetGroups[0].TargetGroupArn' \
+  --output text --region $REGION 2>/dev/null || \
+  aws elbv2 describe-target-groups --names getwork-ecs-tg \
+  --query 'TargetGroups[0].TargetGroupArn' --output text --region $REGION)
+
+aws elbv2 create-listener \
+  --load-balancer-arn $ALB_ARN \
+  --protocol HTTP --port 80 \
+  --default-actions Type=forward,TargetGroupArn=$TG_ARN \
+  --region $REGION 2>/dev/null || true
+
+# Create ECS Service with circuit breaker
+aws ecs create-service \
+  --cluster getwork-cluster \
+  --service-name getwork-api \
+  --task-definition getwork-api:1 \
+  --desired-count 2 \
+  --launch-type FARGATE \
+  --network-configuration "awsvpcConfiguration={
+    subnets=[$SUBNET_1,$SUBNET_2],
+    securityGroups=[$ECS_SG],
+    assignPublicIp=ENABLED}" \
+  --load-balancers "targetGroupArn=$TG_ARN,containerName=getwork-api,containerPort=8080" \
+  --health-check-grace-period-seconds 60 \
+  --deployment-configuration "deploymentCircuitBreaker={enable=true,rollback=true},minimumHealthyPercent=50,maximumPercent=200" \
+  --region $REGION 2>/dev/null || echo "Service already exists"
+
+ALB_DNS=$(aws elbv2 describe-load-balancers \
+  --load-balancer-arns $ALB_ARN \
+  --query 'LoadBalancers[0].DNSName' --output text --region $REGION)
+echo "Service created! ALB: http://$ALB_DNS"
+echo "Waiting ~2-3 minutes for tasks to start and become healthy..."</code>
+          <div class="snote">Note target-type=ip for Fargate (not instance). Fargate tasks register by IP address in awsvpc mode. Also note assignPublicIp=ENABLED — needed if subnets are private without NAT Gateway, so tasks can reach ECR. In production with NAT Gateway or Interface Endpoints, use DISABLED.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Verify the deployment and simulate a rolling update</div>
+          <div class="sb">Wait for tasks to become healthy, verify via ALB, then push a new image version and trigger a rolling deployment. Observe the deployment circuit breaker in action.</div>
+          <code class="cmd"># Monitor service until tasks are running
+for i in $(seq 1 15); do
+  RUNNING=$(aws ecs describe-services \
+    --cluster getwork-cluster --services getwork-api \
+    --query 'services[0].runningCount' --output text --region $REGION)
+  DESIRED=$(aws ecs describe-services \
+    --cluster getwork-cluster --services getwork-api \
+    --query 'services[0].desiredCount' --output text --region $REGION)
+  echo "$(date +%H:%M:%S) Running: $RUNNING / $DESIRED"
+  [ "$RUNNING" = "$DESIRED" ] && break
+  sleep 20
+done
+
+# Verify ALB endpoint
+ALB_DNS=$(aws elbv2 describe-load-balancers --names getwork-ecs-alb \
+  --query 'LoadBalancers[0].DNSName' --output text --region $REGION)
+curl -sf "http://$ALB_DNS/" && echo " Health check OK!"
+
+# Simulate a new deployment — push a new image tag
+BUILD_NUM=2
+docker tag getwork-api:local ${ECR_REPO}:build-${BUILD_NUM}
+docker push ${ECR_REPO}:build-${BUILD_NUM}
+
+# Update task definition with new image
+aws ecs register-task-definition \
+  --family getwork-api \
+  --network-mode awsvpc \
+  --requires-compatibilities FARGATE \
+  --cpu 256 --memory 512 \
+  --execution-role-arn "arn:aws:iam::${ACCOUNT_ID}:role/ecsTaskExecutionRole" \
+  --container-definitions "[{
+    \"name\":\"getwork-api\",
+    \"image\":\"${ECR_REPO}:build-${BUILD_NUM}\",
+    \"cpu\":256,\"memory\":512,
+    \"portMappings\":[{\"containerPort\":8080}],
+    \"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{
+      \"awslogs-group\":\"/getwork/ecs/api\",
+      \"awslogs-region\":\"${REGION}\",
+      \"awslogs-stream-prefix\":\"task\",
+      \"awslogs-create-group\":\"true\"}},
+    \"healthCheck\":{\"command\":[\"CMD-SHELL\",\"wget -qO- http://localhost:8080/ | grep -q UP || exit 1\"],
+      \"interval\":30,\"timeout\":5,\"retries\":3,\"startPeriod\":30}
+  }]" --region $REGION
+
+# Trigger rolling deployment to revision 2
+aws ecs update-service \
+  --cluster getwork-cluster \
+  --service getwork-api \
+  --task-definition getwork-api:2 \
+  --force-new-deployment \
+  --region $REGION
+
+echo "Rolling deployment started — watch events:"
+aws ecs describe-services --cluster getwork-cluster --services getwork-api \
+  --query 'services[0].events[0:3]' --output json --region $REGION</code>
+          <div class="snote">The rolling deployment starts 2 new tasks (total 4), waits for them to be healthy, then stops the 2 old tasks. Observe via: aws ecs describe-services ... events. The circuit breaker will auto-rollback if the new tasks fail to become healthy within the configured threshold.</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div></div>
+        <div class="ls-r">
+          <div class="st">Clean up ECS resources</div>
+          <div class="sb">Scale the service to 0, delete the service, delete the cluster (tasks must be stopped first). Clean up the ALB, ECR repository, and IAM roles.</div>
+          <code class="cmd"># Scale service to 0 (stops all tasks, stops Fargate billing)
+aws ecs update-service \
+  --cluster getwork-cluster \
+  --service getwork-api \
+  --desired-count 0 --region $REGION
+sleep 30
+
+# Delete service
+aws ecs delete-service \
+  --cluster getwork-cluster \
+  --service getwork-api \
+  --force --region $REGION
+
+# Delete ALB
+LISTENER=$(aws elbv2 describe-listeners --load-balancer-arn $ALB_ARN \
+  --query 'Listeners[0].ListenerArn' --output text --region $REGION)
+aws elbv2 delete-listener --listener-arn $LISTENER --region $REGION
+aws elbv2 delete-load-balancer --load-balancer-arn $ALB_ARN --region $REGION
+sleep 5
+aws elbv2 delete-target-group --target-group-arn $TG_ARN --region $REGION
+
+# Delete ECR images and repository (careful in production!)
+aws ecr delete-repository \
+  --repository-name getwork-api \
+  --force --region $REGION
+
+# Delete ECS cluster
+aws ecs delete-cluster \
+  --cluster getwork-cluster --region $REGION
+
+echo "Day 12 lab cleanup complete"</code>
+          <div class="snote">ECS Fargate billing stops the moment tasks stop running — no fixed hourly cost unlike EC2. The ECR repository deletion with --force removes all images. In production you'd archive important images before deleting a repository.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[8])">Day 12 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Day 12 — ECS & Docker on AWS mechanics</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">Multi-stage Dockerfile</div><div class="cs-d">Builder stage installs Maven/JDK + builds. Runtime stage has JRE + app only. No build tools in production image. 500MB → 150MB. Spring Boot layered JAR makes code-change deploys 2MB instead of 200MB.</div></div>
+      <div class="cs-item"><div class="cs-t">pom.xml-first layer caching</div><div class="cs-d">COPY pom.xml first, then RUN mvn dependency:go-offline. Deps layer cached unless pom.xml changes. Source code layer rebuilds only on code changes. Cuts CI build from 8 min to 90s on cache hit.</div></div>
+      <div class="cs-item"><div class="cs-t">UseContainerSupport</div><div class="cs-d">JVM reads cgroup memory limits (not host RAM) for heap sizing. Required since Java 10. MaxRAMPercentage=75.0 uses 75% of container memory limit for heap. Scale heap by setting container memory limit — not hardcoded JVM flags.</div></div>
+      <div class="cs-item"><div class="cs-t">executionRoleArn vs taskRoleArn</div><div class="cs-d">Execution role: used by ECS agent to pull ECR image, write CloudWatch logs, inject secrets at task start. Task role: used by your Spring Boot code for S3, Secrets Manager, SQS calls. Never combine — different principals, different permissions.</div></div>
+      <div class="cs-item"><div class="cs-t">awsvpc network mode</div><div class="cs-d">Every Fargate task gets its own ENI, private IP, and Security Groups. Task-level network isolation. Required for Fargate. Security Groups apply per-task, not per-host. Each task consumes 1 ENI from VPC limits.</div></div>
+      <div class="cs-item"><div class="cs-t">Deployment circuit breaker</div><div class="cs-d">Set deploymentCircuitBreaker.enable=true,rollback=true on every production service. Auto-rolls back deployment if new tasks fail to become healthy. Without it: broken deployments leave service in degraded state indefinitely.</div></div>
+      <div class="cs-item"><div class="cs-t">OOMKilled = exit code 137</div><div class="cs-d">Container exceeded memory hard limit. JVM overhead (Metaspace + threads + NIO buffers) beyond heap size. Rule: memory limit = heap × 2.5 (MVC) or heap × 1.5 (WebFlux). Set ExitOnOutOfMemoryError to crash fast.</div></div>
+      <div class="cs-item"><div class="cs-t">Fargate cold start</div><div class="cs-d">microVM boot (~3s) + ENI attachment (~15s) + ECR image pull (~20-60s) + Spring Boot startup (~30-60s) = 90-120s total. Layered JAR reduces image pull. Health check grace period must exceed this total.</div></div>
+      <div class="cs-item"><div class="cs-t">ECR lifecycle policy</div><div class="cs-d">Keep last 10 tagged images, delete untagged after 1 day. Without policy: 365+ images/year per service. 20 services × 500MB × 365 builds = hundreds in storage costs. Set on every ECR repository at creation.</div></div>
+      <div class="cs-item"><div class="cs-t">:latest tag danger</div><div class="cs-d">:latest is mutable — changes every push. Use build-NUMBER or git-SHA tags in task definitions. Rollback = update task definition to point to previous tag. Immutable tags make rollback a 10-second operation.</div></div>
+      <div class="cs-item"><div class="cs-t">Fargate vs EC2 cost</div><div class="cs-d">Fargate: ~$21/month per continuous task (0.5 vCPU, 1GB). EC2 launch type (bin-packed): ~$2/task/month. Fargate 10× more expensive for always-on workloads. But Fargate is cheaper for batch/intermittent tasks that don't run 24/7.</div></div>
+      <div class="cs-item"><div class="cs-t">CannotPullContainerError</div><div class="cs-d">ECR auth failure: check executionRole has ecr:GetAuthorizationToken on *. Network: Fargate in private subnet needs NAT Gateway or ECR Interface Endpoints + S3 Gateway Endpoint to reach ECR.</div></div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Day 13 preview — ElastiCache + DynamoDB</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      Day 13: ElastiCache (Redis) — caching layer in front of RDS. Read-aside cache pattern for GetWork job listings. Connection pooling with Jedis/Lettuce in Spring Boot. Redis cluster mode vs replication group. Cache invalidation strategies.<br>
+      Day 13: DynamoDB — distributed key-value store for session data, rate limiting, and high-throughput counters. Partition key design, capacity modes, GSIs, and the Spring Boot integration via DynamoDB Enhanced Client.
+    </div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+</body>
+</html>

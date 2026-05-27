@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saga Pattern & Distributed Transactions</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06090e;
+    --surface: #0f141e;
+    --surface2: #1a212e;
+    --surface3: #263040;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #E6EDF3;
+    --muted: #8b9eb3;
+    --muted2: #5b6b7d;
+    --blue: #3b82f6;
+    --blue-bg: rgba(59, 130, 246, 0.1);
+    --green: #10b981;
+    --green-bg: rgba(16, 185, 129, 0.1);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245, 158, 11, 0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239, 68, 68, 0.1);
+    --purple: #8b5cf6;
+    --purple-bg: rgba(139, 92, 246, 0.1);
+    --cyan: #06b6d4;
+    --cyan-bg: rgba(6, 182, 212, 0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh; overflow-x: hidden;
+  }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ─── TOP BAR ─── */
+  #topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(6, 9, 14, 0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px; display: flex; align-items: center; height: 52px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px; margin-right: 32px;
+    font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 10px var(--purple); }
+  .step-tabs { display: flex; gap: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .step-tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 0 16px; height: 52px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; 
+    border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; user-select: none;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+  .tab.done { color: var(--green); }
+  .tab-num {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--surface2); 
+    border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: var(--muted); transition: all 0.2s; flex-shrink: 0;
+  }
+  .tab.active .tab-num { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .tab.done .tab-num { background: var(--green); border-color: var(--green); color: #fff; }
+  
+  .nav-btns { display: flex; gap: 8px; margin-left: 16px; }
+  .nav-btn {
+    height: 32px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+    font-family: 'Space Grotesk', sans-serif; text-transform: uppercase;
+  }
+  .nav-btn:hover { background: var(--surface3); border-color: rgba(255,255,255,0.2); }
+  .nav-btn.primary { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .nav-btn.primary:hover { opacity: 0.85; box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);}
+  .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ─── MAIN LAYOUT ─── */
+  #main {
+    display: grid; grid-template-columns: 280px 1fr 300px;
+    height: calc(100vh - 52px); overflow: hidden;
+  }
+
+  /* ─── LEFT PANEL ─── */
+  #left {
+    border-right: 1px solid var(--border); overflow-y: auto; padding: 20px 0;
+    background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .left-section-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: var(--muted2); text-transform: uppercase; padding: 8px 20px 6px;
+  }
+  .request-block {
+    margin: 0 12px 16px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; transition: all 0.3s;
+  }
+  .req-header {
+    padding: 10px 12px 8px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .method-badge { font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 2px 7px; border-radius: 4px; }
+  .method-post { background: var(--purple-bg); color: var(--purple); }
+  .req-path { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text); font-weight: 600;}
+  .req-body { padding: 10px 12px; font-size: 10px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; word-break: break-all;}
+  .json-key { color: var(--pink); }
+  .json-str { color: var(--cyan); }
+  .json-num { color: var(--amber); }
+  .divider { height: 1px; background: var(--border); margin: 4px 20px 12px; }
+
+  .phase-list { padding: 0 12px; display: flex; flex-direction: column; gap: 3px; }
+  .phase-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; font-weight: 500;
+  }
+  .phase-item:hover { background: var(--surface2); }
+  .phase-item.active { background: var(--purple-bg); border-color: rgba(139, 92, 246, 0.2); color: var(--purple); }
+  .phase-item.done { color: var(--green); }
+  .phase-item.failed { color: var(--red); }
+  .phase-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted2); flex-shrink: 0; transition: all 0.2s; }
+  .phase-item.active .phase-dot { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+  .phase-item.done .phase-dot { background: var(--green); }
+  .phase-item.failed .phase-dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .phase-label { flex: 1; }
+
+  /* ─── CENTER PANEL ─── */
+  #center {
+    overflow-y: auto; padding: 28px 32px; background: var(--bg);
+    scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .scene { display: none; }
+  .scene.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+
+  .scene-header { margin-bottom: 24px; }
+  .scene-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(59, 130, 246, 0.3);}
+  .badge-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(139, 92, 246, 0.3);}
+  .badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3);}
+  .badge-red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.3);}
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3);}
+  .badge-cyan { background: var(--cyan-bg); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.3);}
+
+  .scene-title { font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 10px; color: #fff;}
+  .scene-sub { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 600px; }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 30px 24px; margin: 24px 0; position: relative; overflow: hidden; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+  }
+  .arch-row { display: flex; align-items: center; justify-content: center; position: relative; margin: 10px 0; gap: 15px;}
+  .arch-box {
+    border-radius: 8px; border: 1px solid; padding: 12px 16px; font-size: 13px; font-weight: 600;
+    text-align: center; position: relative; z-index: 1; min-width: 120px; transition: all 0.3s;
+    background: var(--surface2); color: var(--text);
+  }
+  .arch-arrow { display: flex; flex-direction: column; align-items: center; color: var(--muted2); font-size: 11px; font-family: monospace; font-weight: bold;}
+  
+  /* Specific Node Styles */
+  .box-blue { border-color: rgba(59, 130, 246, 0.5); border-left: 4px solid var(--blue); }
+  .box-green { border-color: rgba(16, 185, 129, 0.5); border-left: 4px solid var(--green); background: var(--green-bg); }
+  .box-red { border-color: rgba(239, 68, 68, 0.5); border-left: 4px solid var(--red); background: var(--red-bg); }
+  .box-amber { border-color: rgba(245, 158, 11, 0.5); border-left: 4px solid var(--amber); }
+  .box-purple { border-color: rgba(139, 92, 246, 0.5); border-left: 4px solid var(--purple); background: var(--purple-bg); box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);}
+  .box-cyan { border-color: rgba(6, 182, 212, 0.5); border-left: 4px solid var(--cyan); }
+
+  /* Info cards */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; transition: all 0.2s; }
+  .info-card:hover { border-color: var(--purple); background: var(--surface2); }
+  .info-card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .info-card-val { font-size: 14px; font-weight: 700; color: var(--text); }
+  .info-card-sub { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+  /* Code blocks */
+  .code-block { background: #020617; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 16px 0; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);}
+  .code-header { padding: 8px 14px; border-bottom: 1px solid var(--surface2); display: flex; align-items: center; gap: 8px; background: var(--surface); }
+  .code-lang { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  .code-desc { font-size: 11px; color: var(--muted); margin-left: auto; font-family: monospace;}
+  .code-body { padding: 14px 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; line-height: 1.7; overflow-x: auto; color: #e2e8f0;}
+  .kw { color: #f472b6; font-weight: bold;}
+  .fn { color: var(--blue); }
+  .str { color: var(--green); }
+  .num { color: var(--amber); }
+  .cm { color: var(--muted); font-style: italic; }
+  .an { color: var(--amber); font-weight: bold; }
+  
+  .hl-purple { background: rgba(139, 92, 246, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--purple); }
+  .hl-red { background: rgba(239, 68, 68, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--red); }
+  .hl-green { background: rgba(16, 185, 129, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--green); }
+
+  /* Spatial Network Visuals (Center Pane) */
+  .spatial-network { position: relative; width: 100%; height: 280px; display: flex; justify-content: center; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-top: 20px; overflow: hidden;}
+  
+  /* Coordinator Node */
+  .coord-node { background: rgba(15,23,42,0.9); border: 2px solid var(--purple); padding: 15px; border-radius: 8px; font-weight: bold; color: var(--purple); box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); z-index: 10; position: absolute; left: 50%; top: 30px; transform: translateX(-50%); text-align: center;}
+  
+  /* Worker Nodes */
+  .worker-node { position: absolute; background: rgba(15,23,42,0.9); border: 1px solid var(--border2); padding: 10px; border-radius: 6px; font-size: 11px; color: var(--text); top: 180px; transition: all 0.3s; font-family: monospace; text-align: center; width: 100px;}
+  .worker-node span { display: block; font-size: 8px; color: var(--muted); margin-top: 4px; }
+  .wn-order { left: 30px; border-color: var(--blue); }
+  .wn-pay { left: 50%; transform: translateX(-50%); border-color: var(--green); }
+  .wn-inv { right: 30px; border-color: var(--amber); }
+  
+  /* Lock Visuals */
+  .db-lock { position: absolute; font-size: 24px; top: -15px; right: -10px; opacity: 0; filter: drop-shadow(0 0 5px red); z-index: 20; transition: opacity 0.3s;}
+  .giant-lock { position: absolute; font-size: 60px; top: 120px; left: 50%; transform: translateX(-50%); opacity: 0; filter: drop-shadow(0 0 15px red); z-index: 30; transition: opacity 0.3s;}
+  
+  /* SVG Lines */
+  .svg-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;}
+  .line { fill: none; stroke: var(--border-light); stroke-width: 2; opacity: 0; transition: opacity 0.5s; stroke-dasharray: 4 4;}
+  
+  /* Packets */
+  .packet {
+    position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: bold;
+    padding: 4px 8px; border-radius: 4px; opacity: 0; z-index: 25; color: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none; text-align: center; white-space: nowrap; transform: translate(-50%, -50%);
+  }
+  .pkt-cmd { background: var(--blue); }
+  .pkt-ok { background: var(--green); }
+  .pkt-err { background: var(--red); }
+  .pkt-comp { background: var(--amber); color: #000; } /* Compensation */
+  
+  /* Chaos Spaghetti */
+  .chaos-lines path { stroke: var(--text-muted); stroke-width: 1; opacity: 0; transition: opacity 0.3s;}
+
+  /* ─── RIGHT PANEL ─── */
+  #right {
+    border-left: 1px solid var(--border); overflow-y: auto; padding: 20px 16px;
+    background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .right-section { margin-bottom: 24px; }
+  .right-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted2); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .metric-card {
+    background: var(--surface2); border-radius: 8px; padding: 12px 14px;
+    margin-bottom: 8px; border: 1px solid var(--border); transition: all 0.3s;
+  }
+  .metric-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 4px; text-transform: uppercase;}
+  .metric-val { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .metric-sub { font-size: 10px; color: var(--muted2); margin-top: 4px; }
+  
+  .metric-green { color: var(--green); text-shadow: 0 0 10px rgba(16,185,129,0.3);}
+  .metric-purple { color: var(--purple); text-shadow: 0 0 10px rgba(139,92,246,0.3);}
+  .metric-blue { color: var(--blue); text-shadow: 0 0 10px rgba(59,130,246,0.3);}
+  .metric-amber { color: var(--amber); text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);}
+  .metric-red { color: var(--red); text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); animation: shake 0.3s infinite;}
+
+  @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} }
+
+  /* Dynamic State Panel */
+  .state-panel { background: #000; border: 1px solid var(--border2); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 10px; line-height: 1.5; margin-bottom: 15px; color: var(--text);}
+  .sp-key { color: var(--muted); }
+  .sp-val { color: var(--purple); font-weight: bold;}
+
+  /* ─── FOOTER ─── */
+  #footer {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 36px;
+    background: rgba(6, 9, 14, 0.95); border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; gap: 16px;
+    font-size: 11px; font-weight: 600; color: var(--muted); backdrop-filter: blur(8px); z-index: 99;
+  }
+  .footer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--purple); flex-shrink: 0; }
+  .footer-dot.pulse { animation: blink 1s ease-in-out infinite; box-shadow: 0 0 8px var(--purple);}
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .kbd {
+    display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 4px;
+    background: var(--surface2); border: 1px solid var(--border2); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #fff;
+  }
+  .separator { color: var(--surface3); }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <a href="../../index.html?pathway=keytopics" style="text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-right: 20px; flex-shrink: 0; transition: opacity 0.2s;">
+    <span>←</span> Back
+  </a>
+  <div class="brand">
+    <div class="brand-dot"></div>
+    Distributed Data Masterclass
+  </div>
+  <div class="step-tabs" id="tabs"></div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
+    <button class="nav-btn primary" id="nextBtn" onclick="navigate(1)">Next →</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT -->
+  <div id="left">
+    <div class="left-section-title">Active Context</div>
+    
+    <div class="request-block" id="req-block">
+      <div class="req-header">
+        <span class="method-badge method-post">POST</span>
+        <span class="req-path">/api/v1/orders</span>
+      </div>
+      <div class="req-body">
+        <span class="json-key">"user_id"</span>: <span class="json-str">"usr_982"</span>,<br>
+        <span class="json-key">"item"</span>: <span class="json-str">"MacBook Pro"</span>,<br>
+        <span class="json-key">"amount"</span>: <span class="json-num">2500.00</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="left-section-title">Saga Pipeline</div>
+    <div class="phase-list" id="phaseList"></div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center" id="scenes">
+
+    <!-- SCENE 0: Overview -->
+    <div class="scene active" id="scene0">
+      <div class="scene-header">
+        <div class="scene-badge badge-blue">Architecture</div>
+        <div class="scene-title">The Distributed Data Problem</div>
+        <div class="scene-sub">In a monolith, transferring money uses one ACID database transaction. In microservices, Order, Payment, and Inventory have separate databases. You cannot lock them all across a network.</div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title" style="color:var(--green);">✅ Monolith (ACID)</div>
+          <div class="info-card-sub" style="color:#fff;">1 DB. 1 Connection. Absolute consistency. Rollbacks are instant and mathematical.</div>
+        </div>
+        <div class="info-card" style="border-color: var(--red); background: var(--red-bg);">
+          <div class="info-card-title" style="color:var(--red);">❌ Microservices</div>
+          <div class="info-card-sub" style="color:#fff;">3 DBs. 3 Connections over HTTP/TCP. If DB 3 fails, how do you rollback DB 1?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 1: 2PC Failure -->
+    <div class="scene" id="scene1">
+      <div class="scene-header">
+        <div class="scene-badge badge-red">Anti-Pattern</div>
+        <div class="scene-title">Two-Phase Commit (2PC)</div>
+        <div class="scene-sub">The naive approach is a distributed lock. The coordinator locks ALL databases, executes the logic, and commits. This guarantees consistency but destroys availability. If a network drops, the system freezes permanently.</div>
+      </div>
+
+      <div class="spatial-network" style="height: 220px;">
+        <svg class="svg-lines">
+            <path class="line" d="M150,110 L80,180" style="opacity:1; stroke-dasharray:none;"></path>
+            <path class="line" d="M150,110 L220,180" style="opacity:1; stroke-dasharray:none;"></path>
+        </svg>
+        
+        <div class="coord-node" style="top:20px; border-color:var(--red); color:var(--red);">Transaction Manager</div>
+        
+        <div class="worker-node" style="top: 130px; left: 30px; border-color:var(--red);">DB 1<div class="db-lock" style="opacity:1;">🔒</div></div>
+        <div class="worker-node" style="top: 130px; right: 30px; border-color:var(--red);">DB 2<div class="db-lock" style="opacity:1;">🔒</div></div>
+        
+        <div class="giant-lock" style="opacity:1; top: 80px;">🔒</div>
+      </div>
+      <div style="text-align:center; color:var(--red); font-size:12px; font-weight:bold; margin-top:15px;">System Frozen. Throughput drops to zero.</div>
+    </div>
+
+    <!-- SCENE 2: Choreography -->
+    <div class="scene" id="scene2">
+      <div class="scene-header">
+        <div class="scene-badge badge-amber">Pattern 1</div>
+        <div class="scene-title">Choreography (Event-Driven)</div>
+        <div class="scene-sub">Decentralized. Services publish events to a broker (Kafka). Good for simple flows, but for complex transactions, it becomes an untestable "plate of spaghetti" where nobody knows the overall state.</div>
+      </div>
+
+      <div class="spatial-network" style="height: 250px;">
+        <svg class="svg-lines chaos-lines">
+            <!-- Random lines to represent spaghetti -->
+            <path d="M80,80 L220,80" id="ch1"></path>
+            <path d="M220,80 L220,200" id="ch2"></path>
+            <path d="M220,200 L80,200" id="ch3"></path>
+            <path d="M80,200 L80,80" id="ch4"></path>
+            <path d="M80,80 L220,200" id="ch5"></path>
+            <path d="M220,80 L80,200" id="ch6"></path>
+        </svg>
+        
+        <div class="worker-node" style="top: 30px; left: 30px;">OrderSvc</div>
+        <div class="worker-node" style="top: 30px; right: 30px;">PaymentSvc</div>
+        <div class="worker-node" style="top: 150px; left: 30px;">InventorySvc</div>
+        <div class="worker-node" style="top: 150px; right: 30px;">ShippingSvc</div>
+      </div>
+    </div>
+
+    <!-- SCENE 3: Orchestration Intro -->
+    <div class="scene" id="scene3">
+      <div class="scene-header">
+        <div class="scene-badge badge-purple">Pattern 2</div>
+        <div class="scene-title">Orchestration (The Brain)</div>
+        <div class="scene-sub">We introduce a central brain: The Saga Execution Coordinator (SEC). It issues explicit Commands (not events) and tracks the exact state in its own database. Perfect for complex flows with money.</div>
+      </div>
+
+      <div class="spatial-network" id="net-orchestration">
+        <svg class="svg-lines">
+            <path class="line" id="l-c-o" d="M210,90 L80,180"></path>
+            <path class="line" id="l-c-p" d="M210,90 L210,180"></path>
+            <path class="line" id="l-c-i" d="M210,90 L340,180"></path>
+        </svg>
+
+        <div class="coord-node" id="n-coord">Saga Coordinator<br><span style="font-size:9px; color:var(--muted); font-weight:normal; margin-top:4px;">State Machine</span></div>
+        
+        <div class="worker-node wn-order" id="n-order">Order Service</div>
+        <div class="worker-node wn-pay" id="n-pay">Payment Service</div>
+        <div class="worker-node wn-inv" id="n-inv">Inventory Service</div>
+
+        <!-- Packets -->
+        <div class="packet" id="pkt-main">Cmd</div>
+      </div>
+    </div>
+
+    <!-- SCENE 4: Happy Path Code -->
+    <div class="scene" id="scene4">
+      <div class="scene-header">
+        <div class="scene-badge badge-green">Execution</div>
+        <div class="scene-title">The Happy Path</div>
+        <div class="scene-sub">The Coordinator breaks the transaction into a sequence of Local Transactions. Each service commits locally, releases its lock instantly, and replies. High availability is maintained.</div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JAVA</span><span class="code-desc">Coordinator Logic</span></div>
+        <div class="code-body">
+<span class="c-cm">// Step 1</span>
+orderClient.createPendingOrder(req);
+state = ORDER_PENDING;
+
+<span class="c-cm">// Step 2</span>
+paymentClient.charge(req.amount());
+state = PAYMENT_APPROVED;
+
+<span class="c-cm">// Step 3</span>
+inventoryClient.reserve(req.item());
+state = <span class="c-st">COMPLETED</span>;
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 5: Failure Code -->
+    <div class="scene" id="scene5">
+      <div class="scene-header">
+        <div class="scene-badge badge-red">Failure</div>
+        <div class="scene-title">The Distributed Failure</div>
+        <div class="scene-sub">The network is hostile. Order is created. Payment is charged. But when reserving Inventory, it returns "Out of Stock". The user lost money, but gets no item. We cannot do an SQL rollback on the Payment Service!</div>
+      </div>
+
+      <div class="code-block" style="border-color: var(--red); box-shadow: inset 0 0 20px rgba(239,68,68,0.2);">
+        <div class="code-header" style="background: rgba(239,68,68,0.1);"><span class="code-lang">JAVA</span><span class="code-desc">Inventory Call</span></div>
+        <div class="code-body">
+<span class="c-kw">try</span> {
+    inventoryClient.reserve(req.item());
+    state = COMPLETED;
+} <span class="c-kw">catch</span> (<span class="c-ty">OutOfStockException</span> e) {
+<span class="c-err">    <span class="c-cm">// FATAL: Payment was already committed!</span></span>
+<span class="c-err">    state = INVENTORY_FAILED;</span>
+<span class="c-err">    triggerCompensation();</span>
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 6: Compensation Code -->
+    <div class="scene" id="scene6">
+      <div class="scene-header">
+        <div class="scene-badge badge-amber">Recovery</div>
+        <div class="scene-title">Compensating Transactions</div>
+        <div class="scene-sub">The genius of Saga: <strong>Semantic Rollbacks</strong>. The Coordinator shifts into reverse and issues <em>Compensation Commands</em>. It tells Payment: 'Refund $2500'. It tells Order: 'Cancel'. Perfect financial consistency restored.</div>
+      </div>
+
+      <div class="code-block" style="border-color: var(--amber); box-shadow: inset 0 0 20px rgba(245,158,11,0.2);">
+        <div class="code-header" style="background: rgba(245,158,11,0.1);"><span class="code-lang">JAVA</span><span class="code-desc">Compensation Logic</span></div>
+        <div class="code-body">
+<span class="c-kw">private void</span> <span class="c-fn">triggerCompensation</span>() {
+    state = COMPENSATING;
+    
+<span class="c-an">    <span class="c-cm">// Reverse Step 2</span>
+    paymentClient.refund(req.amount());</span>
+    
+<span class="c-an">    <span class="c-cm">// Reverse Step 1</span>
+    orderClient.cancelOrder(req.orderId());</span>
+    
+    state = <span class="c-cm" style="color:var(--muted);">ABORTED_SAFELY</span>;
+}
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end center -->
+
+  <!-- RIGHT -->
+  <div id="right">
+    <div class="right-section">
+      <div class="right-title">⚡ Live Metrics</div>
+      <div class="metric-card" id="mc-active">
+        <div class="metric-label">Active Sagas</div>
+        <div class="metric-val metric-blue" id="mv-active">--</div>
+        <div class="metric-sub" id="ms-active">Transactions in flight</div>
+      </div>
+      <div class="metric-card" id="mc-comp">
+        <div class="metric-label">Compensation Rate</div>
+        <div class="metric-val metric-purple" id="mv-comp">--</div>
+        <div class="metric-sub" id="ms-comp">Rollbacks executed</div>
+      </div>
+      <div class="metric-card" id="mc-locks">
+        <div class="metric-label">DB Locks Held</div>
+        <div class="metric-val metric-green" id="mv-locks">0</div>
+        <div class="metric-sub">Distributed Contention</div>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <div class="right-title">🔍 Coordinator State</div>
+      <div class="state-panel" id="state-panel">
+        <span class="sp-key">Saga ID:</span> <span class="sp-val">sg-8821</span><br>
+        <span class="sp-key">Status:</span> <span class="sp-val" id="st-val" style="color:var(--muted);">IDLE</span>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <div class="right-title">📶 Pipeline Flow</div>
+      <div class="phase-list" id="r-phaseList" style="padding:0;">
+          <!-- Cloned phases will go here visually -->
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- FOOTER -->
+<div id="footer">
+  <div class="footer-dot pulse"></div>
+  <span>Saga Pattern Architecture</span>
+  <span class="separator">|</span>
+  <span>Use <span class="kbd">←</span> <span class="kbd">→</span> to navigate</span>
+  <span class="separator">|</span>
+  <span id="footerStage">Stage: Overview</span>
+</div>
+
+<script>
+  const STAGES = [
+    { id: 'scene0', short: 'Overview',  phase: 'Monolith vs Microservices' },
+    { id: 'scene1', short: '2PC Fallacy', phase: '1 · Two-Phase Commit' },
+    { id: 'scene2', short: 'Choreography', phase: '2 · Event Spaghettification' },
+    { id: 'scene3', short: 'Orchestration', phase: '3 · The Central Brain' },
+    { id: 'scene4', short: 'Happy Path', phase: '4 · Sequential Commits' },
+    { id: 'scene5', short: 'Failure', phase: '5 · Distributed Failure' },
+    { id: 'scene6', short: 'Compensation', phase: '6 · Semantic Rollback' }
+  ];
+
+  const PHASES = [
+    { label: 'Create Order', id: 'p-ord' },
+    { label: 'Process Payment', id: 'p-pay' },
+    { label: 'Reserve Inventory', id: 'p-inv' }
+  ];
+
+  let current = 0;
+  let isAnimating = false;
+
+  function buildUI() {
+    const tabContainer = document.getElementById('tabs');
+    STAGES.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'tab' + (i === 0 ? ' active' : '');
+      div.innerHTML = `<span class="tab-num">${i}</span>${s.short}`;
+      div.onclick = () => goTo(i);
+      tabContainer.appendChild(div);
+    });
+
+    const pContainer = document.getElementById('phaseList');
+    const rContainer = document.getElementById('r-phaseList');
+    PHASES.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'phase-item';
+      div.id = 'l-phase-' + i;
+      div.innerHTML = `<div class="phase-dot"></div><span class="phase-label">${p.label}</span>`;
+      pContainer.appendChild(div);
+
+      const rdiv = document.createElement('div');
+      rdiv.className = 'phase-item';
+      rdiv.id = 'r-phase-' + i;
+      rdiv.innerHTML = `<div class="phase-dot"></div><span class="phase-label">${p.label}</span>`;
+      rContainer.appendChild(rdiv);
+    });
+  }
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  // Animation Helper for Center Network
+  async function animatePacket(lineId, startNode, endNode, text, colorClass, duration=500) {
+      const line = document.getElementById(lineId);
+      const pkt = document.getElementById('pkt-main');
+      
+      line.style.opacity = '1';
+      line.classList.add('active');
+      
+      pkt.className = `packet ${colorClass}`;
+      pkt.innerText = text;
+      
+      // Rough coordinate extraction based on inline styles
+      const startX = startNode === 'n-coord' ? 210 : startNode === 'n-order' ? 80 : startNode === 'n-pay' ? 210 : 340;
+      const startY = startNode === 'n-coord' ? 90 : 180;
+      const endX = endNode === 'n-coord' ? 210 : endNode === 'n-order' ? 80 : endNode === 'n-pay' ? 210 : 340;
+      const endY = endNode === 'n-coord' ? 90 : 180;
+      
+      pkt.style.transition = 'none';
+      pkt.style.top = startY + 'px';
+      pkt.style.left = startX + 'px';
+      pkt.style.opacity = '1';
+      
+      await sleep(50);
+      
+      pkt.style.transition = `all ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+      pkt.style.top = endY + 'px';
+      pkt.style.left = endX + 'px';
+      
+      await sleep(duration);
+      pkt.style.opacity = '0';
+      line.classList.remove('active');
+      line.style.opacity = '0';
+  }
+
+  function setPhaseState(idx, state) { // state: 'active', 'done', 'failed', 'clear'
+      const l = document.getElementById('l-phase-'+idx);
+      const r = document.getElementById('r-phase-'+idx);
+      l.className = 'phase-item'; r.className = 'phase-item';
+      if(state !== 'clear') {
+          l.classList.add(state); r.classList.add(state);
+      }
+  }
+
+  async function updateDynamicContent(idx) {
+    const mvAct = document.getElementById('mv-active');
+    const mvComp = document.getElementById('mv-comp');
+    const mvLck = document.getElementById('mv-locks');
+    const stVal = document.getElementById('st-val');
+    
+    // Reset visuals
+    ['ch1','ch2','ch3','ch4','ch5','ch6'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.style.opacity = '0';
+    });
+    document.getElementById('pkt-main').style.opacity = '0';
+    
+    for(let i=0; i<3; i++) setPhaseState(i, 'clear');
+
+    if (idx === 0) {
+        mvAct.innerText = "--"; mvAct.className = "metric-val metric-blue";
+        mvComp.innerText = "--"; mvComp.className = "metric-val metric-purple";
+        mvLck.innerText = "0"; mvLck.className = "metric-val metric-green";
+        stVal.innerText = "IDLE"; stVal.style.color = "var(--muted)";
+    } 
+    else if (idx === 1) { // 2PC
+        mvAct.innerText = "1"; mvAct.className = "metric-val metric-blue";
+        mvLck.innerText = "ALL"; mvLck.className = "metric-val metric-red";
+        stVal.innerText = "WAITING_LOCKS"; stVal.style.color = "var(--red)";
+    }
+    else if (idx === 2) { // Choreography
+        mvAct.innerText = "12"; mvAct.className = "metric-val metric-blue";
+        mvLck.innerText = "0"; mvLck.className = "metric-val metric-green";
+        stVal.innerText = "UNKNOWN"; stVal.style.color = "var(--amber)";
+        
+        // Spaghetti animation
+        const ids = ['ch1','ch2','ch3','ch4','ch5','ch6'];
+        for(let i=0; i<ids.length; i++) {
+            setTimeout(() => {
+                const el = document.getElementById(ids[i]);
+                if(el && current === 2) el.style.opacity = '1';
+            }, i * 200);
+        }
+    }
+    else if (idx === 3) { // Orchestration Intro
+        mvAct.innerText = "0"; mvAct.className = "metric-val metric-blue";
+        mvLck.innerText = "0"; mvLck.className = "metric-val metric-green";
+        stVal.innerText = "READY"; stVal.style.color = "var(--blue)";
+    }
+    else if (idx === 4) { // Happy Path
+        mvAct.innerText = "1"; mvAct.className = "metric-val metric-blue";
+        mvComp.innerText = "0%"; mvComp.className = "metric-val metric-green";
+        
+        stVal.innerText = "ORDER_PENDING"; stVal.style.color = "var(--blue)";
+        setPhaseState(0, 'active');
+        await animatePacket('l-c-o', 'n-coord', 'n-order', 'Cmd:Create', 'pkt-cmd');
+        await animatePacket('l-c-o', 'n-order', 'n-coord', 'Success', 'pkt-ok');
+        setPhaseState(0, 'done');
+        
+        if (current !== 4) return;
+        stVal.innerText = "PAYMENT_APPROVED"; stVal.style.color = "var(--blue)";
+        setPhaseState(1, 'active');
+        await animatePacket('l-c-p', 'n-coord', 'n-pay', 'Cmd:Charge', 'pkt-cmd');
+        await animatePacket('l-c-p', 'n-pay', 'n-coord', 'Success', 'pkt-ok');
+        setPhaseState(1, 'done');
+
+        if (current !== 4) return;
+        stVal.innerText = "COMPLETED"; stVal.style.color = "var(--green)";
+        setPhaseState(2, 'active');
+        await animatePacket('l-c-i', 'n-coord', 'n-inv', 'Cmd:Reserve', 'pkt-cmd');
+        await animatePacket('l-c-i', 'n-inv', 'n-coord', 'Success', 'pkt-ok');
+        setPhaseState(2, 'done');
+    }
+    else if (idx === 5) { // Failure
+        mvAct.innerText = "1"; mvAct.className = "metric-val metric-blue";
+        
+        setPhaseState(0, 'done');
+        setPhaseState(1, 'done');
+        setPhaseState(2, 'active');
+        stVal.innerText = "PAYMENT_APPROVED"; stVal.style.color = "var(--blue)";
+        
+        await sleep(400);
+        if (current !== 5) return;
+        await animatePacket('l-c-i', 'n-coord', 'n-inv', 'Cmd:Reserve', 'pkt-cmd');
+        
+        document.getElementById('n-inv').classList.add('node-fail');
+        await animatePacket('l-c-i', 'n-inv', 'n-coord', 'Out of Stock', 'pkt-err');
+        document.getElementById('n-inv').classList.remove('node-fail');
+        
+        stVal.innerText = "INVENTORY_FAILED"; stVal.style.color = "var(--red)";
+        setPhaseState(2, 'failed');
+    }
+    else if (idx === 6) { // Compensation
+        mvAct.innerText = "0"; mvAct.className = "metric-val metric-blue";
+        mvComp.innerText = "100%"; mvComp.className = "metric-val metric-amber";
+        
+        setPhaseState(0, 'done');
+        setPhaseState(1, 'done');
+        setPhaseState(2, 'failed');
+        stVal.innerText = "COMPENSATING"; stVal.style.color = "var(--amber)";
+        
+        await sleep(400);
+        if (current !== 6) return;
+        setPhaseState(1, 'active'); // Re-activating payment for refund
+        await animatePacket('l-c-p', 'n-coord', 'n-pay', 'Cmd:Refund', 'pkt-comp');
+        await animatePacket('l-c-p', 'n-pay', 'n-coord', 'Success', 'pkt-ok');
+        setPhaseState(1, 'failed'); // Mark as rolled back (red)
+        
+        if (current !== 6) return;
+        setPhaseState(0, 'active');
+        await animatePacket('l-c-o', 'n-coord', 'n-order', 'Cmd:Cancel', 'pkt-comp');
+        await animatePacket('l-c-o', 'n-order', 'n-coord', 'Success', 'pkt-ok');
+        setPhaseState(0, 'failed');
+        
+        stVal.innerText = "ABORTED_SAFELY"; stVal.style.color = "var(--muted)";
+    }
+  }
+
+  function goTo(idx) {
+    if(isAnimating && current === 4 || current === 5 || current === 6) {
+        // allow interruption but rough
+    }
+    isAnimating = true;
+    
+    const scenes = document.querySelectorAll('.scene');
+    scenes.forEach(s => s.classList.remove('active'));
+    document.getElementById(STAGES[idx].id).classList.add('active');
+
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach((t, i) => {
+      t.classList.remove('active', 'done');
+      if (i < idx) t.classList.add('done');
+      if (i === idx) t.classList.add('active');
+    });
+
+    // Special handling to show the orchestration network on scenes 4,5,6
+    if(idx >= 3) {
+        document.getElementById('net-orchestration').style.display = 'block';
+    } else {
+        document.getElementById('net-orchestration').style.display = 'none';
+    }
+
+    current = idx;
+    updateDynamicContent(idx).then(() => { isAnimating = false; });
+    
+    document.getElementById('footerStage').textContent = 'Stage: ' + STAGES[idx].phase;
+    document.getElementById('prevBtn').disabled = idx === 0;
+    document.getElementById('nextBtn').disabled = idx === STAGES.length - 1;
+    document.getElementById('nextBtn').textContent = idx === STAGES.length - 1 ? 'Done ✓' : 'Next →';
+
+    document.getElementById('center').scrollTop = 0;
+  }
+
+  function navigate(dir) {
+    const next = Math.max(0, Math.min(STAGES.length - 1, current + dir));
+    goTo(next);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
+  });
+
+  buildUI();
+  updateDynamicContent(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 11 — Route 53 & CloudFront</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#FAECE7;color:#712B13;border:1px solid #F0997B}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #C03A14;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#FAECE7;color:#712B13;border-color:#F0997B;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #C03A14;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-coral{background:#FAECE7;color:#712B13}.p-green{background:#E1F5EE;color:#085041}
+.p-blue{background:#E6F1FB;color:#0C447C}.p-amber{background:#FAEEDA;color:#633806}
+.p-purple{background:#EEEDFE;color:#3C3489}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+.code-block{background:#1a1a18;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.code-block code{font-family:monospace;font-size:12px;line-height:1.7;color:#e8e6e0;display:block;white-space:pre}
+.k{color:#9FE1CB}.v{color:#FAC775}.s{color:#F0997B}.c{color:#555;font-style:italic}.cmd-g{color:#97C459}
+.cg-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.cg-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+.cc{background:#fff;border:1px solid #eee;border-radius:10px;padding:1rem}
+.cc-t{font-size:13px;font-weight:600;margin-bottom:6px}
+.cc-b{font-size:12px;color:#555;line-height:1.65}
+.cc.hl{border-color:#C03A14;background:#FAECE7}
+.cc.hl .cc-t{color:#712B13}
+.routing-flow{background:#f5f5f2;border-radius:10px;padding:1rem;margin:12px 0}
+.rf-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.rf-box{border-radius:6px;padding:6px 12px;font-size:11px;font-weight:600;min-width:80px;text-align:center}
+.rf-arrow{color:#888;font-size:14px}
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 11 of 30</span>
+    <span class="tag">Route 53 + CloudFront</span>
+    <span class="tag">Phase 3 — Advanced Services</span>
+    <span class="tag">DNS · CDN · Global delivery · HTTPS</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('r53',this)">Route 53 internals</button>
+    <button class="ntab" onclick="show('routing',this)">Routing policies</button>
+    <button class="ntab" onclick="show('cf',this)">CloudFront deep</button>
+    <button class="ntab" onclick="show('origins',this)">Origins & behaviours</button>
+    <button class="ntab" onclick="show('security',this)">Security & WAF</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- ROUTE 53 INTERNALS -->
+  <div id="p-r53" class="panel active">
+    <div class="lede"><strong>Route 53 is not a DNS server you point a domain at. It is a globally distributed authoritative DNS service built on AWS's anycast network — the same infrastructure that handles hundreds of billions of DNS queries per day. Understanding how it differs from a standard DNS server, what Alias records actually are, and how health-check-based failover works at the DNS layer is what makes you dangerous designing globally available systems.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('r',0,this)">1 · How Route 53 resolves queries</button>
+      <button class="cbtn" onclick="showC('r',1,this)">2 · Record types in depth</button>
+      <button class="cbtn" onclick="showC('r',2,this)">3 · Alias records vs CNAMEs</button>
+      <button class="cbtn" onclick="showC('r',3,this)">4 · Health checks</button>
+    </div>
+
+    <div id="r0" class="cpanel active">
+      <div class="ch">How Route 53 answers a DNS query — the resolver chain</div>
+      <div class="csub">From the user's device to your EC2's IP — every hop in the resolution path</div>
+      <div class="cb">
+        <p>When a GetWork user on a mobile in Mumbai types <span class="mono">api.getwork.app</span>, the following chain of DNS lookups occurs before a single HTTP byte is sent to your ALB.</p>
+        <div class="routing-flow">
+          <div class="rf-row">
+            <div class="rf-box" style="background:#FAECE7;border:1px solid #F0997B;color:#712B13">User device<br>DNS cache</div>
+            <div class="rf-arrow">→ miss →</div>
+            <div class="rf-box" style="background:#f5f5f2;border:1px solid #ddd;color:#555">ISP / OS<br>Resolver</div>
+            <div class="rf-arrow">→ miss →</div>
+            <div class="rf-box" style="background:#f5f5f2;border:1px solid #ddd;color:#555">Root DNS<br>nameserver</div>
+          </div>
+          <div class="rf-row">
+            <div class="rf-arrow" style="margin-left:30px">↓ .app TLD</div>
+          </div>
+          <div class="rf-row">
+            <div class="rf-box" style="background:#f5f5f2;border:1px solid #ddd;color:#555">.app TLD<br>nameserver</div>
+            <div class="rf-arrow">→ NS records for getwork.app →</div>
+            <div class="rf-box" style="background:#E6F1FB;border:1px solid #85B7EB;color:#0C447C">Route 53<br>ns-*.awsdns-*.com</div>
+          </div>
+          <div class="rf-row">
+            <div class="rf-arrow" style="margin-left:180px">↓ A record query</div>
+          </div>
+          <div class="rf-row">
+            <div class="rf-box" style="background:#E6F1FB;border:1px solid #85B7EB;color:#0C447C">Route 53<br>authoritative</div>
+            <div class="rf-arrow">→ returns ALB IP (via Alias) →</div>
+            <div class="rf-box" style="background:#E1F5EE;border:1px solid #5DCAA5;color:#085041">Client<br>connects to ALB</div>
+          </div>
+        </div>
+        <p>Route 53's nameservers (4 NS records per hosted zone, assigned at zone creation) are globally distributed via anycast — the same Route 53 NS IP address routes to the geographically nearest Route 53 datacenter. A query from Mumbai goes to a Mumbai-region Route 53 node; a query from London goes to a London-region node. This is why Route 53 answers most queries in under 5ms from anywhere in the world.</p>
+        <div class="mechbox"><strong>Anycast vs unicast — why Route 53 is not "a server in us-east-1":</strong> Traditional DNS servers have a single IP that routes to a single location. Anycast announces the same IP prefix from multiple geographic locations simultaneously. BGP routing automatically sends packets to the nearest announcing node. Route 53 announces its nameserver IPs from dozens of points of presence worldwide. Your users' DNS queries go to the nearest Route 53 node, regardless of which AWS region your hosted zone was created in. Creating a hosted zone in ap-south-1 does NOT mean DNS queries from Mumbai are served from Mumbai and queries from London are served from us-east-1 — anycast serves all queries from the nearest node globally.</div>
+        <p><strong>The TTL and its real-world implications:</strong> Every DNS record has a TTL (Time to Live) in seconds. Resolvers cache the answer for the TTL duration. During the TTL, changes to the record are not visible to clients with cached entries. For a record with TTL=300 (5 minutes): if you change the ALB endpoint the record points to, some clients see the new endpoint within seconds (their cache expired), others see the old endpoint for up to 5 minutes (their cache is still valid). For planned migrations (changing ALBs, switching regions): reduce the TTL to 60 seconds 48 hours before the migration window, perform the migration, then restore TTL to 300. For records that never change: high TTL (86400, 24 hours) reduces DNS query load and improves resolution speed for repeat visitors.</p>
+        <div class="failbox"><strong>The TTL reduction you forget to do before a migration:</strong> You're migrating from ALB v1 to ALB v2. You update the Route 53 A record at midnight. The TTL is 300 seconds. At 12:05 AM, most clients have refreshed and hit ALB v2. But some enterprise clients are behind corporate DNS resolvers with aggressive caching that ignores TTLs — they continue hitting ALB v1 for hours. If ALB v1 is decommissioned at 12:10 AM, those clients get connection refused. The 48-hour TTL pre-reduction to 60 seconds ensures that by migration time, all cached entries have expired and all clients will pick up the new IP within 60 seconds of the change.</div>
+      </div>
+    </div>
+
+    <div id="r1" class="cpanel">
+      <div class="ch">DNS record types — what each one does and when to use it</div>
+      <div class="csub">A, AAAA, CNAME, MX, TXT, NS, SOA, SRV — the types you'll actually configure for a production application</div>
+      <div class="cb">
+        <p><strong>A record</strong> — maps a hostname to an IPv4 address. The most fundamental record type. <span class="mono">api.getwork.app → 52.66.10.1</span>. When Route 53 returns an A record, the client connects directly to that IP. Multiple A records for the same hostname enable simple round-robin load balancing at the DNS level (rarely the right approach — use ALB instead, which provides health-based routing).</p>
+        <p><strong>AAAA record</strong> — maps a hostname to an IPv6 address. Same as A but for IPv6. Required if you're enabling dual-stack access. CloudFront and ALB both support dual-stack — create both A and AAAA Alias records pointing to the same resource to support both IPv4 and IPv6 clients.</p>
+        <p><strong>CNAME record</strong> — maps a hostname to another hostname (canonical name). <span class="mono">www.getwork.app → getwork.app</span> or <span class="mono">custom.getwork.app → getwork-alb-12345.ap-south-1.elb.amazonaws.com</span>. The resolver follows the chain: query for custom.getwork.app returns a CNAME pointing to the ALB DNS name, resolver then queries for the ALB DNS name and returns its current IP addresses. CNAMEs cannot be created at the apex (root) of a domain — <span class="mono">getwork.app</span> cannot be a CNAME, only subdomains can. This is the "CNAME at zone apex" limitation that Alias records solve.</p>
+        <p><strong>TXT record</strong> — arbitrary text data. Used for: domain ownership verification (ACM certificate validation, Google Search Console, SPF email authentication), DMARC and DKIM email authentication policies. In your Day 9 lab, ACM certificate DNS validation created a TXT-like CNAME record in your hosted zone.</p>
+        <p><strong>MX record</strong> — specifies mail servers for the domain. Required for any domain that receives email. If GetWork sends transactional emails (job posting confirmations, payment receipts) via SES, the MX and SPF/DKIM records must be correctly configured to prevent email being flagged as spam.</p>
+        <p><strong>NS record</strong> — nameserver records that delegate authority for a subdomain. When Route 53 creates a hosted zone, it assigns 4 NS records. You copy these NS records to your domain registrar's settings to delegate DNS authority for the domain to Route 53. Without this NS delegation, Route 53 hosts the zone but nobody asks Route 53 for answers — all queries still go to the registrar's nameservers.</p>
+        <div class="mechbox"><strong>The NS delegation step that engineers forget:</strong> Creating a Route 53 hosted zone does not automatically make Route 53 authoritative for your domain. You must go to your domain registrar (GoDaddy, Namecheap, Google Domains, etc.) and update the NS records there to point to the 4 Route 53 nameservers assigned to your hosted zone. Until this is done, Route 53's records are invisible — all queries resolve via the registrar's nameservers, which don't have your records. This is the most common "I created the hosted zone and it doesn't work" issue. Verify with: <span class="mono">dig NS getwork.app +short</span> — if it shows awsdns nameservers, delegation is correct.</div>
+      </div>
+    </div>
+
+    <div id="r2" class="cpanel">
+      <div class="ch">Alias records — Route 53's proprietary extension that solves the CNAME apex limitation</div>
+      <div class="csub">Why you should almost always use Alias instead of CNAME for AWS resources</div>
+      <div class="cb">
+        <p>An Alias record is a Route 53-specific DNS record type (not standard DNS). It looks like an A or AAAA record to clients — it returns IP addresses, not a hostname to follow. But internally, Route 53 resolves the Alias target (an ALB DNS name, CloudFront distribution, S3 website endpoint, etc.) and returns those current IP addresses as A/AAAA records. The resolution happens inside Route 53's infrastructure — the client never sees a CNAME chain.</p>
+        <p><strong>Alias vs CNAME — the four key differences:</strong></p>
+        <p><strong>1. Zone apex support.</strong> Alias records can be created at the zone apex — <span class="mono">getwork.app</span> can be an Alias pointing to an ALB or CloudFront. A CNAME at the zone apex would violate DNS RFC 1034 and Route 53 refuses to create it. This is the primary reason Alias records exist.</p>
+        <p><strong>2. No additional DNS lookup for clients.</strong> A CNAME requires the client's resolver to follow the chain: CNAME → ALB hostname → A record → IP. Two round trips. An Alias returns the final IP addresses directly — one round trip. For high-frequency API calls where DNS TTL is short, this reduces resolution overhead.</p>
+        <p><strong>3. No charge for Alias queries to AWS resources.</strong> Route 53 charges $0.40/million DNS queries for standard record types. Alias queries to AWS resources (ALB, CloudFront, S3, Elastic Beanstalk, Global Accelerator) are free. A high-traffic application making millions of DNS queries saves money with Alias over CNAME.</p>
+        <p><strong>4. Alias targets are AWS-aware — automatic IP tracking.</strong> ALB IPs change when the ALB scales or is replaced. A CNAME pointing to the ALB DNS name requires the client to re-resolve the ALB hostname (which may itself take time). Route 53 Alias records monitor the ALB's current IPs automatically and return them — if the ALB changes its IPs, the Alias record reflects the new IPs without any TTL wait on your zone's record.</p>
+        <div class="prodbox"><strong>When to use CNAME vs Alias for GetWork:</strong> Use Alias for: <span class="mono">api.getwork.app → ALB</span>, <span class="mono">getwork.app → CloudFront</span>, <span class="mono">www.getwork.app → CloudFront</span>. Use CNAME for: ACM certificate validation records (these are CNAMEs generated by ACM — you can't change them), third-party service verification records, subdomains pointing to non-AWS services (Stripe webhooks, Firebase hosting custom domain). The rule: if the target is an AWS resource, use Alias. Otherwise, CNAME is fine.</div>
+        <div class="failbox"><strong>The Alias record that breaks when you change region:</strong> You create an Alias from <span class="mono">api.getwork.app</span> to your ALB in ap-south-1. Six months later you add ap-southeast-1 as a second region with its own ALB. You want latency-based routing between the two ALBs. You cannot update the existing Alias record to "route between two ALBs" — a simple Alias points to exactly one target. You need to delete the simple Alias and replace it with latency-based routing policy records, each being an Alias to one regional ALB. Plan your routing policy before creating records in production — changing from a simple Alias to a latency-based policy requires a brief downtime window (deleting and recreating the records).</div>
+      </div>
+    </div>
+
+    <div id="r3" class="cpanel">
+      <div class="ch">Route 53 health checks — DNS-level failover without changing your application</div>
+      <div class="csub">How health checks combine with routing policies to remove unhealthy endpoints from DNS automatically</div>
+      <div class="cb">
+        <p>Route 53 health checks are independent monitors that periodically check the health of your endpoints. They can monitor: an HTTP/HTTPS endpoint (by requesting a specific URL and checking for a status code and/or string in the response), the health of other Route 53 records (calculated health checks — aggregate multiple endpoint health checks), and CloudWatch alarms (declare an endpoint unhealthy when a specific alarm fires).</p>
+        <p><strong>Health check mechanics:</strong> Route 53 health checkers run from multiple AWS regions (15+ globally). All of them check your endpoint independently. An endpoint is considered healthy if more than 18% of health checkers report it healthy (the threshold is configurable). This multi-region checking means a regional network issue that makes your endpoint unreachable from one region doesn't incorrectly mark it as unhealthy — it must be unreachable from a majority of the globally-distributed checkers.</p>
+        <div class="mechbox"><strong>The 15+ region health check network and what it means for your endpoint:</strong> Route 53 health checkers come from these regions: us-east-1, us-west-1, us-west-2, eu-west-1, ap-southeast-1, ap-southeast-2, ap-northeast-1, sa-east-1, and several others. Each region sends health check requests to your endpoint independently. If your ALB is in ap-south-1 and its Security Group doesn't allow inbound traffic from us-east-1 health checker IPs — the health check will fail even if your ALB is perfectly healthy. Route 53 publishes the IP ranges it uses for health checks in the AWS IP ranges JSON file. Your ALB Security Group must allow inbound on port 80/443 from these IP ranges (or use the HTTP status code check pointing to a CloudFront distribution that's accessible globally).</div>
+        <p><strong>Combining health checks with routing policies for automatic DNS failover:</strong> Create two A records for <span class="mono">api.getwork.app</span>: a Primary record (Failover routing policy, record type PRIMARY, Alias to ALB in ap-south-1, associated with a health check on the ALB). A Secondary record (Failover routing policy, record type SECONDARY, Alias to a static error page in S3 or a secondary region ALB). When the Primary's health check fails (ALB in ap-south-1 is down), Route 53 stops returning the Primary record and returns the Secondary. Your users are automatically redirected at the DNS level — no application code change, no manual intervention. Recovery is equally automatic: when the Primary health check passes again, Route 53 returns the Primary record.</p>
+        <div class="failbox"><strong>The health check that fires too aggressively:</strong> Route 53 health check interval defaults to 30 seconds. An ALB that's deploying (rolling update, brief 503 during instance replacement) may fail a health check check and trigger DNS failover — sending all traffic to the secondary for the duration of the rollout. This is rarely what you want. Configure the health check failure threshold carefully: for production ALBs, require 3 consecutive failures (90 seconds of sustained failure) before triggering failover. Brief ALB degradation during deployments shouldn't route all traffic to a failover endpoint.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('routing',document.querySelectorAll('.ntab')[1])">Routing policies — the seven ways Route 53 can answer a query →</button>
+  </div>
+
+  <!-- ROUTING POLICIES -->
+  <div id="p-routing" class="panel">
+    <div class="lede"><strong>Route 53 has seven routing policies, each implementing a different strategy for deciding which record to return for a query. Simple is the default and suits most cases. The other six exist because DNS can be a surprisingly powerful traffic management layer when used correctly — and understanding them is required for multi-region, multi-AZ, and blue-green DNS architectures.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('rp',0,this)">1 · Simple, Weighted, Latency</button>
+      <button class="cbtn" onclick="showC('rp',1,this)">2 · Failover & Geolocation</button>
+      <button class="cbtn" onclick="showC('rp',2,this)">3 · Multivalue & Geoproximity</button>
+      <button class="cbtn" onclick="showC('rp',3,this)">4 · Private hosted zones</button>
+    </div>
+
+    <div id="rp0" class="cpanel active">
+      <div class="ch">Simple, Weighted, and Latency-based routing</div>
+      <div class="csub">The three most commonly used policies and the scenarios each is designed for</div>
+      <div class="cb">
+        <p><strong>Simple routing</strong> — one record, one answer. <span class="mono">api.getwork.app → ALB-in-ap-south-1</span>. Every query gets the same answer. No health checks, no routing logic. Correct for: single-region deployments with no failover requirement, records that should always return the same value (MX, TXT, NS records). This is where most applications start and where many stay indefinitely. Simplicity is not a weakness — unnecessary routing complexity is a failure mode.</p>
+        <p><strong>Weighted routing</strong> — distribute queries across multiple records in proportion to assigned weights. Two records: <span class="mono">api.getwork.app → ALB-v1 (weight 90)</span> and <span class="mono">api.getwork.app → ALB-v2 (weight 10)</span>. 90% of DNS queries return ALB-v1's IP; 10% return ALB-v2's IP. Use cases: A/B testing two application versions at the DNS level; gradually migrating traffic from old to new infrastructure (start at 5%, increase as confidence grows); canary deployments where you want precise traffic percentage control rather than ALB's request-level weighted target groups.</p>
+        <div class="mechbox"><strong>Weighted routing is not the same as ALB weighted target groups:</strong> ALB weighted target groups route requests — each individual HTTP request is distributed in the configured ratio. Route 53 weighted routing routes DNS queries — each DNS lookup is distributed in the ratio. Because DNS responses are cached, a client that resolves to ALB-v2 at weight 10% may continue hitting ALB-v2 for the full TTL duration (300 seconds) regardless of subsequent DNS queries. At the DNS level, "10%" means roughly 10% of clients (not 10% of requests from each client) hit ALB-v2. For precise request-level traffic splitting, use ALB weighted target groups. For client-level splitting (entire user sessions go to one version), use Route 53 weighted routing.</div>
+        <p><strong>Latency-based routing</strong> — Route 53 routes each query to the AWS region with the lowest latency from the resolver's location. You create one record per region: <span class="mono">api.getwork.app → ap-south-1-ALB (region: ap-south-1)</span> and <span class="mono">api.getwork.app → ap-southeast-1-ALB (region: ap-southeast-1)</span>. A resolver in Mumbai receives the ap-south-1 ALB address. A resolver in Singapore receives the ap-southeast-1 ALB address. Route 53 uses an empirically built latency map between resolver locations and AWS regions — continuously updated based on actual measured network performance.</p>
+        <div class="prodbox"><strong>Latency-based routing for GetWork's expansion to Southeast Asia:</strong> As GetWork expands — Mumbai first, then Singapore and Jakarta — latency-based routing ensures each user connects to the nearest region. Workers in Bangalore hit ap-south-1 (Mumbai). Workers in Jakarta hit ap-southeast-1 (Singapore). No application code changes. No client-side logic. DNS automatically routes to the nearest healthy region. Each region must have its own ALB, ASG, and RDS replica (or Aurora Global Database write endpoint). Latency-based routing + Aurora Global Database = a complete multi-region architecture where reads are served locally and writes go to the nearest writer.</div>
+      </div>
+    </div>
+
+    <div id="rp1" class="cpanel">
+      <div class="ch">Failover and Geolocation routing</div>
+      <div class="csub">Active-passive DNS failover and routing users by country or continent</div>
+      <div class="cb">
+        <p><strong>Failover routing</strong> — active-passive DNS failover. One PRIMARY record (serves all traffic when healthy) and one SECONDARY record (serves traffic when the primary is unhealthy). Both records are for the same hostname. Health checks are required on the primary. When the primary's health check fails, Route 53 automatically serves the secondary record. Used for DR (disaster recovery) setups where a primary region has failed and you want all traffic routed to a secondary region. The secondary can be: another region's ALB, an S3 static website (error page or read-only mode), or any other accessible endpoint.</p>
+        <p><strong>Geolocation routing</strong> — route traffic based on the geographic location of the DNS resolver (which approximates the user's location). You create records associated with specific countries, continents, or the default (catch-all). Use cases: serving different content to different regions (language localisation at DNS level), complying with data sovereignty requirements (users in EU must hit EU-based servers), blocking traffic from specific countries (a crude DDoS mitigation — better done at WAF level but DNS-level blocking has lower overhead).</p>
+        <div class="mechbox"><strong>Geolocation vs Latency-based — the confusion:</strong> These two look similar but serve different purposes. Latency-based: route to the nearest region for performance (a resolver in Singapore might route to ap-south-1 if Mumbai is somehow closer by latency, not geography). Geolocation: route based on location for compliance or content targeting (EU users must hit EU servers — regardless of which AWS region has lower latency). Use latency-based for performance optimisation. Use geolocation for compliance or content-based requirements. They can be combined: weighted routing of geolocation rules allows "80% of EU traffic to eu-west-1, 20% to eu-central-1."</div>
+        <div class="failbox"><strong>The geolocation record that drops traffic from unlisted countries:</strong> You create geolocation records for India, Singapore, and UAE. A user from Germany queries your API. No Germany record exists, and you forgot to create a Default record. Route 53 returns a NXDOMAIN (domain not found). Your API is unreachable from Germany and every other country you didn't explicitly list. Always create a Default geolocation record that catches all unlisted locations. Make it point to your primary region's endpoint. Test from multiple countries before relying on geolocation routing for production traffic.</div>
+      </div>
+    </div>
+
+    <div id="rp2" class="cpanel">
+      <div class="ch">Multivalue Answer and Geoproximity routing</div>
+      <div class="csub">Multivalue for rudimentary health-checked round robin; Geoproximity for fine-grained traffic shifting between regions</div>
+      <div class="cb">
+        <p><strong>Multivalue Answer routing</strong> — return up to 8 healthy records in response to each query. Each record can have an associated health check. Route 53 returns only the healthy ones (up to 8), in random order. The resolver and client can use any of the returned IPs, giving basic load distribution across multiple endpoints.</p>
+        <p>This is NOT a replacement for an ALB. It is useful when: you have multiple independent endpoints that are not behind a load balancer (multiple API gateways, multiple regional endpoints), you want client-side load balancing (let the client choose from multiple IPs), or you want DNS-level health check filtering without the complexity of ALB. The limitation: DNS caching means a single client typically uses one IP for the TTL duration — distribution is across clients over time, not across requests from a single client.</p>
+        <p><strong>Geoproximity routing</strong> — route traffic based on geographic distance between users and your resources, with a configurable bias that shifts the geographic boundary. You can expand one region's routing radius (bias +50 means route users from a wider geographic area to this region) or shrink it (bias -50 routes users from only the closest geographic area to this region). Unlike geolocation (which is country/continent-based), geoproximity uses continuous geographic distance, allowing you to gradually shift traffic from one region to another by adjusting the bias value — a useful migration mechanism. Requires Route 53 Traffic Flow (an additional Route 53 feature with its own pricing).</p>
+        <div class="mechbox"><strong>When to use each routing policy — the decision tree:</strong> Single region, no failover → Simple. Multiple values to share load between → Weighted (A/B) or Multivalue (health-checked round robin). Route to nearest AWS region → Latency-based. Primary/secondary failover → Failover. Route by country/regulation → Geolocation. Gradually shift geographic traffic boundaries → Geoproximity. In practice: most applications use Simple for 95% of records, Latency-based for multi-region expansion, and Failover for DR. Weighted is useful for deployments. The others are for specific compliance and optimisation scenarios.</div>
+      </div>
+    </div>
+
+    <div id="rp3" class="cpanel">
+      <div class="ch">Private hosted zones — internal DNS for your VPC</div>
+      <div class="csub">Service discovery within your VPC without exposing DNS names to the internet</div>
+      <div class="cb">
+        <p>A private hosted zone is a Route 53 hosted zone that only answers queries from within associated VPCs. The domain name resolves to internal IP addresses from inside the VPC but returns NXDOMAIN for queries from outside. This is how you implement service discovery for microservices: <span class="mono">auth-service.getwork.internal</span> resolves to the auth service's ALB private IP; <span class="mono">job-service.getwork.internal</span> resolves to the job service's internal endpoint.</p>
+        <p><strong>Private hosted zone setup:</strong> Create the zone with the domain name <span class="mono">getwork.internal</span>. Associate it with your VPC. The VPC's DNS resolver (169.254.169.253 — the VPC+2 resolver) automatically queries Route 53 for names in associated private zones. No configuration changes on EC2 instances — they already use the VPC DNS resolver. Create A records or Alias records pointing to internal endpoints.</p>
+        <div class="mechbox"><strong>Private hosted zones and VPC peering:</strong> A private hosted zone is associated with specific VPCs. If you have multiple VPCs (dev, staging, prod) that are peered, the private hosted zone in the prod VPC does NOT automatically resolve in the dev or staging VPCs. You must explicitly associate the private zone with each VPC that needs to resolve its names. Cross-account association (dev VPC in Account A, private zone in Account B) requires a CLI-based association process since the console doesn't support it directly. Common failure mode: microservices in a dev VPC can't resolve <span class="mono">service.getwork.internal</span> even though the name exists — the private zone isn't associated with the dev VPC.</div>
+        <p><strong>Split-horizon DNS:</strong> A private hosted zone can use the same domain name as a public hosted zone. <span class="mono">getwork.app</span> as a public zone resolves to the ALB's public IP from the internet. <span class="mono">getwork.app</span> as a private zone (associated with your VPC) resolves to the ALB's private IP from within the VPC. EC2 instances inside the VPC that query <span class="mono">api.getwork.app</span> receive the internal IP and talk to the ALB over the private network — no egress charges, no NAT Gateway, no public internet hop. This is split-horizon (or split-brain) DNS — the same name resolves differently depending on where the query originates.</div>
+        <div class="prodbox"><strong>Split-horizon DNS for your GetWork Spring Boot services:</strong> When one Spring Boot microservice calls another (e.g., the job service calls the notification service at <span class="mono">https://api.getwork.app/notifications</span>), using the public domain name means the traffic goes: EC2 → NAT Gateway → ALB → EC2. That's three hops, two of which incur data transfer costs. With split-horizon DNS: EC2 queries <span class="mono">api.getwork.app</span>, gets the ALB's private IP, traffic goes directly EC2 → ALB → EC2. One NAT Gateway hop eliminated, no data transfer costs for internal traffic. At scale, this saves meaningful money.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('cf',document.querySelectorAll('.ntab')[2])">CloudFront — the global CDN layer →</button>
+  </div>
+
+  <!-- CLOUDFRONT DEEP -->
+  <div id="p-cf" class="panel">
+    <div class="lede"><strong>CloudFront is not just a cache in front of your server. It is a globally distributed reverse proxy with 600+ Points of Presence, built-in TLS termination, WAF integration, Lambda@Edge and CloudFront Functions for edge compute, origin failover, and a sophisticated cache invalidation system. Understanding how cache keys work, when responses are cached vs forwarded, and how CloudFront decides which edge node to use is what makes the difference between a CDN that helps and one that silently serves stale data.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('cf',0,this)">1 · How CloudFront routes requests</button>
+      <button class="cbtn" onclick="showC('cf',1,this)">2 · Cache mechanics deep</button>
+      <button class="cbtn" onclick="showC('cf',2,this)">3 · Cache invalidation</button>
+      <button class="cbtn" onclick="showC('cf',3,this)">4 · Price classes and cost</button>
+    </div>
+
+    <div id="cf0" class="cpanel active">
+      <div class="ch">How a CloudFront request flows from user to origin and back</div>
+      <div class="csub">The three-tier network: client → edge PoP → regional edge cache → origin</div>
+      <div class="cb">
+        <p>CloudFront has a three-tier infrastructure. When a user requests <span class="mono">https://getwork.app/job-image.jpg</span>:</p>
+        <p><strong>Tier 1 — Edge PoP (Point of Presence):</strong> CloudFront has 600+ edge locations worldwide — actual server infrastructure in major cities (Mumbai, Bangalore, Chennai in India alone). The user's DNS resolves to the nearest edge PoP via anycast. The request arrives at the edge PoP in milliseconds. If the response is cached at this edge: served immediately from local SSD, sub-10ms response. If not cached: proceed to Tier 2.</p>
+        <p><strong>Tier 2 — Regional Edge Cache:</strong> A smaller number of larger caches (12 globally) that sit behind the edge PoPs. If the edge PoP doesn't have the object, it checks the regional edge cache. Regional caches have more storage and longer retention than edge PoPs. Objects evicted from edge PoPs may still be in the regional cache — a "second chance" before going to origin. If found here: returned to the edge PoP (which now caches it for future requests) and then to the user.</p>
+        <p><strong>Tier 3 — Origin:</strong> Your ALB, S3 bucket, or any HTTP endpoint. If not cached at either edge tier, CloudFront fetches from origin. This is the only time your origin server sees the request. The response is cached at both the regional edge cache and the requesting edge PoP for future requests.</p>
+        <div class="mechbox"><strong>What this architecture means for your origin's load:</strong> A popular image (the GetWork logo, a frequently shared job posting image) is requested by 100,000 users in India simultaneously. Without CloudFront: 100,000 HTTP requests hit your ALB, which forwards to EC2, which reads from S3 for each request — 100,000 S3 reads, ALB processes 100,000 requests, EC2 serves 100,000 responses. With CloudFront: first request fetches from S3 (1 origin request). Next 99,999 requests are served from the Mumbai edge PoP's local cache — 0 origin requests, 0 ALB requests, 0 EC2 CPU, 0 S3 reads. CloudFront shields your origin from traffic. Origin gets only the cache misses — typically 5-10% of total requests for static content. This is not just a latency improvement; it's an order-of-magnitude reduction in origin infrastructure requirements.</div>
+        <p><strong>The CloudFront distribution DNS name:</strong> Every CloudFront distribution gets a subdomain of <span class="mono">cloudfront.net</span> (e.g., <span class="mono">d1234abcd.cloudfront.net</span>). You create a CNAME or Alias in Route 53 from your custom domain (<span class="mono">getwork.app</span>) to the CloudFront distribution domain. The distribution's SSL certificate must cover your custom domain (ACM certificate in us-east-1 — CloudFront only works with certificates in us-east-1, regardless of your origin's region). This is a hard requirement: to use a custom domain with CloudFront, the ACM certificate must be in us-east-1.</div>
+        <div class="failbox"><strong>The ACM certificate in the wrong region:</strong> You have a certificate in ap-south-1 for <span class="mono">getwork.app</span>. You try to attach it to your CloudFront distribution. The dropdown shows no certificates — because CloudFront only accepts ACM certificates provisioned in us-east-1. You must request a new certificate specifically in us-east-1. Both certificates (ap-south-1 for the ALB, us-east-1 for CloudFront) can coexist — they're in different regions. This trips up every engineer the first time they set up CloudFront with a custom domain.</div>
+      </div>
+    </div>
+
+    <div id="cf1" class="cpanel">
+      <div class="ch">Cache mechanics — the cache key, TTL, and what gets cached vs forwarded</div>
+      <div class="csub">The exact rules that determine whether a response is served from cache or forwarded to origin</div>
+      <div class="cb">
+        <p>CloudFront's cache is not a simple URL-based cache. It uses a <strong>cache key</strong> — a composite of multiple request attributes — to determine cache uniqueness. Two requests with different cache keys are treated as different objects, even if they hit the same URL. Understanding the cache key composition is what prevents the most common CloudFront caching bugs.</p>
+        <p><strong>Default cache key:</strong> URL path + query string (if configured to include it). By default, query string parameters are NOT included in the cache key — <span class="mono">/jobs?city=mumbai</span> and <span class="mono">/jobs?city=bangalore</span> have the same cache key (<span class="mono">/jobs</span>) and return the same cached response. If you have query-string-parameterised APIs behind CloudFront, you must configure CloudFront to include query strings in the cache key (or use a cache policy that specifies which query strings to include).</p>
+        <p><strong>Headers and cookies in the cache key:</strong> By default, CloudFront strips most request headers and cookies before forwarding to origin — it caches a single response regardless of the caller's browser, language, or authentication. If you have content that varies by: Accept-Language header (serve different language content), Cookie (serve personalised content), Authorization header (serve user-specific content) — you must configure CloudFront to include these in the cache key. But every additional dimension you add to the cache key reduces the cache hit rate (more unique combinations = less reuse).</p>
+        <div class="mechbox"><strong>The cache key design tension:</strong> Including more dimensions in the cache key (query strings, headers, cookies) allows more accurate caching of dynamic, personalised content. But every additional dimension reduces how often cache hits occur. A fully personalised response (different for every user) has a cache hit rate of ~0% — CloudFront adds latency (the extra hop to the edge PoP) without providing caching benefit. The correct pattern: separate cacheable content from dynamic content into different CloudFront behaviours. Static assets (/images/*, /css/*, /js/*) cache aggressively with minimal cache key dimensions. API calls (/api/*) are forwarded to origin with caching disabled or short TTLs. Images get cache for 365 days. API responses get no cache (TTL=0) or very short cache (TTL=60s).</div>
+        <p><strong>TTL sources and their priority:</strong> CloudFront respects the Cache-Control headers from your origin. If your Spring Boot response includes <span class="mono">Cache-Control: max-age=3600</span>, CloudFront caches for 3600 seconds. If the response includes <span class="mono">Cache-Control: no-store</span> or <span class="mono">no-cache</span>, CloudFront doesn't cache. The CloudFront distribution's minimum/maximum/default TTL settings override origin headers within bounds: if min TTL=60 and origin returns max-age=10, CloudFront caches for 60 seconds (min overrides). If max TTL=86400 and origin returns max-age=604800 (1 week), CloudFront caches for 86400 seconds (max overrides).</p>
+        <div class="failbox"><strong>The API response that gets cached and serves stale data:</strong> A Spring Boot API returns job listings from RDS. The response includes no Cache-Control header (default). CloudFront's distribution has default TTL set to 86400 (24 hours). Result: job listing responses are cached for 24 hours — new jobs added to the database don't appear for up to 24 hours. This is the most common CloudFront misconfiguration for dynamic APIs. Fix: in your CloudFront behaviour for <span class="mono">/api/*</span>, set Cache-Control default TTL to 0 and forward all requests to origin. Or add <span class="mono">Cache-Control: no-store</span> to all API responses from Spring Boot. Always test that your API endpoints are not being cached before production launch.</div>
+      </div>
+    </div>
+
+    <div id="cf2" class="cpanel">
+      <div class="ch">Cache invalidation — purging stale content from CloudFront</div>
+      <div class="csub">When content changes and you need CloudFront to serve the new version immediately</div>
+      <div class="cb">
+        <p>When you update content at the origin (upload a new version of an image to S3, deploy a new version of a CSS file), existing CloudFront cache entries continue serving the old content until their TTL expires. Cache invalidation is the mechanism for forcing CloudFront to discard specific cached content and fetch fresh versions from origin.</p>
+        <p><strong>Creating an invalidation:</strong> <span class="mono">aws cloudfront create-invalidation --distribution-id E1234ABCD --paths "/*"</span>. The paths argument specifies which objects to invalidate. <span class="mono">/*</span> invalidates all objects. <span class="mono">/images/*</span> invalidates all objects with keys starting with /images/. <span class="mono">/job-listings.html</span> invalidates a specific file. Wildcards are supported but only at the end of a path — you cannot use <span class="mono">/image-*.jpg</span>; you must use <span class="mono">/image-*</span>.</p>
+        <div class="mechbox"><strong>Invalidation propagation time and the free tier:</strong> Invalidations complete in approximately 5-60 seconds globally — CloudFront sends the invalidation to all 600+ edge locations simultaneously. First 1,000 invalidation paths per month are free. After that: $0.005 per path per month. A <span class="mono">/*</span> invalidation counts as 1 path regardless of how many objects are cached. Frequent <span class="mono">/*</span> invalidations are cost-effective but aggressive. For large deployments with thousands of deployments per day, the invalidation cost adds up. The professional alternative: versioned asset URLs.</div>
+        <p><strong>Versioned asset URLs — the better alternative to invalidation for deployments:</strong> Instead of updating <span class="mono">app.css</span> and invalidating it, your build pipeline generates <span class="mono">app.css?v=a7f3d9</span> (query string version) or <span class="mono">app.a7f3d9.css</span> (filename version). The old URL continues serving the old version from cache. The new URL is a cache miss — CloudFront fetches it from origin. Old objects expire naturally. No invalidation needed. No cost. Old browser tabs continue working with the cached old version. New loads get the new version. This is how every well-engineered frontend deployment works.</p>
+        <div class="prodbox"><strong>When you do need explicit invalidation:</strong> Emergency fixes where you cannot wait for TTL to expire. Security incident (remove leaked content immediately). Incorrect data served via CDN (a wrong job listing cached). Configuration change that affects content (you changed the origin's CORS headers and need all cached responses to include the new headers). For these scenarios: keep a Makefile target or pipeline step that creates a targeted invalidation: <span class="mono">make invalidate-cdn path=/api/jobs</span>. Having this automation ready before you need it at 2AM is what separates prepared teams from unprepared ones.</div>
+      </div>
+    </div>
+
+    <div id="cf3" class="cpanel">
+      <div class="ch">CloudFront price classes and cost model</div>
+      <div class="csub">Choosing the right edge network coverage to balance global performance against cost</div>
+      <div class="cb">
+        <p>CloudFront pricing has two components: data transfer out (the cost of bytes leaving CloudFront to users) and HTTP request count (cost per million requests). Both vary by edge location geography — serving from South America is more expensive than North America or Asia Pacific.</p>
+        <p><strong>Price Classes:</strong> Price Class All — uses all 600+ edge locations globally, including the expensive regions (South America, Middle East, South Africa). Best performance for global users. Highest cost. Price Class 200 — uses all edge locations except the most expensive South American, African and some Middle Eastern ones. Good coverage, moderate cost. Price Class 100 — uses only the lowest-cost edge locations (US, Europe, and some Asia Pacific including India and Japan). Cheapest option. Appropriate for applications serving India, Southeast Asia, US, and Europe.</p>
+        <div class="mechbox"><strong>CloudFront cost compared to serving from origin directly:</strong> CloudFront data transfer out: $0.008-0.020/GB (varies by region and volume). ALB data transfer out: $0.08/GB. EC2 data transfer out: $0.09/GB. CloudFront is 4-10x cheaper for data transfer than your origin, in addition to being faster and reducing origin load. For a video-heavy or image-heavy application, the data transfer savings alone justify CloudFront — serving 100GB/day from origin costs $8/day ($240/month) in data transfer. Serving the same through CloudFront (assuming 10% origin cache miss rate): 10GB origin transfer ($0.08/day) + 100GB CloudFront transfer ($0.80/day) = $0.88/day vs $8/day. 9x cheaper. Cache hits pay for themselves rapidly.</div>
+        <p><strong>CloudFront Free Tier:</strong> AWS Free Tier includes 1TB data transfer out and 10 million HTTP requests per month for 12 months. For GetWork at its current scale, CloudFront is effectively free. After Free Tier: a modest website serving India and Southeast Asia with Price Class 100 costs roughly $1-5/month at typical traffic levels. At 10TB/month: ~$80/month. CloudFront is one of the few AWS services where the cost scales directly with value delivered — you pay more as you serve more users.</p>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('origins',document.querySelectorAll('.ntab')[3])">Origins and behaviours — configuring what CloudFront serves →</button>
+  </div>
+
+  <!-- ORIGINS AND BEHAVIOURS -->
+  <div id="p-origins" class="panel">
+    <div class="lede"><strong>A CloudFront distribution is not a simple pass-through proxy. It is configured with origins (where to fetch content from) and behaviours (rules mapping URL patterns to origin, cache settings, and request/response manipulation). Understanding how to compose these correctly is what allows a single CloudFront distribution to serve a SPA frontend, API, and static assets — with different caching rules for each.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('ob',0,this)">1 · Origins</button>
+      <button class="cbtn" onclick="showC('ob',1,this)">2 · Behaviours and cache policies</button>
+      <button class="cbtn" onclick="showC('ob',2,this)">3 · SPA hosting pattern</button>
+      <button class="cbtn" onclick="showC('ob',3,this)">4 · Origin failover</button>
+    </div>
+
+    <div id="ob0" class="cpanel active">
+      <div class="ch">CloudFront origins — where content comes from</div>
+      <div class="csub">S3, ALB, API Gateway, and custom HTTP origins — and the security models for each</div>
+      <div class="cb">
+        <p>A CloudFront distribution has one or more origins. Each origin is a content source. An origin can be:</p>
+        <p><strong>S3 bucket</strong> — for static content hosting. CloudFront fetches objects from S3. Security mechanism: Origin Access Control (OAC) — a CloudFront-specific identity that is granted read access to the S3 bucket via a bucket policy. The S3 bucket can have all public access blocked; only OAC-authenticated CloudFront requests succeed. This prevents users from bypassing CloudFront and accessing your S3 bucket directly (which would bypass WAF rules, logging, and geographic restrictions).</p>
+        <p><strong>Application Load Balancer</strong> — for dynamic content. CloudFront connects to the ALB using the ALB's DNS name. Security consideration: if you want CloudFront to be the only entry point (not allow direct ALB access), add a custom header in CloudFront's origin request (e.g., <span class="mono">X-CloudFront-Secret: your-secret-value</span>) and validate that header in a WAF rule on the ALB — reject requests that don't include the secret. This ensures all traffic goes through CloudFront's WAF, rate limiting, and geographic restrictions.</p>
+        <p><strong>API Gateway</strong> — for serverless APIs. CloudFront in front of API Gateway allows custom domain names (API Gateway has its own domain management, but CloudFront provides more flexibility), WAF protection, and caching at the edge for API responses.</p>
+        <p><strong>Custom HTTP endpoint</strong> — any publicly accessible HTTP/HTTPS server. Your on-premise servers, EC2 instances directly (though ALB is preferred), or third-party APIs. Custom origins can use HTTP or HTTPS. For HTTPS, CloudFront validates the origin's certificate unless you configure it not to (insecure).</p>
+        <div class="mechbox"><strong>Origin Access Control (OAC) — the modern way to secure S3 origins:</strong> OAC replaced the older Origin Access Identity (OAI) in 2022. OAC supports more S3 features (SSE-KMS encrypted buckets, S3 Object Lambda) that OAI doesn't. When you create an OAC for an S3 origin, CloudFront signs requests to S3 using AWS SigV4 with the OAC's identity. Your S3 bucket policy allows access only from that CloudFront OAC. Configure this for every S3-backed CloudFront distribution. Without it, your S3 bucket is accessible directly by anyone with the S3 URL, bypassing CloudFront entirely.</div>
+      </div>
+    </div>
+
+    <div id="ob1" class="cpanel">
+      <div class="ch">Behaviours and cache policies — routing URL patterns to origins with specific rules</div>
+      <div class="csub">The pattern matching rules that determine which origin serves which URL and how it's cached</div>
+      <div class="cb">
+        <p>A behaviour is a rule that maps a URL path pattern to an origin with specific cache and request handling settings. Behaviours are evaluated in priority order. The default behaviour (path pattern <span class="mono">*</span>) catches everything not matched by more specific behaviours.</p>
+        <p><strong>Behaviour configuration for a full-stack application (GetWork):</strong></p>
+        <div class="code-block"><code><span class="c">/* CloudFront distribution for GetWork — single distribution, multiple origins */</span>
+
+<span class="c">/* Origin 1: S3 bucket for React Native web build static assets */</span>
+<span class="k">S3Origin</span>:
+  bucket: getwork-frontend.s3.ap-south-1.amazonaws.com
+  <span class="k">originAccessControl</span>: getwork-oac
+
+<span class="c">/* Origin 2: ALB for the Spring Boot API */</span>
+<span class="k">ALBOrigin</span>:
+  domainName: getwork-alb-12345.ap-south-1.elb.amazonaws.com
+  protocol: HTTPS
+  customHeaders:
+    - <span class="k">X-CloudFront-Secret</span>: ${SECRET_VALUE}  <span class="c">// Validates traffic is from CF</span>
+
+<span class="c">/* Behaviour 1: API calls — no cache, forward all headers/cookies */</span>
+<span class="k">behaviour</span> "/api/*":
+  origin: ALBOrigin
+  cachePolicy: CachingDisabled   <span class="c">// Never cache API responses</span>
+  originRequestPolicy: AllViewer  <span class="c">// Forward all headers + cookies to ALB</span>
+  viewerProtocolPolicy: redirect-to-https
+  allowedMethods: GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE
+
+<span class="c">/* Behaviour 2: Static assets — aggressive caching */</span>
+<span class="k">behaviour</span> "/static/*":
+  origin: S3Origin
+  cachePolicy:
+    defaultTTL: 86400        <span class="c">// 1 day default</span>
+    maxTTL: 31536000         <span class="c">// 1 year max (for versioned filenames)</span>
+    minTTL: 0
+    enableAcceptEncodingGzip: true   <span class="c">// Compress at edge</span>
+    enableAcceptEncodingBrotli: true
+  viewerProtocolPolicy: redirect-to-https
+  allowedMethods: GET, HEAD
+
+<span class="c">/* Behaviour 3: Images and media */</span>
+<span class="k">behaviour</span> "/uploads/*":
+  origin: S3Origin
+  cachePolicy:
+    defaultTTL: 604800       <span class="c">// 1 week</span>
+    maxTTL: 2592000          <span class="c">// 30 days</span>
+
+<span class="c">/* Default behaviour: SPA frontend HTML */</span>
+<span class="k">behaviour</span> "*":
+  origin: S3Origin
+  cachePolicy:
+    defaultTTL: 0            <span class="c">// Don't cache index.html — always fresh</span>
+    maxTTL: 0
+  viewerProtocolPolicy: redirect-to-https
+  customErrorResponse:       <span class="c">// SPA routing — serve index.html for 404s</span>
+    - errorCode: 404
+      responsePagePath: /index.html
+      responseCode: 200</code></div>
+        <div class="mechbox"><strong>The originRequestPolicy — what CloudFront forwards to origin:</strong> By default, CloudFront strips most request headers before forwarding to origin — browsers send dozens of headers (User-Agent, Accept-Language, Cookie) that would explode your cache key dimensionality if included. The originRequestPolicy controls what gets forwarded. For APIs (dynamic content): use AllViewer to forward everything. For static content: use the managed CORS-S3Origin policy (adds Origin header for CORS support, strips everything else). Never forward Host header manually for ALB origins — CloudFront sets the correct Host header for the origin. Forwarding the original client Host header to ALB causes "Invalid host header" errors because ALB expects its own hostname, not your custom domain.</div>
+      </div>
+    </div>
+
+    <div id="ob2" class="cpanel">
+      <div class="ch">SPA hosting pattern — CloudFront + S3 for your React/React Native web build</div>
+      <div class="csub">The correct setup that serves a Single Page Application with client-side routing from CloudFront + S3</div>
+      <div class="cb">
+        <p>The most common CloudFront + S3 pattern is hosting a Single Page Application (your React Native web export or a React admin dashboard). The challenge: SPAs use client-side routing. <span class="mono">getwork.app/jobs/123</span> is handled by the React router, not a server-side route. When a user directly navigates to or refreshes <span class="mono">getwork.app/jobs/123</span>, the browser requests that path from the server. S3 returns a 404 (no object at that path). Without the custom error response configuration, users get 403 or 404 errors on direct navigation or page refresh.</p>
+        <p><strong>The SPA error page fix:</strong> Configure a Custom Error Response in CloudFront: when origin returns HTTP 403 (S3's default for missing keys when public access is blocked) or 404, return <span class="mono">/index.html</span> with HTTP 200. The browser receives index.html, React loads, the React Router reads the current URL, and routes to the correct component. The user sees the correct page. This is the standard SPA hosting pattern — every SPA deployed to CloudFront + S3 needs this configuration.</p>
+        <div class="code-block"><code><span class="c"># Complete S3 + CloudFront SPA hosting setup via CLI</span>
+
+<span class="c"># 1. Create S3 bucket (private — CloudFront OAC controls access)</span>
+aws s3 mb s3://getwork-frontend --region ap-south-1
+aws s3api put-public-access-block \
+  --bucket getwork-frontend \
+  --public-access-block-configuration \
+    BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+
+<span class="c"># 2. Deploy SPA build to S3</span>
+aws s3 sync ./build s3://getwork-frontend --delete
+<span class="c"># Critical: set Cache-Control on index.html — must not be cached</span>
+aws s3 cp s3://getwork-frontend/index.html s3://getwork-frontend/index.html \
+  --metadata-directive REPLACE \
+  --cache-control "no-store, no-cache, must-revalidate" \
+  --content-type "text/html"
+
+<span class="c"># 3. Create ACM certificate in us-east-1 (REQUIRED for CloudFront)</span>
+CERT_ARN=$(aws acm request-certificate \
+  --domain-name getwork.app \
+  --subject-alternative-names "*.getwork.app" \
+  --validation-method DNS \
+  --region us-east-1 \
+  --query CertificateArn --output text)
+echo "Certificate ARN (us-east-1): $CERT_ARN"
+echo "Add the DNS validation CNAME records to your Route 53 hosted zone"
+
+<span class="c"># 4. Create CloudFront distribution (simplified — full config via console or Terraform)</span>
+aws cloudfront create-distribution \
+  --distribution-config file://cloudfront-config.json
+<span class="c"># cloudfront-config.json must include:</span>
+<span class="c"># - S3 origin with OAC</span>
+<span class="c"># - Custom error response (404 → /index.html, 200)</span>
+<span class="c"># - Viewer certificate with ACM ARN from us-east-1</span>
+<span class="c"># - Default root object: index.html</span>
+<span class="c"># - Aliases: ["getwork.app", "www.getwork.app"]</span></code></div>
+        <div class="warnbox"><strong>index.html must never be cached:</strong> Your build pipeline changes static asset filenames with content hashes (<span class="mono">app.a7f3d9.js</span>) but index.html always has the same name. index.html references the current build's JS and CSS filenames. If CloudFront caches index.html for 24 hours, users who deployed a new version still get the old index.html, which references old asset filenames — those old assets may have been deleted from S3. They see a broken app. Set <span class="mono">Cache-Control: no-store</span> on index.html and configure the CloudFront behaviour for the root to have TTL=0. Asset files (CSS, JS, images) with content-hashed filenames can have TTL=31536000 (1 year) — they never change.</div>
+      </div>
+    </div>
+
+    <div id="ob3" class="cpanel">
+      <div class="ch">Origin failover — automatic switching to a secondary origin on failure</div>
+      <div class="csub">CloudFront-level redundancy that works alongside (and independently of) ALB and Route 53 failover</div>
+      <div class="cb">
+        <p>CloudFront origin failover configures a primary origin and a secondary origin. If the primary origin returns a specified HTTP error status code (500, 502, 503, 504) or is unreachable, CloudFront automatically retries the request against the secondary origin. This happens at the CloudFront layer — no DNS change, no client retry required.</p>
+        <p><strong>Example for GetWork:</strong> Primary origin: ALB in ap-south-1 (production). Secondary origin: S3 bucket containing a static maintenance page. If the ALB returns 503 (all instances unhealthy) or times out, CloudFront serves the maintenance page from S3 to the user — they see a friendly "GetWork is temporarily under maintenance" page rather than a browser-level connection error. This is the user experience difference between a "service is down" error and a "graceful degradation" experience.</p>
+        <div class="mechbox"><strong>Origin failover vs Route 53 failover vs ALB failover:</strong> Three different layers, each with different scope. ALB failover (health checks on target group): removes unhealthy EC2 instances from rotation within the ALB — users hitting a healthy instance are unaffected. Route 53 failover: DNS-level failover to a secondary region when an entire origin becomes unavailable — requires DNS propagation (60s+). CloudFront origin failover: request-level failover to a secondary origin when the primary fails a specific request — immediate, no DNS change, transparent to clients. These three mechanisms are complementary and additive. A production system benefits from all three layers: ALB for instance-level health, Route 53 for regional failover, CloudFront for graceful degradation when the origin is temporarily unavailable.</div>
+        <p><strong>What CloudFront origin failover does NOT do:</strong> It does not split traffic between origins simultaneously (that's weighted origins in ALB). It does not retry on client errors (4xx) — only server errors (5xx) and timeouts. It does not cache the failed response — each request to the failed primary results in a secondary origin fetch (no cache benefit during an outage). For a sustained origin outage, CloudFront will hit the secondary origin for every cache miss — ensure the secondary can handle the load if your CDN cache hit rate drops during an outage.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('security',document.querySelectorAll('.ntab')[4])">Security — WAF, signed URLs, and access control →</button>
+  </div>
+
+  <!-- SECURITY -->
+  <div id="p-security" class="panel">
+    <div class="lede"><strong>CloudFront's security layer goes far beyond serving content over HTTPS. WAF (Web Application Firewall) rules protect against SQL injection, XSS, and bot traffic at the edge — before requests reach your origin. Signed URLs and signed cookies restrict access to premium content. Geographic restrictions block entire countries. Understanding these security features is what allows you to design defences in depth from the CDN edge inward.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('sec',0,this)">1 · WAF integration</button>
+      <button class="cbtn" onclick="showC('sec',1,this)">2 · Signed URLs and cookies</button>
+      <button class="cbtn" onclick="showC('sec',2,this)">3 · Geographic restrictions</button>
+      <button class="cbtn" onclick="showC('sec',3,this)">4 · CloudFront Functions</button>
+    </div>
+
+    <div id="sec0" class="cpanel active">
+      <div class="ch">AWS WAF on CloudFront — filtering malicious requests at the edge</div>
+      <div class="csub">How WAF rules work and which managed rule groups to enable for a production API</div>
+      <div class="cb">
+        <p>AWS WAF (Web Application Firewall) can be attached to CloudFront distributions, ALBs, and API Gateways. When attached to CloudFront, WAF rules evaluate every request at the edge before it reaches your origin — malicious requests are blocked 600+ edge PoPs closer to the attacker, before they consume your origin's resources.</p>
+        <p><strong>WAF rule types:</strong></p>
+        <p><strong>Managed rule groups</strong> — AWS and third parties maintain lists of known malicious patterns. Key groups for your stack: AWS-AWSManagedRulesCommonRuleSet (protects against OWASP Top 10 including SQL injection and XSS), AWS-AWSManagedRulesKnownBadInputsRuleSet (blocks known malicious input patterns like Log4j exploitation payloads), AWS-AWSManagedRulesBotControlRuleSet (blocks known bots and crawlers — optional, can block legitimate bots if misconfigured).</p>
+        <p><strong>Rate-based rules</strong> — limit requests from a single IP address. A rate-based rule with 1,000 requests per 5 minutes per IP blocks a single source from sending more than 200 req/s to your API. This provides basic DDoS protection at the edge. More aggressive DDoS requires AWS Shield Advanced.</p>
+        <p><strong>Custom rules</strong> — match specific request attributes. Block requests not containing your custom <span class="mono">X-CloudFront-Secret</span> header (prevents bypassing CloudFront to hit the ALB directly). Allow only specific geographic regions. Block requests with specific User-Agent strings associated with vulnerability scanners.</p>
+        <div class="mechbox"><strong>WAF in count mode vs block mode — how to safely deploy rules:</strong> New WAF rules should always be deployed in COUNT mode first. In count mode, matching requests are logged (you can see them in WAF sampled requests and CloudWatch) but not blocked. Run in count mode for 24-48 hours, review the matched requests to confirm they're malicious and not legitimate traffic being incorrectly matched. Then switch to BLOCK mode. Deploying directly to BLOCK without count-mode testing is how WAF rules break legitimate traffic — a managed rule that matches a valid API request pattern blocks real users and appears as a 403 error with no obvious cause.</div>
+        <div class="prodbox"><strong>WAF pricing consideration:</strong> WAF charges: $5/month per WebACL, $1/month per rule group, $0.60/million requests processed. For GetWork at current scale: ~$10/month total. For a financial services application processing millions of requests: WAF is cheap insurance against OWASP attacks. For your JP Morgan project: WAF is almost certainly mandated — financial applications have security audit requirements that typically include WAF as a baseline control.</div>
+      </div>
+    </div>
+
+    <div id="sec1" class="cpanel">
+      <div class="ch">Signed URLs and signed cookies — time-limited access to private content</div>
+      <div class="csub">Distributing protected content — job posting premium photos, private documents — through CloudFront with expiring access</div>
+      <div class="cb">
+        <p>Signed URLs and signed cookies allow CloudFront to serve content that is otherwise inaccessible. The S3 bucket is private (no public access). CloudFront normally serves it via OAC. But for content that should only be accessible to authenticated users (premium features, private documents, purchased media), you can add an additional time-limited access control layer.</p>
+        <p><strong>Signed URL</strong> — a CloudFront URL with embedded expiry time and cryptographic signature. Generated by your Spring Boot application using your CloudFront Key Pair's private key. Valid for a specified duration (e.g., 1 hour). After expiry, the URL returns 403. Can restrict to a specific IP address (for high-security scenarios). Use case: "Download this invoice" — generate a signed URL valid for 15 minutes, return it in the API response. The user clicks the link within 15 minutes and gets the file. After 15 minutes, the link is expired.</p>
+        <p><strong>Signed cookie</strong> — instead of a signed URL (which works for individual file access), signed cookies grant access to multiple files matching a pattern. Set a signed cookie on the user's browser when they authenticate. All subsequent CloudFront requests include the cookie, granting access to all URLs matching the cookie's wildcard pattern. Use case: a premium user who pays for "full resolution images" gets a signed cookie granting access to <span class="mono">/premium-images/*</span>. The cookie is valid for their session. All full-res images are accessible. Free users don't have the cookie and get 403 on <span class="mono">/premium-images/*</span>.</p>
+        <div class="code-block"><code><span class="c">// Generate a CloudFront signed URL in Spring Boot</span>
+<span class="cmd-g">@Service</span>
+<span class="k">public class</span> SignedUrlService {
+    <span class="k">private final</span> CloudFrontUtilities cfUtilities = CloudFrontUtilities.create();
+    <span class="k">private final</span> String keyPairId;          <span class="c">// from Secrets Manager</span>
+    <span class="k">private final</span> PrivateKey privateKey;     <span class="c">// from Secrets Manager (PEM format)</span>
+    <span class="k">private final</span> String cfDomain;           <span class="c">// your CF distribution domain</span>
+
+    <span class="k">public</span> String generateSignedUrl(String objectKey, Duration validity) {
+        SignedUrl signedUrl = cfUtilities.getSignedUrlWithCannedPolicy(
+            SignedUrlRequest.builder()
+                .resourceUrl(<span class="s">"https://"</span> + cfDomain + <span class="s">"/"</span> + objectKey)
+                .privateKey(privateKey)
+                .keyPairId(keyPairId)
+                .expirationDate(Instant.now().plus(validity))
+                .build());
+        <span class="k">return</span> signedUrl.url();
+    }
+}
+
+<span class="c">// Usage in controller — returns a signed URL valid for 30 minutes</span>
+<span class="cmd-g">@GetMapping</span>(<span class="s">"/jobs/{id}/documents/{docId}/download"</span>)
+<span class="cmd-g">@PreAuthorize</span>(<span class="s">"hasPermission(#id, 'Job', 'read')"</span>)
+<span class="k">public</span> ResponseEntity&lt;Map&gt; downloadDocument(
+        <span class="cmd-g">@PathVariable</span> Long id,
+        <span class="cmd-g">@PathVariable</span> String docId) {
+    String signedUrl = signedUrlService.generateSignedUrl(
+        <span class="s">"job-documents/"</span> + id + <span class="s">"/"</span> + docId,
+        Duration.ofMinutes(30));
+    <span class="k">return</span> ResponseEntity.ok(Map.of(<span class="s">"downloadUrl"</span>, signedUrl, <span class="s">"expiresInMinutes"</span>, 30));
+}</code></div>
+      </div>
+    </div>
+
+    <div id="sec2" class="cpanel">
+      <div class="ch">Geographic restrictions — blocking or allowing specific countries</div>
+      <div class="csub">CloudFront-level country blocking and its limitations vs WAF geolocation rules</div>
+      <div class="cb">
+        <p>CloudFront geographic restrictions block or allow requests based on the country the request originates from (determined by IP geolocation). This operates at the distribution level — you can either maintain an allowlist (only these countries can access this distribution) or a blocklist (these countries are blocked, all others allowed).</p>
+        <p><strong>Use cases:</strong> A financial application with strict data residency requirements can restrict access to specific countries. An application not licensed for certain jurisdictions. Basic protection against traffic from countries known for high bot/attack traffic ratios. Compliance requirements that prohibit serving users in sanctioned countries (OFAC compliance for a fintech application at JP Morgan).</p>
+        <div class="mechbox"><strong>CloudFront geo-restriction vs WAF geolocation rules — the right tool for each:</strong> CloudFront geographic restriction returns a 403 Forbidden to blocked countries — simple, fast, no additional cost. WAF geolocation rules can do more sophisticated matching: allow country X but only if the request includes a valid authentication token, block country Y except for requests from your office IP range. CloudFront restriction is coarser but free (no WAF charges). WAF geolocation is more expensive but supports conditional logic. For straightforward "block these countries entirely" requirements, CloudFront restriction is sufficient. For nuanced rules, use WAF.</div>
+        <div class="failbox"><strong>Geographic restrictions are not perfect:</strong> IP geolocation databases are not 100% accurate. VPNs allow users to appear to be in different countries. Tor exit nodes can appear to be in any country. For regulatory compliance (GDPR for EU users, OFAC sanctions compliance), IP-based blocking is a control that reduces risk but does not eliminate it — it must be combined with contractual terms of service, user registration requirements, and legal counsel's guidance. Never rely solely on IP geolocation for compliance enforcement at a financial institution like JP Morgan.</div>
+      </div>
+    </div>
+
+    <div id="sec3" class="cpanel">
+      <div class="ch">CloudFront Functions and Lambda@Edge — logic at the edge</div>
+      <div class="csub">Running code at 600+ PoPs before the request reaches your origin</div>
+      <div class="cb">
+        <p>CloudFront Functions and Lambda@Edge allow you to run code at CloudFront's edge locations — before the request reaches your origin (viewer request), after the response leaves your origin (origin response), and at viewer response time. This enables a class of optimisations impossible with traditional server-side code.</p>
+        <p><strong>CloudFront Functions</strong> — lightweight JavaScript functions that run at every edge PoP. Sub-millisecond execution time. Very limited runtime (no network calls, no external dependencies, limited compute). Use cases: URL normalisation (canonicalise URLs to improve cache hit rate: <span class="mono">/Jobs</span> → <span class="mono">/jobs</span>), request header manipulation (add security headers to every response), A/B testing via cookie reading (read the experiment cookie and add a request header that the origin can use to serve the appropriate variant), redirect short URLs to full paths.</p>
+        <p><strong>Lambda@Edge</strong> — full Lambda functions executed at regional edge nodes (not all 600+ PoPs — a subset of regional nodes). Supports multiple runtimes (Node.js, Python). Can make network calls. Higher latency than CloudFront Functions (50-200ms cold start). Use cases: JWT authentication at the edge (validate the JWT before forwarding to origin — rejected requests never reach your origin server), dynamic image resizing (resize images at the edge based on request URL parameters), fetching user-specific content configuration from DynamoDB before forwarding to origin.</p>
+        <div class="prodbox"><strong>JWT validation at the edge with Lambda@Edge — the GetWork security pattern:</strong> Instead of validating JWT tokens in your Spring Boot application (which happens after the request has traversed the internet, hit your ALB, and reached your EC2), validate JWTs in Lambda@Edge. The Lambda function runs at the regional edge node closest to the user, validates the JWT signature and expiry, and either forwards the valid request to origin or returns 401 immediately. Invalid requests never reach your origin — reducing load and eliminating the attack surface for authentication bypass exploits against your application code. The Lambda@Edge function needs only the JWT public key (or JWKS endpoint) to validate — no database, no application state needed.</div>
+        <div class="mechbox"><strong>CloudFront Functions vs Lambda@Edge — the selection criteria:</strong> CloudFront Functions: sub-1ms, runs at every PoP, JavaScript only, no async/network, <1MB code size, very cheap ($0.10/million invocations). Lambda@Edge: 5-200ms, runs at regional PoPs, Node.js/Python, can do network I/O, up to 10MB code size, Lambda pricing applies. Choose CloudFront Functions for simple, synchronous header manipulation and URL rewriting. Choose Lambda@Edge for anything requiring async operations, complex logic, or external data fetching. Never use Lambda@Edge for simple header manipulation — the startup latency and cost are unjustified.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[5])">Interview prep →</button>
+  </div>
+
+  <!-- INTERVIEW PREP -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>Route 53 and CloudFront interview questions test whether you understand DNS as an architectural decision — not just as a configuration task. Senior engineers are expected to know why Alias records matter, how CloudFront's cache key works, and how these two services compose into a global delivery architecture.</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">What is an Alias record in Route 53? Why would you use it instead of a CNAME for api.getwork.app pointing to an ALB?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>An Alias record is a Route 53-specific extension that behaves like an A record to clients but internally resolves an AWS resource endpoint. It returns the current IP addresses of the target resource directly, without the client needing to follow a CNAME chain.</p>
+          <p>For <span class="mono">api.getwork.app</span> pointing to an ALB, I'd use Alias over CNAME for three reasons. First, Alias records are free for queries to AWS resources — Route 53 doesn't charge for Alias queries to ALB, CloudFront, S3 etc. CNAME queries are charged at $0.40/million. At production traffic, this difference is meaningful. Second, an Alias record automatically tracks the ALB's current IP addresses. When the ALB scales horizontally or its IPs change, the Alias record reflects the new IPs without any TTL wait on our zone's record — the ALB DNS TTL is managed separately and doesn't affect our domain's TTL. Third, Alias records can be used at the zone apex — <span class="mono">getwork.app</span> (without subdomain) cannot be a CNAME per DNS RFC, but it can be an Alias. Many users access services at the bare domain; without Alias support for the apex, you'd need a workaround like redirecting the apex to www.</p>
+          <p>The one case where I'd use CNAME over Alias: pointing to a non-AWS endpoint where Alias targets aren't supported — a Vercel deployment, a Netlify site, a third-party API. Alias targets must be specific AWS resource types.</p>
+          <span class="tip"><strong>Why this answer works:</strong> Three concrete reasons with cost, tracking, and apex support — not "Alias is better." The edge case where CNAME is appropriate shows you understand the actual constraint rather than applying a rule mechanically.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">A user reports that they're getting stale job listings through the app after you deployed new data. You have CloudFront in front of the API. What went wrong and how do you fix it both immediately and permanently?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>The API response is being cached by CloudFront and served from cache despite the underlying data changing. This happens when the CloudFront behaviour for the API path doesn't have caching disabled, and the Spring Boot API response either has no Cache-Control header or has a permissive one (like <span class="mono">Cache-Control: max-age=86400</span>).</p>
+          <p><strong>Immediate fix:</strong> Create a CloudFront cache invalidation: <span class="mono">aws cloudfront create-invalidation --distribution-id DIST_ID --paths "/api/jobs*"</span>. This purges all cached responses matching that path from all 600+ edge locations. Takes 30-60 seconds to propagate globally. Users will see fresh data on their next request. Cost: first 1,000 invalidation paths per month are free.</p>
+          <p><strong>Permanent fix — two layers.</strong> First, the CloudFront behaviour for <span class="mono">/api/*</span> must use a CachingDisabled cache policy (or set both minimum and maximum TTL to 0). API responses that return database content should never be cached at the CDN layer without careful thought. Second, add explicit <span class="mono">Cache-Control: no-store</span> headers to all dynamic API responses from Spring Boot. This can be done globally via a Spring response filter — any response from controllers in the <span class="mono">/api</span> path prefix gets <span class="mono">Cache-Control: no-store, no-cache, must-revalidate</span>. This ensures that even if the CloudFront behaviour is misconfigured in future, the response headers prevent caching by any intermediate cache, not just CloudFront.</p>
+          <p>The root cause is a configuration gap — API behaviour was not explicitly defined in CloudFront, so it fell through to the default behaviour which likely has caching enabled. Every API path pattern must have an explicit behaviour with caching disabled. The default behaviour should only catch static SPA assets that are safe to cache aggressively.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It diagnoses the cause precisely (behaviour not defined, fell to default with caching), gives the immediate tactical fix (invalidation with the specific CLI command), and the permanent systemic fix (two layers: CloudFront behaviour + Spring Boot headers). The two-layer defence principle shows architectural thinking.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">How does Route 53 latency-based routing work? How would you use it to expand GetWork from India to Southeast Asia?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Route 53 latency-based routing returns the record associated with the AWS region that has the lowest measured latency from the requesting DNS resolver's location. Route 53 maintains an empirically built latency database between all DNS resolver IP ranges and all AWS regions — continuously updated. A resolver in Mumbai resolves to ap-south-1 because it has lower latency than ap-southeast-1. A resolver in Jakarta resolves to ap-southeast-1.</p>
+          <p>For expanding GetWork to Southeast Asia, I'd set up the following:</p>
+          <p>Infrastructure in ap-southeast-1 (Singapore): an identical stack — VPC, ALB, ASG, and either a Read Replica of the ap-south-1 RDS (for read traffic) or an Aurora Global Database secondary cluster (for fast read + writable failover). Writes always go to ap-south-1 (primary writer) through the app; reads serve from the local replica for performance.</p>
+          <p>Route 53 configuration: two A Alias records for <span class="mono">api.getwork.app</span>, both with latency routing policy. Record 1: Alias to ap-south-1 ALB, region set to ap-south-1. Record 2: Alias to ap-southeast-1 ALB, region set to ap-southeast-1. Both records should have health checks associated — if ap-south-1 becomes unhealthy, Route 53 stops returning its record and all traffic (including Indian traffic) routes to Singapore until ap-south-1 recovers.</p>
+          <p>The application layer must handle cross-region writes: Singapore app servers write to the ap-south-1 RDS primary over the AWS global network backbone (internal to AWS, low latency). Read queries go to the local replica. This is the standard CQRS-like split: local reads, central writes.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It goes beyond "create two records with latency routing" to address the actual multi-region complexity — database writes going to the primary, reads from local replica, health checks on both records. The Aurora Global Database mention shows knowledge of the right data tier for this pattern.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">Explain CloudFront's three-tier caching architecture and what "cache hit ratio" means operationally.</span>
+          <span class="iq-d d-e">Easy</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>CloudFront has three tiers. Edge PoPs (600+ locations) are the first point of contact for user requests — local SSD caches, sub-10ms responses for cache hits. Regional edge caches (12 globally) sit behind the edge PoPs — larger storage, serve as a "second chance" when edge PoPs evict objects due to infrequent access. Origins (ALB, S3) are only contacted on a cache miss that propagates through both edge tiers.</p>
+          <p>Cache hit ratio is the percentage of requests served from CloudFront cache without contacting the origin. A cache hit ratio of 95% means for every 100 requests to CloudFront, 95 are served from cache and 5 hit the origin. For a well-configured deployment of static content, 95-99% is achievable. For a dynamic API with no caching (correct for most APIs), the cache hit ratio for API paths should be 0% — you want all API requests to reach the origin.</p>
+          <p>Operationally, cache hit ratio determines two things. Cost: a 95% cache hit ratio means your origin handles 5% of CloudFront's request volume — dramatically reducing EC2, ALB, and S3 costs at scale. CloudFront data transfer is cheaper than origin data transfer, so higher cache hit ratio = lower total cost. Latency: cached responses from the nearest edge PoP are 5-50x faster than origin responses (edge PoP is milliseconds away; origin is hundreds of milliseconds away after traversing the internet). Users in Mumbai served from the Mumbai edge PoP get sub-10ms responses; without CloudFront they'd get 30-100ms responses from the ap-south-1 ALB.</p>
+          <p>The CloudFront metric to monitor: <span class="mono">CacheHitRate</span> in CloudWatch under the <span class="mono">AWS/CloudFront</span> namespace. If your cache hit rate for static content is below 80%, investigate: are URLs inconsistently cased? Are query strings included in the cache key unnecessarily? Is content-hashing used on asset filenames? Is index.html being requested but caching is disabled (correct — but monitor separately)?</p>
+          <span class="tip"><strong>Why this answer works:</strong> The three-tier description is accurate and concise. Cache hit ratio is explained with the operational implication (cost and latency), not just as a percentage. The specific CloudWatch metric and the diagnostics for a low cache hit rate show operational depth.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[6])">Start the lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab adds Route 53 DNS and CloudFront CDN to the Day 10 architecture. You'll create a hosted zone, configure Alias records, create a CloudFront distribution with your ALB as origin, and verify the full request chain: DNS → CloudFront edge → ALB → EC2. This completes the production-grade frontend delivery pipeline.</strong></div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create a Route 53 hosted zone and understand NS delegation</div>
+          <div class="sb">Create a Route 53 public hosted zone. Inspect the NS records assigned. These must be configured at your domain registrar. For this lab, we use a subdomain so you can test without owning a real domain.</div>
+          <code class="cmd">REGION=ap-south-1
+
+# Option A: If you own a real domain (e.g. bought on Route 53 itself)
+# Create the hosted zone for your domain
+# aws route53 create-hosted-zone \
+#   --name getwork.app \
+#   --caller-reference $(date +%s)
+
+# Option B: Lab without real domain — use Route 53 to understand the mechanics
+# Create a subdomain hosted zone to delegate to Route 53
+# This simulates the real delegation flow
+
+# Simulate the architecture with a fake zone to observe record structure
+ZONE_ID=$(aws route53 create-hosted-zone \
+  --name lab.getwork.internal \
+  --caller-reference "day11-$(date +%s)" \
+  --query 'HostedZone.Id' --output text | sed 's|/hostedzone/||')
+echo "Hosted Zone ID: $ZONE_ID"
+
+# Inspect the auto-generated NS and SOA records
+aws route53 list-resource-record-sets \
+  --hosted-zone-id $ZONE_ID \
+  --query 'ResourceRecordSets[*].{Name:Name,Type:Type,TTL:TTL,Records:ResourceRecords}' \
+  --output json
+
+echo ""
+echo "The 4 NS records above must be set at your domain registrar"
+echo "Until NS delegation is configured, Route 53 answers queries"
+echo "but the world still uses the registrar's nameservers"</code>
+          <div class="snote">The NS delegation step is performed at your domain registrar (GoDaddy, Namecheap, AWS Route 53 Domains, etc.) — not in AWS CLI. You copy the 4 NS nameserver values from Route 53 and paste them as the domain's custom nameservers at the registrar. DNS propagation takes 24-48 hours.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create DNS records — Alias, CNAME, and understand TTL behaviour</div>
+          <div class="sb">Create representative record types. Create an Alias record pointing to your Day 10 ALB (if running) or observe the Alias target structure. Create a CNAME and TXT record to observe the differences.</div>
+          <code class="cmd"># Get your ALB DNS name if it's running (recreate from Day 10 if needed)
+ALB_DNS=$(aws elbv2 describe-load-balancers \
+  --names getwork-alb \
+  --query 'LoadBalancers[0].DNSName' \
+  --output text --region $REGION 2>/dev/null || echo "ALB-NOT-RUNNING")
+
+# If ALB is not running, use any AWS DNS name for demonstration
+# e.g., your Day 9 RDS endpoint
+RDS_ENDPOINT=$(aws rds describe-db-instances \
+  --db-instance-identifier getwork-db \
+  --query 'DBInstances[0].Endpoint.Address' \
+  --output text --region $REGION 2>/dev/null || echo "")
+
+echo "ALB DNS: $ALB_DNS"
+echo ""
+
+# Create an Alias A record (points to ALB DNS name)
+# Note: Alias to ALB requires the ALB's hosted zone ID + DNS name
+ALB_ZONE_ID="ZP97RAFLXTNZK"  # ap-south-1 ALB hosted zone ID (fixed for all ALBs in this region)
+
+cat > /tmp/record-batch.json << RECORDS
+{
+  "Changes": [
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "api.lab.getwork.internal",
+        "Type": "A",
+        "AliasTarget": {
+          "HostedZoneId": "$ALB_ZONE_ID",
+          "DNSName": "$ALB_DNS",
+          "EvaluateTargetHealth": true
+        }
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "www.lab.getwork.internal",
+        "Type": "CNAME",
+        "TTL": 300,
+        "ResourceRecords": [{"Value": "api.lab.getwork.internal"}]
+      }
+    },
+    {
+      "Action": "CREATE",
+      "ResourceRecordSet": {
+        "Name": "lab.getwork.internal",
+        "Type": "TXT",
+        "TTL": 300,
+        "ResourceRecords": [{"Value": "\"v=spf1 include:amazonses.com ~all\""}]
+      }
+    }
+  ]
+}
+RECORDS
+
+aws route53 change-resource-record-sets \
+  --hosted-zone-id $ZONE_ID \
+  --change-batch file:///tmp/record-batch.json
+
+echo "Records created — observe: Alias has no TTL (Route 53 manages it)"
+echo "CNAME and TXT have explicit TTL=300"
+aws route53 list-resource-record-sets \
+  --hosted-zone-id $ZONE_ID \
+  --query 'ResourceRecordSets[*].{Name:Name,Type:Type,TTL:TTL}' \
+  --output table</code>
+          <div class="snote">The ELB hosted zone IDs are fixed per region. ap-south-1 ALBs always use ZP97RAFLXTNZK. This is in the AWS documentation and is required for Alias records pointing to ALBs. Notice the Alias record has no TTL field — Route 53 manages it dynamically based on the ALB's own DNS TTL.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Request an ACM certificate in us-east-1 for CloudFront</div>
+          <div class="sb">CloudFront requires ACM certificates in us-east-1. Request a certificate with DNS validation — understand why us-east-1 is required and observe the DNS validation CNAME that ACM creates.</div>
+          <code class="cmd"># CRITICAL: CloudFront ACM certs MUST be in us-east-1
+# This is a hard requirement regardless of where your origin is
+CERT_ARN=$(aws acm request-certificate \
+  --domain-name "*.getwork.app" \
+  --subject-alternative-names "getwork.app" \
+  --validation-method DNS \
+  --region us-east-1 \
+  --query CertificateArn \
+  --output text)
+
+echo "Certificate ARN (us-east-1): $CERT_ARN"
+echo ""
+echo "Waiting for ACM to generate the DNS validation record..."
+sleep 15
+
+# Get the CNAME validation record that ACM requires
+aws acm describe-certificate \
+  --certificate-arn $CERT_ARN \
+  --region us-east-1 \
+  --query 'Certificate.DomainValidationOptions[0].ResourceRecord'
+
+echo ""
+echo "Add this CNAME record to your Route 53 hosted zone for validation."
+echo "ACM polls this record every few minutes."
+echo "Certificate becomes ISSUED within 5-30 minutes of CNAME creation."
+echo ""
+echo "For this lab: this cert isn't associated to a real domain so it won't validate."
+echo "For production: copy the Name and Value fields to a Route 53 CNAME record."
+echo ""
+echo "KEY INSIGHT: Your ap-south-1 cert for the ALB is separate from this."
+echo "Two certs for the same domain: one in ap-south-1 (for ALB), one in us-east-1 (for CloudFront)"</code>
+          <div class="snote">This is the step that trips up every engineer the first time. You need TWO ACM certificates for the same domain: one in ap-south-1 for your ALB's HTTPS listener, one in us-east-1 for CloudFront. Both can exist simultaneously — they're in different regions. CloudFront's us-east-1 requirement is a fixed architectural constraint, not configurable.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create a CloudFront distribution with ALB as origin and correct behaviours</div>
+          <div class="sb">Create a CloudFront distribution with your ALB as origin. Configure two behaviours: /api/* with caching disabled, and /* with caching enabled. This is the production-correct CDN configuration for a Spring Boot API + SPA frontend.</div>
+          <code class="cmd"># Get ALB ARN and DNS name
+ALB_DNS=$(aws elbv2 describe-load-balancers \
+  --names getwork-alb \
+  --query 'LoadBalancers[0].DNSName' \
+  --output text --region $REGION 2>/dev/null || echo "getwork-alb-placeholder.ap-south-1.elb.amazonaws.com")
+
+# CloudFront distribution config
+# For lab purposes — adjust aliases to your actual domain if you have one
+cat > /tmp/cf-config.json << CFG
+{
+  "CallerReference": "getwork-$(date +%s)",
+  "Comment": "GetWork production CDN",
+  "DefaultCacheBehavior": {
+    "TargetOriginId": "ALBOrigin",
+    "ViewerProtocolPolicy": "redirect-to-https",
+    "AllowedMethods": {
+      "Quantity": 7,
+      "Items": ["GET","HEAD","OPTIONS","PUT","POST","PATCH","DELETE"],
+      "CachedMethods": {"Quantity": 2, "Items": ["GET","HEAD"]}
+    },
+    "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+    "OriginRequestPolicyId": "216adef6-5c7f-47e4-b989-5492eafa07d3",
+    "Compress": true
+  },
+  "CacheBehaviors": {
+    "Quantity": 1,
+    "Items": [{
+      "PathPattern": "/api/*",
+      "TargetOriginId": "ALBOrigin",
+      "ViewerProtocolPolicy": "redirect-to-https",
+      "AllowedMethods": {
+        "Quantity": 7,
+        "Items": ["GET","HEAD","OPTIONS","PUT","POST","PATCH","DELETE"],
+        "CachedMethods": {"Quantity": 2, "Items": ["GET","HEAD"]}
+      },
+      "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+      "OriginRequestPolicyId": "216adef6-5c7f-47e4-b989-5492eafa07d3",
+      "Compress": true
+    }]
+  },
+  "Origins": {
+    "Quantity": 1,
+    "Items": [{
+      "Id": "ALBOrigin",
+      "DomainName": "$ALB_DNS",
+      "CustomOriginConfig": {
+        "HTTPPort": 80,
+        "HTTPSPort": 443,
+        "OriginProtocolPolicy": "http-only",
+        "OriginReadTimeout": 30,
+        "OriginKeepaliveTimeout": 5
+      }
+    }]
+  },
+  "PriceClass": "PriceClass_100",
+  "Enabled": true,
+  "HttpVersion": "http2and3",
+  "IsIPV6Enabled": true
+}
+CFG
+
+# Note: 4135ea2d... = CachingDisabled managed policy
+# 216adef6... = AllViewer managed origin request policy
+# These are AWS-managed policy IDs that work in all accounts
+
+CF_DOMAIN=$(aws cloudfront create-distribution \
+  --distribution-config file:///tmp/cf-config.json \
+  --query 'Distribution.DomainName' \
+  --output text)
+
+echo "CloudFront distribution created!"
+echo "Domain: $CF_DOMAIN (takes 5-15 minutes to deploy globally)"
+echo ""
+echo "While deploying, add Route 53 Alias CNAME for your domain:"
+echo "  api.getwork.app CNAME → $CF_DOMAIN"
+echo ""
+echo "Test once deployed:"
+echo "  curl -I https://$CF_DOMAIN/"</code>
+          <div class="snote">PriceClass_100 uses edge locations in US, Europe, and Asia Pacific (including India) — appropriate for GetWork's current market. The CachingDisabled policy ID (4135ea2d-6df8-44a3-9df3-4b5a84be39ad) is a fixed AWS-managed policy available in all accounts. The deployment takes 5-15 minutes to propagate to all edge locations.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Verify the CloudFront distribution and inspect cache headers</div>
+          <div class="sb">Once the distribution deploys, test it. Inspect the response headers to understand which edge PoP served the response, whether it was a cache hit or miss, and the X-Cache header that CloudFront adds.</div>
+          <code class="cmd"># Wait for distribution to deploy (check status)
+DIST_ID=$(aws cloudfront list-distributions \
+  --query 'DistributionList.Items[0].Id' \
+  --output text)
+
+aws cloudfront get-distribution \
+  --id $DIST_ID \
+  --query 'Distribution.{Status:Status,Domain:DomainName}' \
+  --output json
+
+# Test when Status = Deployed
+curl -I "https://$CF_DOMAIN/" 2>/dev/null | grep -E "(HTTP|X-Cache|Via|Age|Cache-Control)"
+# Look for these response headers:
+# X-Cache: Hit from cloudfront  (served from cache)
+# X-Cache: Miss from cloudfront (forwarded to origin)
+# Via: 1.1 xxxx.cloudfront.net (CloudFront) — confirms CF is in the path
+# Age: 0  (just cached) vs Age: 3600 (cached 1 hour ago)
+# x-amz-cf-pop: BOM54-P1 — the Mumbai PoP that served this response
+
+# Make the same request twice — first miss, second hit
+echo "First request (cache miss):"
+curl -sI "https://$CF_DOMAIN/" | grep "X-Cache"
+echo "Second request (cache hit):"
+curl -sI "https://$CF_DOMAIN/" | grep "X-Cache"
+
+# Test an API path — should always be cache miss (CachingDisabled policy)
+echo "API request (always miss):"
+curl -sI "https://$CF_DOMAIN/api/health" | grep "X-Cache"
+
+# Create an invalidation to observe the mechanism
+aws cloudfront create-invalidation \
+  --distribution-id $DIST_ID \
+  --paths "/*"
+echo "Invalidation created — all cached objects purged"</code>
+          <div class="snote">The x-amz-cf-pop header shows the specific edge PoP that handled the request. BOM = Bombay (Mumbai). The first request is a cache miss (X-Cache: Miss). The second request is a hit (X-Cache: Hit from cloudfront). The Age header shows how long ago the object was cached. This makes CloudFront's caching behaviour observable rather than abstract.</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Clean up — disable the CloudFront distribution and delete Day 11 resources</div>
+          <div class="sb">CloudFront distributions cannot be deleted while enabled. Disable first, then delete. Clean up the Route 53 hosted zone and ACM certificate (the cert incurs no charge, but keeping it clean is good hygiene).</div>
+          <code class="cmd"># Disable the CloudFront distribution (required before deletion)
+DIST_ETAG=$(aws cloudfront get-distribution --id $DIST_ID \
+  --query 'ETag' --output text)
+DIST_CONFIG=$(aws cloudfront get-distribution --id $DIST_ID \
+  --query 'Distribution.DistributionConfig' --output json | \
+  python3 -c "import sys,json; cfg=json.load(sys.stdin); cfg['Enabled']=False; print(json.dumps(cfg))")
+aws cloudfront update-distribution \
+  --id $DIST_ID \
+  --distribution-config "$DIST_CONFIG" \
+  --if-match $DIST_ETAG
+
+echo "Distribution disabled — waiting to deploy (~5 min) before deletion is possible"
+echo "To check: aws cloudfront get-distribution --id $DIST_ID --query 'Distribution.Status'"
+echo ""
+echo "When Status = Deployed (disabled state), delete with:"
+echo "ETAG=\$(aws cloudfront get-distribution --id $DIST_ID --query ETag --output text)"
+echo "aws cloudfront delete-distribution --id $DIST_ID --if-match \$ETAG"
+
+# Delete the ACM certificate (no charge, but clean up)
+aws acm delete-certificate --certificate-arn $CERT_ARN --region us-east-1
+
+# Delete Route 53 records first, then hosted zone
+aws route53 change-resource-record-sets \
+  --hosted-zone-id $ZONE_ID \
+  --change-batch '{"Changes":[
+    {"Action":"DELETE","ResourceRecordSet":{"Name":"api.lab.getwork.internal","Type":"A","AliasTarget":{"HostedZoneId":"ZP97RAFLXTNZK","DNSName":"'$ALB_DNS'","EvaluateTargetHealth":true}}},
+    {"Action":"DELETE","ResourceRecordSet":{"Name":"www.lab.getwork.internal","Type":"CNAME","TTL":300,"ResourceRecords":[{"Value":"api.lab.getwork.internal"}]}}
+  ]}' 2>/dev/null || echo "Records already deleted or need manual cleanup"
+
+aws route53 delete-hosted-zone --id $ZONE_ID 2>/dev/null || \
+  echo "Delete NS/SOA records first via console, then delete the zone"
+
+echo "Day 11 lab cleanup complete"</code>
+          <div class="snote">CloudFront distributions cost ~$0.010/GB served and $0.60/million requests — minimal for lab usage. The main cost is the ALB ($0.018/hr) and any EC2 running. Disabling the distribution stops all edge serving. Route 53 hosted zones cost $0.50/month — worth deleting if you won't use them.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[7])">Day 11 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Day 11 — Route 53 & CloudFront mechanics</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">Route 53 anycast</div><div class="cs-d">Route 53 nameservers use anycast — same IPs route to the nearest of dozens of global nodes. Creating a zone in ap-south-1 does NOT mean Mumbai queries are slower; anycast serves from nearest node everywhere.</div></div>
+      <div class="cs-item"><div class="cs-t">NS delegation</div><div class="cs-d">Creating a hosted zone in Route 53 doesn't make it authoritative until you copy the 4 NS records to your domain registrar. Until then Route 53's records are invisible to the world.</div></div>
+      <div class="cs-item"><div class="cs-t">Alias vs CNAME</div><div class="cs-d">Alias: free for AWS resources, works at zone apex, tracks AWS resource IPs automatically. CNAME: standard DNS, cannot be at zone apex, requires additional DNS lookup. Use Alias for all AWS resource targets.</div></div>
+      <div class="cs-item"><div class="cs-t">TTL reduction before migration</div><div class="cs-d">Reduce TTL to 60s 48 hours before any DNS migration. Then change the record. After migration and validation, restore to 300s. Skipping this means some clients are stuck on old IPs for hours.</div></div>
+      <div class="cs-item"><div class="cs-t">ACM cert in us-east-1</div><div class="cs-d">CloudFront ONLY accepts ACM certificates from us-east-1. Create a separate cert in us-east-1 for CloudFront even if your origin is in ap-south-1. Both certs can coexist for the same domain.</div></div>
+      <div class="cs-item"><div class="cs-t">CloudFront three tiers</div><div class="cs-d">Edge PoP (600+, local SSD cache) → Regional edge cache (12 globally, larger storage) → Origin (your ALB or S3). Origin only sees cache misses. Popular static content: ~95% cache hit rate.</div></div>
+      <div class="cs-item"><div class="cs-t">API caching disabled</div><div class="cs-d">CloudFront behaviour for /api/* must use CachingDisabled policy. API responses MUST include Cache-Control: no-store from Spring Boot. Both layers defend against accidental API response caching.</div></div>
+      <div class="cs-item"><div class="cs-t">Cache key design</div><div class="cs-d">Default: URL path only. Each query string, header, or cookie added to cache key reduces hit rate. Static assets: minimal cache key. Dynamic content: don't cache or include all relevant dimensions.</div></div>
+      <div class="cs-item"><div class="cs-t">SPA custom error response</div><div class="cs-d">Configure 403/404 → /index.html (200) in CloudFront. Without this, SPA client-side routes return 403 on direct navigation. Essential for React/React Native web deployments on S3+CloudFront.</div></div>
+      <div class="cs-item"><div class="cs-t">index.html must not be cached</div><div class="cs-d">Set Cache-Control: no-store on index.html explicitly after S3 sync. All other assets use content-hashed filenames with 1-year TTL. Cached index.html referencing old (deleted) asset filenames breaks the app.</div></div>
+      <div class="cs-item"><div class="cs-t">WAF count mode first</div><div class="cs-d">Always deploy new WAF rules in COUNT mode for 24-48 hours before BLOCK. Review matched requests. Confirm they are malicious, not legitimate traffic. Then switch to BLOCK. Direct BLOCK breaks production.</div></div>
+      <div class="cs-item"><div class="cs-t">Origin Access Control (OAC)</div><div class="cs-d">Secures S3 origins — only CloudFront with OAC can access the bucket. Prevents users from bypassing CloudFront to access S3 directly (which would bypass WAF, logging, geo-restrictions).</div></div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">What Phase 3 is adding to the architecture</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      Day 11: Route 53 DNS with Alias records to ALB and CloudFront. CloudFront with ALB + S3 origins, correct cache policies, WAF, signed URLs.<br>
+      Day 12 (next): ECS + Docker — containerise the Spring Boot app, run on Fargate, understand service mesh basics.<br>
+      Day 13: ElastiCache (Redis caching layer in front of RDS) + DynamoDB for session state and high-throughput key-value access.<br>
+      Each day adds a new capability layer without replacing the previous — the Phase 2 VPC/EC2/RDS/S3/ALB foundation remains.
+    </div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

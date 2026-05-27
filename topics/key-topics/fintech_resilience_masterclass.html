@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fintech Resilience - Anti-Gravity Claude Theme</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+        /* Anthropic Claude Palette */
+        --bg-canvas: #F8F7F4;
+        --bg-panel: #FFFFFF;
+        --text-main: #23221F;
+        --text-muted: #737373;
+        --accent-rust: #D97757;
+        --accent-sand: #D3C4B1;
+        --accent-sage: #6B7D6A;
+        --accent-blue: #5C7B99;
+        --border-light: #E8E5DF;
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #E5E0D8; color: var(--text-main);
+        font-family: 'Inter', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-canvas); position: relative;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08); border: 1px solid var(--border-light);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 20px;
+    }
+
+    /* Anti-Gravity Particles Background */
+    .particle-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        overflow: hidden; z-index: 0; pointer-events: none;
+    }
+    .particle {
+        position: absolute; background: var(--accent-sand); border-radius: 50%;
+        opacity: 0.4; animation: floatUp linear infinite;
+    }
+    @keyframes floatUp {
+        0% { transform: translateY(100vh) scale(0.5); opacity: 0; }
+        20% { opacity: 0.6; }
+        80% { opacity: 0.6; }
+        100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+    }
+
+    /* Header */
+    .header { padding: 30px 24px 5px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Lora', serif; font-size: 22px; font-weight: 600;
+        color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--accent-rust); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Progress Bar */
+    .progress-wrapper { width: 80%; margin: 10px auto 0; height: 4px; background: var(--border-light); border-radius: 2px; overflow: hidden; z-index: 10;}
+    .progress-fill { height: 100%; background: var(--accent-rust); width: 0%; transition: width 0.3s ease; }
+    .progress-text { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-muted); margin-top: 4px; z-index: 10; }
+
+    /* Top Half: Visual Canvas Area */
+    .canvas {
+        flex: 1.3; position: relative; z-index: 5; display: flex;
+        flex-direction: column; align-items: center; justify-content: center; min-height: 0;
+    }
+
+    /* Anti-Gravity Nodes */
+    .node {
+        position: absolute; background: var(--bg-panel); border: 1px solid var(--accent-sand);
+        padding: 10px 14px; border-radius: 12px; font-family: 'Inter', sans-serif;
+        font-weight: 600; font-size: 12px; color: var(--text-main); text-align: center;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.04); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        animation: antiGravity 6s ease-in-out infinite alternate;
+        z-index: 15;
+    }
+    .node span { font-size: 8px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 4px; text-transform: uppercase;}
+    
+    @keyframes antiGravity { 0% { transform: translateY(0px); } 100% { transform: translateY(-8px); } }
+
+    /* Specific Nodes */
+    .n-mobile { top: 10px; left: 50%; transform: translateX(-50%) !important; animation: none;}
+    .n-gateway { top: 90px; left: 50%; margin-left: -50px; animation-delay: 0s;}
+    .n-payment { top: 180px; left: 20px; animation-delay: -2s; border-color: var(--accent-blue);}
+    .n-profile { top: 180px; right: 20px; animation-delay: -4s; border-color: var(--accent-sage); opacity: 0;}
+    .n-bank { top: 270px; left: 20px; animation-delay: -1s; border-color: var(--accent-rust);}
+    .n-redis { top: 270px; left: 160px; background: rgba(217,119,87,0.05); border-style: dashed; opacity: 0;}
+
+    /* Connection Lines */
+    .svg-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none;}
+    .line { fill: none; stroke: var(--accent-sand); stroke-width: 2; stroke-dasharray: 4 4; opacity: 0; transition: opacity 0.5s; }
+    .line.solid { stroke-dasharray: none; }
+    .line.err { stroke: var(--accent-rust); }
+
+    /* Data Packets */
+    .packet {
+        position: absolute; width: 12px; height: 12px; background: var(--accent-blue);
+        border-radius: 50%; z-index: 20; opacity: 0; transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 0 10px rgba(92,123,153,0.4); pointer-events: none;
+    }
+    .pkt-err { background: var(--accent-rust); box-shadow: 0 0 10px rgba(217,119,87,0.4); }
+    .pkt-ok { background: var(--accent-sage); box-shadow: 0 0 10px rgba(107,125,106,0.4); }
+
+    /* Node Status Overlays */
+    .status-overlay {
+        position: absolute; top: -10px; right: -10px; background: var(--accent-rust); color: white;
+        font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 10px; opacity: 0; transition: opacity 0.3s;
+    }
+    .node-fail { border-color: var(--accent-rust); background: rgba(217,119,87,0.05); }
+    .node-shake { animation: shake 0.4s; }
+    @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+
+    /* Circuit Breaker Visual */
+    .cb-visual {
+        position: absolute; top: -25px; left: 50%; transform: translateX(-50%);
+        font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: bold;
+        background: var(--bg-panel); border: 1px solid var(--border-light); padding: 2px 6px; border-radius: 4px; opacity: 0;
+    }
+    .cb-closed { color: var(--accent-sage); border-color: var(--accent-sage);}
+    .cb-open { color: var(--accent-rust); border-color: var(--accent-rust);}
+    .cb-half { color: #D29922; border-color: #D29922;}
+
+    /* Bulkhead Visual */
+    .bulkhead-wall {
+        position: absolute; top: 160px; bottom: 40px; left: 50%; width: 2px;
+        background: var(--border-light); border-left: 2px dashed var(--accent-rust);
+        opacity: 0; transition: opacity 0.5s; z-index: 5;
+    }
+    .thread-pool {
+        font-family: monospace; font-size: 8px; color: var(--text-muted);
+        position: absolute; bottom: -20px; width: 100%; text-align: center;
+    }
+
+    /* Bottom Half: Explainer Panel */
+    .explainer-panel {
+        background: var(--bg-panel); padding: 20px 24px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid var(--border-light); box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+    }
+    
+    .explainer-content { flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 10px; }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: var(--accent-sand); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: var(--bg-canvas); color: var(--accent-rust);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--accent-sand);
+    }
+
+    .explainer-title {
+        font-family: 'Lora', serif; font-size: 18px; font-weight: 600; color: var(--text-main);
+        margin-bottom: 8px; letter-spacing: -0.5px; line-height: 1.2;
+    }
+
+    .explainer-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px; }
+
+    /* Code Block */
+    .code-block {
+        background: #F9F8F6; border: 1px solid var(--border-light); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #3A3A3A; overflow-x: auto;
+    }
+    
+    .c-kw { color: #8F5E4D; font-weight: 500; } 
+    .c-ty { color: #5C7B99; } 
+    .c-st { color: #6B7D6A; } 
+    .c-cm { color: #A3A3A3; font-style: italic; } 
+    .c-an { color: #D97757; } 
+
+    .btn-next {
+        background: var(--text-main); color: var(--bg-canvas); border: none; padding: 14px 24px;
+        border-radius: 8px; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.2s;
+        width: 100%; font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <!-- Particles generated by JS -->
+    <div class="particle-bg" id="particles"></div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Fintech Failure Patterns</h1>
+        <p>Designing For Disaster</p>
+    </div>
+    
+    <div class="progress-wrapper"><div class="progress-fill" id="p-bar"></div></div>
+    <div class="progress-text" id="p-text">Step 0 / 34</div>
+
+    <div class="canvas" id="canvas">
+        <svg class="svg-lines" id="svg-lines">
+            <path id="l-m-g" class="line" d="M210,50 L210,90"></path>
+            <path id="l-g-p" class="line" d="M210,130 L70,180"></path>
+            <path id="l-g-pr" class="line" d="M210,130 L350,180"></path>
+            <path id="l-p-b" class="line" d="M70,220 L70,270"></path>
+            <path id="l-p-r" class="line" d="M70,200 L160,280"></path>
+        </svg>
+
+        <div class="node n-mobile" id="n-mobile">Mobile App <span>GPay Client</span></div>
+        <div class="node n-gateway" id="n-gateway">API Gateway <span>Spring Cloud</span></div>
+        
+        <div class="node n-payment" id="n-payment">PaymentSvc <span>Core Logic</span>
+            <div class="cb-visual" id="cb-vis">CLOSED</div>
+            <div class="thread-pool" id="tp-pay">Threads: 200/200</div>
+            <div class="status-alert" id="a-pay">TIMEOUT</div>
+        </div>
+        
+        <div class="node n-profile" id="n-profile">ProfileSvc <span>User Data</span>
+            <div class="thread-pool" id="tp-prof">Threads: 200/200</div>
+            <div class="status-alert" id="a-prof">DEAD</div>
+        </div>
+        
+        <div class="node n-bank" id="n-bank">Bank API <span>External HDFC</span>
+            <div class="status-alert" id="a-bank">DOWN</div>
+        </div>
+
+        <div class="node n-redis" id="n-redis">Redis <span>Idemp Cache</span></div>
+
+        <div class="bulkhead-wall" id="bulkhead"></div>
+        <div class="packet" id="pkt"></div>
+    </div>
+
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[INITIALIZING]</div>
+            <h2 id="explainer-title" class="explainer-title">The Fallacy of the Network</h2>
+            <p id="explainer-text" class="explainer-text">In a distributed Fintech architecture, the network is fundamentally hostile. We must design for failure. Click to begin the 34-step masterclass on Timeouts, Retries, Idempotency, Circuit Breakers, and Bulkheads.</p>
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Start Masterclass</button>
+    </div>
+</div>
+
+<script>
+    // Generate Particles
+    const pContainer = document.getElementById('particles');
+    for(let i=0; i<15; i++) {
+        let p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.width = (Math.random() * 4 + 2) + 'px';
+        p.style.height = p.style.width;
+        p.style.animationDuration = (Math.random() * 10 + 5) + 's';
+        p.style.animationDelay = (Math.random() * 5) + 's';
+        pContainer.appendChild(p);
+    }
+
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeBox = document.getElementById('code-container');
+    const btn = document.getElementById('btn-next');
+    const pBar = document.getElementById('p-bar');
+    const pText = document.getElementById('p-text');
+    const pkt = document.getElementById('pkt');
+
+    // Node Refs
+    const nMob = document.getElementById('n-mobile');
+    const nGw = document.getElementById('n-gateway');
+    const nPay = document.getElementById('n-payment');
+    const nBank = document.getElementById('n-bank');
+    const nProf = document.getElementById('n-profile');
+    const nRedis = document.getElementById('n-redis');
+    
+    // Alerts & Visuals
+    const aPay = document.getElementById('a-pay');
+    const aBank = document.getElementById('a-bank');
+    const aProf = document.getElementById('a-prof');
+    const cbVis = document.getElementById('cb-vis');
+    const bulkhead = document.getElementById('bulkhead');
+    const tpPay = document.getElementById('tp-pay');
+    const tpProf = document.getElementById('tp-prof');
+
+    // Lines
+    const lMG = document.getElementById('l-m-g');
+    const lGP = document.getElementById('l-g-p');
+    const lPB = document.getElementById('l-p-b');
+    const lPR = document.getElementById('l-p-r');
+    const lGPr = document.getElementById('l-g-pr');
+
+    let currentStep = 0;
+    let isAnimating = false;
+    const TOTAL_STEPS = 34;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setPacket(top, left, type='pkt-rest') {
+        pkt.style.transition = 'none';
+        pkt.style.opacity = '1';
+        pkt.className = `packet ${type}`;
+        pkt.style.top = top + 'px';
+        pkt.style.left = left + 'px';
+        void pkt.offsetWidth;
+    }
+
+    function animPacket(top, left, duration=600) {
+        pkt.style.transition = `all ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        pkt.style.top = top + 'px';
+        pkt.style.left = left + 'px';
+    }
+
+    function resetVisuals() {
+        // Reset all states safely before a step applies its specific logic
+        pkt.style.opacity = '0';
+        [nPay, nBank, nProf].forEach(n => n.classList.remove('node-fail'));
+        [aPay, aBank, aProf].forEach(a => a.style.opacity = '0');
+        [lMG, lGP, lPB, lPR, lGPr].forEach(l => l.style.opacity = '0');
+        nProf.style.opacity = '0'; nRedis.style.opacity = '0';
+        cbVis.style.opacity = '0'; bulkhead.style.opacity = '0';
+        tpPay.innerText = 'Threads: 200/200'; tpProf.innerText = 'Threads: 200/200';
+        tpPay.style.opacity = '0'; tpProf.style.opacity = '0';
+        codeBox.style.display = 'none';
+    }
+
+    const steps = [
+        // --- INTRO ---
+        { b: "Intro 1", t: "The Fintech Reality", txt: "In GPay, hitting 'Pay' starts a complex chain. Mobile calls Gateway, Gateway calls PaymentService, PaymentService calls the external Bank API. Let's build the happy path.", act: async()=>{ lMG.style.opacity='1'; lGP.style.opacity='1'; lPB.style.opacity='1'; } },
+        { b: "Intro 2", t: "The Happy Path", txt: "The user sends $100. The packet flows perfectly. The Bank responds instantly. All is well in a synchronous world.", act: async()=>{ lMG.style.opacity='1'; lGP.style.opacity='1'; lPB.style.opacity='1'; setPacket(30,205); animPacket(90,205,400); await sleep(400); setPacket(130,205); animPacket(180,70,400); await sleep(400); setPacket(220,70); animPacket(270,70,400); await sleep(400); pkt.className='packet pkt-ok'; animPacket(220,70,400); await sleep(400); pkt.style.opacity='0'; } },
+        { b: "Intro 3", t: "The Inevitable Failure", txt: "But the network is hostile. The Bank API's database locks up. It stops responding. What happens to our Payment Service?", act: async()=>{ lMG.style.opacity='1'; lGP.style.opacity='1'; lPB.style.opacity='1'; aBank.innerText='HANG'; aBank.style.opacity='1'; nBank.classList.add('node-fail'); } },
+        
+        // --- TIMEOUTS ---
+        { b: "Timeouts 1", t: "The Missing Timeout", txt: "By default, HTTP clients block infinitely. Our Payment thread is now stuck waiting for the Bank. It cannot process any other work.", act: async()=>{ lPB.style.opacity='1'; nBank.classList.add('node-fail'); aBank.style.opacity='1'; setPacket(220,70); animPacket(260,70,600); await sleep(600); tpPay.style.opacity='1'; tpPay.innerText='Threads: 199/200'; } },
+        { b: "Timeouts 2", t: "Resource Exhaustion", txt: "Thousands of users click 'Pay'. More threads get stuck waiting for the Bank. Within seconds, the Tomcat thread pool is entirely exhausted.", act: async()=>{ lPB.style.opacity='1'; nBank.classList.add('node-fail'); tpPay.style.opacity='1'; tpPay.innerText='Threads: 0/200'; tpPay.style.color='var(--accent-rust)'; nPay.classList.add('node-fail'); } },
+        { b: "Timeouts 3", t: "Cascading Failure", txt: "Because threads are exhausted, the Payment Service crashes completely. A slow DB at the Bank just took down the entire GPay app.", act: async()=>{ lPB.style.opacity='1'; nBank.classList.add('node-fail'); nPay.classList.add('node-fail'); aPay.innerText='CRASHED'; aPay.style.opacity='1'; } },
+        { b: "Timeouts 4", t: "Applying Timeouts", txt: "We must implement 'Fail Fast'. We set a strict 2-second <code>readTimeout</code> on our RestTemplate or WebClient.", c: `@Bean\npublic RestTemplate restTemplate() {\n  return new RestTemplateBuilder()\n    .setReadTimeout(Duration.ofSeconds(2))\n    .build();\n}`, act: async()=>{ lPB.style.opacity='1'; codeBox.style.display='block'; aPay.style.opacity='0'; nPay.classList.remove('node-fail'); nBank.classList.add('node-fail'); tpPay.style.opacity='1'; tpPay.innerText='Threads: 200/200'; tpPay.style.color=''; } },
+        { b: "Timeouts 5", t: "The Timeout Result", txt: "Now, the thread waits 2 seconds, severs the connection, and throws a TimeoutException. The thread is freed. The app survives, but the payment failed.", act: async()=>{ lPB.style.opacity='1'; nBank.classList.add('node-fail'); setPacket(220,70); animPacket(250,70,800); await sleep(800); pkt.className='packet pkt-err'; animPacket(220,70,300); await sleep(300); pkt.style.opacity='0'; } },
+
+        // --- RETRIES ---
+        { b: "Retries 1", t: "The Transient Failure", txt: "Timeouts save the app, but failing every time there is a 50ms network blip ruins user experience. We need Retries to recover transient failures.", act: async()=>{ lPB.style.opacity='1'; } },
+        { b: "Retries 2", t: "Immediate Retry Storm", txt: "If 10,000 users fail and retry immediately (at 0ms), it creates a 'Thundering Herd' that acts like a DDoS attack, keeping the Bank down permanently.", act: async()=>{ lPB.style.opacity='1'; nBank.classList.add('node-fail'); setPacket(220,70); animPacket(250,70,200); await sleep(200); pkt.className='packet pkt-err'; animPacket(220,70,200); await sleep(200); pkt.className='packet pkt-rest'; animPacket(250,70,200); await sleep(200); aBank.innerText='DDoS!'; aBank.style.opacity='1'; } },
+        { b: "Retries 3", t: "Exponential Backoff", txt: "We must space out the retries. 1st retry: 100ms. 2nd: 200ms. 3rd: 400ms. This gives the Bank breathing room to recover.", c: `@Retryable(\n  maxAttempts = 3,\n  backoff = @Backoff(delay = 100, multiplier = 2)\n)\npublic void processPayment() { ... }`, act: async()=>{ lPB.style.opacity='1'; codeBox.style.display='block'; } },
+        { b: "Retries 4", t: "The Jitter Principle", txt: "Even with backoff, threads can sync up. We add 'Jitter' (randomized mathematical noise) so retries happen at 112ms, 234ms, 401ms. Traffic scatters perfectly.", act: async()=>{ lPB.style.opacity='1'; codeBox.style.display='block'; codeBox.innerHTML = `<span class="c-cm">// Adding randomness</span>\n@Backoff(delay = 100, multiplier = 2, random = true)`; } },
+        { b: "Retries 5", t: "Safe Retries Only", txt: "Never retry client errors (like 400 Bad Request). Only retry safe network errors like 503, 504, or IOExceptions.", act: async()=>{ lPB.style.opacity='1'; codeBox.style.display='block'; codeBox.innerHTML = `@Retryable(\n  retryFor = {HttpServerErrorException.class, IOException.class},\n  noRetryFor = {HttpClientErrorException.class}\n)`; } },
+        { b: "Retries 6", t: "The Retry Success", txt: "With Backoff + Jitter, the Bank recovers by the 3rd attempt. The payment goes through without the user ever noticing.", act: async()=>{ lPB.style.opacity='1'; setPacket(220,70); animPacket(250,70,400); await sleep(400); pkt.className='packet pkt-err'; animPacket(220,70,200); await sleep(500); /* wait */ pkt.className='packet pkt-rest'; animPacket(270,70,400); await sleep(400); pkt.className='packet pkt-ok'; animPacket(220,70,400); await sleep(400); pkt.style.opacity='0'; } },
+
+        // --- IDEMPOTENCY ---
+        { b: "Idemp 1", t: "The Dangerous Retry", txt: "Wait. Retrying a POST request (Payment) is incredibly dangerous. What if the Bank processed the payment, but the network dropped the 'Success' response?", act: async()=>{ lPB.style.opacity='1'; setPacket(220,70); animPacket(270,70,400); await sleep(400); pkt.className='packet pkt-ok'; animPacket(250,70,400); await sleep(400); pkt.style.opacity='0'; /* Drops! */ aPay.innerText='TIMEOUT'; aPay.style.opacity='1'; nPay.classList.add('node-fail'); } },
+        { b: "Idemp 2", t: "Double Charge!", txt: "The Payment Service thinks it failed, so it retries. The Bank receives the payload again and processes it again. The user was just charged twice! A Fintech disaster.", act: async()=>{ lPB.style.opacity='1'; setPacket(220,70); animPacket(270,70,400); await sleep(400); pkt.className='packet pkt-ok'; animPacket(220,70,400); await sleep(400); pkt.style.opacity='0'; aBank.innerText='DOUBLE CHARGE'; aBank.style.opacity='1'; nBank.classList.add('node-fail'); } },
+        { b: "Idemp 3", t: "Idempotency Key", txt: "To fix this, the Mobile App generates a unique UUID (Idempotency Key) for every 'Pay' button click, and passes it in the HTTP Header.", c: `POST /api/v1/payments\nIdempotency-Key: a1b2c3d4...\n\n{ "amount": 100 }`, act: async()=>{ lMG.style.opacity='1'; lGP.style.opacity='1'; codeBox.style.display='block'; setPacket(30,205); animPacket(90,205,400); await sleep(400); pkt.style.opacity='0'; } },
+        { b: "Idemp 4", t: "The Redis Lock", txt: "Before calling the Bank, the Payment Service checks a Redis cache. 'Have I seen this key?' If not, it processes the payment and caches the success response.", act: async()=>{ lPR.style.opacity='1'; nRedis.style.opacity='1'; setPacket(200,80); animPacket(270,160,500); await sleep(500); pkt.className='packet pkt-ok'; animPacket(200,80,500); await sleep(500); pkt.style.opacity='0'; } },
+        { b: "Idemp 5", t: "First Request Success", txt: "The payment hits the Bank, succeeds, and the Service stores the HTTP 200 OK response mapped to the UUID in Redis.", act: async()=>{ lPB.style.opacity='1'; lPR.style.opacity='1'; nRedis.style.opacity='1'; setPacket(220,70); animPacket(270,70,400); await sleep(400); pkt.className='packet pkt-ok'; animPacket(220,70,400); await sleep(400); setPacket(200,80,'pkt-ok'); animPacket(270,160,400); await sleep(400); pkt.style.opacity='0'; } },
+        { b: "Idemp 6", t: "Network Drops Response", txt: "Let's simulate the failure. The first response drops. The Mobile App retries the exact same request with the exact same Idempotency Key.", act: async()=>{ lMG.style.opacity='1'; lGP.style.opacity='1'; nRedis.style.opacity='1'; setPacket(30,205); animPacket(90,205,400); await sleep(400); setPacket(130,205); animPacket(180,70,400); await sleep(400); pkt.style.opacity='0'; } },
+        { b: "Idemp 7", t: "The Cache Hit Guarantee", txt: "Payment Service asks Redis. Redis says 'Yes! Key exists. Here is the cached 200 OK.' It bypasses the Bank entirely, returning success safely. Exactly-once semantics.", act: async()=>{ lPR.style.opacity='1'; nRedis.style.opacity='1'; codeBox.style.display='block'; codeBox.innerHTML = `if (redis.exists(idemKey)) {\n  return redis.get(idemKey);\n}\n// Else call Bank...`; setPacket(200,80); animPacket(270,160,400); await sleep(400); pkt.className='packet pkt-ok'; animPacket(200,80,400); await sleep(400); pkt.style.opacity='0'; } },
+
+        // --- CIRCUIT BREAKER ---
+        { b: "Circuit 1", t: "The Downstream Outage", txt: "What if the Bank API is completely dead? Retries are useless. They just burn CPU, flood the network, and delay the inevitable failure for the user.", act: async()=>{ lPB.style.opacity='1'; aBank.innerText='OFFLINE'; aBank.style.opacity='1'; nBank.classList.add('node-fail'); } },
+        { b: "Circuit 2", t: "Continuous Retries Failing", txt: "Every user request wastes 3 retry attempts, multiplying the traffic by 3x on an already dying Bank server.", act: async()=>{ lPB.style.opacity='1'; aBank.style.opacity='1'; nBank.classList.add('node-fail'); setPacket(220,70); animPacket(260,70,200); await sleep(200); pkt.className='packet pkt-err'; animPacket(220,70,200); await sleep(200); pkt.className='packet pkt-rest'; animPacket(260,70,200); await sleep(200); pkt.style.opacity='0'; } },
+        { b: "Circuit 3", t: "Installing the Circuit Breaker", txt: "We install a Circuit Breaker (Resilience4j). It acts as a protective fuse. It monitors the failure rate of the Bank API calls in real-time.", c: `resilience4j.circuitbreaker:\n  instances:\n    bankApi:\n      failureRateThreshold: 50\n      slidingWindowSize: 10`, act: async()=>{ lPB.style.opacity='1'; aBank.style.opacity='1'; nBank.classList.add('node-fail'); cbVis.style.opacity='1'; cbVis.className='cb-visual cb-closed'; cbVis.innerText='CLOSED'; codeBox.style.display='block'; } },
+        { b: "Circuit 4", t: "State: OPEN", txt: "Once 50% of calls fail, the Circuit trips to OPEN. It instantly rejects all incoming calls, returning a Fallback Response (503). Zero calls reach the Bank.", act: async()=>{ cbVis.style.opacity='1'; cbVis.className='cb-visual cb-open'; cbVis.innerText='OPEN'; setPacket(130,205); animPacket(170,80,300); await sleep(300); pkt.className='packet pkt-err'; animPacket(130,205,300); await sleep(300); pkt.style.opacity='0'; } },
+        { b: "Circuit 5", t: "State: HALF-OPEN", txt: "After 30 seconds, it enters HALF-OPEN. It lets exactly 1 request through to 'test the waters'. If it fails, it trips OPEN again. If it succeeds, it CLOSES.", act: async()=>{ lPB.style.opacity='1'; aBank.style.opacity='1'; nBank.classList.add('node-fail'); cbVis.style.opacity='1'; cbVis.className='cb-visual cb-half'; cbVis.innerText='HALF-OPEN'; setPacket(220,70); animPacket(260,70,600); await sleep(600); pkt.className='packet pkt-err'; animPacket(220,70,400); await sleep(400); pkt.style.opacity='0'; } },
+        { b: "Circuit 6", t: "State: CLOSED", txt: "The Bank fixes its servers. The next HALF-OPEN test succeeds! The circuit CLOSES, and traffic flows normally again. The system heals autonomously.", act: async()=>{ lPB.style.opacity='1'; cbVis.style.opacity='1'; cbVis.className='cb-visual cb-closed'; cbVis.innerText='CLOSED'; setPacket(220,70); animPacket(270,70,500); await sleep(500); pkt.className='packet pkt-ok'; animPacket(220,70,500); await sleep(500); pkt.style.opacity='0'; } },
+
+        // --- BULKHEADS ---
+        { b: "Bulkheads 1", t: "The Shared Thread Pool", txt: "Even with Circuit Breakers, we have a fatal flaw. Spring Boot uses one shared Tomcat thread pool for the entire server. Payment and Profile services share resources.", act: async()=>{ lGPr.style.opacity='1'; nProf.style.opacity='1'; tpPay.style.opacity='1'; tpPay.innerText='Threads: 200/200'; } },
+        { b: "Bulkheads 2", t: "The Noisy Neighbor", txt: "If the Bank is slow (and before the CB trips), Payments will consume all 200 server threads. The threads are saturated.", act: async()=>{ lPB.style.opacity='1'; lGPr.style.opacity='1'; nProf.style.opacity='1'; tpPay.style.opacity='1'; tpPay.innerText='Threads: 0/200'; tpPay.style.color='var(--accent-rust)'; nPay.classList.add('node-fail'); aBank.innerText='SLOW'; aBank.style.opacity='1'; } },
+        { b: "Bulkheads 3", t: "Profile Service Dies", txt: "Now, a user just wants to load their Profile. But there are ZERO threads left. The Profile request times out, even though the Profile DB is perfectly healthy!", act: async()=>{ lGPr.style.opacity='1'; nProf.style.opacity='1'; tpPay.style.opacity='1'; tpPay.innerText='Threads: 0/200'; tpPay.style.color='var(--accent-rust)'; nPay.classList.add('node-fail'); aBank.style.opacity='1'; aProf.innerText='TIMEOUT'; aProf.style.opacity='1'; nProf.classList.add('node-fail'); } },
+        { b: "Bulkheads 4", t: "The Bulkhead Pattern", txt: "Named after watertight compartments in ships, we must mathematically isolate the resources so a leak in one doesn't sink the whole ship.", act: async()=>{ lGPr.style.opacity='1'; nProf.style.opacity='1'; bulkhead.style.opacity='1'; } },
+        { b: "Bulkheads 5", t: "Thread Isolation", txt: "Using Resilience4j Bulkhead, we dedicate 150 threads to Payment, and 50 to Profile. They are strictly isolated.", c: `resilience4j.thread-pool-bulkhead:\n  instances:\n    paymentService:\n      maxThreadPoolSize: 150\n    profileService:\n      maxThreadPoolSize: 50`, act: async()=>{ lGPr.style.opacity='1'; nProf.style.opacity='1'; bulkhead.style.opacity='1'; codeBox.style.display='block'; tpPay.style.opacity='1'; tpProf.style.opacity='1'; tpPay.innerText='Pay: 150/150'; tpProf.innerText='Prof: 50/50'; tpPay.style.color=''; } },
+        { b: "Bulkheads 6", t: "The Resilient Fix", txt: "Now, if Payment is saturated, it exhausts its 150 threads. But Profile has its own protected 50 threads. Profile remains 100% responsive!", act: async()=>{ lPB.style.opacity='1'; lGPr.style.opacity='1'; nProf.style.opacity='1'; bulkhead.style.opacity='1'; tpPay.style.opacity='1'; tpProf.style.opacity='1'; tpPay.innerText='Pay: 0/150'; tpPay.style.color='var(--accent-rust)'; nPay.classList.add('node-fail'); aBank.style.opacity='1'; setPacket(130,205); animPacket(180,350,600); await sleep(600); pkt.className='packet pkt-ok'; animPacket(130,205,600); await sleep(600); pkt.style.opacity='0'; } },
+        
+        // --- OUTRO ---
+        { b: "Summary", t: "The Resilient Architecture", txt: "By combining Timeouts, Retries with Jitter, Redis Idempotency, Circuit Breakers, and Bulkheads, you have built an indestructible, enterprise-grade Fintech architecture.", act: async()=>{ lMG.style.opacity='1'; lGP.style.opacity='1'; lPB.style.opacity='1'; lGPr.style.opacity='1'; lPR.style.opacity='1'; nProf.style.opacity='1'; nRedis.style.opacity='1'; bulkhead.style.opacity='1'; cbVis.style.opacity='1'; cbVis.className='cb-visual cb-closed'; cbVis.innerText='CLOSED'; tpPay.style.opacity='0'; tpProf.style.opacity='0'; } }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        if (currentStep >= steps.length) { currentStep = 0; } // Loop back
+
+        isAnimating = true;
+        btn.disabled = true;
+
+        const sd = steps[currentStep];
+        
+        // Update Text
+        badge.innerText = `[${sd.b}]`;
+        title.innerText = sd.t;
+        text.innerHTML = sd.txt;
+        if (sd.c) {
+            codeBox.innerHTML = sd.c;
+        }
+
+        // Progress bar
+        pBar.style.width = ((currentStep + 1) / TOTAL_STEPS) * 100 + '%';
+        pText.innerText = `Step ${currentStep + 1} / ${TOTAL_STEPS}`;
+        
+        btn.innerText = currentStep === steps.length - 1 ? "Restart Masterclass" : "Next Frame →";
+
+        // Reset visual state to avoid overlapping bug chaos
+        resetVisuals();
+
+        // Run step action
+        await sd.act();
+        
+        currentStep++;
+        isAnimating = false;
+        btn.disabled = false;
+    }
+
+    // Init state
+    resetVisuals();
+</script>
+</body>
+</html>

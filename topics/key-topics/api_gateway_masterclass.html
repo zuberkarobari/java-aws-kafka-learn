@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Gateway Patterns - Deep Space Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --space-dark: #030014;
+        --neon-cyan: #22d3ee;
+        --neon-pink: #f472b6;
+        --neon-purple: #a855f7;
+        --neon-red: #f43f5e;
+        --neon-green: #34d399;
+        --neon-orange: #fb923c;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #000;
+        color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container */
+    #reel-container {
+        width: 100%;
+        max-width: 420px;
+        height: 100vh;
+        max-height: 850px;
+        background: var(--space-dark);
+        position: relative;
+        box-shadow: 0 0 50px rgba(34, 211, 238, 0.2);
+        border: 1px solid #164e63;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* Deep Space Background */
+    .space-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at 50% 20%, #082f49 0%, #030014 60%);
+        z-index: 0;
+    }
+    
+    .stars {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 200px 50px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 250px 90px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 300px 150px, #ffffff, rgba(0,0,0,0));
+        background-repeat: repeat;
+        background-size: 400px 200px;
+        opacity: 0.4;
+        animation: drift 60s linear infinite;
+        z-index: 0;
+    }
+
+    @keyframes drift {
+        from { background-position: 0 0; }
+        to { background-position: 0 400px; }
+    }
+
+    /* Header */
+    .header {
+        padding: 30px 20px 10px;
+        text-align: center;
+        z-index: 10;
+    }
+    
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+        background: linear-gradient(to right, var(--neon-cyan), var(--neon-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
+        text-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    }
+
+    .header p {
+        color: var(--neon-cyan);
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Visual Canvas Area */
+    .canvas {
+        flex: 1;
+        position: relative;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        perspective: 1000px;
+        padding-bottom: 60px; 
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scene 1: Doorman */
+    .doorman-list { width: 85%; display: flex; flex-direction: column; gap: 8px; }
+    .dm-item { background: rgba(15,23,42,0.8); border: 1px solid var(--border-neon); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 10px; font-size: 11px; }
+    .dm-item.good { border-color: var(--neon-green); box-shadow: 0 0 10px rgba(52,211,153,0.1); }
+    .dm-item.bad { border-color: var(--neon-red); box-shadow: 0 0 10px rgba(244,63,94,0.1); opacity: 0.6; }
+    .icon-badge { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px;}
+    .good .icon-badge { background: rgba(52,211,153,0.2); color: var(--neon-green); }
+    .bad .icon-badge { background: rgba(244,63,94,0.2); color: var(--neon-red); }
+
+    /* Scene 2: Reactive Routing */
+    .route-visual { position: relative; width: 100%; height: 200px; display: flex; justify-content: center; align-items: center;}
+    .gw-node { background: rgba(15,23,42,0.9); border: 2px solid var(--neon-cyan); padding: 15px; border-radius: 8px; font-weight: bold; color: var(--neon-cyan); box-shadow: 0 0 20px rgba(34,211,238,0.3); z-index: 10; position: absolute; left: 50%; top: 20px; transform: translateX(-50%); font-family: 'Space Grotesk';}
+    .svc-registry { position: absolute; left: 10px; top: 120px; border: 1px dashed var(--neon-purple); padding: 10px; border-radius: 8px; font-size: 10px; color: var(--neon-purple); font-family: monospace; text-align: center;}
+    .downstream-node { position: absolute; background: rgba(15,23,42,0.9); border: 1px solid var(--neon-green); padding: 10px; border-radius: 6px; font-size: 11px; color: var(--neon-green); top: 120px; transition: all 0.3s;}
+    .dn-1 { right: 80px; }
+    .dn-2 { right: 10px; opacity: 0.5;}
+    
+    .anim-packet { position: absolute; width: 10px; height: 10px; background: var(--neon-cyan); border-radius: 50%; box-shadow: 0 0 10px var(--neon-cyan); opacity: 0; z-index: 5;}
+
+    /* Scene 3: Filter Chain */
+    .filter-chain { display: flex; flex-direction: column; gap: 15px; width: 80%; align-items: center;}
+    .filter-box { padding: 10px 20px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: bold; text-align: center; width: 100%; border: 2px solid transparent;}
+    .global-f { border-color: var(--neon-purple); background: rgba(168,85,247,0.1); color: var(--neon-purple); box-shadow: 0 0 15px rgba(168,85,247,0.2);}
+    .gateway-f { border-color: var(--neon-orange); background: rgba(251,146,60,0.1); color: var(--neon-orange); box-shadow: 0 0 15px rgba(251,146,60,0.2); width: 80%;}
+    .chain-arrow { color: #475569; font-size: 16px; }
+
+    /* Scene 4: JWT Shield */
+    .jwt-shield-container { position: relative; width: 200px; height: 200px; display: flex; align-items: center; justify-content: center;}
+    .shield { position: absolute; width: 120px; height: 120px; border: 4px solid var(--neon-cyan); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; box-shadow: 0 0 30px rgba(34,211,238,0.3); transition: all 0.5s;}
+    .h-badge { position: absolute; font-family: monospace; font-size: 10px; background: #000; padding: 2px 6px; border: 1px solid var(--neon-pink); color: var(--neon-pink); border-radius: 4px; top: -10px; opacity: 0; transition: opacity 0.5s;}
+    
+    /* Scene 5: Token Bucket */
+    .bucket-container { position: relative; width: 120px; height: 140px; border: 4px solid var(--neon-orange); border-top: none; border-radius: 0 0 12px 12px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px; box-shadow: 0 10px 30px rgba(251,146,60,0.2); margin-top: 40px;}
+    .token-fill { width: 100px; height: 0%; background: rgba(251,146,60,0.5); transition: height 0.5s linear; border-radius: 0 0 6px 6px; display: flex; align-items: center; justify-content: center;}
+    .falling-token { position: absolute; width: 20px; height: 20px; background: var(--neon-orange); border-radius: 50%; box-shadow: 0 0 10px var(--neon-orange); top: -40px; opacity: 0; transition: all 0.4s ease-in;}
+
+    /* Scene 6: Circuit Breaker */
+    .cb-container { display: flex; align-items: center; gap: 20px; margin-top: 20px;}
+    .cb-service { padding: 15px; border-radius: 8px; border: 2px solid var(--neon-cyan); background: rgba(34,211,238,0.1); color: var(--neon-cyan); font-family: monospace; font-weight: bold;}
+    .cb-downstream { padding: 15px; border-radius: 8px; border: 2px solid var(--neon-red); background: rgba(244,63,94,0.1); color: var(--neon-red); font-family: monospace; font-weight: bold; position: relative;}
+    .cb-downstream::after { content: '⚠️ 504'; position: absolute; top: -25px; left: 50%; transform: translateX(-50%); font-size: 10px; width: 100px; text-align: center;}
+    .circuit-switch { width: 60px; height: 4px; background: var(--neon-green); position: relative; transition: all 0.3s; transform-origin: left center;}
+    .circuit-switch.open { transform: rotate(-45deg); background: var(--neon-red); }
+
+    /* Scene 7: CORS */
+    .cors-visual { width: 80%; border: 1px dashed var(--neon-purple); padding: 20px; border-radius: 8px; text-align: center;}
+    .cors-badge { display: inline-block; padding: 4px 10px; background: rgba(168,85,247,0.2); border: 1px solid var(--neon-purple); color: var(--neon-purple); border-radius: 12px; font-family: monospace; font-size: 10px; margin: 4px;}
+
+    /* Explainer Panel at Bottom */
+    .explainer-panel {
+        background: linear-gradient(to top, rgba(3, 0, 20, 1) 85%, rgba(3, 0, 20, 0.9) 95%, transparent);
+        padding: 24px 20px 30px;
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        z-index: 30;
+        min-height: 480px; 
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    .step-badge {
+        display: inline-block;
+        background: rgba(168, 85, 247, 0.1);
+        color: var(--neon-purple);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
+        align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+    }
+
+    .explainer-text {
+        font-size: 12px;
+        color: #cbd5e1;
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: #000;
+        border: 1px solid rgba(34, 211, 238, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        line-height: 1.6;
+        color: #e2e8f0;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        box-shadow: inset 0 0 20px rgba(0,0,0,1);
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #22d3ee; } 
+    .c-fn { color: #a855f7; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-hi { background: rgba(34, 211, 238, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan));
+        color: white;
+        border: 1px solid var(--neon-cyan);
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 13px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+        transition: all 0.2s;
+        width: 100%;
+        font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(168, 85, 247, 0.3); }
+    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="space-bg"></div>
+    <div class="stars"></div>
+
+    <!-- Header -->
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>API Gateway Patterns</h1>
+        <p>Spring Cloud Architecture</p>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas" id="canvas">
+        
+        <!-- Scene 1: Doorman -->
+        <div class="scene-container active" id="scene-1">
+            <div class="doorman-list">
+                <div class="dm-item good"><div class="icon-badge">✓</div> Authentication & JWT</div>
+                <div class="dm-item good"><div class="icon-badge">✓</div> Rate Limiting</div>
+                <div class="dm-item good"><div class="icon-badge">✓</div> Request Routing</div>
+                <div class="dm-item bad" style="margin-top: 10px;"><div class="icon-badge">✗</div> Business Logic (if/else)</div>
+                <div class="dm-item bad"><div class="icon-badge">✗</div> Database Calls</div>
+                <div class="dm-item bad"><div class="icon-badge">✗</div> Heavy Orchestration</div>
+            </div>
+        </div>
+
+        <!-- Scene 2: Reactive Routing -->
+        <div class="scene-container" id="scene-2">
+            <div class="route-visual">
+                <div class="gw-node" id="gw-node">Gateway</div>
+                <div class="svc-registry">Eureka<br>Registry</div>
+                <div class="downstream-node dn-1" id="dn-1">Payment:8081</div>
+                <div class="downstream-node dn-2">Payment:8082</div>
+                <div class="anim-packet" id="pkt-1"></div>
+            </div>
+        </div>
+
+        <!-- Scene 3: Filter Chain -->
+        <div class="scene-container" id="scene-3">
+            <div class="filter-chain">
+                <div class="filter-box global-f">Global: RequestLogging</div>
+                <div class="chain-arrow">↓</div>
+                <div class="filter-box global-f">Global: JwtAuthFilter</div>
+                <div class="chain-arrow">↓</div>
+                <div class="filter-box gateway-f">Gateway: RateLimiter</div>
+                <div class="chain-arrow">↓</div>
+                <div class="filter-box gateway-f">Gateway: CircuitBreaker</div>
+            </div>
+        </div>
+
+        <!-- Scene 4: JWT -->
+        <div class="scene-container" id="scene-4">
+            <div class="jwt-shield-container">
+                <div class="shield" id="jwt-shield">🛡️</div>
+                <div class="h-badge" id="h-badge">X-User-Id: 9821</div>
+            </div>
+        </div>
+
+        <!-- Scene 5: Rate Limiter -->
+        <div class="scene-container" id="scene-5">
+            <div style="font-family: monospace; font-size: 10px; color: var(--neon-orange); margin-bottom: 10px;">Redis Token Bucket</div>
+            <div class="bucket-container" id="bucket">
+                <div class="falling-token" id="f-token"></div>
+                <div class="token-fill" id="t-fill"><span style="color:#000; font-size: 10px; font-weight:bold;" id="t-text"></span></div>
+            </div>
+        </div>
+
+        <!-- Scene 6: Circuit Breaker -->
+        <div class="scene-container" id="scene-6">
+            <div class="cb-container">
+                <div class="cb-service">Gateway</div>
+                <div class="circuit-switch" id="cb-switch"></div>
+                <div class="cb-downstream" id="cb-down">Service</div>
+            </div>
+            <div style="margin-top: 30px; font-family: monospace; font-size: 12px; color: var(--neon-red); opacity: 0; transition: opacity 0.3s;" id="cb-fallback">
+                Fallback: 503 Service Unavailable
+            </div>
+        </div>
+
+        <!-- Scene 7: CORS -->
+        <div class="scene-container" id="scene-7">
+            <div class="cors-visual">
+                <div style="font-family: 'Space Grotesk'; font-weight: bold; color: var(--neon-purple); margin-bottom: 10px;">Global CORS Config</div>
+                <div class="cors-badge">allowed-origins: https://app.com</div>
+                <div class="cors-badge">allowed-methods: GET, POST</div>
+                <div class="cors-badge">allow-credentials: true</div>
+            </div>
+            <div style="margin-top: 20px; font-family: monospace; font-size: 10px; color: var(--neon-cyan); text-align: center;">
+                Metrics: spring.cloud.gateway.requests
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Text Overlay / Explainer -->
+    <div class="explainer-panel">
+        <div id="step-badge" class="step-badge">[DAY_44_CHECKLIST]</div>
+        <h2 id="explainer-title" class="explainer-title">The Doorman of Microservices</h2>
+        <p id="explainer-text" class="explainer-text">The API Gateway is the most visible part of your architecture. Interviewers want to know what belongs there, and what DOES NOT. Let's master Spring Cloud Gateway.</p>
+        
+        <div id="code-container" class="code-block" style="display: none;"></div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Begin Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+    let animInterval;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setScene(index) {
+        document.querySelectorAll('.scene-container').forEach((el, i) => {
+            if(i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+    }
+
+    const steps = [
+        {
+            badge: "Principle 1/7",
+            title: "Gateway Responsibilities",
+            text: "The gateway handles cross-cutting concerns: Auth, Rate Limiting, and Routing. <strong>The Anti-Pattern:</strong> Adding business logic (if/else rules). A fat gateway is untestable and becomes a shared liability. Keep it thin.",
+            code: ``,
+            action: async () => {
+                setScene(0);
+                codeContainer.style.display = 'none';
+            }
+        },
+        {
+            badge: "Architecture 2/7",
+            title: "Reactive Routing",
+            text: "Spring Cloud Gateway uses non-blocking Netty. Notice <code>lb://</code>? It queries the Service Registry (Eureka/K8s) to load-balance traffic, avoiding hardcoded IPs.",
+            code: `
+<span class="c-kw">routes:</span>
+  - <span class="c-kw">id:</span> payment-service
+<span class="c-hi">    <span class="c-kw">uri:</span> lb://payment-service <span class="c-cm"># LoadBalanced</span></span>
+    <span class="c-kw">predicates:</span>
+      - Path=/api/payments/**
+            `,
+            action: async () => {
+                setScene(1);
+                codeContainer.style.display = 'block';
+                
+                // Animate packet routing
+                const pkt = document.getElementById('pkt-1');
+                pkt.style.top = '40px'; pkt.style.left = '50%'; pkt.style.opacity = '1';
+                await sleep(500);
+                pkt.style.transition = 'all 0.5s ease';
+                pkt.style.top = '120px'; pkt.style.left = '80px'; // To dn-1
+                
+                await sleep(800);
+                pkt.style.transition = 'none';
+                pkt.style.opacity = '0';
+            }
+        },
+        {
+            badge: "Filters 3/7",
+            title: "Global vs Gateway Filters",
+            text: "<strong>GlobalFilters</strong> apply to ALL routes (e.g., Request ID injection, Logging, JWT validation). <strong>GatewayFilters</strong> apply to specific routes (e.g., Rate Limiting per service).",
+            code: `
+<span class="c-cm">// Global: Runs on every request</span>
+<span class="c-hi"><span class="c-kw">public class</span> <span class="c-ty">RequestLoggingFilter</span> 
+       <span class="c-kw">implements</span> <span class="c-ty">GlobalFilter</span> { ... }</span>
+
+<span class="c-cm">// Route-Specific Config</span>
+<span class="c-kw">filters:</span>
+  - StripPrefix=1
+  - <span class="c-kw">name:</span> RequestRateLimiter
+            `,
+            action: async () => {
+                setScene(2);
+            }
+        },
+        {
+            badge: "Security 4/7",
+            title: "JWT Authentication",
+            text: "The gateway validates the token signature via JWKS. On success, it extracts claims and injects trusted headers (<code>X-User-Id</code>). <strong>Crucial:</strong> It MUST strip external forged headers first!",
+            code: `
+<span class="c-cm">// Inject validated claims as trusted headers</span>
+<span class="c-ty">ServerHttpRequest</span> mutated = request.mutate()
+<span class="c-hi">    .header(<span class="c-st">"X-User-Id"</span>, claims.getSubject())</span>
+    .header(<span class="c-st">"X-Roles"</span>, claims.getRoles())
+    .build();
+
+<span class="c-kw">return</span> chain.filter(exchange.mutate()
+    .request(mutated).build());
+            `,
+            action: async () => {
+                setScene(3);
+                const s = document.getElementById('jwt-shield');
+                const hb = document.getElementById('h-badge');
+                
+                s.style.transform = 'scale(1.1)';
+                s.style.boxShadow = '0 0 40px rgba(52,211,153,0.5)';
+                s.style.borderColor = 'var(--neon-green)';
+                
+                await sleep(500);
+                hb.style.opacity = '1';
+                hb.style.top = '-20px';
+            }
+        },
+        {
+            badge: "Resilience 5/7",
+            title: "Redis Rate Limiting",
+            text: "Uses a Token Bucket algorithm in Redis via an atomic Lua script. <code>burstCapacity</code> holds max tokens; <code>replenishRate</code> refills them. Fails OPEN if Redis crashes to protect availability.",
+            code: `
+<span class="c-kw">filters:</span>
+  - <span class="c-kw">name:</span> RequestRateLimiter
+    <span class="c-kw">args:</span>
+<span class="c-hi">      redis-rate-limiter.replenishRate: <span class="c-st">100</span></span>
+      redis-rate-limiter.burstCapacity: <span class="c-st">200</span>
+      key-resolver: <span class="c-st">'#{@userKeyResolver}'</span>
+            `,
+            action: async () => {
+                setScene(4);
+                const fill = document.getElementById('t-fill');
+                const ft = document.getElementById('f-token');
+                const tText = document.getElementById('t-text');
+                
+                fill.style.height = '0%';
+                tText.innerText = '0 / 200';
+                
+                await sleep(500);
+                
+                // Animate token dropping and filling
+                let count = 0;
+                animInterval = setInterval(() => {
+                    if(count >= 3) {
+                        clearInterval(animInterval);
+                        return;
+                    }
+                    ft.style.transition = 'none';
+                    ft.style.top = '-40px'; ft.style.opacity = '1';
+                    
+                    setTimeout(() => {
+                        ft.style.transition = 'all 0.4s ease-in';
+                        ft.style.top = '120px'; ft.style.opacity = '0';
+                        setTimeout(() => {
+                            let h = (count+1) * 30;
+                            fill.style.height = h + '%';
+                            tText.innerText = (count+1)*60 + ' / 200';
+                        }, 400);
+                    }, 50);
+                    count++;
+                }, 800);
+            }
+        },
+        {
+            badge: "Resilience 6/7",
+            title: "Circuit Breaker & Retry",
+            text: "Prevents cascading failures. If a service times out, the circuit OPENS and returns a Fallback immediately. <br><br><em>Note: Only auto-retry idempotent requests (GET). NEVER retry a POST without idempotency keys.</em>",
+            code: `
+<span class="c-kw">filters:</span>
+  - <span class="c-kw">name:</span> CircuitBreaker
+    <span class="c-kw">args:</span>
+      name: payment-cb
+<span class="c-hi">      fallbackUri: forward:/fallback/payments</span>
+            `,
+            action: async () => {
+                clearInterval(animInterval);
+                setScene(5);
+                const sw = document.getElementById('cb-switch');
+                const down = document.getElementById('cb-down');
+                const fb = document.getElementById('cb-fallback');
+                
+                sw.classList.remove('open');
+                down.style.opacity = '1';
+                fb.style.opacity = '0';
+                
+                await sleep(1000);
+                // Circuit trips
+                sw.classList.add('open');
+                down.style.opacity = '0.3';
+                
+                await sleep(400);
+                fb.style.opacity = '1';
+            }
+        },
+        {
+            badge: "Config 7/7",
+            title: "CORS & Observability",
+            text: "Handle CORS centrally at the gateway so downstream services don't duplicate config. Use Micrometer to export metrics. Set CloudWatch alarms on p99 latency.",
+            code: `
+<span class="c-kw">spring:</span>
+  <span class="c-kw">cloud:</span>
+    <span class="c-kw">gateway:</span>
+      <span class="c-kw">globalcors:</span>
+        <span class="c-kw">cors-configurations:</span>
+<span class="c-hi">          <span class="c-kw">'[/**]':</span></span>
+            <span class="c-kw">allowed-origins:</span> https://app.com
+            <span class="c-kw">allow-credentials:</span> <span class="c-kw">true</span>
+            `,
+            action: async () => {
+                setScene(6);
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            setScene(-1); // Hide all
+            codeContainer.style.display = 'none';
+
+            // Reset specific visuals
+            document.getElementById('jwt-shield').style.transform = 'scale(1)';
+            document.getElementById('jwt-shield').style.boxShadow = '0 0 30px rgba(34,211,238,0.3)';
+            document.getElementById('jwt-shield').style.borderColor = 'var(--neon-cyan)';
+            document.getElementById('h-badge').style.opacity = '0';
+            document.getElementById('cb-switch').classList.remove('open');
+
+            badge.innerText = "[DAY_44_CHECKLIST]";
+            title.innerText = "The Doorman of Microservices";
+            text.innerHTML = "The API Gateway is the most visible part of your architecture. Interviewers want to know what belongs there, and what DOES NOT. Let's master Spring Cloud Gateway.";
+            btnNext.innerText = "Begin Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

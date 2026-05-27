@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 19  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 19  ·  STUDY CHECKLIST — Security — JWT, OAuth2, Spring Security, RBAC and Common Vulnerabilities</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 19 Checklist</div>
+    <h1 style="margin-top: 0;">Security — JWT, OAuth2, Spring Security, RBAC and Common Vulnerabilities</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 19 · STUDY CHECKLIST</h3>
+    <h3>Security — JWT, OAuth2, Spring Security, RBAC and Common Vulnerabilities</h3>
+    <h3>JWT</h3>
+    <p>Structure, signing, validation, expiry, refresh tokens</p>
+    <h3>OAuth2</h3>
+    <p>Authorization Code, Client Credentials, flows and scopes</p>
+    <h3>Spring Security</h3>
+    <p>Filter chain, SecurityFilterChain, method security</p>
+    <h3>Vulnerabilities</h3>
+    <p>OWASP Top 10 relevant to APIs, service-to-service auth</p>
+    <p>Note:</p>
+    <p>Security questions at senior level go beyond knowing what JWT is. Interviewers want to know: where do you store tokens, how do you revoke them, what is the actual attack you are defending against with each decision. Every answer today should connect the mechanism to the threat it defends against.</p>
+    <h3>Day 19 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">JWT structure: header.payload.signature — what each part contains and why</span></li>
+      <li><span class="checkbox-label">JWT signing algorithms: HS256 vs RS256 — when each is appropriate</span></li>
+      <li><span class="checkbox-label">JWT validation: what must be checked beyond the signature</span></li>
+      <li><span class="checkbox-label">Access token vs refresh token — purpose, storage, TTL for each</span></li>
+      <li><span class="checkbox-label">Token revocation: why it is hard with JWT and the practical solutions</span></li>
+      <li><span class="checkbox-label">OAuth2: Authorization Code Flow — every step, why each step exists</span></li>
+      <li><span class="checkbox-label">OAuth2: Client Credentials Flow — when it applies, how it differs</span></li>
+      <li><span class="checkbox-label">PKCE: what it adds to Authorization Code Flow and why it matters</span></li>
+      <li><span class="checkbox-label">Spring Security filter chain: order, how to customise SecurityFilterChain</span></li>
+      <li><span class="checkbox-label">JWT filter in Spring: where it sits, what it does, what it must not do</span></li>
+      <li><span class="checkbox-label">Method-level security: @PreAuthorize, @PostAuthorize, @Secured</span></li>
+      <li><span class="checkbox-label">RBAC vs ABAC: trade-offs, when each model is appropriate</span></li>
+      <li><span class="checkbox-label">OWASP API Top 10: broken object-level auth, broken function-level auth, mass assignment</span></li>
+      <li><span class="checkbox-label">Service-to-service auth in microservices: mTLS vs JWT client credentials</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — JWT Internals</h2>
+    <h3>Structure and What Each Part Contains</h3>
+    <p>A JWT is three Base64Url-encoded JSON objects joined by dots:</p>
+    <p>header.payload.signature. The header declares the algorithm and token type. The payload contains claims — registered claims (iss, sub, exp, iat, jti) and custom claims (roles, userId, tenantId). The signature is computed over the header and payload using the signing key, which prevents tampering with either part without invalidating the token.</p>
+    <pre><code class="language-java">// Header — decoded
+{
+  "alg": "RS256",   // signing algorithm
+  "typ": "JWT",
+  "kid": "key-2024-01"  // key ID — tells verifier which public key to use
+}
+// Payload — decoded
+{
+  "iss": "https://auth.example.com",     // issuer
+  "sub": "user-123",                      // subject (user ID)
+  "aud": "payment-service",               // intended audience
+  "exp": 1705315200,                        // expiry (Unix timestamp)
+  "iat": 1705311600,                        // issued at
+  "jti": "a8098c1a-f86e-11da",            // JWT ID — unique token identifier
+  "roles": ["PAYMENT_WRITE", "ACCOUNT_READ"],  // custom claims
+  "tenantId": "tenant-acme"               // custom claim for multi-tenancy
+}
+// Signature (RS256)
+// RSA_SHA256(base64url(header) + "." + base64url(payload), privateKey)
+// Verifier uses the corresponding public key — does NOT need the private key
+// What you MUST validate beyond the signature
+// 1. exp — token has not expired
+// 2. iss — issuer matches your expected identity provider
+// 3. aud — audience includes your service name
+// 4. nbf — not before time, if present
+// 5. alg — algorithm matches what you expect (reject 'none')</code></pre>
+    <h3>HS256 vs RS256</h3>
+    <h3>HS256 (HMAC-SHA256) | RS256 (RSA-SHA256)</h3>
+    <h3>Key type</h3>
+    <p>Single shared secret — same key signs and verifies | Asymmetric key pair — private key signs, public key verifies</p>
+    <h3>Who can verify</h3>
+    <p>Any party that has the shared secret | Any party with the public key — no secret needed</p>
+    <h3>Use in microservices</h3>
+    <p>All services must share the secret — leaking one means all are compromised | Auth server holds private key; services only have public key</p>
+    <h3>JWKS endpoint</h3>
+    <p>Not applicable | Auth server publishes public keys at /.well-known/jwks.json; services fetch and cache them</p>
+    <h3>Key rotation</h3>
+    <p>Requires coordinated update across all services | Auth server rotates private key; services fetch new JWKS automatically via kid</p>
+    <h3>Choose when</h3>
+    <p>Single service, internal tooling, or when operational simplicity matters more | Multi-service, external-facing APIs, any production system with multiple token consumers</p>
+    <h3>Access Tokens and Refresh Tokens</h3>
+    <h3>Access Token | Refresh Token</h3>
+    <h3>Purpose</h3>
+    <p>Authorise API calls | Obtain new access tokens without re-authentication</p>
+    <h3>Typical TTL</h3>
+    <p>15 minutes to 1 hour | Days to weeks</p>
+    <h3>Where to store (browser)</h3>
+    <p>Memory only — never localStorage or sessionStorage | HttpOnly, Secure, SameSite=Strict cookie</p>
+    <h3>Where to store (mobile)</h3>
+    <p>Secure device storage (Keychain on iOS, Keystore on Android) | Same secure storage</p>
+    <h3>Sent with</h3>
+    <p>Every API request in Authorization: Bearer header | Only to the token endpoint to get a new access token</p>
+    <h3>Revocation</h3>
+    <p>Hard — JWT is stateless; use short TTL or a token blocklist | Store server-side; revoke by deleting from DB/cache</p>
+    <p>Token revocation — the honest problem with JWT:</p>
+    <p>A JWT is self-contained and stateless. Once issued, it is valid until expiry. If you need to revoke a token — user logs out, account is suspended, token is compromised — you cannot do it with pure JWT without contacting the server on every request. Practical solutions: short access token TTL so the damage window is small; a token blocklist in Redis keyed on the jti claim checked on every request; or opaque tokens that require a database lookup (trading statelessness for revocability).</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> How does JWT token validation work and what do you check beyond the signature? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Signature verification proves the token was issued by someone with the signing key and has not been tampered with. But it is not enough on its own. After the signature passes, I check exp — if the token has expired, it should be rejected regardless of the valid signature. I check iss to confirm the token was issued by the identity provider I trust, not some other server that happens to use the same algorithm. I check aud to confirm this token was intended for my service — a token issued for the mobile app should not be accepted by the payment backend. If the jti claim is present and I am maintaining a blocklist, I check it against the blocklist. One thing that is easy to miss: validate that the alg header matches your expected algorithm. There is a known attack where an attacker changes alg to 'none' and removes the signature entirely — some early JWT libraries would accept this. Always whitelist the algorithms you accept and reject everything else.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — OAuth2 Flows</h2>
+    <h3>Authorization Code Flow — Step by Step</h3>
+    <p>When to use it:</p>
+    <p>Authorization Code Flow is for applications acting on behalf of a user — web apps, mobile apps, single-page apps. The user authenticates with the identity provider directly; the application never sees the password. PKCE should always be added for public clients (SPAs, mobile apps) that cannot safely store a client secret.</p>
+    <pre><code class="language-java">// Authorization Code Flow with PKCE — every step
+// Step 1: Client generates PKCE values
+// code_verifier = 43-128 random chars
+// code_challenge = BASE64URL(SHA256(code_verifier))
+// Step 2: Client redirects user to Auth Server
+GET https://auth.example.com/authorize
+  ?response_type=code
+  &amp;client_id=payment-web-app
+  &amp;redirect_uri=https://app.example.com/callback
+  &amp;scope=payments:read payments:write profile
+  &amp;state=xyzABC123            // CSRF protection — random value, verified on return
+  &amp;code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+  &amp;code_challenge_method=S256
+// Step 3: User authenticates with Auth Server (login page)
+// Auth Server redirects back to the app with a short-lived authorization code
+GET https://app.example.com/callback
+  ?code=SplxlOBeZQQYbYS6WxSbIA    // valid for ~60 seconds, single use
+  &amp;state=xyzABC123               // must match what was sent in Step 2
+// Step 4: App exchanges code for tokens (server-to-server, no browser)
+POST https://auth.example.com/token
+Content-Type: application/x-www-form-urlencoded
+grant_type=authorization_code
+&amp;code=SplxlOBeZQQYbYS6WxSbIA
+&amp;redirect_uri=https://app.example.com/callback
+&amp;client_id=payment-web-app
+&amp;client_secret=s3cr3t           // server-side only; SPAs use code_verifier instead
+&amp;code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
+// Auth Server response
+{
+  "access_token":  "eyJhbGc...",   // short-lived JWT
+  "token_type":    "Bearer",
+  "expires_in":    900,              // 15 minutes
+  "refresh_token": "8xLOxBtZp8",  // long-lived, stored securely
+  "scope":         "payments:read payments:write profile"
+}
+// Step 5: App uses access token for API calls
+GET /api/payments
+Authorization: Bearer eyJhbGc...
+// Step 6: Access token expires — app uses refresh token silently
+POST https://auth.example.com/token
+grant_type=refresh_token
+&amp;refresh_token=8xLOxBtZp8
+&amp;client_id=payment-web-app</code></pre>
+    <h3>Client Credentials Flow</h3>
+    <p>When to use it:</p>
+    <p>Client Credentials is for machine-to-machine communication — no user is involved. Service A needs to call Service B. Service A authenticates as itself using its own client ID and secret, gets an access token, and uses it to call Service B. This is the correct pattern for microservice-to-microservice auth.</p>
+    <pre><code class="language-java">// Client Credentials Flow — service-to-service
+// Payment Service calling Fraud Service
+POST https://auth.example.com/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic base64(payment-service:service-secret)
+grant_type=client_credentials
+&amp;scope=fraud:check
+// Response
+{
+  "access_token": "eyJhbGc...",
+  "token_type":   "Bearer",
+  "expires_in":   3600,   // longer TTL fine for services — no refresh token needed
+  "scope":        "fraud:check"
+}
+// Spring: auto-managed token with OAuth2AuthorizedClientManager
+@Configuration
+public class FraudServiceClientConfig {
+    @Bean
+    public WebClient fraudServiceClient(
+            OAuth2AuthorizedClientManager clientManager) {
+        ServletOAuth2AuthorizedClientExchangeFilterFunction oauth =
+            new ServletOAuth2AuthorizedClientExchangeFilterFunction(clientManager);
+        oauth.setDefaultClientRegistrationId("fraud-service");
+        return WebClient.builder()
+            .baseUrl("https://fraud.internal.example.com")
+            .apply(oauth.oauth2Configuration())
+            .build();
+        // Spring auto-fetches and caches the token, refreshes before expiry
+    }
+}
+// application.yml
+// spring:
+//   security:
+//     oauth2:
+//       client:
+//         registration:
+//           fraud-service:
+//             client-id: payment-service
+//             client-secret: ${FRAUD_CLIENT_SECRET}
+//             authorization-grant-type: client_credentials
+//             scope: fraud:check
+//         provider:
+//           fraud-service:
+//             token-uri: https://auth.example.com/token</code></pre>
+    <h3>Flow</h3>
+    <h3>User involved? | Use for | Key characteristic</h3>
+    <h3>Authorization Code + PKCE</h3>
+    <p>Yes | Web apps, mobile apps, SPAs acting on behalf of a user | Auth code exchanged server-side; user never exposes password to app</p>
+    <h3>Client Credentials</h3>
+    <p>No | Service-to-service, daemon processes, batch jobs | App authenticates as itself; no user context</p>
+    <h3>Implicit (deprecated)</h3>
+    <p>Yes | Was for SPAs — replaced by Auth Code + PKCE | Token returned directly in redirect — vulnerable to interception</p>
+    <h3>Resource Owner Password</h3>
+    <h3>Device Code</h3>
+    <p>Yes | Smart TVs, CLI tools, IoT devices | User authenticates on a second device with a code</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What is PKCE and why was it added to the Authorization Code Flow? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">PKCE stands for Proof Key for Code Exchange. It was added to solve a specific attack against public clients — apps that cannot safely store a client secret, like single-page apps and mobile apps. The attack: an authorization code returned in the redirect URI can be intercepted by a malicious app on the same device (particularly on mobile where URL schemes can be registered by any app). Without PKCE, the attacker exchanges the intercepted code for tokens. With PKCE, the client generates a random code_verifier before the flow starts, hashes it to a code_challenge, and sends the challenge with the initial authorization request. When exchanging the code for tokens, the client must send the original code_verifier. The auth server hashes it and compares it to the stored challenge. An attacker who intercepted the code does not have the code_verifier, so the exchange fails. PKCE should be used for all clients today, not just public ones — there is no downside to adding it.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Spring Security Filter Chain</h2>
+    <h3>How the Filter Chain Works</h3>
+    <p>The mental model:</p>
+    <p>Spring Security wraps your application in a chain of servlet filters. Every HTTP request passes through the chain in order. Each filter can inspect the request, set authentication context, reject the request, or pass it along. The SecurityFilterChain bean configures which filters are active and in what order. Your JWT filter sits in this chain and is responsible for extracting and validating the token and populating the SecurityContext.</p>
+    <pre><code class="language-java">// Key filters in order (simplified)
+// 1.  SecurityContextPersistenceFilter  — loads SecurityContext from store
+// 2.  CorsFilter                        — handles CORS preflight
+// 3.  CsrfFilter                        — CSRF token validation (usually disabled for APIs)
+// 4.  YOUR JwtAuthenticationFilter      — validates Bearer token, sets Authentication
+// 5.  UsernamePasswordAuthenticationFilter — form login (not used in REST APIs)
+// 6.  ExceptionTranslationFilter        — converts AuthenticationException → 401/403
+// 7.  FilterSecurityInterceptor          — evaluates access rules (@PreAuthorize etc.)
+// Complete SecurityFilterChain for a JWT-secured REST API
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity  // enables @PreAuthorize, @PostAuthorize
+public class SecurityConfig {
+    private final JwtAuthenticationFilter jwtFilter;
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(csrf -&gt; csrf.disable())       // stateless API — no CSRF needed
+            .sessionManagement(session -&gt;
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .cors(cors -&gt; cors.configurationSource(corsConfigSource()))
+            .authorizeHttpRequests(auth -&gt; auth
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/payments/**")
+                    .hasAnyAuthority("PAYMENT_READ", "PAYMENT_ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/payments")
+                    .hasAuthority("PAYMENT_WRITE")
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -&gt; ex
+                .authenticationEntryPoint(jwtAuthEntryPoint())   // 401
+                .accessDeniedHandler(jwtAccessDeniedHandler()))  // 403
+            .build();
+    }
+}
+// JWT Authentication Filter
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private final JwtValidator   jwtValidator;
+    private final UserDetailsService userDetailsService;
+    @Override
+    protected void doFilterInternal(HttpServletRequest  request,
+                                    HttpServletResponse response,
+                                    FilterChain         chain)
+            throws ServletException, IOException {
+        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (header == null || !header.startsWith("Bearer ")) {
+            chain.doFilter(request, response); // no token — let the next filter handle it
+            return;
+        }
+        String token = header.substring(7);
+        try {
+            Claims claims = jwtValidator.validate(token);
+            // Build an Authentication object from claims
+            List&lt;GrantedAuthority&gt; authorities = ((List&lt;String&gt;) claims.get("roles"))
+                .stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+            UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(
+                    claims.getSubject(),  // principal
+                    null,                 // credentials — null after authentication
+                    authorities);
+            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+        } catch (JwtException e) {
+            // Do NOT return 401 here — let ExceptionTranslationFilter handle it
+            // Just clear the context and continue the chain
+            SecurityContextHolder.clearContext();
+            log.warn("JWT validation failed: {}", e.getMessage());
+        }
+        chain.doFilter(request, response);
+    }
+}</code></pre>
+    <h3>Method-Level Security</h3>
+    <pre><code class="language-java">// @PreAuthorize — evaluated BEFORE the method runs
+@Service
+public class PaymentService {
+    // Simple role check
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteAllPayments() { }
+    // Authority check
+    @PreAuthorize("hasAuthority('PAYMENT_WRITE')")
+    public PaymentResult createPayment(PaymentRequest req) { }
+    // SpEL — access method arguments
+    @PreAuthorize("hasAuthority('PAYMENT_READ') and #accountId == authentication.name")
+    public List&lt;Payment&gt; getPaymentsForAccount(String accountId) {
+        // Only allows a user to see their own account payments
+        return repository.findByAccountId(accountId);
+    }
+    // @PostAuthorize — evaluated AFTER the method returns
+    // Useful for object-level access control on the returned value
+    @PostAuthorize("returnObject.accountId == authentication.name")
+    public Payment getPaymentById(String id) {
+        return repository.findById(id).orElseThrow();
+        // If returned payment does not belong to the caller — 403
+    }
+}
+// Custom security expression — reusable permission logic
+@Component("paymentSecurity")
+public class PaymentSecurityExpression {
+    private final PaymentRepository repository;
+    public boolean canAccess(Authentication auth, String paymentId) {
+        return repository.findById(paymentId)
+            .map(p -&gt; p.getAccountId().equals(auth.getName()))
+            .orElse(false);
+    }
+}
+// Use the custom expression
+@PreAuthorize("@paymentSecurity.canAccess(authentication, #id)")
+public Payment getPayment(String id) { }</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> Walk me through what happens when a JWT Bearer token arrives at a Spring Boot service. [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The request enters the servlet filter chain. Our JwtAuthenticationFilter runs before UsernamePasswordAuthenticationFilter. It extracts the Bearer token from the Authorization header. If there is no token, it calls chain.doFilter and moves on — unauthenticated requests may still reach endpoints that are marked permitAll. If there is a token, it validates it: checks the signature using the public key (RS256) fetched from the JWKS endpoint, checks expiry, checks issuer and audience. If validation passes, it builds a UsernamePasswordAuthenticationToken from the claims — the subject becomes the principal, the roles claim becomes the GrantedAuthority list — and puts it in the SecurityContext. If validation fails, it clears the SecurityContext and calls chain.doFilter. It does not return a 401 directly — that is the job of ExceptionTranslationFilter downstream, which catches the resulting AuthenticationException when the request reaches a secured endpoint. This separation is intentional: the JWT filter is not an authentication entry point, it is a context-population filter.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — RBAC vs ABAC</h2>
+    <h3>Role-Based vs Attribute-Based Access Control</h3>
+    <h3>RBAC | ABAC</h3>
+    <h3>Access decision based on</h3>
+    <p>User's role (ADMIN, USER, AUDITOR) | Attributes of user, resource, environment, and action combined</p>
+    <h3>Flexibility</h3>
+    <p>Low — roles are coarse-grained | High — any attribute combination can be a policy</p>
+    <h3>Example rule</h3>
+    <p>User with PAYMENT_WRITE role can create payments | User can create payment IF their tenantId matches the resource's tenantId AND their credit limit allows it</p>
+    <h3>Implementation complexity</h3>
+    <p>Low — Spring @PreAuthorize with hasRole | High — policy engine (OPA, Casbin), attribute resolution</p>
+    <h3>Auditability</h3>
+    <p>Easy — roles are explicit | Harder — need to log which attributes drove the decision</p>
+    <h3>Scales to</h3>
+    <p>Tens of roles, hundreds of users | Complex multi-tenant, fine-grained, dynamic permission requirements</p>
+    <h3>Common mistake</h3>
+    <p>Role explosion — creating a new role for every slight permission variation | Over-engineering — using ABAC for something that RBAC handles cleanly</p>
+    <p>Practical advice:</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is the difference between RBAC and ABAC and when would you move from one to the other? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">RBAC gives users roles and roles get permissions. It is simple, easy to reason about, and covers the majority of real access control requirements. The problem comes when permissions depend not just on who you are but on properties of the resource being accessed or the context. If a manager can approve payments only up to their credit limit, or a user can only see payments for their own tenant in a multi-tenant system, RBAC alone gets messy — you end up with role explosion where you create new roles for every combination. ABAC evaluates policies based on attributes: the user's department, the resource's owner, the time of day, the IP address. It is more expressive but significantly harder to implement and audit. My approach: use RBAC as the first gate — does this role have access to this endpoint at all — and add @PreAuthorize SpEL expressions for the object-level checks that need to look at the actual data. For systems with complex policy requirements I would consider OPA (Open Policy Agent) as an external policy decision point.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — OWASP API Security Top 10</h2>
+    <h3>The Vulnerabilities Most Relevant to Java Backend APIs</h3>
+    <h3>Vulnerability</h3>
+    <h3>What it is | Java / Spring example | Fix</h3>
+    <h3>Broken Object Level Auth (BOLA)</h3>
+    <p>Accessing another user's data by changing an ID in the URL | GET /payments/TXN-456 where TXN-456 belongs to a different user — no ownership check | @PostAuthorize or @PreAuthorize that verifies resource belongs to caller</p>
+    <h3>Broken Authentication</h3>
+    <p>Weak token validation, missing expiry checks, accepting 'none' algorithm | JWT filter that only checks signature but not exp, iss, aud | Validate ALL claims; whitelist algorithms; enforce short TTLs</p>
+    <h3>Broken Object Property Level Auth</h3>
+    <p>Returning or accepting fields the user should not see or set | Returning all fields of a User including passwordHash, internal flags | Use dedicated response DTOs; never serialise JPA entities directly</p>
+    <h3>Unrestricted Resource Consumption</h3>
+    <p>No rate limiting on expensive endpoints | /api/reports endpoint that runs a full DB scan on every call | Rate limiting at API Gateway; pagination on all list endpoints; @RateLimiter</p>
+    <h3>Broken Function Level Auth</h3>
+    <p>Accessing admin functions without admin role | POST /api/admin/users accessible without ADMIN role check | Deny-by-default; every endpoint explicitly authorised; test with lower-privilege users</p>
+    <h3>Mass Assignment</h3>
+    <p>User sets internal fields by sending extra properties in request body | User sends isAdmin=true in JSON and the mapper blindly sets it | Use @JsonIgnoreProperties or separate request DTOs; never map request body directly to entity</p>
+    <h3>Security Misconfiguration</h3>
+    <p>Actuator exposed, stack traces in error responses, weak CORS | /actuator/env accessible without auth; 500 responses with exception messages | Restrict actuator; generic error messages; strict CORS; no stack traces in prod</p>
+    <h3>Injection</h3>
+    <p>SQL/JPQL injection via string concatenation | repository.query("SELECT * FROM payments WHERE id = '" + id + "'") | Parameterised queries; @Query with named params; JPQL not string SQL</p>
+    <pre><code class="language-java">// BOLA — Broken Object Level Auth — the most common API vulnerability
+// BAD: checks authentication but not ownership
+@GetMapping("/api/payments/{id}")
+public Payment getPayment(@PathVariable String id) {
+    return repository.findById(id).orElseThrow();
+    // Any authenticated user can see any payment by guessing IDs
+}
+// GOOD: enforce ownership at the query level
+@GetMapping("/api/payments/{id}")
+@PreAuthorize("@paymentSecurity.canAccess(authentication, #id)")
+public Payment getPayment(@PathVariable String id) {
+    return repository.findByIdAndAccountId(id, getCurrentUserId()).orElseThrow();
+}
+// Mass Assignment — the hidden JPA trap
+// BAD: binding request body directly to the entity
+@PostMapping("/api/users")
+public User createUser(@RequestBody User user) {  // user.isAdmin could be set by attacker
+    return repository.save(user);
+}
+// GOOD: use a dedicated request DTO, map manually
+@PostMapping("/api/users")
+public User createUser(@RequestBody @Valid CreateUserRequest req) {
+    User user = new User();
+    user.setEmail(req.getEmail());
+    user.setName(req.getName());
+    // isAdmin, roles, internalFlags are NOT in CreateUserRequest
+    return repository.save(user);
+}
+// Security misconfiguration — never expose exception details
+// BAD
+@ExceptionHandler(Exception.class)
+public ResponseEntity&lt;String&gt; handle(Exception ex) {
+    return ResponseEntity.status(500).body(ex.getMessage()); // leaks internals
+}
+// GOOD
+@ExceptionHandler(Exception.class)
+public ProblemDetail handle(Exception ex, HttpServletRequest req) {
+    log.error("Unexpected error [traceId={}]: {}", MDC.get("traceId"), ex.getMessage(), ex);
+    ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+    pd.setDetail("An unexpected error occurred. Reference: " + MDC.get("traceId"));
+    return pd;  // no exception message, no stack trace
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is BOLA and how do you prevent it in a Spring Boot API? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">BOLA — Broken Object Level Authorisation — is when an API checks that you are authenticated but does not check that you own the resource you are accessing. You are authenticated as user A, but you call GET /payments/TXN-456 which belongs to user B. If the API just fetches by ID without checking ownership, you get user B's data. It is consistently the number one API vulnerability in OWASP because it is easy to miss — you see a valid JWT and assume the request is authorised. The fix has two layers. First, at the query level: always include the caller's user ID in the WHERE clause — findByIdAndAccountId(id, currentUserId) so the database only returns records the caller owns. Second, at the Spring Security level: a @PostAuthorize that verifies the returned object belongs to the caller, or a custom @PreAuthorize expression that checks ownership before the method runs. Both together is belt-and-suspenders. The test that matters: log in as user A, get a payment ID that belongs to user B, call the endpoint as user A — you should get 404 or 403, not user B's data.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — Service-to-Service Authentication</h2>
+    <h3>Options for Securing Internal Microservice Calls</h3>
+    <h3>Approach</h3>
+    <h3>How it works | Strengths | Weaknesses | Use when</h3>
+    <h3>JWT Client Credentials</h3>
+    <p>Each service gets a client ID and secret from the auth server. Fetches a JWT. Sends it on every call to other services. | Standard OAuth2 pattern; works with existing auth infrastructure; tokens carry claims (scopes) | Token management overhead; services need auth server access | Most microservices systems — good balance of security and simplicity</p>
+    <h3>mTLS (Mutual TLS)</h3>
+    <p>Both client and server present certificates. Identity proven at the TLS layer. | Very strong — no token to steal; identity is in the certificate; works without auth server at call time | Certificate management complexity; rotation requires coordination; harder to debug | High-security environments; service mesh (Istio); financial systems with strict compliance</p>
+    <h3>API Key (shared secret)</h3>
+    <p>Services share a pre-agreed key sent in a header | Simple to implement | No expiry, no rotation mechanism, key must be distributed securely, hard to audit per-call | Only for internal, low-risk, simple deployments</p>
+    <h3>Network perimeter only</h3>
+    <p>Rely on VPC / network policy — if you are inside the network you are trusted | Zero application code | No defence in depth; one compromised service can call all others | Never — lateral movement is too easy</p>
+    <pre><code class="language-java">// Propagating user context in service-to-service calls
+// When Service A calls Service B on behalf of a user,
+// Service B needs to know which user originated the request.
+// Pattern 1: Forward the original user JWT
+// Service A passes the user's access token through to Service B.
+// Service B validates it and knows the original user context.
+// Risk: if Service B is compromised it has the user's token.
+// Pattern 2: Token exchange (OAuth2 Token Exchange — RFC 8693)
+// Service A exchanges the user's token for a new token issued to Service A
+// that also contains the original user's identity as an 'act' claim.
+// More secure — the exchanged token is scoped to Service A only.
+// Pattern 3: Inject trusted headers at the gateway
+// API Gateway validates the user JWT, then injects X-User-Id and X-Roles headers.
+// Internal services trust these headers (they are behind the gateway).
+// Simple but requires strict network policy — only the gateway can send these headers.
+// Spring: reading injected user context headers
+@RestController
+public class FraudController {
+    @PostMapping("/fraud/check")
+    public FraudResult check(
+            @RequestHeader("X-User-Id")  String userId,
+            @RequestHeader("X-Roles")    String roles,
+            @RequestBody FraudCheckRequest req) {
+        // Trust these headers because only the gateway can set them
+        // (network policy enforced at infra layer)
+        return fraudService.check(userId, req);
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> How do you secure service-to-service communication in a microservices architecture? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I use OAuth2 Client Credentials as the default. Each service has a client ID and secret registered with the identity provider. When Service A needs to call Service B, it requests a token from the auth server using client credentials, gets a short-lived JWT scoped to what Service A is allowed to do, and sends it in the Authorization header. Spring's OAuth2AuthorizedClientManager handles token caching and refresh automatically so the application code just makes the WebClient call. For high-security environments or where we have a service mesh like Istio, mTLS is better — identity is verified at the TLS layer and there is no token to intercept. The thing I avoid is relying on network perimeter trust alone — if one service is compromised, it should not be able to call everything else freely. For user context propagation, I prefer the trusted header pattern where the API Gateway validates the user JWT and injects X-User-Id into internal calls — it keeps internal services simple without passing user tokens further than necessary.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory. After each exercise, state the specific attack this code prevents.</p>
+    <h3>Exercise 1 — JWT Validation Filter</h3>
+    <p>Task:</p>
+    <p>Write a JwtAuthenticationFilter extending OncePerRequestFilter.</p>
+    <p>Validate: signature (RS256 using JWKS endpoint), exp, iss, aud, alg (reject 'none').</p>
+    <p>On valid token: populate SecurityContext with principal (sub) and authorities (roles claim).</p>
+    <p>On invalid/expired token: clear SecurityContext, call chain.doFilter — do NOT return 401 directly.</p>
+    <p>Write a unit test: valid token sets SecurityContext, expired token clears it, missing token passes through.</p>
+    <p>Show where the 401 actually comes from when an unauthenticated request hits a secured endpoint.</p>
+    <h3>Exercise 2 — SecurityFilterChain Configuration</h3>
+    <p>Task:</p>
+    <p>Configure a SecurityFilterChain for a REST API: CSRF disabled, stateless sessions.</p>
+    <p>Permit: /api/auth/**, /actuator/health. Require PAYMENT_READ for GET /api/payments/**.</p>
+    <p>Require PAYMENT_WRITE for POST /api/payments. Require ADMIN role for /api/admin/**.</p>
+    <p>Register the JWT filter before UsernamePasswordAuthenticationFilter.</p>
+    <p>Configure custom AuthenticationEntryPoint that returns RFC 7807 JSON on 401.</p>
+    <p>Configure custom AccessDeniedHandler that returns RFC 7807 JSON on 403.</p>
+    <h3>Exercise 3 — BOLA Prevention</h3>
+    <p>Task:</p>
+    <p>Write GET /api/payments/{id} that prevents BOLA.</p>
+    <p>Query layer: findByIdAndAccountId(id, currentUserId) — resource not found returns 404.</p>
+    <p>Spring Security layer: @PostAuthorize that verifies returnObject.accountId == authentication.name.</p>
+    <p>Write a custom @paymentSecurity.canAccess() SpEL component used in @PreAuthorize.</p>
+    <p>Test: user A cannot access payment belonging to user B — verify 404 is returned (not 403, to avoid confirming existence).</p>
+    <h3>Exercise 4 — OAuth2 Client Credentials Integration</h3>
+    <p>Task:</p>
+    <p>Configure a WebClient for calling an internal FraudService using Client Credentials.</p>
+    <p>Use OAuth2AuthorizedClientManager to auto-manage token fetch and refresh.</p>
+    <p>Show the application.yml config: client-id, client-secret (from env var), token-uri, scope.</p>
+    <p>Write a FraudServiceClient bean that calls POST /fraud/check with the managed token.</p>
+    <p>Test with WireMock: stub the token endpoint and the fraud endpoint; verify the token is included in the call.</p>
+    <h3>Exercise 5 — Mass Assignment Prevention</h3>
+    <p>Task:</p>
+    <p>Show the mass assignment vulnerability: @RequestBody User entity with isAdmin, roles fields.</p>
+    <p>Fix 1: dedicated CreateUserRequest DTO with only email, name, password — no security fields.</p>
+    <p>Fix 2: @JsonIgnore on sensitive fields in the entity.</p>
+    <p>Fix 3: Jackson @JsonView to define which fields are readable/writable per context.</p>
+    <p>Write a test that sends isAdmin=true in the request body and verifies the created user has isAdmin=false.</p>
+    <h3>Exercise 6 — Method Security with Custom Expressions</h3>
+    <p>Task:</p>
+    <p>Write @PreAuthorize on a PaymentService with three levels: role check, authority check, SpEL with args.</p>
+    <p>Write a PaymentSecurityExpression component with canAccess(auth, paymentId) and canRefund(auth, paymentId, amount).</p>
+    <p>canRefund: user must have PAYMENT_REFUND authority AND the payment must belong to them AND refund amount <= original amount.</p>
+    <p>Write @PostAuthorize on getPayment that verifies the returned payment belongs to the caller.</p>
+    <p>Test all paths: authorised access, wrong role, right role but wrong owner.</p>
+    <h3>Exercise 7 — BOSS: Secure Payment API End-to-End</h3>
+    <p>Secure the full payment service:</p>
+    <p>Layer 1 — Gateway: JWT filter validates RS256 token, checks all claims, injects X-User-Id and X-Roles headers for internal services. Layer 2 — SecurityFilterChain: path-based access rules, custom 401/403 handlers with Problem Details. Layer 3 — Method security: @PreAuthorize on service methods, custom PaymentSecurityExpression for ownership checks. Layer 4 — BOLA prevention: all queries scoped to the authenticated user. Layer 5 — Mass assignment: dedicated request/response DTOs, no entity serialisation. Layer 6 — Error handling: no exception messages in 500 responses, traceId in every error. Write one test per layer that proves the security control works — each test should show both the blocked case and the allowed case.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Connect each answer to the specific threat it defends against.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What is a JWT and how does it work? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A JWT is a self-contained token with three Base64Url-encoded parts: header, payload, and signature. The header declares the algorithm. The payload contains claims — who the user is, when the token expires, what they are allowed to do. The signature is computed over the header and payload using a signing key, which means any tampering with the payload invalidates the signature. The receiver validates the signature, then checks expiry, issuer, and audience. The key property that makes JWT useful for microservices is that each service can validate tokens independently without calling a central auth server on every request — they only need the public key (for RS256) or the shared secret (for HS256). The downside of this statelesness is that you cannot revoke a token before it expires without introducing a server-side blocklist.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> Why should you use RS256 instead of HS256 in a microservices architecture? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">With HS256, the same secret is used to sign and verify. Every service that needs to verify tokens must hold the secret. If any of those services is compromised, the attacker has the signing key and can forge tokens for any user. With RS256, the auth server holds the private key and signs tokens. Every other service holds only the public key to verify. A compromised service leaks the public key — which is already public — but cannot forge tokens because it does not have the private key. Key rotation is also cleaner with RS256: the auth server publishes its public keys at a JWKS endpoint with key IDs. When the key rotates, services fetch the new public key automatically using the kid header in the token. With HS256, rotating the secret requires a coordinated update across all services simultaneously.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> Where should you store JWTs on the client side? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">For browser-based apps: store the access token in memory only — a JavaScript variable or in-memory state. Never in localStorage or sessionStorage because those are accessible to any JavaScript running on the page, including injected scripts from XSS attacks. Store the refresh token in an HttpOnly, Secure, SameSite=Strict cookie. HttpOnly means JavaScript cannot read it — only the browser sends it to the server. Secure means it only goes over HTTPS. SameSite=Strict means it will not be sent on cross-site requests, which blocks CSRF. The trade-off: memory storage means the access token is lost on page refresh, so the app must use the refresh token cookie to get a new access token silently on startup. For mobile apps: use the platform's secure storage — iOS Keychain, Android Keystore. Never store tokens in plain SharedPreferences or local files.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How do you revoke a JWT before it expires? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Pure JWT is stateless — once issued, it is valid until the exp claim. Revocation requires introducing state. Three practical approaches. First: short access token TTL, typically 15 minutes. When a user logs out or an account is suspended, you revoke the refresh token in the database. The access token remains valid for up to 15 minutes, which is usually an acceptable window. Second: a token blocklist in Redis keyed on the jti (JWT ID) claim. On logout or suspension, add the jti to the blocklist with a TTL equal to the token's remaining lifetime. Every request checks the blocklist — this adds a Redis lookup per request but gives you instant revocation. Third: opaque tokens. Instead of self-contained JWT, issue a random string. The resource server calls a token introspection endpoint on the auth server for every request. Full revocation control, but you lose the statelessness benefit. In practice, option one for most use cases and option two when instant revocation is a business requirement.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What is OAuth2 and what problem does it solve? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">OAuth2 is an authorisation framework that allows an application to access resources on behalf of a user without the user giving the application their password. The classic problem it solves: you want to let a third-party application access your Google Drive files. Without OAuth2, you would give the app your Google password. The app would store it, use it, and if compromised — your whole account is exposed. OAuth2 introduces an authorisation server between the app and the resource. The user authenticates with the auth server directly. The auth server issues a scoped access token to the app. The app never sees the password. The token only grants access to what the user approved. The app cannot do more than what the scopes allow. This separation of authentication (who are you) from authorisation (what can you do) is the core of the protocol.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is the difference between Authentication and Authorisation? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Authentication is verifying identity — who are you. It answers: is this token valid, does this password match, is this certificate from the right CA. Authorisation is verifying permission — what are you allowed to do. It answers: does this authenticated user have the PAYMENT_WRITE authority, does this payment belong to the caller. In Spring Security: authentication happens in the filter chain, specifically in the JWT filter that validates the token and populates the SecurityContext. Authorisation happens after that — either in the SecurityFilterChain access rules or in @PreAuthorize on service methods. A common mistake is conflating the two: returning 403 for an unauthenticated request (missing or invalid token) when it should be 401. The right model: 401 means authentication failed; 403 means authenticated but not authorised.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What is BOLA and why is it consistently at the top of API vulnerabilities? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">BOLA — Broken Object Level Authorisation — is when an API verifies that a request is authenticated but does not verify that the authenticated user is allowed to access the specific resource they requested. You are logged in as user A, but you call GET /payments/TXN-456 where TXN-456 belongs to user B. The API returns user B's data because it only checked the JWT, not ownership. It is consistently number one because it is easy to miss — developers think about authentication, test the happy path, and forget to ask who owns each record. It is also trivially exploitable — just increment or guess IDs. The fix is to always include the authenticated user's ID in the WHERE clause of every data query and add an ownership check at the security layer. The test: always include a test where a valid, authenticated user tries to access another user's resource.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What is mass assignment and how do you prevent it in Spring Boot? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Mass assignment is when an API blindly maps request body properties to a domain object, including fields that should not be settable by the client. If your User entity has an isAdmin field and you map the request body directly to the entity, an attacker can send isAdmin: true in the JSON body and become an admin. It happens when people use the JPA entity as the @RequestBody type. The fix is always using a dedicated request DTO that only contains the fields the client is allowed to set. The DTO has email, name, password. The entity mapping is explicit. The isAdmin field does not exist on the DTO. Jackson's @JsonIgnoreProperties(ignoreUnknown = true) on the DTO is a safety net but not a substitute for proper DTO design — ignoring unknown fields means they are silently dropped, whereas a properly designed DTO simply does not have them.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> How does Spring Security decide whether to return 401 or 403? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Spring Security uses ExceptionTranslationFilter to handle both. If the request is unauthenticated — no SecurityContext authentication — and it hits a secured endpoint, it throws AuthenticationException. ExceptionTranslationFilter catches it and calls the AuthenticationEntryPoint, which returns 401. If the request is authenticated but lacks the required authority, it throws AccessDeniedException. ExceptionTranslationFilter catches it and calls the AccessDeniedHandler, which returns 403. Both handlers are configurable — I always configure them in SecurityFilterChain to return RFC 7807 Problem Details JSON instead of the default HTML responses, which are useless for API clients. The important detail: the JWT filter should NOT return 401 directly. It should clear the SecurityContext and pass the request along. The 401 comes from ExceptionTranslationFilter when the unauthenticated request reaches a secured endpoint.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> What is CSRF and when do you need to protect against it in a Spring Boot API? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">CSRF — Cross-Site Request Forgery — is when a malicious website tricks a user's browser into making a request to your API using the user's existing cookies. Because the browser automatically sends cookies, the request arrives at your API looking legitimate. CSRF protection is needed when your API uses cookie-based authentication — session cookies or refresh token cookies. It is not needed when your API uses Bearer tokens in the Authorization header, because JavaScript on a malicious site cannot read your cookies (if they are HttpOnly) and cannot set the Authorization header on cross-site requests (blocked by the browser's same-origin policy). For a pure stateless REST API with JWT Bearer tokens, I disable CSRF protection in Spring Security: http.csrf(csrf -> csrf.disable()). If you are using cookie-based auth or a hybrid approach, CSRF tokens or SameSite=Strict cookies are needed.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> How do you secure Actuator endpoints in production? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The default Spring Boot Actuator setup exposes too much. In production, I take three steps. First, run Actuator on a separate management port (management.server.port=8081) — that port is firewalled to only be accessible within the VPC or via a bastion. Second, explicitly whitelist only the endpoints that external monitoring needs: management.endpoints.web.exposure.include=health,metrics,info. Third, set health details to when-authorized so load balancers see UP/DOWN without credential requirements, but full health detail is gated. The endpoints that must never be public: /env (exposes all config properties), /beans (exposes architecture), /heapdump (heap may contain sensitive data including tokens in memory), /loggers (allows changing log levels at runtime — an attacker could enable DEBUG to flood logs or reduce logging to hide their tracks).</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> What is SQL injection and how does Spring Data JPA prevent it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">SQL injection is when user-controlled input is included in a SQL query by string concatenation, allowing an attacker to modify the query structure. The classic example: 'SELECT * FROM users WHERE name = \'' + name + '\'' — if name is ' OR '1'='1, the query returns all users. Spring Data JPA prevents it through parameterised queries. JPQL with named parameters — @Query("SELECT p FROM Payment p WHERE p.accountId = :accountId") with @Param("accountId") — never concatenates the value into the SQL string. The database driver sends the query and the parameter separately; the parameter is treated as data, not SQL. Derived query methods like findByAccountId(String accountId) also use parameters internally. Where it can still go wrong in Spring: using EntityManager.createNativeQuery with string concatenation, or using Criteria API incorrectly. I treat any dynamic query as a potential injection vector and always use bind parameters.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What is PKCE and why should all OAuth2 clients use it now? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">PKCE — Proof Key for Code Exchange — prevents an authorization code interception attack. Without PKCE: an attacker on the same device as a mobile app can register the same custom URL scheme, intercept the authorization code returned in the redirect, and exchange it for tokens. With PKCE: the client generates a code_verifier before the flow starts and sends a hash of it (code_challenge) with the authorization request. When exchanging the code for tokens, the client must send the original code_verifier. The auth server verifies the hash matches. An attacker who intercepted the code does not have the verifier, so the exchange fails. PKCE was originally required for public clients (mobile, SPA) that cannot hold a client secret securely. It should now be used for all clients — even confidential ones — because it adds protection for free. The OAuth2 Security BCP (Best Current Practice) recommends it universally.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> How do you handle token expiry gracefully on the client side? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The pattern is to catch 401 responses and attempt a silent token refresh before retrying the original request. In a web app: the API client intercepts every 401, calls the token endpoint with the refresh token cookie, gets a new access token, stores it in memory, and retries the original request — all transparent to the user. If the refresh token is also expired or revoked, the retry will get another 401 and you redirect to the login page. The key implementation detail: queue concurrent requests during a refresh rather than triggering multiple refresh calls simultaneously. A common bug is when ten parallel API calls all expire at the same time and the app sends ten refresh requests — only the first one succeeds, the rest fail because the refresh token was already consumed (some auth servers rotate refresh tokens on use). Use a flag and a promise queue: if a refresh is in progress, add the request to the queue; when the refresh completes, replay all queued requests with the new token.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q21:</span> What are the security implications of logging in a backend service? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Logging creates a secondary attack surface that is often overlooked. Three main risks. First: logging sensitive data. Production logs often contain PII (email addresses, phone numbers, account IDs), financial data (payment amounts, card last-four), or authentication data (API keys, tokens — especially if someone logs the full Authorization header). Fix: use a logging framework that masks sensitive fields (Logback's %mdc patterns, custom converters), and have a strict policy: never log request headers, never log request bodies for payment endpoints. Second: log injection. If you log user-supplied input without sanitising newlines, an attacker can inject fake log entries. Fix: strip or encode newlines in any user input before logging. Third: log verbosity as an operational risk. Overly verbose DEBUG logging in production can itself be an attack vector — a flood of requests can fill disk space and cause the application to crash. Fix: INFO in production, DEBUG only in dev or with a runtime toggle via Actuator /loggers.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 19 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you draw the JWT structure and name every claim you must validate?</span></li>
+      <li><span class="checkbox-label">Can you explain RS256 vs HS256 and why RS256 is better for microservices?</span></li>
+      <li><span class="checkbox-label">Can you walk through the Authorization Code + PKCE flow step by step?</span></li>
+      <li><span class="checkbox-label">Can you trace what happens in the Spring Security filter chain for a JWT request?</span></li>
+      <li><span class="checkbox-label">Can you explain BOLA and name the two layers where you prevent it?</span></li>
+      <li><span class="checkbox-label">Can you name four OWASP vulnerabilities and the fix for each?</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises — Boss exercise (layered secure API) done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>JWT: structure, claims, validation checklist</h3>
+    <p>/5 |</p>
+    <h3>HS256 vs RS256: which to use and why</h3>
+    <p>/5 |</p>
+    <h3>Token storage: access token in memory, refresh in cookie</h3>
+    <p>/5 |</p>
+    <h3>Token revocation: three practical approaches</h3>
+    <p>/5 |</p>
+    <h3>OAuth2: Auth Code + PKCE flow, every step</h3>
+    <p>/5 |</p>
+    <h3>OAuth2: Client Credentials for service-to-service</h3>
+    <p>/5 |</p>
+    <h3>Spring Security: filter chain, JWT filter placement</h3>
+    <p>/5 |</p>
+    <h3>BOLA prevention: query layer + security layer</h3>
+    <p>/5 |</p>
+    <h3>Mass assignment: DTO pattern, why entities are dangerous</h3>
+    <p>/5 |</p>
+    <h3>OWASP: four vulnerabilities you can explain in detail</h3>
+    <p>/5 |</p>
+    <p>Day 19 complete:</p>
+    <p>Security questions are where many backend candidates stumble because they know the tools but have not thought through the threat model. The pattern that wins in interviews: name the attack first, then explain the defence. 'BOLA is when..., the attack is..., the fix is...' That framing shows you understand security, not just configuration.</p>
+    <h3>Preview: Day 20 — Phase 3 Review and Mock Interview</h3>
+    <p>Full review of Days 16-19 (Spring Boot Internals, Testing, REST API Design, Security). 60-question blitz, one whiteboard system design question, and six senior mock interview questions spanning all four days.</p>
+    <p>Day 19 of 60 · Security · Prepared for Md Zuber</p>
+    <p>"Every security decision is a trade-off. The question is not whether to add a control but whether the risk you are mitigating justifies the complexity you are adding."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 7 — EC2 Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#E1F5EE;color:#085041;border:1px solid #5DCAA5}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #1D9E75;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#E1F5EE;color:#085041;border-color:#5DCAA5;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #1D9E75;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-green{background:#E1F5EE;color:#085041}.p-blue{background:#e6f1fb;color:#0C447C}
+.p-amber{background:#FAEEDA;color:#633806}.p-coral{background:#FAECE7;color:#712B13}
+.p-purple{background:#EEEDFE;color:#3C3489}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+.code-block{background:#1a1a18;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.code-block code{font-family:monospace;font-size:12px;line-height:1.7;color:#e8e6e0;display:block;white-space:pre}
+.k{color:#9FE1CB}.v{color:#FAC775}.s{color:#F0997B}.c{color:#666;font-style:italic}.cmd-g{color:#97C459}.cmd-b{color:#85B7EB}
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.comp-card{background:#fff;border:1px solid #eee;border-radius:10px;padding:1rem}
+.comp-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.comp-body{font-size:12px;color:#555;line-height:1.65}
+.comp-card.hl{border-color:#1D9E75;background:#f0faf5}
+.comp-card.hl .comp-title{color:#085041}
+.ebs-table{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}
+.ebs-table th{text-align:left;padding:8px 10px;background:#f5f5f2;color:#666;font-weight:600;border-bottom:1px solid #eee}
+.ebs-table td{padding:8px 10px;border-bottom:1px solid #eee;color:#444;vertical-align:top;line-height:1.5}
+.ebs-table td:first-child{font-weight:600;color:#1a1a18}
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 7 of 30</span>
+    <span class="tag">EC2 Deep Dive</span>
+    <span class="tag">Phase 2 — Application Deployment</span>
+    <span class="tag">User data · AMIs · EBS · Launch templates</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('userdata',this)">User data & cloud-init</button>
+    <button class="ntab" onclick="show('ami',this)">AMI mechanics</button>
+    <button class="ntab" onclick="show('ebs',this)">EBS deep dive</button>
+    <button class="ntab" onclick="show('launchtemplates',this)">Launch templates</button>
+    <button class="ntab" onclick="show('advanced',this)">Advanced EC2</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- USER DATA & CLOUD-INIT -->
+  <div id="p-userdata" class="panel active">
+    <div class="lede"><strong>User data is not a simple startup script. It is the entry point into cloud-init — a complete instance configuration framework used by every major Linux distribution. Understanding cloud-init's execution phases, module system, and failure modes is what separates engineers whose automation works reliably from those whose EC2 instances randomly come up misconfigured and nobody knows why.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('u',0,this)">1 · cloud-init internals</button>
+      <button class="cbtn" onclick="showC('u',1,this)">2 · Execution phases</button>
+      <button class="cbtn" onclick="showC('u',2,this)">3 · Writing robust user data</button>
+      <button class="cbtn" onclick="showC('u',3,this)">4 · Debugging failures</button>
+    </div>
+
+    <div id="u0" class="cpanel active">
+      <div class="ch">cloud-init — what it is and how it relates to user data</div>
+      <div class="csub">The full picture behind the "startup script" abstraction</div>
+      <div class="cb">
+        <p>cloud-init is an open-source multi-distribution package that handles early cloud instance initialisation. It is pre-installed on Amazon Linux 2023, Ubuntu, RHEL, and every other major AWS AMI. When an EC2 instance boots for the first time, cloud-init is the process that fetches your user data from IMDS, interprets it, and executes it. User data is the input to cloud-init — cloud-init is the engine that processes it.</p>
+        <p>cloud-init supports multiple input formats. The format is determined by the first line of the user data content:</p>
+        <p><span class="mono">#!/bin/bash</span> — a shell script. Executed directly. Most common format for simple bootstrapping.<br>
+        <span class="mono">#cloud-config</span> — a YAML document following cloud-config syntax. Declarative — you describe the desired state (packages to install, files to create, users to add) and cloud-init translates it to commands. More structured and idempotent than shell scripts.<br>
+        <span class="mono">Content-Type: multipart/mixed</span> — multiple parts combined, allowing both a cloud-config document and a shell script in one user data payload.</p>
+        <div class="mechbox"><strong>How cloud-init fetches user data — and the IMDSv2 interaction:</strong> cloud-init queries IMDS to get user data: <span class="mono">http://169.254.169.254/latest/user-data</span>. On instances where IMDSv2 is required (which all your instances should be after Day 5), cloud-init correctly handles the two-step IMDSv2 token request. The cloud-init version matters here: versions before 18.4 do not support IMDSv2. If you build an AMI with an old cloud-init version and then enforce IMDSv2, your user data will never execute on new instances — they'll boot with no user data applied, silently. Amazon Linux 2023 ships with a current cloud-init version. Ubuntu 20.04 LTS ships cloud-init 20.x — IMDSv2 compatible. Always check cloud-init version when working with custom AMIs that might have older software.</div>
+        <p><strong>The instance data hierarchy cloud-init reads:</strong> cloud-init reads from multiple IMDS paths: user data (your script), meta-data (instance ID, AZ, hostname, IAM role name), and vendor-data (AWS-specific configuration injected by the hypervisor — things like the SSH public key from your key pair). The SSH public key injection you rely on when you create an EC2 with a key pair is cloud-init reading the key from <span class="mono">http://169.254.169.254/latest/meta-data/public-keys/0/openssh-key</span> and writing it to <span class="mono">~ec2-user/.ssh/authorized_keys</span>. If cloud-init fails, SSH access also fails — because the key was never written.</p>
+      </div>
+      <span class="pill p-green">#!/bin/bash = shell script, #cloud-config = YAML declarative</span>
+      <span class="pill p-amber">cloud-init before 18.4 doesn't support IMDSv2 — check version in custom AMIs</span>
+    </div>
+
+    <div id="u1" class="cpanel">
+      <div class="ch">cloud-init execution phases — the exact order everything runs</div>
+      <div class="csub">Five phases, each running at a different point in the boot process — knowing this prevents race conditions</div>
+      <div class="cb">
+        <p>cloud-init execution is split into five phases, each corresponding to a systemd service that runs at a specific point during boot. Understanding the phases is critical for writing user data that doesn't fail due to dependencies not being ready yet.</p>
+        <p><strong>Phase 1 — cloud-init-generator (very early boot):</strong> Runs as a systemd generator before networking is up. Determines if this is a first boot, subsequent boot, or if cloud-init is disabled. Reads the kernel command line. Almost nothing you care about happens here.</p>
+        <p><strong>Phase 2 — cloud-init local (before networking):</strong> Runs before the network is configured. Fetches data sources that don't require network (local disk only in this phase). Sets up the hostname using metadata from the data source that doesn't need network access (for EC2, the hostname is derived from the private IP address). This is why your instance gets its hostname before network is up.</p>
+        <p><strong>Phase 3 — cloud-init network (after networking, before services):</strong> Network is up. cloud-init fetches user data from IMDS. Applies network configuration. Runs the <strong>init</strong> modules: sets timezone, locale, writes files, creates users, adds SSH authorized keys. This is where SSH key injection happens — the key is written to authorized_keys during this phase.</p>
+        <p><strong>Phase 4 — cloud-config (after init modules):</strong> Runs the config modules: installs packages (<span class="mono">yum install</span>, <span class="mono">apt-get install</span>), runs commands, configures services, writes configuration files. This is the main execution phase for most user data content.</p>
+        <p><strong>Phase 5 — cloud-final (last):</strong> Runs the final modules: executes your shell scripts (if using <span class="mono">#!/bin/bash</span>), runs puppet/chef/ansible if configured, sends completion signals (used by CloudFormation cfn-signal). Your shell script runs in this final phase — meaning if your script depends on something installed in Phase 4, it works correctly because Phase 4 always precedes Phase 5.</p>
+        <div class="mechbox"><strong>Why the phase order matters for your Spring Boot deployment:</strong> If you use a <span class="mono">#cloud-config</span> user data document that installs Java (Phase 4 — package installation) and then runs a command to start your Spring Boot JAR (also Phase 4 — runcmd), the runcmd executes after the package installation in the same phase. But if you use a shell script (<span class="mono">#!/bin/bash</span>) that does <span class="mono">yum install java-17</span> and then <span class="mono">java -jar app.jar</span>, both happen in Phase 5 — sequentially, as written. Either approach works for simple cases. The issue arises when you mix formats: a cloud-config document and a separate shell script in a multipart user data — the cloud-config runs first (Phase 4) and the shell script runs second (Phase 5), which is often the right order for "install dependencies then run app."</div>
+        <div class="failbox"><strong>The "user data ran but packages aren't installed" race condition:</strong> An engineer writes a user data script that installs packages and immediately runs them, but the script completes in seconds while package installation takes 2-3 minutes due to package manager initialization. This happens when the script launches a background process (<span class="mono">yum install &</span>) and the script exits before installation completes. When the ASG's health check runs before installation finishes, the instance appears healthy (SSH works, user data script returned 0), but the application isn't running. Solution: never background-execute package installation in user data scripts. Block until installation completes. Use <span class="mono">set -e</span> so the script fails fast if any command fails.</div>
+      </div>
+    </div>
+
+    <div id="u2" class="cpanel">
+      <div class="ch">Writing production-grade user data scripts</div>
+      <div class="csub">The patterns that make the difference between "usually works" and "always works"</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">#!/bin/bash
+# Production-grade user data for a Spring Boot application server
+# Runs in cloud-final phase (Phase 5) — networking fully up, packages available
+set -euo pipefail</span>
+
+<span class="c"># Redirect all output to a log file AND the system log</span>
+<span class="v">exec</span> > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+echo <span class="s">"--- User data start: $(date -u +%Y-%m-%dT%H:%M:%SZ) ---"</span>
+
+<span class="c"># STEP 1: System update (separate from app dependencies — different failure mode)</span>
+echo <span class="s">"Updating system packages..."</span>
+dnf update -y --exclude=kernel  <span class="c"># Exclude kernel to avoid reboot requirement</span>
+
+<span class="c"># STEP 2: Install Java 17 (Amazon Corretto — production-grade OpenJDK)</span>
+echo <span class="s">"Installing Java 17..."</span>
+dnf install -y java-17-amazon-corretto
+java -version  <span class="c"># Verify — script fails here if installation failed</span>
+
+<span class="c"># STEP 3: Create dedicated app user (never run apps as root or ec2-user)</span>
+useradd -r -s /sbin/nologin -d /opt/app appuser 2>/dev/null || true
+<span class="c"># 2>/dev/null || true: ignore "already exists" error — makes script idempotent</span>
+
+<span class="c"># STEP 4: Fetch configuration from Parameter Store (not hardcoded in user data)</span>
+<span class="c"># User data is stored in IMDS and visible to anyone who can describe the instance</span>
+APP_BUCKET=$(aws ssm get-parameter \
+  --name /getwork/prod/app-bucket \
+  --region ap-south-1 \
+  --query Parameter.Value --output text)
+APP_VERSION=$(aws ssm get-parameter \
+  --name /getwork/prod/app-version \
+  --region ap-south-1 \
+  --query Parameter.Value --output text)
+
+<span class="c"># STEP 5: Download application JAR from S3</span>
+echo <span class="s">"Downloading app version ${APP_VERSION}..."</span>
+mkdir -p /opt/app
+aws s3 cp "s3://${APP_BUCKET}/releases/app-${APP_VERSION}.jar" /opt/app/app.jar
+chown appuser:appuser /opt/app/app.jar
+
+<span class="c"># STEP 6: Write systemd service file</span>
+cat > /etc/systemd/system/getwork-app.service << 'UNIT'
+[Unit]
+Description=GetWork Application
+After=network.target
+Wants=network-online.target
+
+[Service]
+User=appuser
+WorkingDirectory=/opt/app
+ExecStart=/usr/bin/java \
+  -Xms512m -Xmx1g \
+  -XX:+UseG1GC \
+  -Dspring.profiles.active=production \
+  -jar /opt/app/app.jar
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=getwork-app
+Environment=JAVA_OPTS="-server"
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+<span class="c"># STEP 7: Enable and start the service</span>
+systemctl daemon-reload
+systemctl enable getwork-app
+systemctl start getwork-app
+
+<span class="c"># STEP 8: Verify the service started successfully</span>
+<span class="c"># Wait up to 60 seconds for health endpoint to respond</span>
+for i in $(seq 1 12); do
+  if curl -sf http://localhost:8080/actuator/health > /dev/null; then
+    echo <span class="s">"Application healthy after $((i*5)) seconds"</span>
+    break
+  fi
+  [ $i -eq 12 ] && { echo <span class="s">"ERROR: Application failed to start"</span>; exit 1; }
+  sleep 5
+done
+
+<span class="c"># STEP 9: Signal CloudFormation/EC2 Auto Scaling that this instance is ready</span>
+<span class="c"># (required for rolling deployments — prevents traffic before app is ready)</span>
+INSTANCE_ID=$(curl -sf http://169.254.169.254/latest/meta-data/instance-id \
+  -H "X-aws-ec2-metadata-token: $(curl -sf -X PUT \
+  http://169.254.169.254/latest/api/token \
+  -H X-aws-ec2-metadata-token-ttl-seconds:21600)")
+echo <span class="s">"--- User data complete: $(date -u +%Y-%m-%dT%H:%M:%SZ) instance=$INSTANCE_ID ---"</span></code></div>
+
+        <div class="warnbox"><strong>Never put secrets in user data:</strong> User data is stored in IMDS and is readable by anyone who can SSH into the instance — including other users on a shared host (rare on EC2 but possible). It is also visible in the EC2 console to any IAM user with ec2:DescribeInstanceAttribute permission. Never put database passwords, API keys, or other secrets directly in user data. Fetch them from AWS Secrets Manager or Parameter Store in the script, as shown above. The instance role provides credentials to call SSM/Secrets Manager without any hardcoded secrets.</div>
+      </div>
+    </div>
+
+    <div id="u3" class="cpanel">
+      <div class="ch">Debugging user data failures — the systematic approach</div>
+      <div class="csub">The four log locations and the exact commands to diagnose every user data failure</div>
+      <div class="cb">
+        <p>User data failures are silent by default — the instance boots, SSH works, but the application is not running. Without knowing where to look, engineers spend hours randomly checking things. There are four specific locations that tell the complete story.</p>
+        <div class="code-block"><code><span class="c"># LOG LOCATION 1: cloud-init main log — execution timeline</span>
+sudo cat /var/log/cloud-init.log
+<span class="c"># Shows: every phase, every module, timestamps, and critical errors</span>
+<span class="c"># Look for: "Traceback" (Python exception), "FAILED", or "Error"</span>
+<span class="c"># The last few lines tell you where execution stopped</span>
+
+<span class="c"># LOG LOCATION 2: cloud-init output log — your script's stdout/stderr</span>
+sudo cat /var/log/cloud-init-output.log
+<span class="c"># Shows: everything your script printed to stdout or stderr</span>
+<span class="c"># This is the log you see your echo statements in</span>
+<span class="c"># If this file is empty, your script never ran (look at cloud-init.log)</span>
+
+<span class="c"># LOG LOCATION 3: user-data.log (if script redirects there)</span>
+sudo cat /var/log/user-data.log
+<span class="c"># Only exists if your script redirects output there (as in the template above)</span>
+<span class="c"># More readable than cloud-init-output.log because it's only your script's output</span>
+
+<span class="c"># LOG LOCATION 4: systemd journal for the app service</span>
+sudo journalctl -u getwork-app --no-pager -n 100
+<span class="c"># Shows Spring Boot application logs after the service started</span>
+<span class="c"># If user data ran fine but app failed, the error is here</span>
+
+<span class="c"># CHECK: Did cloud-init complete successfully?</span>
+sudo cloud-init status --long
+<span class="c"># Outputs: status: done (success) or status: error (with details)</span>
+<span class="c"># This is the fastest first check — one command tells you pass/fail</span>
+
+<span class="c"># CHECK: What exact user data did the instance receive?</span>
+<span class="c"># (Requires IMDSv2 token on instances with --http-tokens required)</span>
+TOKEN=$(curl -sf -X PUT http://169.254.169.254/latest/api/token \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+curl -sf http://169.254.169.254/latest/user-data \
+  -H "X-aws-ec2-metadata-token: $TOKEN"
+<span class="c"># Prints the exact user data the instance received — confirms it was set correctly</span>
+
+<span class="c"># CHECK: Re-run user data manually for debugging (without rebooting)</span>
+<span class="c"># cloud-init normally runs user data once. Force re-run for testing:</span>
+sudo cloud-init clean --logs  <span class="c"># Clears cloud-init state (makes it think this is first boot)</span>
+sudo cloud-init init          <span class="c"># Re-fetches and re-runs (careful in production!)</span></code></div>
+
+        <div class="failbox"><strong>The "user data is base64-encoded" debugging trap:</strong> When you pass user data via the CLI using <span class="mono">--user-data file://script.sh</span>, the CLI automatically base64-encodes it. When you view user data via the console, it shows the decoded version. But if you pass <span class="mono">--user-data fileb://script.sh</span> (binary), the CLI does NOT encode it — and if the content is already base64-encoded, the instance receives double-encoded data. cloud-init tries to execute base64 gibberish, fails silently, and your script never runs. Always use <span class="mono">file://</span> (text mode — auto-encodes) not <span class="mono">fileb://</span> (binary mode — no encoding) for user data scripts.</div>
+        <div class="prodbox"><strong>SSM Run Command — the alternative to user data for post-launch configuration:</strong> User data runs once on first boot and is immutable. If you need to push a configuration change to running instances (e.g. update an environment variable, rotate a configuration file), SSM Run Command is the mechanism. You send a command to one or many instances, it executes, and the output is available in SSM. No SSH required, no port 22 open, full audit trail in CloudTrail. This is the production mechanism for operational tasks on running fleets.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('ami',document.querySelectorAll('.ntab')[1])">AMI mechanics — baking golden images →</button>
+  </div>
+
+  <!-- AMI MECHANICS -->
+  <div id="p-ami" class="panel">
+    <div class="lede"><strong>AMIs are the unit of deployment for EC2-based systems. The difference between teams that deploy reliably in 60 seconds and teams that spend 10 minutes bootstrapping every instance is entirely in how they build and manage AMIs. Understanding AMI internals — how EBS snapshots underpin them, how the block device mapping works, how AMI sharing and copying work — is what allows you to design immutable infrastructure correctly.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('a',0,this)">1 · AMI internals</button>
+      <button class="cbtn" onclick="showC('a',1,this)">2 · AMI baking strategy</button>
+      <button class="cbtn" onclick="showC('a',2,this)">3 · EC2 Image Builder</button>
+      <button class="cbtn" onclick="showC('a',3,this)">4 · AMI lifecycle management</button>
+    </div>
+
+    <div id="a0" class="cpanel active">
+      <div class="ch">How AMIs actually work — the EBS snapshot relationship</div>
+      <div class="csub">An AMI is not a disk image file. It is a metadata document pointing to one or more EBS snapshots.</div>
+      <div class="cb">
+        <p>When most engineers hear "AMI," they picture a large disk image file stored somewhere. The reality is different and important. An AMI is a <strong>metadata object in AWS's registration system</strong> that contains: a name, description, architecture, virtualisation type, root device type, and most critically — a <strong>block device mapping</strong> that specifies one or more EBS snapshots.</p>
+        <p>When you create an AMI from a running EC2 instance using <span class="mono">aws ec2 create-image</span>, AWS does the following: creates EBS snapshots of all volumes attached to the instance, registers a new AMI that points to those snapshots in its block device mapping, and returns the AMI ID. The AMI itself contains no data — the data lives in the EBS snapshots. The AMI is a pointer.</p>
+        <div class="mechbox"><strong>What this means for launch speed:</strong> When you launch an EC2 instance from an AMI, AWS does NOT copy the entire EBS snapshot to a new volume before booting the instance. EBS uses a copy-on-write mechanism. The new volume is created instantly, pointing to the same underlying data as the snapshot. The instance boots immediately. As the OS reads data that hasn't been explicitly written, it fetches from the snapshot storage. As the OS writes data, it writes to the new volume's private storage. This is why an EC2 instance can boot in under 60 seconds from a 100GB AMI — it doesn't wait to copy 100GB first. The catch: the first access to each block of data that hasn't been read yet has slightly higher latency as it's fetched from snapshot storage. This is called the "cold storage" penalty. For latency-sensitive applications, pre-warm new volumes using <span class="mono">fio</span> or <span class="mono">dd</span> to read every block before the instance enters the load balancer target group.</div>
+        <p><strong>Block device mapping in an AMI:</strong> The block device mapping defines which EBS snapshot maps to which device. A typical Spring Boot server AMI might have: <span class="mono">/dev/xvda</span> → snapshot-001 (8GB, root volume, gp3), <span class="mono">/dev/xvdb</span> → snapshot-002 (50GB, application data volume, gp3). When the instance launches, each mapped device is instantiated as an EBS volume from its snapshot. Additional devices can be added at launch time that are NOT in the AMI (e.g., an ephemeral instance store volume). Devices in the AMI that you specify as <span class="mono">"NoDevice"</span> are suppressed — this lets you launch from an AMI without creating one of its defined volumes.</p>
+        <div class="failbox"><strong>The AMI deregistration / snapshot deletion ordering mistake:</strong> You deregister an old AMI you no longer need. The deregistration succeeds. But the EBS snapshots that the AMI pointed to are NOT automatically deleted — they continue to exist and you continue to be charged for them. Many teams deregister old AMIs and discover months later they're paying for hundreds of orphaned snapshots. The correct sequence: first copy all instance IDs that were launched from this AMI (to confirm no instances depend on it), then deregister the AMI, then explicitly delete the EBS snapshots it pointed to. AWS provides scripts for this cleanup, and EC2 Image Builder manages this lifecycle automatically if you use it.</div>
+      </div>
+    </div>
+
+    <div id="a1" class="cpanel">
+      <div class="ch">AMI baking strategy — the spectrum from vanilla to fully baked</div>
+      <div class="csub">Four approaches to AMI construction, each with different trade-offs for boot time, flexibility, and maintenance cost</div>
+      <div class="cb">
+        <p>The "right" AMI strategy depends on your deployment frequency, team size, and tolerance for boot-time latency. These are the four main approaches in order of increasing pre-baking:</p>
+        <p><strong>Approach 1 — Plain OS AMI + full user data bootstrapping.</strong> Start from the AWS-provided Amazon Linux 2023 AMI. User data script installs all software (Java, your JAR, monitoring agents, etc.) on every launch. Boot time: 5-10 minutes. Advantages: always uses latest package versions, no AMI maintenance required. Disadvantages: slow scaling — Auto Scaling cannot add capacity quickly because new instances take 10 minutes to become ready. Suitable for: dev environments, non-time-sensitive scaling, teams without a CI/CD pipeline for AMI baking.</p>
+        <p><strong>Approach 2 — Partially baked AMI + minimal user data.</strong> Pre-install Java, monitoring agents, and OS-level tools. Bake this into an AMI. User data fetches your application JAR from S3 and writes environment-specific configuration. Boot time: 90-120 seconds. Advantages: fast enough for Auto Scaling, most static dependencies pre-installed. Disadvantages: AMI must be updated when Java version changes or agents need patching.</p>
+        <p><strong>Approach 3 — Fully baked AMI (immutable infrastructure).</strong> The application JAR, all dependencies, all configuration templates, and even environment-specific config (injected at bake time) are in the AMI. User data does minimal work — perhaps set the hostname and register with a service registry. Boot time: 60-90 seconds. Netflix pioneered this pattern. Advantages: fastest possible scaling, complete reproducibility (every instance that launches from AMI v47 is identical), rollback is simply pointing the ASG at AMI v46. Disadvantages: every application change requires baking a new AMI. CI/CD pipeline must include AMI baking as a step.</p>
+        <p><strong>Approach 4 — Container-based AMI.</strong> The AMI only contains Docker and your container runtime (ECS agent or similar). The application runs as a Docker container pulled from ECR at launch time. Boot time: 2-3 minutes (AMI boot + Docker pull). This decouples the OS-level AMI from the application, letting you update the application independently of the AMI. This is essentially ECS on EC2, covered on Day 12.</p>
+        <div class="prodbox"><strong>The recommended approach for GetWork and your Hotel Microservices:</strong> Approach 2 with a baking pipeline. Maintain a base AMI with Java, CloudWatch agent, SSM agent, and common tools pre-installed. In your CI/CD pipeline: on every main branch merge, bake a new AMI with the latest JAR embedded, update the Launch Template to reference the new AMI, and trigger a rolling update of the Auto Scaling Group. New instances boot in 90 seconds rather than 10 minutes, your application version is encoded in the AMI ID (enabling rollback), and the base AMI is refreshed monthly for security patches.</div>
+        <div class="mechbox"><strong>Packer — the standard tool for AMI baking:</strong> HashiCorp Packer is the industry-standard tool for building AMIs programmatically. A Packer template defines: the source AMI, a list of provisioners (shell scripts, Ansible playbooks, file uploads), and the target AMI name and tags. Packer launches a temporary EC2 instance, runs your provisioners, creates an AMI from the result, and terminates the temporary instance. The entire process takes 5-10 minutes and produces a tagged, versioned AMI. Since you already use Terraform at Deloitte, adding Packer to your pipeline is natural — they're from the same company and integrate seamlessly.</div>
+      </div>
+    </div>
+
+    <div id="a2" class="cpanel">
+      <div class="ch">EC2 Image Builder — AWS-native AMI baking pipeline</div>
+      <div class="csub">Automated, scheduled, tested AMI builds with built-in vulnerability scanning</div>
+      <div class="cb">
+        <p>EC2 Image Builder is AWS's managed service for building, testing, and distributing AMIs. Instead of maintaining Packer templates and a build EC2 instance, Image Builder provides a GUI and API-driven pipeline with automated security scanning, cross-region distribution, and AMI lifecycle management built in.</p>
+        <p><strong>Image Builder components:</strong></p>
+        <p><strong>Image recipe</strong> — defines the base AMI (parent image) and the build components to apply. Components are versioned documents containing install scripts, configuration commands, and validation tests. AWS provides hundreds of pre-built components (install latest Java, configure CIS hardening, install CloudWatch agent). You write custom components for your application-specific steps.</p>
+        <p><strong>Infrastructure configuration</strong> — specifies which EC2 instance type to use for building (a larger instance type speeds up the build), the VPC/subnet, IAM role, security groups, and whether to terminate the build instance on failure (useful for debugging — keep it running to inspect state).</p>
+        <p><strong>Distribution configuration</strong> — where the finished AMI is copied. Can distribute to multiple regions and accounts simultaneously. Critical for multi-region architectures: your build runs in ap-south-1 and the AMI is automatically copied to ap-southeast-1 and us-east-1.</p>
+        <p><strong>Image pipeline</strong> — ties everything together with a schedule (build nightly) or trigger (build on new base AMI release). Runs the build, runs the test components (integration tests against the new AMI), and distributes on success.</p>
+        <div class="mechbox"><strong>Inspector integration — vulnerability scanning in the AMI build:</strong> EC2 Image Builder integrates with Amazon Inspector to scan the built AMI for known CVEs before distribution. If Inspector finds critical vulnerabilities, the pipeline can be configured to fail the build rather than distributing a vulnerable AMI. This prevents your fleet from ever running instances with known exploitable vulnerabilities — a security control that would be expensive and complex to build yourself. Combined with the scheduled nightly rebuild, every new instance launches from an AMI that was scanned for CVEs in the last 24 hours.</div>
+        <div class="prodbox"><strong>AMI lifecycle management — the orphaned snapshot problem solved:</strong> EC2 Image Builder tracks which AMIs it created and can automatically deregister old AMIs and delete their snapshots based on a retention policy (keep the last 5 versions). This eliminates the orphaned snapshot billing problem entirely. When you manage AMIs manually, you often forget to clean up old ones. Image Builder's lifecycle policies do this automatically. For a team releasing 2-3 new AMIs per day, without lifecycle management you'd accumulate thousands of AMIs and snapshots within a year.</div>
+      </div>
+    </div>
+
+    <div id="a3" class="cpanel">
+      <div class="ch">AMI sharing, copying, and region mechanics</div>
+      <div class="csub">AMI IDs are region-specific — and what that means for multi-region deployment automation</div>
+      <div class="cb">
+        <p>AMI IDs are unique within a region but not globally. The same AMI has a different ID in each region it exists in. <span class="mono">ami-0abcdef1234567890</span> in ap-south-1 is a completely different AMI from <span class="mono">ami-0abcdef1234567890</span> in us-east-1 — or more likely, the second ID doesn't exist in us-east-1 at all. This is a constant source of automation failures when engineers hardcode AMI IDs.</p>
+        <div class="failbox"><strong>The hardcoded AMI ID in Terraform that breaks multi-region deployments:</strong> An engineer writes a Terraform module with <span class="mono">ami = "ami-0abcdef1234567890"</span>. This works for ap-south-1. Six months later, the team needs to deploy to ap-southeast-1 for Singapore users. The Terraform apply fails: "InvalidAMIID.NotFound". The AMI doesn't exist in Singapore. The correct approach: use an <span class="mono">aws_ami</span> data source that dynamically looks up the latest AMI matching your criteria (owner, name filter, architecture) in whatever region Terraform is deploying to. Never hardcode AMI IDs.</div>
+        <div class="code-block"><code><span class="c"># Correct Terraform pattern — dynamic AMI lookup</span>
+<span class="cmd-b">data "aws_ami"</span> "app_ami" {
+  <span class="k">most_recent</span> = <span class="v">true</span>
+  <span class="k">owners</span>      = [<span class="s">"self"</span>]  <span class="c"># Your account's AMIs</span>
+
+  <span class="k">filter</span> {
+    <span class="k">name</span>   = <span class="s">"name"</span>
+    <span class="k">values</span> = [<span class="s">"getwork-app-*"</span>]   <span class="c"># Name prefix from your baking pipeline</span>
+  }
+
+  <span class="k">filter</span> {
+    <span class="k">name</span>   = <span class="s">"state"</span>
+    <span class="k">values</span> = [<span class="s">"available"</span>]
+  }
+
+  <span class="k">filter</span> {
+    <span class="k">name</span>   = <span class="s">"tag:version"</span>
+    <span class="k">values</span> = [<span class="s">"${var.app_version}"</span>]  <span class="c"># Specific version from CI/CD</span>
+  }
+}
+
+<span class="c"># Use in Launch Template</span>
+<span class="cmd-b">resource "aws_launch_template"</span> "app" {
+  <span class="k">image_id</span> = <span class="v">data.aws_ami.app_ami.id</span>
+  <span class="c"># ...rest of template</span>
+}</code></div>
+
+        <p><strong>AMI copying across regions:</strong> <span class="mono">aws ec2 copy-image --source-image-id ami-xxx --source-region ap-south-1 --region ap-southeast-1 --name "getwork-app-v47"</span>. This creates a new AMI in the destination region with new EBS snapshots (the underlying snapshot data is copied). The copy is asynchronous — the destination AMI state is "pending" until the snapshot copy completes. For large AMIs or many regions, copying can take 15-30 minutes. EC2 Image Builder's distribution configuration handles this automatically and in parallel.</p>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('ebs',document.querySelectorAll('.ntab')[2])">EBS deep dive — the storage your EC2 depends on →</button>
+  </div>
+
+  <!-- EBS DEEP DIVE -->
+  <div id="p-ebs" class="panel">
+    <div class="lede"><strong>EBS is not just "disk storage for EC2." It is a network-attached block storage service with distinct volume types, each optimised for different I/O patterns. Choosing the wrong EBS volume type causes performance degradation that looks like an application problem. Understanding IOPS, throughput, burst credits, and the gp2-to-gp3 economics is directly relevant to your Spring Boot deployments.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('ebs',0,this)">1 · EBS architecture</button>
+      <button class="cbtn" onclick="showC('ebs',1,this)">2 · Volume types compared</button>
+      <button class="cbtn" onclick="showC('ebs',2,this)">3 · gp2 vs gp3 in depth</button>
+      <button class="cbtn" onclick="showC('ebs',3,this)">4 · EBS optimisation patterns</button>
+    </div>
+
+    <div id="ebs0" class="cpanel active">
+      <div class="ch">EBS architecture — why it's network-attached and what that means</div>
+      <div class="csub">EBS is not local disk. It is a distributed storage service accessed over a dedicated network fabric.</div>
+      <div class="cb">
+        <p>EBS (Elastic Block Store) volumes are not physically inside the EC2 host server. They are stored in a separate, dedicated storage infrastructure and accessed over a <strong>dedicated high-performance network</strong> built into the Nitro card. This network is separate from the instance's data network — EBS traffic does not compete with your application's network traffic (unless the instance is not EBS-optimised, which is true of older instance types).</p>
+        <p>The practical implication: EBS latency is network latency, not disk latency. A local NVMe SSD has sub-100µs latency. EBS gp3 has typical latency of 1-5ms (single-digit milliseconds) because packets must travel from the EC2 host to the EBS storage nodes and back. For most application workloads this is fine — a Spring Boot app reading config files or writing logs doesn't notice 3ms disk latency. For I/O-intensive database workloads (MySQL on EC2 vs RDS, or self-hosted Redis), this latency matters significantly.</p>
+        <div class="mechbox"><strong>EBS Multi-Attach — one volume, multiple instances:</strong> EBS io1 and io2 volumes support Multi-Attach — a single EBS volume can be simultaneously attached to up to 16 EC2 instances within the same AZ. This is an advanced feature designed for clustered applications that manage their own write locking (like clustered databases, Oracle RAC). It is NOT a general-purpose shared filesystem — without application-level coordination, multiple instances writing to the same blocks causes data corruption. For shared filesystem needs, use EFS (Elastic File System — a managed NFS) or FSx instead. Multi-Attach is for specific software that knows how to coordinate writes at the block level.</div>
+        <p><strong>EBS encryption:</strong> EBS volumes can be encrypted at rest using AWS KMS (either the default EBS CMK or a customer-managed key). Encryption/decryption happens transparently on the Nitro card — zero CPU overhead on the instance, no performance impact. You cannot add encryption to an existing unencrypted volume — you create a snapshot, copy the snapshot with encryption enabled, then create a new volume from the encrypted snapshot. AWS allows setting account-level default encryption — every new EBS volume is encrypted by default. This should be enabled in every production account. Combined with an SCP preventing creation of unencrypted volumes, you have a hard control that ensures all block storage is encrypted.</p>
+        <div class="failbox"><strong>The EBS volume and AZ lock-in:</strong> An EBS volume exists in exactly one Availability Zone. It can only be attached to an EC2 instance in the same AZ. If your EC2 in ap-south-1a has a data volume attached, and that EC2 terminates, you can start a new EC2 in ap-south-1a and reattach the volume. But you cannot attach that volume to an EC2 in ap-south-1b — different AZ, different physical storage infrastructure. This becomes a problem for HA designs. If you store stateful data on an EBS volume (not in a managed service like RDS or S3), and that AZ fails, the data is inaccessible until the AZ recovers. Solution: use EBS snapshots (stored in S3, AZ-independent) for persistent data backup, or use RDS/ElastiCache/DynamoDB which handle AZ redundancy for you.</div>
+      </div>
+    </div>
+
+    <div id="ebs1" class="cpanel">
+      <div class="ch">EBS volume types — the complete comparison</div>
+      <div class="csub">Six volume types, each optimised for a specific workload pattern — choosing wrong degrades performance</div>
+      <div class="cb">
+        <table class="ebs-table">
+          <thead><tr><th>Type</th><th>Class</th><th>Max IOPS</th><th>Max throughput</th><th>Latency</th><th>Use case</th></tr></thead>
+          <tbody>
+            <tr><td>gp3</td><td>SSD</td><td>16,000</td><td>1,000 MB/s</td><td>1-3ms</td><td>General purpose. Boot volumes, dev/test, most production workloads. The default choice.</td></tr>
+            <tr><td>gp2</td><td>SSD</td><td>16,000</td><td>250 MB/s</td><td>1-3ms</td><td>Legacy general purpose. Still widely used but gp3 is strictly better — same cost, more control. Migrate gp2 to gp3.</td></tr>
+            <tr><td>io2 Block Express</td><td>SSD</td><td>256,000</td><td>4,000 MB/s</td><td>sub-ms</td><td>Most demanding databases. Oracle, SAP HANA, large MySQL/Postgres. 99.999% durability (vs 99.9% for gp3).</td></tr>
+            <tr><td>io1</td><td>SSD</td><td>64,000</td><td>1,000 MB/s</td><td>sub-ms</td><td>High-performance databases. IOPS independently configurable from size. Legacy — use io2 for new workloads.</td></tr>
+            <tr><td>st1</td><td>HDD</td><td>500</td><td>500 MB/s</td><td>5-10ms</td><td>Sequential large-block workloads: data warehouses, log processing, Hadoop. Cannot be a boot volume.</td></tr>
+            <tr><td>sc1</td><td>HDD</td><td>250</td><td>250 MB/s</td><td>5-10ms</td><td>Cold data, infrequently accessed. Cheapest EBS type. Archive storage. Cannot be a boot volume.</td></tr>
+          </tbody>
+        </table>
+        <div class="mechbox"><strong>IOPS vs throughput — they are not the same metric:</strong> IOPS (Input/Output Operations Per Second) measures how many read/write operations can complete per second, regardless of size. Throughput (MB/s) measures how many bytes can transfer per second. For small random I/O (4KB database writes — reading an index, writing a record), IOPS is the bottleneck. For large sequential I/O (streaming 1MB blocks — video processing, log files, Hadoop), throughput is the bottleneck. A database on gp3 hitting IOPS limits exhibits high I/O wait and slow query times. A video transcoding workload on gp3 hitting throughput limits shows high CPU wait on I/O with slow processing. Diagnose using CloudWatch's <span class="mono">VolumeReadOps</span>/<span class="mono">VolumeWriteOps</span> (IOPS) and <span class="mono">VolumeReadBytes</span>/<span class="mono">VolumeWriteBytes</span> (throughput) metrics.</div>
+      </div>
+    </div>
+
+    <div id="ebs2" class="cpanel">
+      <div class="ch">gp2 vs gp3 — why you should migrate every gp2 volume you have</div>
+      <div class="csub">Same price, but gp3 gives you independent IOPS and throughput control that gp2 cannot</div>
+      <div class="cb">
+        <p>gp3 replaced gp2 as AWS's recommended general-purpose SSD volume in December 2020. They have the same price per GB ($0.08/GB/month in ap-south-1), but gp3 has a fundamentally better design.</p>
+        <div class="comp-grid">
+          <div class="comp-card">
+            <div class="comp-title">gp2 — the legacy model</div>
+            <div class="comp-body">
+              IOPS is linked to volume size: 3 IOPS per GB, minimum 100, maximum 16,000. A 100GB gp2 volume gets 300 IOPS. To get 3,000 IOPS you need a 1,000GB volume — even if you only use 50GB of data.<br><br>
+              <strong>Burst credits:</strong> Volumes below 1,000GB earn burst credits when IOPS is below baseline, and spend credits when above baseline (up to 3,000 IOPS). A small volume can burst to 3,000 IOPS temporarily. When credits are exhausted, IOPS drops to baseline. This burst behavior is unpredictable — performance varies with workload history, not just current load.<br><br>
+              Maximum throughput: 250 MB/s, regardless of IOPS provisioned.
+            </div>
+          </div>
+          <div class="comp-card hl">
+            <div class="comp-title">gp3 — the correct modern choice</div>
+            <div class="comp-body">
+              IOPS is independent of size. Every gp3 volume baseline: 3,000 IOPS and 125 MB/s throughput, regardless of size. A 1GB gp3 gets the same baseline as a 1,000GB gp3. No burst credits — performance is consistent.<br><br>
+              <strong>Additional IOPS and throughput can be purchased independently:</strong> up to 16,000 IOPS at $0.005/IOPS/month above 3,000, and up to 1,000 MB/s throughput at $0.04/MB-s/month above 125.<br><br>
+              You provision exactly the IOPS your workload needs, paying only for what you use. No need to over-provision volume size just to get IOPS.
+            </div>
+          </div>
+        </div>
+        <div class="prodbox"><strong>The gp2 to gp3 migration calculation:</strong> A Spring Boot app has a 200GB gp2 root volume (bought large for headroom). It gets 600 IOPS (200 × 3). The app actually needs 2,000 IOPS. With gp2, you'd need to resize to 667GB to get 2,000 IOPS, even though you only need 200GB of space — paying for 467GB of unused disk just to get more IOPS. With gp3: keep the 200GB volume, provision 2,000 IOPS explicitly. Pay for 200GB ($16/month) + 0 additional IOPS charge (2,000 < 3,000 baseline). The gp3 volume is cheaper and has predictable performance. AWS now allows you to modify any gp2 volume to gp3 in-place without detaching or stopping the instance — zero downtime migration.</div>
+        <div class="mechbox"><strong>The in-place volume type modification:</strong> <span class="mono">aws ec2 modify-volume --volume-id vol-xxx --volume-type gp3</span>. The modification happens online — the volume remains attached and the instance continues running. During the modification (which can take minutes to hours for large volumes), I/O performance may fluctuate slightly. After modification, the volume has the new type's characteristics. You can modify type, size, IOPS, and throughput in the same operation. You can increase size but NOT decrease it — another reason to start small and scale up rather than provision large volumes.</div>
+      </div>
+    </div>
+
+    <div id="ebs3" class="cpanel">
+      <div class="ch">EBS optimisation patterns for Spring Boot on EC2</div>
+      <div class="csub">The specific settings and monitoring metrics that determine whether EBS is helping or hurting your application</div>
+      <div class="cb">
+        <p><strong>EBS-optimised instances:</strong> Modern EC2 instance types (all Nitro-based instances: t3, m5, c5, r5, and newer) are EBS-optimised by default — they have dedicated bandwidth between the CPU and EBS storage that doesn't compete with network traffic. Older instances (t2, m4, c4) are not EBS-optimised by default — EBS and network traffic share the same NIC, causing contention. If you're still running t2 instances (avoid for production), explicitly enable EBS optimisation in the instance settings. The cost is negligible.</p>
+        <p><strong>EBS CloudWatch metrics to monitor for your Spring Boot app:</strong></p>
+        <p><span class="mono">VolumeReadOps / VolumeWriteOps</span> — IOPS being used. Compare against your volume's provisioned IOPS. If this is consistently near the limit, you'll see increased latency.<br>
+        <span class="mono">VolumeQueueLength</span> — How many I/O requests are waiting because the volume can't process them fast enough. Should be near 0 for a healthy volume. Consistently > 1 means your IOPS is the bottleneck.<br>
+        <span class="mono">VolumeThroughputPercentage</span> — For io1/io2: what percentage of provisioned throughput is being used.<br>
+        <span class="mono">BurstBalance</span> — For gp2: percentage of burst credits remaining. If this is consistently at 0, your workload exceeds gp2 baseline and you should migrate to gp3 with provisioned IOPS.</p>
+        <div class="mechbox"><strong>The EBS volume pre-warming technique:</strong> New EBS volumes created from snapshots have all blocks in a "cold" state — first access to each block has higher latency than subsequent accesses (the copy-on-write fetch from snapshot storage). For latency-sensitive production applications (databases, Redis on EC2), pre-warm the volume before accepting traffic: <span class="mono">sudo fio --filename=/dev/xvda --rw=read --bs=128k --iodepth=32 --ioengine=libaio --direct=1 --name=volume-initialize</span>. This reads every block, forcing them all into the "warm" (local copy) state. After completion, every subsequent block access has full-speed EBS performance. Do this in your user data script after volume mount, before starting the application.</div>
+        <div class="failbox"><strong>The EBS throughput limit masquerading as CPU bottleneck:</strong> A data processing Spring Boot service processes 500MB log files from EBS. CPU is at 60%, which seems fine — engineers increase CPU and it doesn't help. Root cause: the EBS volume is a gp3 with 125MB/s baseline throughput. Reading 500MB takes 4 seconds. The CPU is idle for most of that time, waiting for disk reads. CloudWatch shows VolumeReadBytes near 125MB/s (the ceiling). Increasing CPU does nothing — the bottleneck is disk throughput. Fix: provision higher throughput on the gp3 volume ($0.04/MB-s above 125) or switch to st1 HDD (500MB/s throughput, specifically designed for streaming large files).</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('launchtemplates',document.querySelectorAll('.ntab')[3])">Launch templates — the modern EC2 launch mechanism →</button>
+  </div>
+
+  <!-- LAUNCH TEMPLATES -->
+  <div id="p-launchtemplates" class="panel">
+    <div class="lede"><strong>Launch Templates replaced Launch Configurations in 2017. If you are still using Launch Configurations in Terraform or the console, you are using deprecated functionality that AWS has stopped adding features to. Launch Templates support versioning, partial specification, inheritance, and every modern EC2 feature that Launch Configurations do not. Every Auto Scaling Group should use a Launch Template.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('lt',0,this)">1 · Launch Template mechanics</button>
+      <button class="cbtn" onclick="showC('lt',1,this)">2 · Versioning strategy</button>
+      <button class="cbtn" onclick="showC('lt',2,this)">3 · Instance requirements</button>
+      <button class="cbtn" onclick="showC('lt',3,this)">4 · EC2 Hibernate</button>
+    </div>
+
+    <div id="lt0" class="cpanel active">
+      <div class="ch">Launch Template mechanics — what it defines and how it's used</div>
+      <div class="csub">The complete specification that determines what every EC2 instance launched from it looks like</div>
+      <div class="cb">
+        <p>A Launch Template is a versioned document that specifies the complete configuration for launching EC2 instances. Every field is optional — a template can specify only the fields you want to control and leave the rest for the caller to specify at launch time. This partial specification model is what makes Launch Templates composable.</p>
+        <p><strong>Key fields in a Launch Template:</strong> AMI ID, instance type, key pair name, security group IDs, subnet ID (or left unspecified for ASG to determine), EBS volume configuration (size, type, IOPS, encryption, delete-on-termination), IAM instance profile, user data (base64-encoded), instance tags, metadata options (IMDSv2 enforcement), network interfaces, placement (Availability Zone, Placement Group), capacity reservation, monitoring (detailed CloudWatch), and Spot instance options.</p>
+        <div class="mechbox"><strong>The critical Launch Template fields for production security:</strong> Always set these in every Launch Template:<br>
+          <span class="mono">MetadataOptions.HttpTokens = required</span> — enforces IMDSv2 (prevents SSRF credential theft, Day 5)<br>
+          <span class="mono">MetadataOptions.HttpPutResponseHopLimit = 1</span> — prevents containers inside the instance from querying IMDS (IMDS response can only be forwarded once — to the EC2 itself, not to a container inside it)<br>
+          <span class="mono">BlockDeviceMappings[].Encrypted = true</span> — EBS volumes encrypted at rest<br>
+          <span class="mono">BlockDeviceMappings[].DeleteOnTermination = true</span> (for root), <span class="mono">false</span> (for data volumes) — ensures data volumes survive instance termination</div>
+        <div class="code-block"><code><span class="c"># Complete production Launch Template via CLI</span>
+aws ec2 create-launch-template \
+  --launch-template-name getwork-app-lt \
+  --version-description "v1 - initial" \
+  --launch-template-data '{
+    "ImageId": "'"$(aws ec2 describe-images \
+      --owners self \
+      --filters "Name=name,Values=getwork-app-*" \
+      --query '"'"'sort_by(Images, &CreationDate)[-1].ImageId'"'"' \
+      --output text)"'",
+    "InstanceType": "t3.small",
+    "IamInstanceProfile": {"Name": "getwork-app-instance-profile"},
+    "SecurityGroupIds": ["'"$APP_SG"'"],
+    "MetadataOptions": {
+      "HttpTokens": "required",
+      "HttpPutResponseHopLimit": 1
+    },
+    "BlockDeviceMappings": [{
+      "DeviceName": "/dev/xvda",
+      "Ebs": {
+        "VolumeSize": 20,
+        "VolumeType": "gp3",
+        "Iops": 3000,
+        "Throughput": 125,
+        "Encrypted": true,
+        "DeleteOnTermination": true
+      }
+    }],
+    "TagSpecifications": [{
+      "ResourceType": "instance",
+      "Tags": [
+        {"Key": "Name", "Value": "getwork-app"},
+        {"Key": "Environment", "Value": "production"},
+        {"Key": "ManagedBy", "Value": "terraform"}
+      ]
+    }],
+    "UserData": "'"$(base64 -w0 user-data.sh)"'"
+  }'</code></div>
+      </div>
+    </div>
+
+    <div id="lt1" class="cpanel">
+      <div class="ch">Launch Template versioning — the deployment and rollback mechanism</div>
+      <div class="csub">How versions enable zero-downtime deployments and instant rollbacks in an Auto Scaling Group</div>
+      <div class="cb">
+        <p>Launch Templates support versioning. Each change to a Launch Template creates a new version. Versions are numbered sequentially (1, 2, 3...) and two special aliases exist: <span class="mono">$Latest</span> (always the most recent version) and <span class="mono">$Default</span> (whichever version you designate as the default). An Auto Scaling Group is configured to use a specific version, <span class="mono">$Latest</span>, or <span class="mono">$Default</span>.</p>
+        <p><strong>The versioning-based deployment workflow:</strong></p>
+        <p>1. CI/CD pipeline bakes a new AMI (getwork-app-v48), tags it appropriately.<br>
+        2. Pipeline creates a new Launch Template version with the new AMI ID:<br>
+        <span class="mono">aws ec2 create-launch-template-version --launch-template-id lt-xxx --source-version 5 --version-description "v6 - app v1.2.3" --launch-template-data '{"ImageId":"ami-new"}'</span><br>
+        3. Pipeline updates the ASG to use the new version and triggers an instance refresh:<br>
+        <span class="mono">aws autoscaling start-instance-refresh --auto-scaling-group-name getwork-asg --preferences '{"MinHealthyPercentage":90}'</span><br>
+        4. ASG performs a rolling replacement — terminates old instances and launches new ones with the new version, maintaining at least 90% capacity throughout.<br>
+        5. If the new version has issues: <span class="mono">aws autoscaling cancel-instance-refresh</span> stops the rollout. Point the ASG back to the previous Launch Template version. Trigger another refresh to roll back. Done.</p>
+        <div class="prodbox"><strong>The $Default version alias for safe rollbacks:</strong> Configure your ASG to use the <span class="mono">$Default</span> Launch Template version (not <span class="mono">$Latest</span>). Your CI/CD pipeline creates a new version but does NOT change the default. The deployment is staged: first deploy to a canary group (10% of traffic) using the new version explicitly, monitor metrics for 10 minutes, then set the new version as default and trigger a full rollout. If canary fails, the default version is still the old version — the rest of the fleet is unaffected. Using <span class="mono">$Latest</span> in the ASG is dangerous because any change to the template immediately affects new instances launched during scaling events, without a staged rollout.</div>
+        <div class="mechbox"><strong>Launch Template inheritance — reducing duplication across environments:</strong> Launch Templates support inheritance: a child template can specify a parent template version to inherit from. Fields in the child override the parent; fields not specified in the child are inherited. This lets you maintain a base template (AMI, security hardening, IMDSv2 settings, common tags) and environment-specific templates (dev uses t3.micro, prod uses m5.large; different security groups, different user data for environment-specific config). Changing the base template propagates to all children on next use. This reduces configuration drift between environments — a security setting added to the base template automatically applies to all environments.</div>
+      </div>
+    </div>
+
+    <div id="lt2" class="cpanel">
+      <div class="ch">Instance type requirements — attribute-based instance selection</div>
+      <div class="csub">Describe what you need, not what type you want — AWS picks the optimal instance automatically</div>
+      <div class="cb">
+        <p>Traditional Launch Templates and configurations specify an exact instance type: <span class="mono">t3.small</span>. This creates fragility — if t3.small is unavailable in the target AZ due to capacity constraints, the launch fails. For Auto Scaling Groups using Spot Instances (where capacity availability varies by instance type and AZ), specifying a single type is almost always wrong.</p>
+        <p>Launch Templates support <strong>attribute-based instance type selection</strong>: instead of specifying <span class="mono">t3.small</span>, you specify requirements: minimum 2 vCPUs, minimum 2GB RAM, Intel or AMD architecture, burstable instances allowed. AWS selects from all instance types in the region that satisfy your requirements. For an ASG with Spot pricing, this allows AWS to fulfil your request from whichever instance type has available capacity and the best current Spot price — automatically.</p>
+        <div class="code-block"><code><span class="c"># Attribute-based instance type selection in Launch Template</span>
+<span class="s">"InstanceRequirements"</span>: {
+  <span class="s">"VCpuCount"</span>: {<span class="s">"Min"</span>: 2, <span class="s">"Max"</span>: 4},
+  <span class="s">"MemoryMiB"</span>: {<span class="s">"Min"</span>: 2048, <span class="s">"Max"</span>: 8192},
+  <span class="s">"CpuManufacturers"</span>: [<span class="s">"intel"</span>, <span class="s">"amd"</span>],
+  <span class="s">"InstanceGenerations"</span>: [<span class="s">"current"</span>],
+  <span class="s">"ExcludedInstanceTypes"</span>: [<span class="s">"t2.*"</span>],  <span class="c">// Avoid old burstable</span>
+  <span class="s">"BurstablePerformance"</span>: <span class="s">"included"</span>,
+  <span class="s">"NetworkInterfaces"</span>: {<span class="s">"MaximumNetworkBandwidthInGbps"</span>: {<span class="s">"Min"</span>: 5}},
+  <span class="s">"SpotMaxPricePercentageOverLowestPrice"</span>: 50  <span class="c">// Max 50% above lowest Spot price</span>
+}</code></div>
+
+        <div class="mechbox"><strong>Mixed instance ASG — the correct pattern for Spot + On-Demand:</strong> For most production workloads you want a mix: a baseline of On-Demand instances (always available, predictable cost) plus additional Spot capacity that scales out during high load (cheap but interruptible). Configure the ASG with <span class="mono">InstancesDistribution</span>: OnDemandBaseCapacity (the minimum On-Demand count — say 2), OnDemandPercentageAboveBaseCapacity (% of additional instances that are On-Demand — say 0%, meaning all scale-out instances are Spot), and SpotAllocationStrategy (price-capacity-optimized — balances Spot price with availability). This gives you reliable baseline capacity with cheap Spot scale-out. For your GetWork app: 2 On-Demand instances for baseline, Spot for additional capacity during peak hours.</div>
+      </div>
+    </div>
+
+    <div id="lt3" class="cpanel">
+      <div class="ch">EC2 Hibernate — preserving RAM state across stop/start cycles</div>
+      <div class="csub">The mechanism, the requirements, and when it actually makes sense</div>
+      <div class="cb">
+        <p>EC2 Hibernate is a power state between running and stopped. When you hibernate an instance, the OS writes the contents of RAM to the EBS root volume, then powers off. When you start the hibernated instance, the EBS root volume is read back into RAM and the OS resumes exactly where it left off — same processes, same network connections (if they haven't timed out), same application state.</p>
+        <p><strong>Hibernate vs Stop:</strong> Stop: instance powers off, RAM state lost, EBS data preserved, new public IP on restart (unless EIP). Hibernate: RAM written to EBS, instance powers off, RAM state restored on start, EBS data preserved, same IP reassigned. From the application's perspective, hibernate is like waking a laptop from sleep — the Spring Boot app is still running when the instance restarts. Stop is like a hard reboot — the Spring Boot app must restart from scratch.</p>
+        <p><strong>Requirements for Hibernate:</strong> Must be enabled at instance launch (cannot enable hibernate on a running instance). The root EBS volume must be large enough to hold the RAM contents (if you have 8GB RAM, you need >8GB free on the root volume). Root volume must be encrypted (hibernate writes RAM to disk — RAM may contain sensitive data). Not all instance types support hibernate (general purpose, compute, memory optimised families do; GPU instances do not). Maximum hibernate duration: 60 days.</p>
+        <div class="mechbox"><strong>When Hibernate is actually useful:</strong> Hibernate is genuinely valuable for: developer workstations running on EC2 (stop paying overnight, resume exactly where you left off — IDE open, browser tabs, running processes). JVM warm-up time is significant for large Spring Boot applications — a fresh start takes 2-3 minutes to JIT-compile hot paths and warm caches. A hibernated instance resumes in 30-60 seconds with a fully warmed JVM. For Auto Scaling Groups in production, hibernate is generally not used — scaling decisions are made based on fleet health, and Spot interruptions don't support hibernate for all instance types.</div>
+        <div class="failbox"><strong>The hibernate + Spot interruption interaction:</strong> AWS gives 2 minutes of warning before reclaiming a Spot instance. EC2 can attempt to hibernate the instance on interruption (if hibernate is enabled and the instance type supports it). If the Spot instance is successfully hibernated, you can potentially resume it later if capacity becomes available. However, AWS does not guarantee that the hibernated Spot instance will be available for resumption — it may never come back. For stateful workloads, relying on Spot + hibernate for state preservation is risky. For stateless workloads (most Spring Boot microservices), Spot interruption just terminates the instance and the ASG replaces it — hibernate is irrelevant.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('advanced',document.querySelectorAll('.ntab')[4])">Advanced EC2 — ENIs, instance types, Nitro enclaves →</button>
+  </div>
+
+  <!-- ADVANCED EC2 -->
+  <div id="p-advanced" class="panel">
+    <div class="lede"><strong>The topics in this section are what differentiate an engineer who knows EC2 from an engineer who has mastered it. ENI mechanics explain every networking mystery. Instance store NVMe vs EBS explains performance anomalies. Dedicated hosts explain compliance requirements you'll encounter at JP Morgan. Nitro Enclaves are the architecture behind the most secure sensitive data processing systems.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('adv',0,this)">1 · ENI mechanics</button>
+      <button class="cbtn" onclick="showC('adv',1,this)">2 · Instance store NVMe</button>
+      <button class="cbtn" onclick="showC('adv',2,this)">3 · Dedicated Hosts</button>
+      <button class="cbtn" onclick="showC('adv',3,this)">4 · Nitro Enclaves</button>
+    </div>
+
+    <div id="adv0" class="cpanel active">
+      <div class="ch">Elastic Network Interfaces (ENIs) — EC2 networking from first principles</div>
+      <div class="csub">What an ENI actually is, why instances can have multiple, and what breaks when you move them</div>
+      <div class="cb">
+        <p>An Elastic Network Interface is a virtual network card in a VPC. Every EC2 instance has at least one ENI (eth0) — the primary network interface. ENIs are separate from EC2 instances: they exist independently, can be detached from one instance and attached to another, and persist after instance termination if configured to do so.</p>
+        <p><strong>What an ENI contains:</strong> A private IPv4 address (assigned from the subnet CIDR), optionally one or more secondary private IPv4 addresses, an optional public IPv4 address (if the subnet has auto-assign public IP or an Elastic IP is attached), an optional IPv6 address, one or more Security Group associations, a MAC address (unique, persistent — doesn't change when ENI is moved between instances), and a source/destination check flag.</p>
+        <div class="mechbox"><strong>The MAC address — the source of software licence persistence:</strong> Some enterprise software (Oracle Database, certain security tools) licences are tied to a MAC address. This was originally designed for on-premise servers where the MAC never changed. On EC2, if you terminate an instance, its MAC is gone — the software licence breaks. The ENI solution: create an ENI specifically to carry the licenced MAC address, and detach/reattach it between instances. The MAC address stays with the ENI, not the EC2 instance. Your Oracle licence sees a consistent MAC address across instance replacements. This is one of the real use cases for Dedicated Hosts at JP Morgan — dedicated instances with predictable MAC addresses for compliance with Oracle's licensing terms.</div>
+        <p><strong>Secondary private IP addresses and the load balancer pattern:</strong> An ENI can have multiple private IP addresses from the same subnet. This is used for: running multiple SSL virtual hosts on one EC2 (each virtual host bound to a different IP), a primary/secondary failover pattern (the primary instance holds the secondary IP; on failure, the secondary IP is moved to the standby instance, preserving any IP-based routing), and ECS on EC2 where each container task gets its own IP address (from secondary IPs on the instance's ENI pool).</p>
+        <div class="failbox"><strong>The source/destination check — the reason NAT instances fail:</strong> By default, every ENI has "Source/Destination Check" enabled. This means the Nitro card drops any packet where the source IP is not one of the ENI's assigned IPs (outbound) or the destination IP is not one of the ENI's assigned IPs (inbound). This is the correct behaviour for normal instances — it prevents IP spoofing. But for NAT instances and network appliances that forward traffic on behalf of other instances (where the source/destination IP is not their own), this check must be disabled. If you're implementing a custom NAT instance (rare today with NAT Gateway) and traffic isn't forwarding, source/destination check is almost certainly the cause.</div>
+      </div>
+    </div>
+
+    <div id="adv1" class="cpanel">
+      <div class="ch">Instance store NVMe — ephemeral local storage and why it's different</div>
+      <div class="csub">Physically attached NVMe SSDs with sub-100µs latency — and the data loss guarantee you must accept</div>
+      <div class="cb">
+        <p>Certain EC2 instance types (i3, i3en, d2, h1, im4gn, is4gen) come with instance store volumes — physically attached NVMe SSDs that are part of the EC2 host server hardware. These are fundamentally different from EBS in three ways: they have sub-100µs latency (vs 1-5ms for EBS), they have much higher IOPS and throughput than any EBS volume, and they are completely ephemeral — data is permanently lost when the instance stops, hibernates, or terminates.</p>
+        <p><strong>Performance comparison:</strong> An i3.xlarge has 1 × 950GB NVMe SSD with approximately 210,000 read IOPS and 100,000 write IOPS. A gp3 EBS volume costs extra to provision above 16,000 IOPS. The performance difference is roughly 10x for random I/O. For workloads that are I/O-bound and can tolerate data loss (because data is replicated elsewhere), instance store is the highest-performance option.</p>
+        <div class="mechbox"><strong>The use cases where instance store makes sense despite the data loss risk:</strong> Apache Kafka brokers — Kafka data is replicated across multiple brokers. If one broker loses its instance store (instance terminated), the data is recovered from replicas. But the remaining replicas must handle more load during recovery — use a Placement Group (Partition) to ensure replicas are on different hardware. Redis clusters — Redis Cluster mode replicates across nodes. Instance store provides the highest cache throughput. On eviction or failure, the cache repopulates from the database. Hadoop HDFS datanodes — HDFS replicates data blocks across multiple nodes by design. Instance store provides the highest local storage throughput. Any buffering or staging layer that holds data temporarily — the data is read from a durable source and written to a durable destination; the buffer itself can be lost and recreated.</div>
+        <div class="failbox"><strong>The instance store data loss incident — the most predictable data disaster in AWS:</strong> A team runs a database on an i3 instance using instance store for performance. The EC2 host has hardware maintenance required by AWS. AWS sends a retirement notice (14 days) and a scheduled stop event. The team is unaware or forgets. The instance is stopped for host maintenance. Instance store data is gone. The database is gone. No backup was taken because "we have high performance storage." This happens regularly. The rule: never store any data on instance store that isn't either replicated elsewhere or reproducible from another source. Instance store is explicitly for ephemeral, replicated, or reconstructable data.</div>
+      </div>
+    </div>
+
+    <div id="adv2" class="cpanel">
+      <div class="ch">Dedicated Hosts — physical server tenancy for compliance and licensing</div>
+      <div class="csub">When sharing a physical server with other AWS customers is not acceptable</div>
+      <div class="cb">
+        <p>By default, EC2 instances run on shared physical hardware — you and other AWS customers have instances running on the same physical server, isolated by the Nitro hypervisor. For most workloads, this is fine and is the foundation of the Shared Responsibility Model. For certain compliance and licensing requirements, shared tenancy is not acceptable.</p>
+        <p><strong>Tenancy options:</strong></p>
+        <p><strong>Shared tenancy (default):</strong> Your instances run on physical hosts shared with other AWS customers. Nitro ensures complete isolation. Most cost-effective.</p>
+        <p><strong>Dedicated Instances:</strong> Your instances run on physical hardware dedicated to your AWS account — no other customer's instances on the same physical server. But AWS manages which physical servers your instances land on; you don't control placement. Per-instance hourly surcharge (~$0.04-0.10/hr depending on instance type) plus a per-region fee of $2/hr when any Dedicated Instances are running.</p>
+        <p><strong>Dedicated Hosts:</strong> You get an entire physical server allocated to your account. You control exactly which instances run on it. You can see the host ID, sockets, cores, and capacity. You can launch instances with specific placements. This is required for: Oracle Database (Oracle's licensing model charges per physical socket — on a Dedicated Host you know exactly how many sockets you're paying for), Windows Server with Bring Your Own License (BYOL), and regulatory requirements in financial services (some regulations require knowing the physical hardware your data runs on).</p>
+        <div class="prodbox"><strong>Dedicated Hosts at JP Morgan — the real use case:</strong> At a financial institution like JP Morgan, certain regulatory frameworks (may include MAS Technology Risk Guidelines in Singapore, certain RBI requirements for India) may require knowing the physical isolation of production systems. Dedicated Hosts satisfy this requirement — JP Morgan can document that trading systems run on specific physical hardware in specific AWS AZs. The Oracle Database licensing angle is equally relevant — Oracle licenses by physical socket, and JP Morgan almost certainly runs Oracle (being a large financial institution). Dedicated Hosts let them accurately count Oracle licences. When interviewing for roles at fintech companies, understanding Dedicated Hosts as a compliance requirement (not just a performance one) shows maturity.</div>
+      </div>
+    </div>
+
+    <div id="adv3" class="cpanel">
+      <div class="ch">Nitro Enclaves — isolated compute for sensitive data processing</div>
+      <div class="csub">The architecture that processes credit card data, health records, and cryptographic keys without any human able to access the processing environment</div>
+      <div class="cb">
+        <p>Nitro Enclaves are isolated virtual machines created within an EC2 instance using the Nitro hypervisor. A Nitro Enclave is created by partitioning some of the parent EC2 instance's CPU cores and memory into a completely isolated environment. The enclave has no persistent storage, no external networking (except a vsock connection to the parent instance), and critically — no SSH access, no shell, no way to debug or inspect what's happening inside.</p>
+        <p>The isolation is enforced by hardware. Not even the root user on the parent EC2 can access the enclave's memory or processes. Not even AWS engineers can access the enclave. The only communication channel is a vsock (virtual socket) between the parent instance and the enclave — and you control what goes in and what comes out.</p>
+        <div class="mechbox"><strong>The Nitro Enclaves use case — why "no access" is the security property you want:</strong> Consider processing credit card numbers (PCI-DSS compliance requires minimising who can see cardholder data). With a Nitro Enclave: the encrypted credit card number is sent to the enclave via vsock. Inside the enclave (which no human can inspect), the number is decrypted using a KMS key that the enclave's cryptographic attestation is authorised to use. The processing (charge, tokenise) happens inside. Only the result (transaction ID, token) exits the enclave. The actual credit card number is never visible outside the enclave — not to the application, not to the EC2 admin, not to AWS. The KMS key policy uses the enclave's attestation document (a cryptographically signed proof of what code is running in the enclave) to decide whether to decrypt. If the enclave's code is tampered with, the attestation changes, and KMS refuses to decrypt.</div>
+        <p><strong>Relevance to your JP Morgan project:</strong> Financial data processing — card numbers, account numbers, authentication secrets — is exactly the domain where Nitro Enclaves are used in production financial services. While you may not be implementing Nitro Enclaves directly, understanding that they exist and what problems they solve is the kind of architectural awareness that distinguishes senior engineers in fintech interviews.</p>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[5])">Interview prep →</button>
+  </div>
+
+  <!-- INTERVIEW PREP -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>Day 7 interview questions are at the depth where you're expected to know not just what something is but why it behaves the way it does, what the failure modes are, and how the underlying mechanics explain the observed behaviour.</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">Your EC2 instance booted but your application isn't running. User data was supposed to start it. Walk me through your complete diagnostic process.</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is a layered diagnostic problem. I'd check in order from the most general to the most specific.</p>
+          <p><strong>First: cloud-init status.</strong> <span class="mono">sudo cloud-init status --long</span>. If status is "error", the cloud-init system itself failed — the issue is in the user data script or cloud-init configuration. If status is "done", cloud-init completed successfully — the issue is post-startup (the application crashed after starting).</p>
+          <p><strong>If cloud-init errored: cloud-init-output.log.</strong> <span class="mono">sudo cat /var/log/cloud-init-output.log</span>. This contains everything the user data script printed. I'm looking for error messages, failed commands, package installation failures. If this file is empty, the script never ran — which means cloud-init failed before reaching the script execution phase. Then I'd check <span class="mono">sudo cat /var/log/cloud-init.log</span> for the cloud-init internal error.</p>
+          <p><strong>Common causes at this stage:</strong> Package manager lock file (another process has the yum/apt lock — user data waits indefinitely); IMDSv2 not supported by cloud-init version (user data was never fetched); user data over 16KB uncompressed limit (user data is truncated); network not up when script tries to download dependencies (ordering issue — script runs before network is ready); base64 encoding issue (file:// vs fileb:// mismatch from Day 6).</p>
+          <p><strong>If cloud-init succeeded but app not running: systemd journal.</strong> <span class="mono">sudo journalctl -u getwork-app --no-pager -n 50</span>. This shows the application's startup logs. Common causes: JAR not found (S3 download failed silently), Java not found (installation succeeded but PATH not updated), port already in use, missing environment variables, database connection failure at startup, out of memory on instance type too small for the JVM heap.</p>
+          <p><strong>Final check: did the user data actually contain what I expected?</strong> Query IMDS: <span class="mono">curl -sf http://169.254.169.254/latest/user-data -H "X-aws-ec2-metadata-token: $(curl -sf -X PUT http://169.254.169.254/latest/api/token -H X-aws-ec2-metadata-token-ttl-seconds:21600)"</span>. This prints the exact user data the instance received — confirms no encoding issue, confirms the correct version was deployed.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It follows the actual debugging sequence (cloud-init status → output log → systemd journal → IMDS verification) rather than random guessing. It names specific failure modes at each step rather than vague "check the logs." The IMDSv2 syntax for the final IMDS query shows you know Day 5 security requirements and apply them even in debugging scenarios.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">What is an AMI and explain what happens at the hardware level when you launch an EC2 instance from one.</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>An AMI is a metadata object — not a disk image file — that contains a description of the AMI (name, architecture, virtualisation type) and a block device mapping that points to one or more EBS snapshots. The AMI itself contains no data; the data lives in the EBS snapshots. This distinction is important for understanding what happens at launch.</p>
+          <p>When you launch an EC2 instance from an AMI, AWS does not copy the EBS snapshots to create new volumes before booting. EBS uses copy-on-write (CoW). A new EBS volume is created instantly, pointing to the same underlying data as the snapshot through a CoW mapping table. The instance boots immediately — it doesn't wait for gigabytes to be copied. As the OS reads data during boot, each block is fetched from the snapshot storage on first access and then cached locally in the volume. As the OS writes data, those writes go directly to the new volume's private storage — not back to the snapshot, which remains unmodified.</p>
+          <p>The practical implication is that EC2 instances boot quickly (under 60 seconds) even from large AMIs. The trade-off is that first-time block access during or after boot has slightly higher latency (the "cold storage" penalty) as blocks are fetched from snapshot storage. For latency-sensitive production workloads — databases especially — pre-warming the volume by reading every block before the application starts eliminates this penalty.</p>
+          <p>When the instance terminates, the EBS volume created from the AMI is deleted (if DeleteOnTermination is true, the default for root volumes). The original AMI and its backing snapshots are unaffected — the snapshot was only ever a reference point, never modified.</p>
+          <span class="tip"><strong>Why this answer works:</strong> Most engineers say "AMI is a template for launching EC2." This answer explains the CoW mechanism that explains boot speed, the "cold storage" latency penalty, and the snapshot immutability — showing you understand the storage architecture, not just the UI concept.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">When would you choose gp3 vs io2 for an EBS volume? What specific metrics would you use to decide?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>The decision is based on the workload's I/O characteristics and whether gp3's maximum capabilities are sufficient.</p>
+          <p>gp3 is the right choice for the vast majority of workloads. It provides up to 16,000 IOPS and 1,000 MB/s throughput, with consistent performance (no burst credits). Spring Boot applications, development databases, log storage, application data — all of these are well within gp3's capabilities. gp3 is also significantly cheaper than io2 per IOPS.</p>
+          <p>io2 (specifically io2 Block Express) is appropriate when: you need more than 16,000 IOPS (io2 Block Express goes to 256,000 IOPS), you need sub-millisecond latency (io2 Block Express has single-digit microsecond latency vs gp3's 1-3ms), you require 99.999% durability (io2) vs 99.9% (gp3) — important for mission-critical databases, or you need Multi-Attach (io1/io2 only).</p>
+          <p><strong>The metrics I'd use to decide:</strong> Start with gp3 and monitor. If <span class="mono">VolumeQueueLength</span> is consistently greater than 1 (requests queuing for the volume), IOPS is the bottleneck. Check <span class="mono">VolumeReadOps + VolumeWriteOps</span> — if approaching 16,000/s, you've hit gp3's maximum and io2 is needed. If throughput (VolumeReadBytes + VolumeWriteBytes) is consistently near 1,000 MB/s, gp3 is saturated on throughput and io2's 4,000 MB/s ceiling applies. For latency: use <span class="mono">VolumeTotalReadTime / VolumeReadOps</span> to compute average read latency. If this is consistently above 3ms under normal load, you may benefit from io2's lower latency.</p>
+          <p>For a typical Spring Boot application: gp3 with 3,000-6,000 IOPS is almost always sufficient. For a high-transaction database (MySQL handling 10,000+ TPS): evaluate with metrics, likely need 10,000-30,000 IOPS which may require io2.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It gives a clear decision framework — default to gp3, use metrics to justify io2. The specific CloudWatch metrics and the calculation for average latency show operational depth. The TPS example connects the abstract metrics to a real workload scenario.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">What are Launch Templates and why should you always use them instead of Launch Configurations?</span>
+          <span class="iq-d d-e">Easy</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>A Launch Template is a versioned specification for launching EC2 instances, defining AMI, instance type, security groups, IAM profile, EBS configuration, user data, and dozens of other settings. It is the modern replacement for Launch Configurations, which were deprecated in 2022 (AWS stopped accepting new Launch Configuration creation for certain features and stopped adding new features to them).</p>
+          <p>The key advantages of Launch Templates over Launch Configurations: versioning — each change creates a numbered version, enabling rollbacks; you can point an ASG at a previous version to instantly revert a deployment. Partial specification — a Launch Template can specify only some fields, with remaining fields specified at launch time or inherited from a parent template. This enables environment-specific overrides (dev uses t3.micro, prod uses m5.large) from the same base template. Support for modern EC2 features — Spot Mixed Instances Policy, attribute-based instance type selection, capacity reservations, Dedicated Hosts, and all new AWS features are only available via Launch Templates. A Launch Configuration cannot use these.</p>
+          <p>In practice: any new Auto Scaling Group should use a Launch Template. Any existing ASG using a Launch Configuration should be migrated — it's an in-place migration that doesn't require replacing instances. In Terraform, the <span class="mono">aws_launch_configuration</span> resource is legacy; use <span class="mono">aws_launch_template</span> exclusively.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The versioning-enables-rollback and attribute-based-selection points are the substantive advantages that show you understand what matters operationally. Mentioning the Terraform resource names shows you apply this knowledge in infrastructure code, not just conceptually.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q5</span>
+          <span class="iq-q">Explain EC2 instance store. When is it the right choice, and when is it absolutely the wrong choice?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Instance store volumes are NVMe SSDs physically attached to the EC2 host server, providing sub-100µs latency and extremely high IOPS (210,000+ for i3 instance types). They are ephemeral — data is permanently lost when the instance stops, hibernates, or terminates, including during scheduled host maintenance by AWS.</p>
+          <p><strong>Right choice:</strong> Workloads where data is replicated across multiple nodes and the loss of one node's local data is tolerable. Apache Kafka brokers in a replicated cluster — if one broker loses its instance store, the data is recovered from replicas on other brokers. Distributed caches like Redis Cluster — cache eviction and repopulation from a backing database handles the loss. Hadoop HDFS datanodes — HDFS replication (typically 3x) ensures data survives node loss. High-throughput buffer/staging layers where data is read from a durable source and written to a durable destination. The common thread: the data exists elsewhere, and the instance store is used purely for performance, not durability.</p>
+          <p><strong>Absolutely wrong choice:</strong> Any single-node database (MySQL, Postgres, Oracle) without external replication — the database is lost on instance stop or host maintenance. Any stateful application data that isn't replicated. Any data that must survive instance termination. Any use case where you would be unhappy receiving an AWS host maintenance notification with 14 days warning and losing everything on that volume.</p>
+          <p>The failure mode that causes incidents: instance store is used for a database because "we have high performance storage." AWS sends a host retirement notice (hardware maintenance). Instance is stopped. Instance store data is gone. No backup exists. This happens to teams regularly who don't read AWS notifications carefully.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The right/wrong framing with specific examples (Kafka, Redis, Hadoop vs single-node MySQL) is concrete. The AWS retirement notice failure story makes the risk visceral — this isn't a theoretical risk, it's a documented operational failure pattern.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[6])">Start the lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab builds a fully automated EC2 deployment: a production-grade user data script that deploys your Spring Boot app, a custom AMI baked from the result, and a Launch Template referencing that AMI with all security settings enforced. By the end, launching a new instance from your Launch Template deploys a ready-to-serve Spring Boot app in under 90 seconds.</strong></div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Write and test a production-grade user data script</div>
+          <div class="sb">Write the user data script from the concepts tab — the one with logging, set -euo pipefail, dedicated app user, and health check verification. Store it in a file and validate it with shellcheck before using it.</div>
+          <code class="cmd">cat > user-data.sh << 'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+echo "--- User data start: $(date -u +%Y-%m-%dT%H:%M:%SZ) ---"
+
+dnf update -y --exclude=kernel
+dnf install -y java-17-amazon-corretto
+java -version
+
+useradd -r -s /sbin/nologin -d /opt/app appuser 2>/dev/null || true
+mkdir -p /opt/app
+
+echo "Hello from GetWork" > /opt/app/version.txt
+chown appuser:appuser /opt/app/version.txt
+
+cat > /etc/systemd/system/demo-app.service << 'UNIT'
+[Unit]
+Description=Demo App
+After=network.target
+
+[Service]
+User=appuser
+ExecStart=/bin/bash -c "while true; do echo HTTP/1.1 200 OK; echo; echo Healthy; done | nc -l -p 8080"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable demo-app
+systemctl start demo-app
+sleep 3
+curl -sf http://localhost:8080 && echo "Service healthy" || echo "Service not yet ready"
+echo "--- User data complete: $(date -u +%Y-%m-%dT%H:%M:%SZ) ---"
+SCRIPT
+
+# Validate the script syntax
+bash -n user-data.sh && echo "Script syntax OK"
+
+# Optional: install shellcheck for deeper analysis
+# shellcheck user-data.sh</code>
+          <div class="snote">The nc (netcat) demo simulates a health endpoint — in real use your Spring Boot JAR replaces this. The important part is the structure: logging, error handling, service file, and health verification.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Launch an EC2 instance with your user data and observe cloud-init execution</div>
+          <div class="sb">Launch an instance using your Day 4 VPC's public subnet and the user data script. SSH in while it's running and watch cloud-init execute in real time.</div>
+          <code class="cmd">VPC_ID=vpc-your-vpc-id
+PUBLIC_SUBNET=subnet-your-public-subnet
+AMI_ID=$(aws ec2 describe-images \
+  --owners amazon \
+  --filters "Name=name,Values=al2023-ami-*" \
+            "Name=architecture,Values=x86_64" \
+            "Name=state,Values=available" \
+  --query 'sort_by(Images, &CreationDate)[-1].ImageId' \
+  --output text --region ap-south-1)
+
+echo "Using AMI: $AMI_ID"
+
+INSTANCE_ID=$(aws ec2 run-instances \
+  --image-id "$AMI_ID" \
+  --instance-type t3.micro \
+  --key-name day2-key \
+  --security-group-ids sg-your-app-sg \
+  --subnet-id "$PUBLIC_SUBNET" \
+  --associate-public-ip-address \
+  --metadata-options "HttpTokens=required,HttpPutResponseHopLimit=1" \
+  --user-data file://user-data.sh \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=day7-lab}]' \
+  --query 'Instances[0].InstanceId' \
+  --output text --region ap-south-1)
+
+echo "Launched: $INSTANCE_ID — waiting for instance to be ready..."
+aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID" --region ap-south-1
+
+PUBLIC_IP=$(aws ec2 describe-instances \
+  --instance-ids "$INSTANCE_ID" \
+  --query 'Reservations[0].Instances[0].PublicIpAddress' \
+  --output text --region ap-south-1)
+
+echo "Instance ready at $PUBLIC_IP — SSH in and run:"
+echo "  sudo cloud-init status --long"
+echo "  sudo tail -f /var/log/user-data.log"</code>
+          <div class="snote">While the instance boots, SSH in early and run: sudo tail -f /var/log/cloud-init-output.log. Watch your script execute line by line in real time. This makes cloud-init's execution order observable.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Observe cloud-init phases and verify the deployment</div>
+          <div class="sb">Once the instance is running, inspect the cloud-init logs to understand what ran in which phase. Verify your service is running correctly.</div>
+          <code class="cmd"># SSH in
+ssh -i ~/Downloads/day2-key.pem ec2-user@$PUBLIC_IP
+
+# On the instance:
+
+# Check cloud-init completion status
+sudo cloud-init status --long
+
+# See the complete execution timeline with phase boundaries
+sudo grep -E "(Starting|Finished|Running|WARN|ERROR)" /var/log/cloud-init.log | head -40
+
+# See your script's output specifically
+sudo cat /var/log/user-data.log
+
+# Verify the service is running
+sudo systemctl status demo-app
+
+# Verify the user data content that was received
+TOKEN=$(curl -sf -X PUT http://169.254.169.254/latest/api/token \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+curl -sf http://169.254.169.254/latest/user-data \
+  -H "X-aws-ec2-metadata-token: $TOKEN" | head -5
+# Should show the first few lines of your script
+
+# Verify IMDSv2 enforcement (IMDSv1 should fail)
+curl -sf http://169.254.169.254/latest/meta-data/instance-id
+# Should return 401 — IMDSv1 blocked
+
+curl -sf http://169.254.169.254/latest/meta-data/instance-id \
+  -H "X-aws-ec2-metadata-token: $TOKEN"
+# Should return the instance ID — IMDSv2 works</code>
+          <div class="snote">The cloud-init.log with phase markers shows you exactly when each cloud-init phase ran relative to boot. Notice "Starting cloud-init modules:config" and "Starting cloud-init modules:final" — those are Phase 4 and Phase 5 markers.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Bake a custom AMI from your configured instance</div>
+          <div class="sb">Create an AMI from the running instance. Observe the AMI creation process and the EBS snapshot that backs it. This is the "golden image" that will launch pre-configured instances.</div>
+          <code class="cmd"># Create AMI from the running instance
+# --no-reboot: don't stop the instance during AMI creation (safe for most cases)
+# Without --no-reboot, AWS stops the instance, creates the image, then restarts it
+AMI_ID=$(aws ec2 create-image \
+  --instance-id "$INSTANCE_ID" \
+  --name "getwork-base-$(date +%Y%m%d-%H%M)" \
+  --description "GetWork base AMI with Java 17 and app structure" \
+  --no-reboot \
+  --tag-specifications 'ResourceType=image,Tags=[
+    {Key=Name,Value=getwork-base},
+    {Key=Version,Value=1.0.0},
+    {Key=CreatedBy,Value=day7-lab}
+  ]' \
+  --query 'ImageId' --output text --region ap-south-1)
+
+echo "AMI creation started: $AMI_ID — waiting (takes 2-5 minutes)..."
+aws ec2 wait image-available --image-ids "$AMI_ID" --region ap-south-1
+echo "AMI ready: $AMI_ID"
+
+# Inspect the AMI — see the EBS snapshot it points to
+aws ec2 describe-images --image-ids "$AMI_ID" \
+  --query 'Images[0].{Name:Name,State:State,Snapshots:BlockDeviceMappings}' \
+  --output json --region ap-south-1
+
+# Note the SnapshotId in the BlockDeviceMappings output
+# That snapshot is what the AMI points to — your disk contents, preserved</code>
+          <div class="snote">The AMI creation takes 2-5 minutes. During this time, observe in the console: a new snapshot appears (being created from the volume), and the AMI state transitions from "pending" to "available". The AMI ID is what you reference in your Launch Template.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create a production Launch Template using your new AMI</div>
+          <div class="sb">Create a Launch Template with all required security settings (IMDSv2, encrypted EBS, proper tags). Use your custom AMI. This template is the foundation for Day 8's Auto Scaling Group.</div>
+          <code class="cmd">ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+APP_SG=sg-your-app-sg  # From Day 4 lab
+
+# Create Launch Template with production security settings
+LT_ID=$(aws ec2 create-launch-template \
+  --launch-template-name getwork-app-lt \
+  --version-description "v1 - day7 lab" \
+  --launch-template-data "{
+    \"ImageId\": \"$AMI_ID\",
+    \"InstanceType\": \"t3.micro\",
+    \"KeyName\": \"day2-key\",
+    \"SecurityGroupIds\": [\"$APP_SG\"],
+    \"MetadataOptions\": {
+      \"HttpTokens\": \"required\",
+      \"HttpPutResponseHopLimit\": 1
+    },
+    \"BlockDeviceMappings\": [{
+      \"DeviceName\": \"/dev/xvda\",
+      \"Ebs\": {
+        \"VolumeSize\": 20,
+        \"VolumeType\": \"gp3\",
+        \"Iops\": 3000,
+        \"Throughput\": 125,
+        \"Encrypted\": true,
+        \"DeleteOnTermination\": true
+      }
+    }],
+    \"TagSpecifications\": [{
+      \"ResourceType\": \"instance\",
+      \"Tags\": [
+        {\"Key\": \"Name\", \"Value\": \"getwork-app\"},
+        {\"Key\": \"Environment\", \"Value\": \"production\"},
+        {\"Key\": \"ManagedBy\", \"Value\": \"launch-template\"}
+      ]
+    }]
+  }" \
+  --query 'LaunchTemplate.LaunchTemplateId' --output text --region ap-south-1)
+
+echo "Launch Template created: $LT_ID"
+
+# Launch a new instance from the template — no user data needed (AMI has everything)
+NEW_INSTANCE=$(aws ec2 run-instances \
+  --launch-template "LaunchTemplateId=$LT_ID,Version=1" \
+  --subnet-id "$PUBLIC_SUBNET" \
+  --associate-public-ip-address \
+  --query 'Instances[0].InstanceId' --output text --region ap-south-1)
+
+echo "New instance from template: $NEW_INSTANCE"
+aws ec2 wait instance-status-ok --instance-ids "$NEW_INSTANCE" --region ap-south-1
+echo "Instance ready — note how it boots faster: AMI has everything pre-installed"</code>
+          <div class="snote">The new instance launches from your AMI with Java and your service pre-installed. User data is minimal or absent — the AMI already has everything. Compare the time for this instance to become ready vs the Day 2 instance where you installed Java manually via SSH.</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div></div>
+        <div class="ls-r">
+          <div class="st">Verify EBS volume type and modify from gp2 to gp3 (if any gp2 volumes exist)</div>
+          <div class="sb">Check all EBS volumes in your account. If any are gp2, migrate them in-place to gp3. This is a zero-downtime operation and something you'd do on every account you manage.</div>
+          <code class="cmd"># Find all volumes and their types
+aws ec2 describe-volumes \
+  --query 'Volumes[*].{ID:VolumeId,Type:VolumeType,Size:Size,State:State,IOPS:Iops,Attached:Attachments[0].InstanceId}' \
+  --output table --region ap-south-1
+
+# Find any gp2 volumes that should be migrated to gp3
+aws ec2 describe-volumes \
+  --filters "Name=volume-type,Values=gp2" \
+  --query 'Volumes[*].{ID:VolumeId,Size:Size,State:State}' \
+  --output table --region ap-south-1
+
+# Migrate a gp2 volume to gp3 in-place (zero downtime)
+# aws ec2 modify-volume \
+#   --volume-id vol-yourvolumeid \
+#   --volume-type gp3 \
+#   --iops 3000 \
+#   --throughput 125 \
+#   --region ap-south-1
+# The modification happens online - instance stays running, volume remains attached
+
+# Check your new instance's EBS volume performance
+VOLUME_ID=$(aws ec2 describe-instances \
+  --instance-ids "$NEW_INSTANCE" \
+  --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' \
+  --output text --region ap-south-1)
+
+aws ec2 describe-volumes --volume-ids "$VOLUME_ID" \
+  --query 'Volumes[0].{Type:VolumeType,IOPS:Iops,Throughput:Throughput,Encrypted:Encrypted}' \
+  --output json --region ap-south-1</code>
+          <div class="snote">Your Launch Template configured gp3 with encryption — the new instance's volume should show VolumeType: gp3, Iops: 3000, Throughput: 125, Encrypted: true. This is your production EBS baseline configuration going forward. Stop both instances when done to save costs.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[7])">Day 7 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Day 7 — EC2 deep mechanics</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">cloud-init phases</div><div class="cs-d">5 phases. Shell scripts run in Phase 5 (cloud-final). cloud-config modules run in Phase 4. SSH key injection in Phase 3. Check status: cloud-init status --long.</div></div>
+      <div class="cs-item"><div class="cs-t">User data debugging</div><div class="cs-d">/var/log/cloud-init.log (engine), /var/log/cloud-init-output.log (script output), journalctl -u service, IMDS query for what was received.</div></div>
+      <div class="cs-item"><div class="cs-t">AMI is a pointer</div><div class="cs-d">AMI = metadata + block device mapping → EBS snapshots. No data in the AMI itself. EBS uses CoW at launch — no snapshot copy, instance boots instantly.</div></div>
+      <div class="cs-item"><div class="cs-t">AMI region-specific IDs</div><div class="cs-d">AMI IDs are unique per region. Never hardcode. Use aws_ami data source in Terraform with owner + name filter. Copy AMIs explicitly between regions.</div></div>
+      <div class="cs-item"><div class="cs-t">AMI deregistration cleanup</div><div class="cs-d">Deregistering AMI does NOT delete backing snapshots. Delete snapshots explicitly. EC2 Image Builder manages this automatically with retention policies.</div></div>
+      <div class="cs-item"><div class="cs-t">gp3 vs gp2</div><div class="cs-d">gp3: IOPS independent of size, 3000 IOPS + 125MB/s baseline, 1000MB/s max. gp2: 3 IOPS/GB, burst credits, 250MB/s max. Migrate all gp2 to gp3 in-place.</div></div>
+      <div class="cs-item"><div class="cs-t">EBS VolumeQueueLength</div><div class="cs-d">The metric that shows IOPS bottleneck. Should be near 0. Consistently >1 means requests queuing — increase IOPS or switch volume type.</div></div>
+      <div class="cs-item"><div class="cs-t">EBS AZ lock-in</div><div class="cs-d">EBS volume exists in one AZ. Can only attach to EC2 in same AZ. Snapshots are AZ-independent (stored in S3). Use snapshots for cross-AZ data recovery.</div></div>
+      <div class="cs-item"><div class="cs-t">Launch Templates vs LC</div><div class="cs-d">Launch Configurations are deprecated. Launch Templates: versioned, partial spec, supports all modern EC2 features. Always use Launch Templates.</div></div>
+      <div class="cs-item"><div class="cs-t">ENI and MAC address</div><div class="cs-d">ENI has persistent MAC. Software licences tied to MAC — keep ENI across instance replacements. Source/Destination Check must be disabled for NAT instances.</div></div>
+      <div class="cs-item"><div class="cs-t">Instance store vs EBS</div><div class="cs-d">Instance store: physically attached NVMe, sub-100µs, data lost on stop/terminate. Only for replicated/ephemeral data. Never for single-node databases.</div></div>
+      <div class="cs-item"><div class="cs-t">Dedicated Hosts</div><div class="cs-d">Entire physical server for your account. Required for Oracle BYOL (socket-based licensing) and some financial compliance frameworks. More expensive than shared.</div></div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Non-negotiable rules for EC2 deployments</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      1. Every user data script starts with: set -euo pipefail and output redirected to a log file.<br>
+      2. Never put secrets in user data — fetch from Secrets Manager or Parameter Store in the script.<br>
+      3. Every Launch Template sets HttpTokens=required (IMDSv2 enforced) and HttpPutResponseHopLimit=1.<br>
+      4. Every EBS volume in Launch Templates: VolumeType=gp3, Encrypted=true.<br>
+      5. Never hardcode AMI IDs — use aws_ami data source with name filter in Terraform.<br>
+      6. When deregistering an AMI, manually delete the backing EBS snapshots afterwards.<br>
+      7. Pre-warm EBS volumes created from large snapshots for latency-sensitive production workloads.<br>
+      8. Use Launch Templates (not Launch Configurations) for all new Auto Scaling Groups.<br>
+      9. Instance store: only for data that is replicated elsewhere or fully ephemeral.<br>
+      10. Debug user data with: cloud-init status --long, then the appropriate log file.
+    </div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

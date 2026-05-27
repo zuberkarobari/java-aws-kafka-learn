@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 22  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 22  ·  STUDY CHECKLIST — Advanced AWS — EC2, S3, RDS, Lambda, IAM, VPC and CloudWatch</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 22 Checklist</div>
+    <h1 style="margin-top: 0;">Advanced AWS — EC2, S3, RDS, Lambda, IAM, VPC and CloudWatch</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 22 · STUDY CHECKLIST</h3>
+    <h3>Advanced AWS — EC2, S3, RDS, Lambda, IAM, VPC and CloudWatch</h3>
+    <h3>Compute & Storage</h3>
+    <p>EC2 types, S3 storage classes, lifecycle</p>
+    <h3>Databases</h3>
+    <p>RDS vs Aurora vs DynamoDB decision criteria</p>
+    <h3>Lambda & IAM</h3>
+    <h3>VPC & Observability</h3>
+    <p>Subnet design, security groups, CloudWatch</p>
+    <p>Note:</p>
+    <p>AWS questions at senior level are not about memorising service names. Interviewers ask: why did you pick RDS over DynamoDB, how did you design the VPC, what does your IAM policy actually allow. They want to hear that you have made real trade-off decisions and understand the consequences. Connect every answer to a decision you would defend in production.</p>
+    <h3>Day 22 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">EC2 instance families: t, m, c, r, i — what each is optimised for and when to choose</span></li>
+      <li><span class="checkbox-label">EC2 pricing models: On-Demand, Reserved, Spot — when each makes financial sense</span></li>
+      <li><span class="checkbox-label">Auto Scaling Groups: launch templates, scaling policies, warm pools</span></li>
+      <li><span class="checkbox-label">S3 storage classes: Standard, IA, Glacier, Intelligent-Tiering — cost and retrieval trade-offs</span></li>
+      <li><span class="checkbox-label">S3 lifecycle policies: transition rules, expiration, how to model them in Terraform</span></li>
+      <li><span class="checkbox-label">RDS vs Aurora vs DynamoDB: the selection criteria that drive the choice</span></li>
+      <li><span class="checkbox-label">DynamoDB: partition key design, GSIs, single-table design basics, on-demand vs provisioned</span></li>
+      <li><span class="checkbox-label">IAM: least-privilege, inline vs managed policies, resource-based vs identity-based</span></li>
+      <li><span class="checkbox-label">IAM roles for services: EC2 instance profile, ECS task role, Lambda execution role</span></li>
+      <li><span class="checkbox-label">VPC design: public/private subnet pattern, NAT Gateway, security groups vs NACLs</span></li>
+      <li><span class="checkbox-label">CloudWatch: structured logging, Logs Insights queries, custom metrics, alarms</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — EC2 Instance Types and S3 Storage</h2>
+    <h3>EC2 Instance Families</h3>
+    <h3>Family</h3>
+    <h3>Optimised for | Use when | Example workload</h3>
+    <h3>t (burstable)</h3>
+    <p>Baseline CPU with burst credits | Variable or low average CPU, dev/test, small services | Dev environments, small Spring Boot services, CI runners</p>
+    <h3>m (general purpose)</h3>
+    <p>Balanced CPU, memory, network | Unknown or mixed workload, the safe default | Application servers, microservices, backend APIs</p>
+    <h3>c (compute)</h3>
+    <p>High CPU-to-memory ratio | CPU-bound workloads, low memory requirements | Batch processing, encoding, CPU-heavy Kafka consumers</p>
+    <h3>r (memory)</h3>
+    <p>High memory-to-CPU ratio | Memory-intensive workloads | In-memory caches, large JVM heaps, Redis, large SQL queries</p>
+    <h3>i (storage)</h3>
+    <p>High-speed NVMe local SSD | I/O-intensive workloads needing low-latency local storage | Kafka brokers, high-throughput databases, Elasticsearch</p>
+    <h3>g (GPU)</h3>
+    <p>GPU acceleration | ML inference, video processing | Model serving, image processing pipelines</p>
+    <p>The t-family trap:</p>
+    <p>t-type instances run on CPU credits. Under sustained load, credits deplete and CPU is throttled to the baseline rate — a t3.medium has a baseline of 20% CPU. A Spring Boot service that handles burst traffic well on t3 can fall over under sustained load when credits run dry. Use t-types for workloads with genuine idle periods. For anything that runs hot consistently, use m or c types.</p>
+    <h3>S3 Storage Classes</h3>
+    <h3>Storage class</h3>
+    <h3>Access pattern | Retrieval | Cost vs Standard | Use for</h3>
+    <h3>S3 Standard</h3>
+    <p>Frequent access, any latency | Immediate | Baseline | Active application data, frequently read files, recent logs</p>
+    <h3>S3 Standard-IA</h3>
+    <p>Infrequent access, immediate retrieval | Immediate | Lower storage, per-GB retrieval fee | Backup files, older logs, disaster recovery data</p>
+    <h3>S3 One Zone-IA</h3>
+    <p>Infrequent access, single AZ only | Immediate | Lower than Standard-IA | Reproducible data where AZ loss is acceptable — thumbnails, re-generatable files</p>
+    <h3>S3 Glacier Instant</h3>
+    <p>Archive, rare access, millisecond retrieval | Milliseconds | Much lower storage | Compliance archives that might need urgent access</p>
+    <h3>S3 Glacier Flexible</h3>
+    <p>Archive, retrieval in minutes to hours | Minutes to 12 hours | Very low storage | Long-term backups, regulatory archives with no urgency</p>
+    <h3>S3 Glacier Deep Archive</h3>
+    <p>Long-term archive, rarely accessed | 12-48 hours | Lowest of all | 7-year compliance retention, cold backups</p>
+    <h3>S3 Intelligent-Tiering</h3>
+    <p>Unknown or changing access pattern | Immediate (frequent) / minutes (archive) | Monitoring fee + tiered storage | When you do not know the access pattern in advance</p>
+    <pre><code class="language-java"># S3 lifecycle policy in Terraform — transition logs through storage classes
+resource "aws_s3_bucket_lifecycle_configuration" "app_logs" {
+  bucket = aws_s3_bucket.app_logs.id
+  rule {
+    id     = "log-lifecycle"
+    status = "Enabled"
+    # Move to IA after 30 days of inactivity
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+    # Move to Glacier after 90 days
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+    # Delete after 365 days
+    expiration {
+      days = 365
+    }
+    # Clean up incomplete multipart uploads
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+# Spring Boot: writing structured logs to S3 for archival
+# Configure Logback to write to CloudWatch, then use CWL export to S3
+# Or: use Firehose delivery stream for high-volume log archival</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> How do you decide which S3 storage class to use and when do you set up lifecycle policies? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The decision comes down to how often the data is read and whether you can tolerate retrieval delay. For active application data that is read regularly, Standard is the right choice — retrieval is immediate and there are no per-request fees. For files that are written once and rarely read again, like application logs older than a week or database backups, Standard-IA cuts storage cost significantly. The per-retrieval fee is irrelevant if you genuinely access the data rarely. For long-term compliance archives where the data exists to satisfy an audit requirement rather than for regular use, Glacier Deep Archive is dramatically cheaper. Lifecycle policies automate the transitions so you do not pay Standard pricing for data that ages out of active use. In our Deloitte project, we set up a lifecycle on the CloudWatch log export bucket: Standard for 30 days, Standard-IA for days 31-90, Glacier for days 91-365, then delete. The cost reduction was significant and the policy runs automatically without any operational overhead.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — RDS vs Aurora vs DynamoDB</h2>
+    <h3>The Selection Decision</h3>
+    <h3>RDS (PostgreSQL/MySQL) | Aurora | DynamoDB</h3>
+    <h3>Data model</h3>
+    <p>Relational — tables, joins, foreign keys, ACID | Same as RDS | Key-value and document — no joins, denormalised</p>
+    <h3>Query flexibility</h3>
+    <p>Full SQL — any query pattern you can write | Full SQL | Limited — primary key and GSI access patterns only</p>
+    <h3>Scale ceiling</h3>
+    <p>Vertical (instance size) + read replicas | Higher ceiling — storage auto-scales to 128TB, up to 15 replicas | Effectively unlimited — horizontal by design</p>
+    <h3>Failover time</h3>
+    <p>1-2 minutes (Multi-AZ) | Under 30 seconds (Aurora uses shared storage) | No failover — multi-region active-active possible</p>
+    <h3>Operational overhead</h3>
+    <p>Medium — manage instance size, storage, backups | Lower — auto-storage, serverless option | Lowest — fully managed, no instance to size</p>
+    <h3>Cost model</h3>
+    <p>Instance + storage + I/O | Higher per-unit but fewer instances needed | Per request (on-demand) or provisioned capacity</p>
+    <h3>Choose when</h3>
+    <p>You need joins, complex queries, or are migrating from an existing relational schema | You need relational + want lower operational overhead and faster failover | You need massive scale, single-digit millisecond reads, and can design access patterns upfront</p>
+    <p>The most common wrong choice:</p>
+    <p>Teams reach for DynamoDB because it sounds modern and scalable, then spend months fighting the data model when they need to query data in ways they did not anticipate during design. DynamoDB requires you to know your access patterns before you design the schema. If you are still exploring the domain or need ad-hoc querying, a relational database is the right tool. DynamoDB shines when access patterns are well-understood, the scale is genuinely large, and you want zero operational overhead on the database layer.</p>
+    <h3>DynamoDB Design Essentials</h3>
+    <pre><code class="language-java">// DynamoDB partition key design — the most critical decision
+// BAD partition key: userId for a payment table
+// If one user has millions of payments, their partition gets hot.
+// DynamoDB limits one partition to 3,000 RCU and 1,000 WCU.
+// GOOD partition key: paymentId (UUID) for the main payment table
+// Each payment lands on a different partition — even distribution
+// Accessing payments by userId? Use a GSI:
+// GSI: userId (partition key) + createdAt (sort key)
+// Query: all payments for a user, sorted by date
+// Single-table design example — payments service
+// One table, different entity types distinguished by PK/SK prefixes
+//
+// PK                  SK                    Data
+// USER#user-123       PROFILE               { name, email, ... }
+// USER#user-123       PAYMENT#2024-01-15#TXN-001  { amount, status, ... }
+// USER#user-123       PAYMENT#2024-01-14#TXN-002  { amount, status, ... }
+// PAYMENT#TXN-001     METADATA              { userId, accountId, ... }
+// Query patterns this supports:
+// 1. Get user profile:   PK = USER#user-123, SK = PROFILE
+// 2. Get all payments for user (newest first):
+//    PK = USER#user-123, SK begins_with PAYMENT#, ScanIndexForward=false
+// 3. Get payment by ID:  PK = PAYMENT#TXN-001, SK = METADATA
+// Spring Boot with DynamoDB Enhanced Client
+@DynamoDbBean
+public class Payment {
+    @DynamoDbPartitionKey
+    private String pk;          // PAYMENT#TXN-001
+    @DynamoDbSortKey
+    private String sk;          // METADATA
+    private String userId;
+    private BigDecimal amount;
+    private String status;
+    private Instant createdAt;
+}
+// On-demand vs provisioned capacity
+// On-demand:   pay per request — no capacity planning, handles any traffic shape
+//              Best for: unpredictable or spiky traffic, new tables
+// Provisioned: pay for reserved RCU/WCU — cheaper at stable, predictable load
+//              Best for: steady workloads where you know the throughput
+//              Add Auto Scaling to handle moderate variation</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> How do you decide between RDS Aurora and DynamoDB for a new service? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">My starting question is always: do I know my access patterns upfront, and are they simple? DynamoDB is excellent when you can answer both with yes. You get effectively unlimited scale, single-digit millisecond reads at any volume, and zero operational overhead on the database. But it demands that you design your schema around your queries — there are no ad-hoc joins. If you add a new query requirement that the schema does not support, you may need a new GSI or a full data migration. Aurora is the right choice when you need relational — joins, complex filtering, transactions spanning multiple entities, or when the domain is still evolving and you need the flexibility to query in ways you have not yet anticipated. Aurora's advantage over standard RDS is faster failover (under 30 seconds versus one to two minutes), auto-scaling storage, and higher read replica count. I have used Aurora for our core payment data at Deloitte precisely because of the complex reporting queries that touch multiple entities. DynamoDB would not have supported those without significant denormalisation effort.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Mitigation</h3>
+    <h3>How it works | Reduction | Trade-off</h3>
+    <h3>Provisioned concurrency</h3>
+    <h3>Minimise package size</h3>
+    <p>Smaller JAR = faster class loading | Reduces JVM init time | Requires careful dependency management, use GraalVM native for maximum reduction</p>
+    <h3>Lazy initialisation</h3>
+    <p>Only initialise what is needed for the invoked handler | Reduces class loading time | More complex code; some frameworks handle this automatically</p>
+    <h3>Keep functions warm</h3>
+    <pre><code class="language-java">// SnapStart configuration in Terraform
+resource "aws_lambda_function" "payment_processor" {
+  function_name = "payment-processor"
+  runtime       = "java21"
+  handler       = "com.example.PaymentHandler::handleRequest"
+  role          = aws_iam_role.lambda_execution.arn
+  filename      = "payment-processor.jar"
+  snap_start {
+    apply_on = "PublishedVersions"  # snapshot each published version
+  }
+  memory_size = 1024  # more memory = more vCPU = faster init
+  timeout     = 30
+}
+// SnapStart restore hook — re-initialise stateful resources
+// Implement the CRaC (Coordinated Restore at Checkpoint) interface
+@Component
+public class DatabaseConnectionRestorer implements Resource {
+    private final DataSource dataSource;
+    @Override
+    public void beforeCheckpoint(Context&lt;? extends Resource&gt; context) {
+        // Close connections before snapshot is taken
+        // SnapStart snapshots the JVM at this point
+        ((HikariDataSource) dataSource).close();
+    }
+    @Override
+    public void afterRestore(Context&lt;? extends Resource&gt; context) {
+        // Re-open connections after restore from snapshot
+        // This runs on every warm invocation from a snapshot
+        ((HikariDataSource) dataSource).initialize();
+    }
+}
+// Lambda best practices for Java
+// 1. Use arm64 (Graviton2) — cheaper and often faster for Java workloads
+// 2. Set memory to at least 512MB — Lambda allocates vCPU proportional to memory
+// 3. Reuse clients across invocations — declare outside handler method
+// 4. Use environment variables for config — avoid reading from SSM on every invocation
+public class PaymentHandler implements RequestHandler&lt;APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent&gt; {
+    // Initialised once per container — reused across warm invocations
+    private static final PaymentService service = new PaymentService();
+    private static final ObjectMapper    mapper  = new ObjectMapper();
+    @Override
+    public APIGatewayProxyResponseEvent handleRequest(
+            APIGatewayProxyRequestEvent event, Context context) {
+        // service and mapper are already initialised — no cost here
+        PaymentRequest req = mapper.readValue(event.getBody(), PaymentRequest.class);
+        PaymentResult  res = service.process(req);
+        return response(200, mapper.writeValueAsString(res));
+    }
+}</code></pre>
+    <hr class="section-divider" />
+    <h2>Section 4 — IAM Least-Privilege Patterns</h2>
+    <h3>IAM Concepts That Matter</h3>
+    <h3>Concept</h3>
+    <h3>What it is | Key detail</h3>
+    <h3>Principal</h3>
+    <p>The entity that makes a request — an IAM user, role, service, or account | AWS services use roles, not users</p>
+    <h3>Identity-based policy</h3>
+    <p>Attached to a principal (user, group, role) — defines what that principal can do | Most common type — your EC2 instance role, Lambda execution role</p>
+    <h3>Resource-based policy</h3>
+    <p>Attached to a resource (S3 bucket, SQS queue) — defines who can access that resource | Used for cross-account access and granting external services access</p>
+    <h3>Inline policy</h3>
+    <p>Embedded directly in a principal — not reusable | Use for permissions that must not be shared — specific to one role</p>
+    <h3>Managed policy</h3>
+    <p>Standalone policy that can be attached to multiple principals | AWS-managed: broad, convenient, often over-permissive. Customer-managed: precise, your definition.</p>
+    <h3>Permission boundary</h3>
+    <p>Maximum permissions a principal can have, regardless of what policies say | Used in large orgs to prevent privilege escalation — even if a dev creates a role, the boundary caps what it can do</p>
+    <h3>Service control policy (SCP)</h3>
+    <p>Applied at the AWS Organisation/account level — applies to everything in the account | The outermost guardrail — even the root user is subject to SCPs</p>
+    <pre><code class="language-java"># IAM role for a Spring Boot service on EC2 — least privilege
+# The principle: grant only the exact permissions the service actually needs.
+# Not S3:* — just the specific actions on the specific bucket.
+resource "aws_iam_role" "payment_service" {
+  name = "payment-service-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+resource "aws_iam_role_policy" "payment_service_policy" {
+  name = "payment-service-permissions"
+  role = aws_iam_role.payment_service.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        # S3: read receipts, write processed files — specific bucket only
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:PutObject"]
+        Resource = "arn:aws:s3:::payments-receipts-prod/*"
+      },
+      {
+        # CloudWatch: write logs and metrics — no ability to delete or read
+        Effect   = "Allow"
+        Action   = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "cloudwatch:PutMetricData"
+        ]
+        Resource = "*"
+      },
+      {
+        # Secrets Manager: read only the secrets this service needs
+        Effect   = "Allow"
+        Action   = "secretsmanager:GetSecretValue"
+        Resource = [
+          "arn:aws:secretsmanager:ap-south-1:123456789:secret:prod/payment-db-*",
+          "arn:aws:secretsmanager:ap-south-1:123456789:secret:prod/payment-gateway-*"
+        ]
+      },
+      {
+        # SQS: send and receive on specific queues — no delete queue
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage"]
+        Resource = "arn:aws:sqs:ap-south-1:123456789:payment-commands"
+      }
+    ]
+  })
+}
+# Instance profile attaches the role to EC2
+resource "aws_iam_instance_profile" "payment_service" {
+  name = "payment-service-profile"
+  role = aws_iam_role.payment_service.name
+}
+# Lambda execution role — same principle, different trust policy
+resource "aws_iam_role" "lambda_execution" {
+  assume_role_policy = jsonencode({
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What does least-privilege mean in practice and how do you implement it for a Spring Boot service on EC2? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Least privilege means the service has exactly the permissions it needs to function — nothing more. In practice, I start by listing every AWS API call the service makes: it reads from one S3 bucket, writes logs to CloudWatch, reads two Secrets Manager secrets, and sends to one SQS queue. I write an IAM policy that grants exactly those actions on exactly those resources — not S3:* on all buckets, not iam:* because it might be convenient later. The service runs under an IAM role attached to an EC2 instance profile. The EC2 instance gets temporary credentials rotated automatically by the metadata service — no access keys stored in config files. The test for least privilege: if you deleted this service's role and reattached only the permissions it actually uses, it should still work correctly. Anything it cannot do is a permission it did not need. The operational benefit beyond security: when a permission is denied, the error message tells you exactly which action was attempted, which makes debugging misconfiguration far easier than digging through overly-broad wildcard policies.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — VPC Design for Microservices</h2>
+    <h3>The Standard Multi-AZ VPC Pattern</h3>
+    <p>The design goal:</p>
+    <p>Separate public-facing resources from private application infrastructure. Public subnets hold load balancers and NAT Gateways — things that need to be reachable from the internet or need to reach the internet. Private subnets hold application servers, databases, and internal services — they have no direct internet exposure and reach the internet only through a NAT Gateway when needed for outbound calls.</p>
+    <pre><code class="language-java"># Standard VPC layout for a microservices system
+# Three AZs for high availability, two subnet tiers per AZ
+# VPC: 10.0.0.0/16  (65,536 addresses)
+#
+# PUBLIC SUBNETS (one per AZ) — load balancers, NAT Gateways
+#   10.0.1.0/24  (AZ-1a)  — 254 addresses
+#   10.0.2.0/24  (AZ-1b)  — 254 addresses
+#   10.0.3.0/24  (AZ-1c)  — 254 addresses
+#
+# PRIVATE SUBNETS (one per AZ) — EC2, ECS, Lambda, RDS
+#   10.0.11.0/24 (AZ-1a)  — 254 addresses
+#   10.0.12.0/24 (AZ-1b)  — 254 addresses
+#   10.0.13.0/24 (AZ-1c)  — 254 addresses
+#
+# Internet Gateway — attached to VPC, used by public subnets
+# NAT Gateway — one per AZ in public subnet, used by private subnets for outbound
+#               (one NAT GW is cheaper but loses HA across AZ failure)
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+}
+# Security Group for the application tier
+resource "aws_security_group" "app" {
+  name   = "payment-service-sg"
+  vpc_id = aws_vpc.main.id
+  # Allow inbound from the load balancer SG only — not from the internet
+  ingress {
+    from_port       = 8080
+    to_port         = 8080
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+  # Allow all outbound — services need to call AWS APIs, databases, etc.
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+# Security Group for RDS — only the application tier can reach it
+resource "aws_security_group" "rds" {
+  name   = "payment-db-sg"
+  vpc_id = aws_vpc.main.id
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app.id]  # only from app tier
+  }
+  # No egress rule needed — RDS does not initiate outbound connections
+}</code></pre>
+    <h3>Security Groups vs NACLs</h3>
+    <h3>Security Groups | NACLs</h3>
+    <h3>Level</h3>
+    <p>Instance/ENI level — applies to specific resources | Subnet level — applies to all traffic entering/leaving a subnet</p>
+    <h3>State</h3>
+    <p>Stateful — return traffic automatically allowed | Stateless — must explicitly allow inbound and outbound for each rule</p>
+    <h3>Rules</h3>
+    <p>Allow rules only — you cannot explicitly deny | Allow and deny rules — evaluated in order by rule number</p>
+    <h3>Default</h3>
+    <p>All inbound denied, all outbound allowed | All traffic allowed (default NACL)</p>
+    <h3>Primary use</h3>
+    <p>Fine-grained access control between services — the primary tool | Broad subnet-level blocks — blocking entire IP ranges or as a secondary defence layer</p>
+    <h3>Typical pattern</h3>
+    <p>Use security groups for everything; rarely need NACLs in normal designs | NACLs for blocking known-bad IP ranges or additional compliance controls</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> How would you design a VPC for a microservices system deployed on AWS? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I start with a /16 CIDR for the VPC which gives plenty of room for growth. I create public and private subnets across three availability zones. The public subnets hold the Application Load Balancers and NAT Gateways. The private subnets hold all the application servers, ECS tasks, databases, and internal services. Private subnet resources have no public IP addresses and no direct route to the internet. Outbound internet access for things like calling external APIs goes through NAT Gateways in the public subnets. For security groups, I follow the principle of source-specific ingress rules: the ALB security group accepts traffic from the internet on 443. The application security group only accepts traffic from the ALB security group. The database security group only accepts traffic from the application security group. Nothing talks to the database except the application tier, and nothing talks to the application tier except the load balancer. I prefer security groups over NACLs for this because security groups are stateful and easier to reason about. I add NACLs only for explicit subnet-level blocks like known-bad IP ranges.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — CloudWatch Logging and Observability</h2>
+    <h3>Structured Logging to CloudWatch</h3>
+    <p>Why structured logging matters:</p>
+    <p>Free-text logs are human-readable but machine-unqueryable. If every log line is a JSON object with consistent field names, CloudWatch Logs Insights can query across millions of log lines in seconds using those fields. You can find all errors for a specific traceId, all payments above a certain amount, or all requests from a specific user — without grep and awk scripts.</p>
+    <pre><code class="language-java">// Logback configuration for structured JSON logging to CloudWatch
+// logback-spring.xml
+// Use logstash-logback-encoder for JSON output
+// application.yml — CloudWatch log group configuration
+logging:
+  level:
+    root: INFO
+    com.example.payment: DEBUG
+// The log output (JSON, one object per line):
+// {
+//   "timestamp": "2024-01-15T10:30:00.123Z",
+//   "level": "INFO",
+//   "thread": "http-nio-8080-exec-1",
+//   "logger": "com.example.payment.PaymentService",
+//   "message": "Payment processed",
+//   "traceId": "4bf92f3577b34da6",
+//   "spanId":  "00f067aa0ba902b7",
+//   "paymentId": "TXN-123",
+//   "amount": 500.00,
+//   "status": "COMPLETED",
+//   "userId": "user-456",
+//   "durationMs": 142
+// }
+// CloudWatch Logs Insights queries
+// 1. Find all events for a specific trace
+fields @timestamp, level, message, paymentId
+| filter traceId = "4bf92f3577b34da6"
+| sort @timestamp asc
+// 2. Count errors by logger in the last hour
+fields @timestamp, logger, message
+| filter level = "ERROR"
+| stats count(*) as errorCount by logger
+| sort errorCount desc
+// 3. P99 payment processing latency
+filter message like /Payment processed/
+| stats pct(durationMs, 99) as p99, avg(durationMs) as avg by bin(5m)
+// 4. Failed payments in the last 30 minutes
+fields @timestamp, paymentId, userId, amount
+| filter status = "FAILED"
+| sort @timestamp desc
+| limit 50
+// 5. High-value payments for fraud review
+filter amount &gt; 50000
+| fields @timestamp, paymentId, userId, amount, status
+| sort amount desc
+// CloudWatch Metric Filter — count errors as a metric from logs
+resource "aws_cloudwatch_log_metric_filter" "payment_errors" {
+  name           = "PaymentErrors"
+  log_group_name = "/payment-service/application"
+  pattern        = "{ $.level = \"ERROR\" }"
+  metric_transformation {
+    name      = "PaymentErrorCount"
+    namespace = "PaymentService"
+    value     = "1"
+  }
+}
+# Alarm on error count
+resource "aws_cloudwatch_metric_alarm" "payment_error_rate" {
+  alarm_name          = "payment-high-error-rate"
+  metric_name         = "PaymentErrorCount"
+  namespace           = "PaymentService"
+  statistic           = "Sum"
+  period              = 300   # 5 minutes
+  evaluation_periods  = 2
+  threshold           = 10
+  comparison_operator = "GreaterThanThreshold"
+  alarm_actions       = [aws_sns_topic.oncall.arn]
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How do you set up meaningful CloudWatch alarms for a Java microservice in production? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I think about alarms in terms of symptoms, not causes. A symptom alarm fires when something the user experiences is degraded — high error rate, high latency, health check failing. A cause alarm fires when a component has a problem — disk full, CPU high, connection pool exhausted. Both are useful but symptom alarms are more actionable. For a payment service, my standard alarm set is: error rate above a threshold over 5 minutes using a CloudWatch metric filter on log lines with level ERROR; p99 latency above 500ms using the Micrometer timer metric published via CloudWatch; consumer lag above 10,000 on any Kafka partition; and ALB unhealthy host count above zero. I keep alarms tight — if an alarm fires, someone should need to act. Alarms that fire for transient blips and auto-recover cause alarm fatigue and get ignored. I use evaluation periods of at least two consecutive periods before an alarm fires, which filters out spikes. For the Deloitte CloudWatch log lookup feature, I used metric filters to count specific log patterns and set alarms on counts that indicated real failures, not just log noise.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory. After each exercise, name one AWS bill item this decision reduces or one security risk it eliminates.</p>
+    <h3>Exercise 1 — S3 Lifecycle Policy in Terraform</h3>
+    <p>Task:</p>
+    <p>Write a Terraform aws_s3_bucket_lifecycle_configuration for an application log bucket.</p>
+    <p>Transition to Standard-IA after 30 days, Glacier after 90 days, delete after 365 days.</p>
+    <p>Add a rule to abort incomplete multipart uploads after 7 days.</p>
+    <p>Add a separate rule for a /audit/ prefix with 7-year retention (Glacier Deep Archive at 90 days, no expiry).</p>
+    <p>Show how to enable S3 versioning and a lifecycle rule that keeps the last 3 non-current versions.</p>
+    <h3>Exercise 2 — DynamoDB Table Design</h3>
+    <p>Task:</p>
+    <p>Design a DynamoDB table for a payment service supporting these access patterns:</p>
+    <p>1) Get payment by payment ID. 2) List all payments for a user sorted by date. 3) List all PENDING payments for a user.</p>
+    <p>Define the partition key, sort key, and at least one GSI.</p>
+    <p>Show the PK/SK values for three sample items using a prefix convention.</p>
+    <p>Compare on-demand vs provisioned capacity: which would you choose for a new service and why?</p>
+    <h3>Exercise 3 — IAM Least-Privilege Role</h3>
+    <p>Task:</p>
+    <p>Write an IAM role in Terraform for a payment service EC2 instance.</p>
+    <p>Grant: S3 GetObject/PutObject on one specific bucket, CloudWatch PutMetricData and log write actions, Secrets Manager GetSecretValue for two specific secret ARN prefixes, SQS send/receive/delete on one specific queue.</p>
+    <p>Attach via an instance profile.</p>
+    <p>Write a separate Lambda execution role for the same service — show the difference in the trust policy.</p>
+    <p>Demonstrate: what happens if you accidentally include s3:DeleteObject — why the principle of least privilege prevents this.</p>
+    <h3>Exercise 4 — VPC with Public/Private Subnets</h3>
+    <p>Task:</p>
+    <p>Write Terraform for a VPC with public and private subnets across two AZs.</p>
+    <p>Internet Gateway for public subnets. NAT Gateway in one public subnet for private subnet outbound traffic.</p>
+    <p>Route table for public subnets: 0.0.0.0/0 → Internet Gateway.</p>
+    <p>Route table for private subnets: 0.0.0.0/0 → NAT Gateway.</p>
+    <p>Security group for the ALB (inbound 443 from 0.0.0.0/0) and app tier (inbound 8080 from ALB SG only).</p>
+    <p>Security group for RDS (inbound 5432 from app tier SG only, no inbound from anywhere else).</p>
+    <p>Task:</p>
+    <p>Implement the CRaC beforeCheckpoint and afterRestore hooks for database connection management.</p>
+    <p>Add an IAM execution role with least-privilege permissions for the Lambda.</p>
+    <p>Write a CloudWatch alarm on Lambda duration p99 exceeding 1000ms.</p>
+    <h3>Exercise 6 — CloudWatch Structured Logging</h3>
+    <p>Task:</p>
+    <p>Configure Logback in a Spring Boot service to output JSON with: timestamp, level, logger, message, traceId, spanId, plus custom fields paymentId, amount, status, durationMs.</p>
+    <p>Write five CloudWatch Logs Insights queries: errors by logger, p99 latency, failed payments in last hour, all events for a traceId, and high-value transactions.</p>
+    <p>Write a Terraform CloudWatch metric filter that counts ERROR log lines and a CloudWatch alarm that fires when error count exceeds 10 in 5 minutes.</p>
+    <p>Add an SNS topic and subscription so the alarm sends an email alert.</p>
+    <h3>Exercise 7 — BOSS: Full AWS Infrastructure for Payment Service</h3>
+    <p>Design and write Terraform for the complete AWS infrastructure of a payment service:</p>
+    <p>Compute: Auto Scaling Group of m6i.large EC2 in private subnets behind an ALB in public subnets. Database: Aurora PostgreSQL Multi-AZ in private subnets, security group from app tier only. Cache: ElastiCache Redis in private subnet for rate limiting and idempotency store. IAM: least-privilege instance role with S3, CloudWatch, Secrets Manager, SQS permissions. Networking: VPC with public/private subnets across three AZs, NAT Gateway per AZ for HA. Observability: CloudWatch log group, metric filter for errors, three alarms (error rate, p99 latency, unhealthy host count). Show how all components connect and identify three security controls your design enforces.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Connect each answer to a real cost, security, or reliability decision.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> How do you choose between EC2 instance types for a Java backend service? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I start with the workload profile. For a typical Spring Boot API service that handles mixed HTTP traffic, an m-series instance is the right default — balanced CPU and memory, predictable performance, no surprises. If profiling shows the service is CPU-bound (doing a lot of computation, encryption, or data transformation), I look at c-series which gives more vCPU for the same price. If it needs a large JVM heap — say, a service that caches a lot of data in memory — r-series gives more memory per dollar. I avoid t-series for anything that runs consistently busy. The CPU credit model sounds good in theory but a service that processes payments steadily will burn through credits and get throttled at exactly the wrong moment. For new services, I start with m6i or m7i (Intel) or m6g/m7g (Graviton2/3 — ARM-based, about 20% cheaper for similar performance on Java workloads). I resize based on actual CloudWatch CPU and memory metrics after the service has been running for a week.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> When would you use DynamoDB over RDS and what design mistakes do people make with it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">DynamoDB is the right choice when scale is genuinely large (millions of writes per second), latency requirements are strict (single-digit milliseconds at any scale), and the access patterns are well-understood upfront. The classic design mistakes: using a low-cardinality partition key like status or date, which concentrates writes on a small number of partitions and hits DynamoDB's per-partition throughput limits. Using sequential IDs as partition keys so all new writes go to the same partition — same problem. The other mistake is treating DynamoDB like a relational database and trying to do complex queries that require scanning the entire table. DynamoDB tables should be designed around the queries they serve, not around the entities they store. If your access patterns are still evolving and you need ad-hoc querying, RDS is the better starting point. You can always migrate data later when patterns stabilise.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What does least privilege mean in IAM and why is it hard to get right? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Least privilege means a principal has exactly the permissions it needs to do its job and nothing more. It is hard to get right for a few reasons. The natural tendency when something breaks is to add more permissions rather than diagnose the exact permission that is missing. Over time, policies accumulate permissions that were needed once and never removed. Teams use wildcard actions like S3:* because it is faster to write and avoids debugging permission errors. The way I enforce it: start with no permissions and add only what the service actually calls. Use AWS CloudTrail and IAM Access Analyzer to see what API calls a service actually makes in production — Access Analyzer's unused access feature will flag permissions that exist in the policy but have never been used. Resource-level restrictions are as important as action-level: granting S3:GetObject on a specific bucket is very different from S3:GetObject on all buckets. The other discipline is reviewing policies at each deployment — permissions that are no longer needed should be removed.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is the difference between a security group and a NACL in AWS? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Security groups operate at the instance or network interface level and are stateful — when you allow inbound traffic from a source, the return traffic is automatically allowed without a separate rule. NACLs operate at the subnet level and are stateless — you must explicitly add rules for both inbound and outbound traffic for each connection direction. For most microservices architectures, security groups alone are sufficient. I use them at every tier: the ALB security group allows inbound 443 from the internet; the application security group only allows inbound 8080 from the ALB security group; the RDS security group only allows inbound 5432 from the application security group. Nothing can reach the database except the application tier. I add NACLs as a supplementary layer when I need to block specific IP ranges at the subnet level — for example, blocking known-malicious IP ranges or as a compliance control. The stateless nature of NACLs means you have to manage both directions of every rule, which is easy to get wrong.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How does Auto Scaling work in EC2 and what scaling policies would you use for a payment API? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">An Auto Scaling Group maintains a fleet of EC2 instances between a minimum and maximum count. When a scaling policy triggers, it adds or removes instances. For a payment API, I use target tracking scaling on two metrics. The primary policy targets CPU utilisation at 60% — when average CPU across the group exceeds 60%, the ASG adds instances; when it drops, it removes them. Target tracking handles the scale-out and scale-in maths automatically. I set scale-in cooldown to 10 minutes because payment processing should not lose instances mid-transaction. The second policy is a target tracking policy on the ALB RequestCountPerTarget metric. This catches scenarios where requests spike faster than CPU responds — such as sudden bursts of lightweight requests. I set the minimum capacity to at least two instances across two AZs so there is always redundancy. Warm pools pre-initialise instances to reduce scale-out latency for Java services that take time to start. Without a warm pool, a scale-out event waits for the instance to boot, the JVM to start, and the Spring Boot context to load — which can take a minute or more.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> How do you store secrets in AWS and how does your Spring Boot service access them? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Secrets belong in AWS Secrets Manager, not in environment variables, config files, or the source code. Secrets Manager stores the secret encrypted at rest, supports automatic rotation, and provides detailed access logs via CloudTrail. The Spring Boot service accesses secrets at startup using the AWS SDK, authenticated via the EC2 instance role or Lambda execution role — no credentials stored in the application itself. Spring Cloud AWS provides a @Value binding that reads from Secrets Manager directly. The IAM policy for the service grants secretsmanager:GetSecretValue on only the specific secret ARNs that service needs — not on all secrets. Rotation is automatic for RDS credentials when you configure Secrets Manager rotation using the provided Lambda rotation function. For non-database secrets, I write a custom rotation Lambda. The critical thing to never do: hard-code a secret in application.properties and check it into source control. Even in a private repository, secrets in source control tend to leak through log output, error messages, and developer machine compromises.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is an S3 bucket policy and when do you need it versus an IAM policy? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">An IAM policy is attached to a principal — a user, role, or group — and defines what that principal can do. An S3 bucket policy is attached to the bucket — the resource — and defines who can access it. You need a bucket policy in three situations: cross-account access, where a role in another AWS account needs to read your bucket and IAM policies in your account cannot grant permissions to identities in other accounts; granting public read access to a bucket (hosting a static website, public assets); or when you want to enforce specific conditions on all access to the bucket regardless of what IAM policies say — for example, requiring that all access goes through a VPC endpoint, or requiring that all uploads use server-side encryption. In a single-account setup where all access is from roles in the same account, IAM policies on the roles are usually sufficient. I use bucket policies as a supplementary control for enforcement — for example, a bucket policy that denies any upload without server-side encryption, which acts as a safety net even if the uploading service's code forgets to set it.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What is Aurora Serverless v2 and when would you use it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Aurora Serverless v2 automatically scales Aurora capacity up and down in fine-grained increments based on actual database load. Unlike standard Aurora, you do not provision a fixed instance size — you set a minimum and maximum ACU (Aurora Capacity Unit) range and Aurora scales within that range. It is useful for workloads with unpredictable or highly variable database load — a service that is idle overnight but handles peak traffic during business hours. You pay only for the capacity actually used, which can be cheaper than running a fixed instance size to handle peak. The trade-off: there is a small latency for scaling up if traffic spikes suddenly, and the minimum capacity cannot be zero (it goes to 0.5 ACU which still costs something). I would use it for development environments where cost matters more than performance, and for production services with genuinely variable load where right-sizing a fixed instance is difficult. For services with steady, predictable load, a standard Aurora instance is usually cheaper.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> How do you use CloudWatch Logs Insights for debugging production issues? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Logs Insights queries structured log fields using a SQL-like syntax. The pattern I follow for debugging: start with a time window around when the incident was reported. Filter on level = ERROR to see what errors were occurring. Take the traceId from one of the error logs and filter all log entries by that traceId across all log groups in the service — this gives me the complete request timeline across all services. Then I look at the durationMs field on key operations to find where time was spent. For intermittent issues, I use aggregation queries — stats pct(durationMs, 99) by bin(5m) — to see if p99 latency was elevated in a specific time window rather than looking at individual log lines. The reason structured logging is non-negotiable: if logs are free text, Logs Insights can only filter on the raw message string. If logs are JSON with consistent field names, I can query on any field. Being able to write filter paymentId = 'TXN-123' is the difference between a two-minute debug session and a twenty-minute grep hunt.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What is a NAT Gateway and why do private subnets need it? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Instances in a private subnet have no public IP address and no direct route to the internet. If a service running in a private subnet needs to make an outbound call — to an external payment gateway, to download a software update, to call an AWS API endpoint not served via VPC endpoint — it needs a way to reach the internet without being directly reachable from it. A NAT Gateway sits in a public subnet and translates the private IP source address of outbound traffic to its own public IP. The external service sees the NAT Gateway's IP, not the private instance's IP. Return traffic comes back to the NAT Gateway, which translates the destination back to the private instance's address and forwards it. The NAT Gateway is one-directional by design — it only handles outbound connections initiated from inside the VPC. No unsolicited inbound connections can pass through it. For high availability, I deploy a NAT Gateway in each AZ and configure private subnet route tables to use the NAT Gateway in their own AZ. This prevents a single NAT Gateway from becoming a cross-AZ dependency.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> How do you handle database credentials securely in a Spring Boot service on AWS? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The approach I use is Secrets Manager with IAM authentication where possible, and rotating secrets where not. For RDS, I prefer IAM database authentication — the service uses its IAM role to generate a temporary authentication token that is valid for 15 minutes, instead of a username and password. No password is stored anywhere. The IAM role has the rds-db:connect permission for the specific database resource. Spring Boot connects using the token in the password field of the JDBC URL, refreshed before each connection or before the token expires. For cases where IAM auth is not available, I store the RDS credentials in Secrets Manager and configure automatic rotation using the Secrets Manager managed rotation Lambda for RDS. The Spring Boot service fetches the secret at startup using the SDK via the instance role. Spring Cloud AWS Secret Manager integration caches the value and can be configured to re-fetch after a TTL so rotation does not require a restart.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What is the difference between horizontal and vertical scaling on AWS and when does each apply? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Vertical scaling means using a larger instance — upgrading from m5.large to m5.2xlarge gives more CPU and memory to the same instance. It is simple but has an upper limit, requires a restart, and creates a single point of failure. Horizontal scaling means adding more instances of the same size behind a load balancer. It has no hard ceiling, enables rolling deployments without downtime, and distributes failure across multiple instances. For stateless Spring Boot services, horizontal scaling is the right model — add instances when load increases, remove them when load drops. The application must be truly stateless for horizontal scaling to work: no in-memory session state, no local file storage for application data, all shared state in Redis or the database. For the database tier, vertical scaling is typically used for the primary write node — there is a practical limit to how many write primaries you can have without distributed transactions. Read scaling uses horizontal read replicas.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> How do you implement a blue-green or rolling deployment for a Spring Boot service on AWS? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">For EC2 with Auto Scaling Groups, rolling deployment is built in. I update the launch template with the new AMI or user data, then configure the instance refresh policy on the ASG with a minimum healthy percentage — say 80%. The ASG replaces instances in batches, keeping at least 80% healthy at all times. The ALB health check ensures traffic only goes to healthy instances. New instances start and pass health checks before old ones are terminated. Blue-green is a stronger approach: maintain two separate ASGs — blue (current) and green (new). Deploy the new version to the green ASG. Run smoke tests against it via a separate target group. Shift traffic from blue to green by updating the ALB listener rule. If the deployment is bad, shift traffic back to blue instantly — green instances are still running. The cost is double the instance count during the switch. For ECS or EKS deployments, the same concepts apply but the mechanics use service update strategies and Kubernetes rolling updates. The key requirement in both cases: the application must handle requests correctly during the deployment window when two versions are running simultaneously.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What AWS services would you use to build an event-driven architecture and how do they compare to a Kafka-based approach? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">AWS's native event-driven services are SNS (fanout notifications), SQS (queued message delivery), EventBridge (event routing with schema registry), and Kinesis (ordered streaming with replay). Comparing to Kafka: SQS is simpler to operate and integrates tightly with Lambda, but messages are consumed and deleted — no replay, no consumer groups with independent offsets, no long-term retention. Kinesis is closer to Kafka — ordered shards, configurable retention up to a year, multiple consumers. But it is harder to scale (shard count is fixed), does not have the Kafka Streams ecosystem, and consumer tooling is less mature. EventBridge is excellent for routing events between AWS services with flexible rules and schema validation, but it is not a high-throughput streaming platform. MSK (Managed Streaming for Kafka) is the right choice when you need full Kafka semantics — consumer groups, offset management, Kafka Streams, the full producer/consumer configuration — without managing the brokers yourself. I use MSK for services that need Kafka's delivery guarantees and ecosystem, and SQS/SNS for simpler fanout patterns and Lambda integrations where operational simplicity matters more than throughput.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 22 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you name the EC2 family for CPU-bound, memory-bound, and I/O-bound workloads?</span></li>
+      <li><span class="checkbox-label">Can you explain the S3 storage class trade-off and when lifecycle policies apply?</span></li>
+      <li><span class="checkbox-label">Can you state when DynamoDB is the wrong choice for a new service?</span></li>
+      <li><span class="checkbox-label">Can you describe the public/private subnet pattern and the role of NAT Gateway?</span></li>
+      <li><span class="checkbox-label">Can you write a Logs Insights query to find all events for a traceId?</span></li>
+      <li><span class="checkbox-label">All 7 exercises — Boss infrastructure exercise done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>EC2 family selection: t vs m vs c vs r</h3>
+    <p>/5 |</p>
+    <h3>S3 storage classes and lifecycle transitions</h3>
+    <p>/5 |</p>
+    <h3>RDS vs Aurora vs DynamoDB decision criteria</h3>
+    <p>/5 |</p>
+    <h3>DynamoDB partition key design and GSIs</h3>
+    <p>/5 |</p>
+    <p>/5 |</p>
+    <h3>IAM least-privilege: inline policy from scratch</h3>
+    <p>/5 |</p>
+    <h3>VPC: public/private subnet, NAT, security groups</h3>
+    <p>/5 |</p>
+    <h3>CloudWatch: structured logging and Logs Insights</h3>
+    <p>/5 |</p>
+    <p>Day 22 complete:</p>
+    <p>AWS questions in senior interviews are really system design questions dressed in cloud clothing. The interviewer is not checking whether you know service names — they want to know whether you can make defensible choices. Every answer should name the trade-off: why this instance type and not that one, why this database and not the other. That pattern of reasoning is what the interview is listening for.</p>
+    <h3>Preview: Day 23 — Advanced SQL and Database Design</h3>
+    <p>Window functions, CTEs, query optimisation and EXPLAIN ANALYZE, indexing strategies for high-traffic tables, transaction isolation levels in practice, database migration strategies with Flyway, and connection pool tuning with HikariCP.</p>
+    <p>Day 22 of 60 · Advanced AWS · Prepared for Md Zuber</p>
+    <p>"The cloud does not remove the need to understand infrastructure — it just changes which decisions you make and which ones AWS makes for you."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

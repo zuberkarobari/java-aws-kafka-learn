@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 46  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 46  ·  STUDY CHECKLIST — WebFlux and Reactive Programming — Project Reactor, Backpressure and When to Use It</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 46 Checklist</div>
+    <h1 style="margin-top: 0;">WebFlux and Reactive Programming — Project Reactor, Backpressure and When to Use It</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 46 · STUDY CHECKLIST</h3>
+    <h3>WebFlux and Reactive Programming — Project Reactor, Backpressure and When to Use It</h3>
+    <h3>Project Reactor</h3>
+    <p>Mono, Flux, operators, the reactive pipeline</p>
+    <h3>Backpressure</h3>
+    <p>How demand flows upstream, overflow strategies</p>
+    <h3>WebFlux</h3>
+    <p>R2DBC, WebClient, reactive security, testing</p>
+    <h3>When to Use</h3>
+    <p>Reactive vs imperative decision criteria</p>
+    <p>Note:</p>
+    <p>Reactive programming comes up in senior interviews in two contexts: can you explain what it is and how it works, and can you articulate when it is actually the right choice versus Spring MVC. Most teams do not need WebFlux. The candidates who stand out are those who can say precisely when they would choose it and when they would not.</p>
+    <h3>Day 46 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Reactive programming: the problem it solves vs thread-per-request model</span></li>
+      <li><span class="checkbox-label">Project Reactor: Mono (0-1 item) vs Flux (0-N items) — when each is used</span></li>
+      <li><span class="checkbox-label">Core operators: map, flatMap, filter, zip, merge, concat, switchIfEmpty</span></li>
+      <li><span class="checkbox-label">flatMap vs concatMap vs flatMapSequential — ordering guarantees</span></li>
+      <li><span class="checkbox-label">Error handling: onErrorReturn, onErrorResume, onErrorMap, doOnError</span></li>
+      <li><span class="checkbox-label">Backpressure: what it is, Flux.create vs Flux.generate, overflow strategies</span></li>
+      <li><span class="checkbox-label">Schedulers: boundedElastic (blocking I/O), parallel (CPU-bound), single</span></li>
+      <li><span class="checkbox-label">WebFlux: @RestController returning Mono/Flux, reactive security filter chain</span></li>
+      <li><span class="checkbox-label">R2DBC: reactive database access, when it makes sense vs JPA</span></li>
+      <li><span class="checkbox-label">WebClient: non-blocking HTTP, retry, timeout, exchange vs retrieve</span></li>
+      <li><span class="checkbox-label">Testing: StepVerifier, WebTestClient</span></li>
+      <li><span class="checkbox-label">When NOT to use reactive: JDBC, blocking libraries, simple CRUD</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h3>Section 1 — The Problem Reactive Solves</h3>
+    <p>Thread-per-request bottleneck:</p>
+    <p>In Spring MVC, every HTTP request gets a thread from Tomcat's thread pool (typically 200 threads). A thread waiting for a database response or an HTTP call to another service is blocked — it cannot do anything else. At 200 concurrent slow requests, the thread pool is exhausted and new requests queue up. Reactive programming uses non-blocking I/O: a small number of event-loop threads handle many concurrent requests by reacting to events (data arrived, error occurred) rather than blocking and waiting.</p>
+    <h3>Aspect</h3>
+    <h3>Spring MVC (Imperative) | Spring WebFlux (Reactive)</h3>
+    <h3>Threading model</h3>
+    <p>One thread per request (typically 200 threads max) | Small event-loop pool (typically CPUs * 2) handles thousands of concurrent requests</p>
+    <h3>I/O model</h3>
+    <p>Blocking — thread waits while DB/HTTP call completes | Non-blocking — thread is released while waiting; reused for other requests</p>
+    <h3>Best for</h3>
+    <p>CPU-bound work, blocking libraries, JDBC, most CRUD services | High concurrency with many concurrent slow I/O operations</p>
+    <h3>Complexity</h3>
+    <p>Low — sequential code, familiar debugging | High — reactive pipelines, stacktraces are hard to read, context propagation differs</p>
+    <h3>DB support</h3>
+    <p>JPA, JDBC — mature ecosystem | R2DBC — limited driver support, smaller ecosystem</p>
+    <h3>Choose when</h3>
+    <p>Default for most services — simpler and sufficient | Serving thousands of concurrent SSE/WebSocket connections, API gateway, or streaming data</p>
+    <h2>Section 2 — Project Reactor Core</h2>
+    <h3>Mono and Flux</h3>
+    <pre><code class="language-java">// Mono — zero or one element
+Mono&lt;PaymentResult&gt; result = paymentService.process(request);
+// Flux — zero to many elements (streaming)
+Flux&lt;Payment&gt; payments = paymentRepository.findByAccountId(accountId);
+// Creating publishers
+Mono.just(value)                    // emit one value
+Mono.empty()                        // emit nothing, complete
+Mono.error(new RuntimeException())  // emit error
+Mono.fromCallable(() -&gt; blockingCall())  // wrap a blocking call
+Flux.just(1, 2, 3)                  // emit fixed values
+Flux.fromIterable(list)             // emit from collection
+Flux.interval(Duration.ofSeconds(1)) // emit every second
+// Core transformation operators
+Flux.just(1, 2, 3, 4, 5)
+    .filter(n -&gt; n % 2 == 0)        // keep even numbers
+    .map(n -&gt; n * 10)               // transform each element
+    .take(2)                        // take first 2 elements
+    .subscribe(System.out::println); // 20, 40
+// flatMap — async transformation, unordered
+// Use when: calling async service per element, order does not matter
+Flux&lt;Payment&gt; payments = accountIds
+    .flatMap(id -&gt; paymentService.findByAccount(id));  // concurrent
+// concatMap — async transformation, ordered (sequential)
+// Use when: order must be preserved, elements processed one at a time
+Flux&lt;Payment&gt; payments = accountIds
+    .concatMap(id -&gt; paymentService.findByAccount(id)); // sequential
+// Error handling
+Mono&lt;PaymentResult&gt; safe = paymentService.process(request)
+    .onErrorReturn(PaymentResult.failed())    // fallback value on error
+    .onErrorResume(e -&gt; fallbackService.process(request)) // fallback Mono
+    .onErrorMap(GatewayException.class,
+        e -&gt; new PaymentServiceException(e)); // translate exception type
+// Combining publishers
+Mono.zip(userMono, accountMono)     // wait for both, combine
+    .map(tuple -&gt; new Dashboard(tuple.getT1(), tuple.getT2()));
+Flux.merge(flux1, flux2)            // interleave two streams as they arrive
+Flux.concat(flux1, flux2)           // flux1 then flux2, sequential</code></pre>
+    <h3>Schedulers and Blocking Code</h3>
+    <p>The golden rule:</p>
+    <p>Never block on a reactor thread. If you must call a blocking library (JDBC, a legacy SDK, file I/O), offload it to the boundedElastic scheduler which is designed for blocking work. Blocking on the event-loop thread (the default thread) stalls all reactive processing on that thread.</p>
+    <pre><code class="language-java">// Offloading blocking work to the right scheduler
+Mono&lt;User&gt; user = Mono.fromCallable(() -&gt; jdbcTemplate.queryForObject(sql, User.class))
+    .subscribeOn(Schedulers.boundedElastic()); // execute on a thread pool for blocking I/O
+// publishOn — switch scheduler for downstream operators
+Flux.fromIterable(largeList)
+    .publishOn(Schedulers.parallel())   // downstream operations run on parallel scheduler
+    .map(this::cpuIntensiveTransform)   // runs on parallel
+    .publishOn(Schedulers.boundedElastic())
+    .flatMap(item -&gt; callExternalApi(item)); // runs on boundedElastic
+// Scheduler types
+// Schedulers.parallel()        — fixed pool = number of CPUs, for CPU-bound work
+// Schedulers.boundedElastic()  — elastic pool for blocking I/O, capped to prevent OOM
+// Schedulers.single()          — single thread for sequential guaranteed ordering
+// Schedulers.immediate()       — same thread as caller (default)</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is backpressure in reactive programming and why does it matter? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Backpressure is the mechanism that lets a subscriber control how fast a publisher emits data. Without it, a fast producer and slow consumer leads to the consumer's buffer overflowing. In Project Reactor, a subscriber requests N items from a publisher using the request() method on the Subscription. The publisher only emits up to N items before waiting for another request signal. This demand-driven model prevents out-of-memory errors when consuming large streams. When backpressure cannot be applied — for example, when you are receiving external events you cannot slow down — you use an overflow strategy: buffer a fixed number of items, drop the oldest, or error when the buffer fills. The practical importance: in a payment event stream from Kafka, if the consumer is slower than the producer, without backpressure you would buffer millions of events in memory. With backpressure, the consumer only pulls what it can handle.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — WebFlux in Practice</h2>
+    <pre><code class="language-java">// Reactive REST controller
+@RestController
+@RequestMapping("/api/payments")
+public class PaymentController {
+    private final ReactivePaymentService service;
+    @PostMapping
+    public Mono&lt;ResponseEntity&lt;PaymentResult&gt;&gt; create(@RequestBody Mono&lt;PaymentRequest&gt; request) {
+        return request
+            .flatMap(service::process)
+            .map(result -&gt; ResponseEntity.status(HttpStatus.CREATED).body(result))
+            .onErrorResume(ValidationException.class,
+                e -&gt; Mono.just(ResponseEntity.badRequest().build()));
+    }
+    @GetMapping
+    public Flux&lt;PaymentSummary&gt; list(@RequestParam String accountId) {
+        return service.findByAccount(accountId);
+    }
+    // Server-Sent Events — streaming to browser
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux&lt;PaymentEvent&gt; stream() {
+        return eventService.getPaymentEventStream();
+    }
+}
+// WebClient — non-blocking HTTP client
+@Service
+public class FraudServiceClient {
+    private final WebClient webClient;
+    public FraudServiceClient(WebClient.Builder builder) {
+        this.webClient = builder
+            .baseUrl("https://fraud.internal.example.com")
+            .build();
+    }
+    public Mono&lt;FraudResult&gt; check(PaymentRequest request) {
+        return webClient.post()
+            .uri("/fraud/check")
+            .bodyValue(request)
+            .retrieve()
+            .onStatus(HttpStatusCode::is5xxServerError,
+                resp -&gt; Mono.error(new FraudServiceException("Service error")))
+            .bodyToMono(FraudResult.class)
+            .timeout(Duration.ofSeconds(2))
+            .retryWhen(Retry.backoff(3, Duration.ofMillis(100))
+                .filter(e -&gt; e instanceof FraudServiceException));
+    }
+}
+// Testing with StepVerifier
+@Test
+void process_validRequest_emitsResult() {
+    StepVerifier.create(paymentService.process(validRequest()))
+        .expectNextMatches(r -&gt; r.getStatus() == PaymentStatus.COMPLETED)
+        .expectComplete()
+        .verify();
+}
+@Test
+void process_invalidRequest_emitsError() {
+    StepVerifier.create(paymentService.process(invalidRequest()))
+        .expectError(ValidationException.class)
+        .verify();
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> When would you choose Spring WebFlux over Spring MVC? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I would choose WebFlux when the service has a high number of concurrent slow I/O operations and thread count is the bottleneck. The clearest cases: an API gateway handling tens of thousands of concurrent connections where most time is spent waiting for downstream responses — a reactive event loop handles this with a handful of threads. A service streaming real-time data via Server-Sent Events or WebSockets to thousands of clients simultaneously. Or a data pipeline reading from Kafka and calling external APIs where maximising I/O concurrency is the goal. For most CRUD services — even high-throughput ones — Spring MVC with a properly sized thread pool and non-blocking connection handling at the OS level is simpler and sufficient. WebFlux introduces real complexity: reactive stacktraces are hard to read, JDBC does not work without R2DBC (which has less mature driver support), debugging is harder, and the mental model requires everyone on the team to understand reactive programming. I would not introduce that complexity unless the concurrency profile genuinely demands it.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — Exercises</h2>
+    <h3>Exercise 1 — Flux Pipeline</h3>
+    <p>Task:</p>
+    <h3>Exercise 2 — WebClient with Retry</h3>
+    <p>Task:</p>
+    <p>Write a FraudServiceClient using WebClient with: 2 second timeout, retry 3 times on 5xx with exponential backoff, onStatus mapping to domain exceptions, bodyToMono deserialization. Write a WireMock test that simulates a 500 then a success and verifies exactly 2 calls.</p>
+    <h3>Exercise 3 — Blocking Code on Correct Scheduler</h3>
+    <p>Task:</p>
+    <p>Wrap a JDBC template call inside Mono.fromCallable() with subscribeOn(Schedulers.boundedElastic()). Demonstrate what happens if you call the JDBC code without subscribeOn — which thread runs it and why that is a problem. Write a test that verifies the code runs on a boundedElastic thread.</p>
+    <h3>Exercise 4 — Backpressure Strategies</h3>
+    <p>Task:</p>
+    <p>Create a Flux.create() that emits faster than the subscriber can consume. Show each overflow strategy: BUFFER (default), DROP, LATEST, ERROR. Use StepVerifier with virtualTime to simulate slow consumption.</p>
+    <h3>Exercise 5 — Reactive Security</h3>
+    <p>Task:</p>
+    <p>Configure a reactive SecurityWebFilterChain for a WebFlux service: JWT authentication using ReactiveJwtDecoder, permit /actuator/health, require PAYMENT_READ for GET /api/payments, stateless session. Show how ReactiveSecurityContextHolder differs from the MVC SecurityContextHolder.</p>
+    <h3>Exercise 6 — zip and Combine</h3>
+    <p>Task:</p>
+    <p>Fetch a user profile and their account details concurrently using Mono.zip(). Map the tuple to a Dashboard DTO. Show how Mono.zip handles the case where one Mono is empty. Compare with sequential flatMap and explain the latency difference.</p>
+    <h3>Exercise 7 — BOSS: Reactive Payment Pipeline</h3>
+    <p>Task:</p>
+    <p>Build a reactive payment processing pipeline: POST /api/payments returns Mono<PaymentResult>. Pipeline: validate request (Mono.error on invalid), call fraud check via WebClient (2s timeout, retry on 5xx), call payment gateway via WebClient, save result via R2DBC repository, publish PaymentCompletedEvent to Kafka (fire-and-forget). Handle each error type differently: ValidationException → 400, FraudBlockedException → 422, GatewayException → 503. Test with StepVerifier and WireMock.</p>
+    <h3>Interview Q&A — 12 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Focus on the when-to-use trade-off in every answer.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What is Project Reactor and how does it relate to Spring WebFlux? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Project Reactor is the reactive streams library that Spring WebFlux is built on. It provides Mono (for 0-1 items) and Flux (for 0-N items) as the core publisher types, and a rich set of operators for transforming, filtering, combining, and error-handling reactive pipelines. Spring WebFlux is the reactive web framework that uses Reactor as its programming model. When a WebFlux controller returns a Mono or Flux, the framework subscribes to it using Netty's event loop threads and writes the result to the HTTP response without blocking. The relationship: WebFlux is to Reactor what Spring MVC is to Java threads — a framework that manages the execution model, while the underlying model (Reactor or threads) handles the concurrency.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is the difference between map and flatMap in Reactor? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">map transforms each element synchronously — it applies a function that returns a plain value, not a publisher. flatMap transforms each element asynchronously — it applies a function that returns a Mono or Flux, then flattens all those publishers into a single stream. Use map when the transformation is pure and immediate, like converting a domain object to a DTO. Use flatMap when the transformation requires an async call — fetching data from a database or calling another service. The important difference between flatMap and concatMap: flatMap subscribes to all inner publishers concurrently and emits results as they arrive (unordered). concatMap subscribes to each inner publisher one at a time and preserves order. If you need all fraud checks to run concurrently and do not care about order, use flatMap. If order matters, use concatMap.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How do you handle errors in a reactive pipeline? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Reactor has several error-handling operators depending on what you want to do when an error occurs. onErrorReturn provides a static fallback value — if the fraud service throws, return a default FraudResult. onErrorResume provides a fallback publisher — if the primary service fails, switch to a cached or degraded response. onErrorMap translates one exception type to another — convert a GatewayException to a domain-specific PaymentFailedException. doOnError runs a side effect on error without changing the pipeline — useful for logging. The important rule: errors in a reactive pipeline propagate downstream to the subscriber. If you do not handle them, the subscriber receives the error signal. In a WebFlux controller, unhandled errors become 500 responses. Wrapping each async call in its own onErrorResume lets you handle failures at the right granularity rather than catching everything at the top.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What is subscribeOn and when do you need it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">subscribeOn sets the scheduler on which the subscription happens — which thread calls the actual source of data. It affects where the source executes, not where downstream operators execute. You need it specifically when the source of your Mono or Flux is blocking — a JDBC call, a legacy synchronous SDK, file I/O. Wrapping the blocking call in Mono.fromCallable() and adding subscribeOn(Schedulers.boundedElastic()) moves the blocking execution off the reactor event loop thread and onto a thread pool designed for blocking work. Without it, a blocking call on a reactor thread stalls all reactive processing on that thread — effectively blocking the event loop for all other requests. publishOn, by contrast, switches the scheduler for the operators that come after it in the pipeline, not for the source itself.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What is R2DBC and what are its limitations? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">R2DBC is the Reactive Relational Database Connectivity specification — a non-blocking API for relational databases. It allows reactive Spring applications to access PostgreSQL, MySQL, and others without blocking. The Spring Data R2DBC module provides reactive repositories that return Mono and Flux. The limitations are real and worth being honest about. First, driver maturity: R2DBC drivers are newer and have less battle-tested production history than JDBC drivers. Second, no JPA: the R2DBC ecosystem does not have a reactive equivalent of JPA or Hibernate — there is no lazy loading, no first-level cache, no entity lifecycle management. You write explicit SQL or use Spring Data's derived query methods for simple cases. Third, transaction support is different — you work with reactive transaction operators rather than @Transactional. For most services, JDBC with a properly sized connection pool and offloading blocking calls to boundedElastic is simpler and more mature.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> How do you test reactive code? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">StepVerifier from reactor-test is the standard tool. It subscribes to a Mono or Flux and lets you assert on each emitted element, the completion signal, or the error signal using expectNext(), expectNextMatches(), expectComplete(), expectError(). For time-based operators like delay or timeout, StepVerifier.withVirtualTime() lets you advance virtual time without actually waiting. For WebFlux controllers, WebTestClient provides a reactive HTTP test client that integrates with MockMvc-style assertions. You use it to send test requests and assert on the response status, headers, and body. The most common mistake in reactive testing is not calling verify() at the end of a StepVerifier chain — without verify(), the assertions are defined but never executed, and the test always passes.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> When would you NOT use WebFlux? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The most common and honest answer is: when the team is not familiar with reactive programming and the service is not genuinely I/O-bound with high concurrency. The learning curve is real — reactive stacktraces are difficult to read, debugging is harder, and the programming model is fundamentally different from imperative code. If you are building a CRUD service that talks to a PostgreSQL database using JDBC, WebFlux gives you no throughput benefit because JDBC is blocking anyway. The reactive non-blocking model only provides benefit when the actual I/O layer is non-blocking end to end. Another case to avoid: when you need to integrate with a library that is not reactive — PDF generation, legacy SDKs, complex file operations. These require offloading to boundedElastic schedulers which partially defeats the purpose. For most Spring Boot services at reasonable scale, MVC with a properly configured thread pool is simpler, more debuggable, and fully sufficient.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> What is the reactive security model in WebFlux? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">WebFlux uses a reactive security filter chain — SecurityWebFilterChain instead of SecurityFilterChain. The authentication and authorization filters are implemented as WebFilter rather than javax.servlet.Filter, and they work with Mono and Flux throughout. The security context is stored in a reactive context rather than ThreadLocal, which is why you use ReactiveSecurityContextHolder.getContext() instead of SecurityContextHolder.getContext(). JWT validation uses ReactiveJwtDecoder which returns a Mono<Jwt>. The practical implication: any code that needs to access the current user in a reactive service must use the reactive context API, not ThreadLocal-based SecurityContextHolder — the latter is not thread-safe in a reactive environment where a single logical request may execute on multiple threads.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> How does Flux handle streaming large datasets from a database? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Flux is ideal for streaming large result sets because it allows processing records one at a time as they arrive from the database, rather than loading the entire result into memory. With R2DBC, a repository method returning Flux<Payment> streams rows from the database to the subscriber using the reactive backpressure protocol — the subscriber requests rows at the rate it can process them. This is the reactive equivalent of scrolling through a JDBC ResultSet. For HTTP streaming, a WebFlux controller returning Flux with text/event-stream media type streams results to the client one by one, which is useful for real-time dashboards or large report downloads. The key benefit: a query returning 1 million rows does not require 1 million objects in memory simultaneously — only the in-flight batch.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is the difference between Mono.zip and Mono.flatMap for combining calls? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Mono.zip combines multiple Mono publishers concurrently — it subscribes to all of them simultaneously and emits when all complete. The result is a Tuple containing all the values. If you need a user profile AND an account summary, Mono.zip(userMono, accountMono) fetches both concurrently and the total latency is the maximum of the two, not the sum. Mono.flatMap chains calls sequentially — the second call only starts after the first completes. Use flatMap when the second call depends on the result of the first. Use zip when the calls are independent. The latency difference is significant: if each call takes 100ms, zip takes 100ms total, flatMap takes 200ms. I use zip heavily for dashboard endpoints that aggregate data from multiple independent sources.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What is Flux.create and when would you use it over Flux.fromIterable? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Flux.fromIterable is for converting an existing synchronous collection into a reactive stream. The data is already in memory. Flux.create is for wrapping a push-based data source — one that calls you when data is available, like a callback-based API, a message listener, or an event emitter. You provide a FluxSink to the create callback; the external source calls sink.next() when data arrives, sink.error() on failure, and sink.complete() when done. Flux.create supports backpressure strategies for when the source produces faster than the subscriber consumes. Flux.generate is the alternative for pull-based sources — the framework calls your generator function each time the subscriber requests an element, giving you full backpressure control without buffering.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> How do you propagate MDC trace context in a reactive pipeline? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">MDC is ThreadLocal-based. In a reactive pipeline, a single request may execute on multiple threads as it moves through operators. MDC values set on the initial thread are lost when the pipeline switches to a different thread. The solution is to use the Reactor Context — a key-value store that is attached to the reactive pipeline and propagates through all operators regardless of thread switches. Micrometer Tracing handles this automatically when you use the Micrometer Tracing bridge for WebFlux — it stores the trace context in the Reactor Context and writes it to MDC on each operator that executes. If you need custom MDC values in a reactive service, use the contextWrite operator to attach them to the pipeline context and a doOnEach operator to write them to MDC before log statements. Without this, log lines from a reactive request will have missing or incorrect traceId values.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Self-Assessment</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Mono vs Flux: when each applies</h3>
+    <p>/5 |</p>
+    <h3>flatMap vs concatMap: ordering</h3>
+    <p>/5 |</p>
+    <h3>Schedulers: which for what</h3>
+    <p>/5 |</p>
+    <h3>Backpressure: strategies</h3>
+    <p>/5 |</p>
+    <h3>WebClient: retry, timeout, error</h3>
+    <p>/5 |</p>
+    <h3>When NOT to use WebFlux</h3>
+    <p>/5 |</p>
+    <h3>StepVerifier testing</h3>
+    <p>/5 |</p>
+    <p>Day 46 complete:</p>
+    <p>The most important thing to be able to say about reactive programming in an interview is when you would not use it. That answer shows more maturity than a list of Reactor operators.</p>
+    <h3>Preview: Day 47 — Performance Tuning</h3>
+    <p>JVM profiling, heap analysis, identifying bottlenecks in Spring Boot services, JMeter load testing, connection pool tuning, and common performance anti-patterns.</p>
+    <p>Day 46 of 60 · WebFlux and Reactive Programming · Prepared for Md Zuber</p>
+    <p>"Reactive is not better. It is different. Know when different is what you need."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

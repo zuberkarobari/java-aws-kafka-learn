@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 5 — IAM Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#FAECE7;color:#712B13;border:1px solid #F0997B}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #993C1D;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#FAECE7;color:#712B13;border-color:#F0997B;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #993C1D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.monoblock{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:8px;padding:10px 12px;display:block;color:#1a1a18;line-height:1.7;margin:10px 0;white-space:pre-wrap}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-red{background:#FAECE7;color:#712B13}.p-green{background:#e0f5ee;color:#085041}
+.p-amber{background:#FAEEDA;color:#633806}.p-blue{background:#e6f1fb;color:#0C447C}
+.p-purple{background:#EEEDFE;color:#3C3489}.p-gray{background:#f5f5f2;color:#444;border:1px solid #ddd}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+
+/* Policy evaluation flow */
+.eval-flow{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.eval-step{display:flex;align-items:flex-start;gap:12px;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px}
+.eval-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px}
+.eval-deny{background:#FAECE7;color:#712B13;border:1px solid #F0997B}
+.eval-allow{background:#e0f5ee;color:#085041;border:1px solid #5DCAA5}
+.eval-default{background:#f5f5f2;color:#444;border:1px solid #ddd}
+.eval-body{font-size:13px;color:#444;line-height:1.65}
+.eval-body strong{font-weight:600;color:#1a1a18}
+
+/* Policy anatomy */
+.policy-block{background:#1a1a18;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.policy-block code{font-family:monospace;font-size:12px;line-height:1.7;color:#e8e6e0;display:block;white-space:pre}
+.k{color:#9FE1CB}.v{color:#FAC775}.s{color:#F0997B}.c{color:#888;font-style:italic}
+
+/* comparison */
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.comp-card{background:#fff;border:1px solid #eee;border-radius:10px;padding:1rem}
+.comp-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.comp-body{font-size:12px;color:#555;line-height:1.65}
+
+/* interview */
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}
+.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+.tip strong{font-weight:600;color:#085041}
+
+/* lab */
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 5 of 30</span>
+    <span class="tag">IAM — Identity & Access Management</span>
+    <span class="tag">Policy evaluation engine</span>
+    <span class="tag">Production security patterns</span>
+    <span class="tag">Credential attacks & defences</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('internals',this)">Policy engine</button>
+    <button class="ntab" onclick="show('entities',this)">Entities & roles</button>
+    <button class="ntab" onclick="show('policies',this)">Policy anatomy</button>
+    <button class="ntab" onclick="show('advanced',this)">Advanced IAM</button>
+    <button class="ntab" onclick="show('attacks',this)">Attack patterns</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- POLICY ENGINE -->
+  <div id="p-internals" class="panel active">
+    <div class="lede"><strong>IAM is not a permission checkbox system. It is a distributed policy evaluation engine that runs on every single AWS API call — billions of times per day. Understanding the evaluation logic explains why access is granted or denied in every scenario, including the counterintuitive ones that break production systems and get engineers fired.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('c',0,this)">1 · What IAM actually is</button>
+      <button class="cbtn" onclick="showC('c',1,this)">2 · Evaluation logic</button>
+      <button class="cbtn" onclick="showC('c',2,this)">3 · The 6 policy types</button>
+      <button class="cbtn" onclick="showC('c',3,this)">4 · Cross-account evaluation</button>
+    </div>
+
+    <div id="c0" class="cpanel active">
+      <div class="ch">What IAM actually is at the infrastructure level</div>
+      <div class="csub">A globally distributed, strongly consistent authorization system evaluated on every API call</div>
+      <div class="cb">
+        <p>IAM is a <strong>globally distributed authorization system</strong>. Every AWS API call — whether from the console, CLI, SDK, or any AWS service — passes through IAM for authentication and authorization before anything happens. There are no exceptions. When you run <span class="mono">aws s3 ls</span>, your CLI authenticates with IAM, IAM evaluates whether your identity has s3:ListAllMyBuckets permission, and only then does S3 return the bucket list. The S3 service itself never touches your credentials — IAM handles all authorization and passes a go/no-go decision to S3.</p>
+        <p>IAM is one of the few AWS services that is <strong>truly global</strong> — it does not exist per-region. IAM users, roles, and policies you create are replicated across all AWS regions and are immediately available everywhere. This is different from S3 (regional), EC2 (AZ-scoped), or RDS (AZ-scoped). IAM uses strong consistency — a policy change is visible immediately across all regions, not eventually consistent.</p>
+        <div class="mechbox"><strong>Why IAM strong consistency matters in production:</strong> If you revoke a permission from an IAM role at 2:00 PM, any API call made using that role at 2:00:01 PM will be denied — no propagation delay. This is critical for incident response. If you discover a compromised IAM role, attaching a deny-all policy is immediately effective globally. Contrast this with rotating a secret (which takes time to propagate across all systems using it). IAM policy changes are the fastest lever for containing a security incident.</div>
+        <p><strong>IAM's internal architecture:</strong> IAM stores policy data in DynamoDB-like replicated storage across all AWS regions. When an API call is made, the IAM authorization service receives the request context (caller identity, action being requested, resource ARN, request conditions like source IP and time), loads all applicable policies for that identity, and runs the policy evaluation algorithm — all in microseconds. The authorization decision is cached briefly at the service level but IAM changes take effect within seconds everywhere.</p>
+        <p><strong>IAM is not a firewall.</strong> It does not block network traffic. It blocks API calls. An attacker who has network access to your EC2 but no IAM credentials cannot make AWS API calls. An attacker who has IAM credentials but is not inside your VPC can make API calls from anywhere on the internet. Network security (VPC, Security Groups) and IAM security are independent, complementary layers — neither is sufficient alone.</p>
+      </div>
+      <span class="pill p-red">Every API call evaluated — no exceptions</span>
+      <span class="pill p-blue">Global, strongly consistent — policy changes are immediate</span>
+    </div>
+
+    <div id="c1" class="cpanel">
+      <div class="ch">The IAM policy evaluation algorithm — the exact logic</div>
+      <div class="csub">Six steps, evaluated in order. Understanding this explains every access denied error you will ever see.</div>
+      <div class="cb">
+        <p>When IAM evaluates whether an API call is allowed, it follows a deterministic algorithm. Every "Access Denied" error in AWS is explained by one of these steps. Senior engineers can identify which step failed from the error message and context.</p>
+
+        <div class="eval-flow">
+          <div class="eval-step">
+            <div class="eval-num eval-deny">1</div>
+            <div class="eval-body"><strong>Is there an explicit DENY in any applicable policy?</strong> IAM collects all applicable policies: identity-based policies attached to the caller, resource-based policies on the target resource, SCPs from AWS Organizations, permission boundaries, and session policies. If ANY policy contains an explicit Deny statement matching this action on this resource — the request is denied immediately. No further evaluation. Explicit Deny overrides everything else, including explicit Allow. You cannot Allow your way out of an explicit Deny.</div>
+          </div>
+          <div class="eval-step">
+            <div class="eval-num eval-deny">2</div>
+            <div class="eval-body"><strong>Does an SCP (Service Control Policy) deny the action?</strong> If the account is in an AWS Organization, SCPs apply as a permission boundary for the entire account. An SCP cannot grant permissions — it can only restrict what is possible within the account. If the SCP does not allow the action (either explicitly denies it or simply doesn't include it), the request is denied even if the IAM identity has explicit Allow. The SCP is evaluated before identity policies.</div>
+          </div>
+          <div class="eval-step">
+            <div class="eval-num eval-allow">3</div>
+            <div class="eval-body"><strong>Is this a resource-based policy with an explicit Allow for this principal?</strong> If the target resource has a resource-based policy (e.g. S3 bucket policy, KMS key policy, Lambda resource policy) that explicitly allows the caller's principal, the request is allowed — even if the caller's IAM identity policy has no explicit allow. Resource-based policies with explicit principal Allows can grant access across accounts and even to services.</div>
+          </div>
+          <div class="eval-step">
+            <div class="eval-num eval-deny">4</div>
+            <div class="eval-body"><strong>Is there a permission boundary on this IAM entity?</strong> Permission boundaries are IAM managed policies attached to an IAM user or role that set the maximum permissions that entity can ever have. If a permission boundary is attached and the requested action is not allowed in the boundary policy, the request is denied — even if the entity's identity policy explicitly allows it. Used to safely delegate IAM permission management to developers without risking privilege escalation.</div>
+          </div>
+          <div class="eval-step">
+            <div class="eval-num eval-allow">5</div>
+            <div class="eval-body"><strong>Is there an identity-based policy with an explicit Allow?</strong> The caller's IAM user policies, group policies, and role policies are evaluated. If any of these explicitly allow the action on the resource, and no prior step denied it, the request is allowed.</div>
+          </div>
+          <div class="eval-step">
+            <div class="eval-num eval-default">6</div>
+            <div class="eval-body"><strong>Default: implicit deny.</strong> If no explicit Allow was found and no explicit Deny was triggered, the request is implicitly denied. The default in IAM is deny everything — you must explicitly grant every permission. This is the correct security default.</div>
+          </div>
+        </div>
+
+        <div class="mechbox"><strong>The most counterintuitive consequence of this algorithm:</strong> Explicit Deny always wins. If you attach an AdministratorAccess policy to an IAM user (allows everything), but also attach a policy with an explicit Deny for s3:DeleteObject — the user cannot delete S3 objects. The Deny wins even over AdministratorAccess. This is how "break glass" deny policies work: create a deny-all policy and attach it immediately during an incident to neutralize a compromised role faster than you can delete or modify the existing allow policies.</div>
+        <div class="failbox"><strong>The implicit deny confusion — "I didn't deny it, why is it denied?"</strong> A new engineer attaches a policy granting s3:GetObject and s3:PutObject to an IAM user. The user tries to run aws s3 ls (which calls s3:ListAllMyBuckets) and gets Access Denied. The engineer is confused — "I didn't deny ListAllMyBuckets." But they didn't Allow it either. IAM defaults to deny. Every action the identity needs must be explicitly allowed. There is no "allow everything except what I've denied" — it's "deny everything except what I've allowed."</div>
+      </div>
+    </div>
+
+    <div id="c2" class="cpanel">
+      <div class="ch">The 6 policy types and when each one applies</div>
+      <div class="csub">Most engineers know 2 of the 6. The others explain half of all production IAM failures.</div>
+      <div class="cb">
+        <p><strong>1. Identity-based policies</strong> — attached to IAM users, groups, or roles. Define what that identity can do. The most common policy type. Can be managed (AWS-managed or customer-managed) or inline (embedded directly in the identity, cannot be reused).</p>
+        <p><strong>2. Resource-based policies</strong> — attached to AWS resources (S3 bucket policies, KMS key policies, Lambda resource policies, SQS queue policies, etc.). Define who can access this resource. Support cross-account access — a bucket policy can grant access to a principal from a different AWS account. Not all services support resource-based policies; EC2, RDS, and most compute services do not.</p>
+        <p><strong>3. Permission boundaries</strong> — an IAM managed policy attached to a user or role that sets the maximum permissions that entity can ever have, regardless of what identity-based policies say. If the boundary allows s3:GetObject but the identity policy allows s3:*, the entity can only do s3:GetObject. The effective permission is the intersection of the identity policy and the boundary. Used to safely delegate IAM management: a developer can create and manage their own IAM roles, but cannot create roles with permissions beyond what their own permission boundary allows — preventing privilege escalation.</p>
+        <p><strong>4. Organizations Service Control Policies (SCPs)</strong> — policies attached at the AWS Organization, OU (Organizational Unit), or account level. Apply to all principals in the account or OU. Cannot grant permissions — can only restrict. An SCP that doesn't include s3:DeleteBucket means no principal in that account, including root, can delete S3 buckets — regardless of what IAM policies say. Used for account-wide guardrails: prevent resource creation outside approved regions, prevent disabling CloudTrail, prevent spending above a threshold.</p>
+        <p><strong>5. Access control lists (ACLs)</strong> — legacy S3 and VPC mechanism. AWS recommends against using ACLs. S3 ACLs were deprecated as the preferred mechanism after the introduction of bucket policies and Block Public Access. Understanding ACLs exists to explain why old S3 buckets may have unexpected access patterns.</p>
+        <p><strong>6. Session policies</strong> — policies passed inline when assuming a role or federating via web identity. They further restrict the permissions available in the session — they cannot expand beyond what the role itself allows. Used with AWS STS AssumeRole calls to create least-privilege temporary sessions: even if the role allows full S3 access, you can pass a session policy that restricts the session to only reading from one specific bucket key prefix.</p>
+        <div class="mechbox"><strong>Effective permissions = intersection, not union:</strong> Your effective permissions are not the union of all applicable policies — they are constrained by every limiting layer. You can think of it as: (Identity policy ∩ Permission boundary ∩ SCP ∩ Session policy) with resource-based policy grants potentially adding access from the resource side. Every restricting layer must allow the action. One layer saying "no" or "nothing" is enough to deny access.</div>
+      </div>
+    </div>
+
+    <div id="c3" class="cpanel">
+      <div class="ch">Cross-account access — the AND logic that everyone gets wrong</div>
+      <div class="csub">Why your IAM policy saying "allow" is not enough when crossing account boundaries</div>
+      <div class="cb">
+        <p>Cross-account access is the most commonly misunderstood IAM scenario. The evaluation logic changes in a critical way when the requesting principal is from a different AWS account than the resource.</p>
+        <p><strong>Same-account access:</strong> If a principal in Account A accesses a resource in Account A, either the identity-based policy OR the resource-based policy can grant access. They are OR'd. If the identity policy allows it and no explicit deny exists, access is granted — even if there's no resource-based policy on the resource.</p>
+        <p><strong>Cross-account access:</strong> If a principal in Account A accesses a resource in Account B, BOTH the identity-based policy in Account A AND the resource-based policy in Account B must explicitly allow the access. This is AND logic. One side allowing is not sufficient.</p>
+        <div class="mechbox"><strong>Why AND logic for cross-account:</strong> Account B's resource owner should not be at the mercy of Account A's IAM configuration. If cross-account access worked with just Account A's allow, then any Account A admin could grant their principals access to Account B's resources by simply writing an allow policy — without Account B's resource owner knowing or consenting. The AND requirement means Account B must explicitly opt in by creating a resource policy that allows Account A's principal. Both sides must agree. This is the correct security model for inter-account access.</div>
+        <div class="failbox"><strong>The most common cross-account debugging scenario:</strong> Team A's IAM role has s3:GetObject on Account B's bucket (written by Team A's AWS admin). Team A's developer runs aws s3 cp and gets Access Denied. Team A's admin confirms "the IAM policy is correct." The developer raises a ticket with Team B saying "your bucket is broken." Team B checks and confirms the bucket has no bucket policy. That's the problem. Without a bucket policy in Account B that explicitly allows Team A's role ARN, cross-account access is denied — regardless of what Team A's IAM policy says. Fix: Team B adds a bucket policy allowing arn:aws:iam::ACCOUNT_A_ID:role/role-name to perform s3:GetObject on their bucket.</div>
+        <p><strong>The role assumption pattern for cross-account access:</strong> Rather than resource-based policies on every resource, the cleaner cross-account pattern is role assumption. Account B creates an IAM role with a trust policy allowing Account A to assume it. Account A's principal calls STS AssumeRole to get temporary credentials for Account B's role. All subsequent API calls use Account B's credentials — so every resource in Account B sees a same-account access request. This bypasses the AND requirement and requires no resource policies. This is how your Deloitte project likely connects to JP Morgan's AWS environment — role assumption across account boundaries.</p>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('entities',document.querySelectorAll('.ntab')[1])">Entities and roles — the deep mechanics →</button>
+  </div>
+
+  <!-- ENTITIES & ROLES -->
+  <div id="p-entities" class="panel">
+    <div class="lede"><strong>IAM Users, Groups, and Roles are not equivalent constructs with different names. They have fundamentally different credential models, lifecycle characteristics, and security properties. Using the wrong one for the wrong use case is the root cause of most IAM security incidents.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('e',0,this)">1 · IAM Users</button>
+      <button class="cbtn" onclick="showC('e',1,this)">2 · IAM Roles</button>
+      <button class="cbtn" onclick="showC('e',2,this)">3 · Role assumption mechanics</button>
+      <button class="cbtn" onclick="showC('e',3,this)">4 · Instance metadata & IMDS</button>
+      <button class="cbtn" onclick="showC('e',4,this)">5 · Service-linked roles</button>
+    </div>
+
+    <div id="e0" class="cpanel active">
+      <div class="ch">IAM Users — long-lived credentials and why they're dangerous</div>
+      <div class="csub">The original IAM construct — still used for humans and legacy systems, increasingly avoided</div>
+      <div class="cb">
+        <p>An IAM User is an identity with long-lived credentials: a username and password for console access, and/or an access key ID + secret access key for programmatic access. "Long-lived" means the credentials remain valid until you explicitly rotate or delete them — they don't expire automatically.</p>
+        <p>Access keys consist of two parts: an <strong>Access Key ID</strong> (like <span class="mono">AKIAIOSFODNN7EXAMPLE</span> — always starts with AKIA for regular access keys) and a <strong>Secret Access Key</strong> (a 40-character string). The access key ID identifies which key is being used; the secret access key signs the request. Both are needed to authenticate. An IAM User can have up to two access keys simultaneously — this supports rotation without downtime (create new, update systems, delete old).</p>
+        <div class="failbox"><strong>The access key in source code — the most common AWS security incident:</strong> A developer creates an IAM user for their Spring Boot application and puts the access key in application.properties: <span class="mono">aws.accessKeyId=AKIA...</span> and <span class="mono">aws.secretAccessKey=xxx</span>. They commit to GitHub. Within minutes, automated bots scanning GitHub for AWS credential patterns find the keys. Within hours, the attacker spins up hundreds of GPU instances for cryptocurrency mining. AWS bill reaches $50,000. AWS detects the anomaly and alerts the account owner, but the damage is done. This is not hypothetical — it happens daily. AWS has automated scanners monitoring GitHub for credential patterns. You will receive an email from AWS before you notice it yourself.</div>
+        <p><strong>When IAM Users are appropriate:</strong> Human console access with password and MFA (though AWS IAM Identity Center — formerly SSO — is preferred for humans in enterprise settings). Legacy systems that cannot assume roles and require static credentials (increasingly rare). CI/CD systems that cannot use OIDC-based role assumption (Jenkins, GitHub Actions, etc. all support OIDC now — static keys for CI/CD are legacy).</p>
+        <p><strong>When IAM Users are NOT appropriate:</strong> Applications running on EC2, Lambda, ECS, or any AWS compute — use IAM roles instead. Service-to-service communication — use roles. Cross-account access — use role assumption. The only valid use case for static access keys in applications is truly legacy systems with no mechanism to support role assumption.</p>
+        <div class="prodbox"><strong>Access key ID prefix tells you what type of credential it is:</strong> AKIA = long-term access key for IAM User. ASIA = temporary credential from STS (assumed role). AROA = IAM Role ID (not a credential). AIDA = IAM User ID. AGPA = IAM Group ID. When you see ASIA in logs or error messages, you know you're looking at temporary credentials from a role assumption — this matters for incident response and debugging.</div>
+      </div>
+    </div>
+
+    <div id="e1" class="cpanel">
+      <div class="ch">IAM Roles — the correct model for everything that isn't a human</div>
+      <div class="csub">Temporary credentials, automatic rotation, no long-lived secrets — the security model that scales</div>
+      <div class="cb">
+        <p>An IAM Role is an identity that can be assumed by a principal (user, service, or another account). Roles have <strong>no long-lived credentials</strong>. When a principal assumes a role, AWS STS (Security Token Service) issues temporary credentials: a temporary access key ID (starts with ASIA), a temporary secret access key, and a session token. These credentials expire — default 1 hour, configurable up to 12 hours for most roles, up to 36 hours for cross-account roles. After expiry, the credentials stop working automatically and must be refreshed.</p>
+        <p>A Role has two policy components: a <strong>trust policy</strong> (who is allowed to assume this role — the resource-based policy on the role itself) and <strong>permission policies</strong> (what the role can do once assumed — the identity-based policies attached to it).</p>
+        <div class="mechbox"><strong>Why temporary credentials are fundamentally more secure:</strong> If a static access key is leaked, it remains valid indefinitely until you explicitly rotate it. If temporary credentials are leaked, they expire automatically after at most 12 hours. An attacker who steals temporary credentials from your EC2's metadata service has a maximum window of the session duration (typically 1 hour) to use them. After that, the credentials are worthless — no action needed by you. For long-term static keys, you must detect the compromise, identify which systems use the key, update all of them, then delete the old key — a process that takes hours to days during which the attacker still has valid credentials.</div>
+        <p><strong>Trust policies — the most overlooked security boundary:</strong> The trust policy defines who can call STS:AssumeRole on this role. A common mistake: trust policy with Principal <span class="mono">*</span> (all AWS principals) or <span class="mono">arn:aws:iam::*:root</span> (all AWS accounts). This means any AWS account can assume your role — if they have credentials to call AssumeRole. This is not immediately catastrophic (they still need to call AssumeRole explicitly) but it violates least-privilege and creates an attack surface. Trust policies should be as specific as possible: exactly which account, service, or user should be allowed to assume this role.</p>
+        <div class="failbox"><strong>The confused deputy attack via over-permissive trust policy:</strong> Your production role has trust policy allowing the EC2 service to assume it, plus an extra condition-less trust for <span class="mono">arn:aws:iam::123456789:root</span> (your account root). An attacker who compromises any IAM user in your account (not even an admin) can call AssumeRole on your production role from their compromised identity — escalating to production-role permissions. Overly broad trust policies are privilege escalation vectors. Every trust policy entry must have a clear justification and ideally conditions (aws:SourceAccount, aws:SourceArn) to prevent confused deputy scenarios.</div>
+      </div>
+    </div>
+
+    <div id="e2" class="cpanel">
+      <div class="ch">Role assumption mechanics — what STS actually does</div>
+      <div class="csub">The exact sequence from AssumeRole call to temporary credentials to authorized API call</div>
+      <div class="cb">
+        <p>Role assumption is the cornerstone of secure AWS architecture. Understanding the exact mechanics helps you design systems correctly and debug credential issues systematically.</p>
+        <p><strong>Step 1 — AssumeRole call:</strong> The requesting principal (IAM User, another Role, EC2 instance profile, Lambda execution role) calls <span class="mono">sts:AssumeRole</span> with the target role ARN. IAM evaluates: does the caller have permission to call sts:AssumeRole on this role? Does the target role's trust policy allow this principal? If both checks pass, STS generates temporary credentials.</p>
+        <p><strong>Step 2 — STS generates temporary credentials:</strong> STS creates three values: a temporary access key ID (ASIA...), a temporary secret access key, and a session token (a long, opaque string). The session token contains encrypted metadata about the assumed role, the original caller, the session duration, and any session policies. All three values are returned to the caller. The session token is mandatory — API calls using role credentials must include it.</p>
+        <p><strong>Step 3 — Using temporary credentials:</strong> Any subsequent API call signed with these temporary credentials must include all three values: access key ID, secret access key (for request signing), and session token (in the x-amz-security-token header or as a query parameter). If the session token is missing, the API call fails with an InvalidClientTokenId error even though the access key is valid.</p>
+        <div class="mechbox"><strong>How the AWS SDK handles this automatically:</strong> When your Spring Boot app runs on an EC2 with an IAM instance profile attached, the AWS SDK's DefaultCredentialsProvider automatically: queries the EC2 instance metadata service (IMDS) for the role's temporary credentials, caches them, refreshes them before expiry (5 minutes before). You never write credential code. Never call AssumeRole manually. Never store the session token. The SDK does all of this transparently. This is the correct pattern — your application code should be completely credential-agnostic.</div>
+        <p><strong>Role chaining:</strong> An assumed role can assume another role — this is called role chaining. If Role A assumes Role B, and Role B has permission to call sts:AssumeRole on Role C, the session that assumed Role B can then assume Role C. Each hop creates a new temporary session. The maximum session duration for role chaining is capped at 1 hour, regardless of the individual role's MaxSessionDuration setting. This catches engineers who set up cross-account pipelines with role chains longer than one hop and wonder why credentials expire faster than expected.</p>
+        <div class="failbox"><strong>The session token requirement failure:</strong> A developer manually captures temporary credentials from the instance metadata service and pastes them into their local AWS CLI config to debug something from their laptop. They put the access key ID and secret access key but forget the session token. Every CLI command fails with "InvalidClientTokenId" even though the keys look valid. The SDK and CLI require all three values for assumed role credentials. The session token field is not optional — it's the cryptographic proof that this temporary key was issued by STS rather than being a compromised static key.</div>
+      </div>
+    </div>
+
+    <div id="e3" class="cpanel">
+      <div class="ch">Instance Metadata Service (IMDS) — how EC2 gets credentials and why it's an attack target</div>
+      <div class="csub">The link between IAM roles and EC2 — and why IMDSv2 is mandatory in production</div>
+      <div class="cb">
+        <p>The Instance Metadata Service (IMDS) is a special HTTP endpoint available on every EC2 instance at <span class="mono">http://169.254.169.254</span>. This link-local IP address is not routable — it can only be accessed from within the EC2 instance itself, not from other instances or the internet. IMDS provides instance metadata (instance ID, AMI ID, AZ, security groups) and, critically, temporary IAM role credentials when an instance profile is attached.</p>
+        <p>To get credentials from IMDS: <span class="mono">curl http://169.254.169.254/latest/meta-data/iam/security-credentials/ROLE-NAME</span> returns a JSON with AccessKeyId, SecretAccessKey, Token, and Expiration. The AWS SDK makes this call automatically and caches the result.</p>
+        <div class="failbox"><strong>SSRF → IMDS → credential theft — a real attack class:</strong> Server-Side Request Forgery (SSRF) is a vulnerability where an attacker tricks your application into making HTTP requests to internal URLs on behalf of the attacker. If your Spring Boot app has an endpoint that fetches a URL provided by the user (e.g. a link preview feature, a webhook validator, or an image downloader), an attacker sends the URL <span class="mono">http://169.254.169.254/latest/meta-data/iam/security-credentials/</span>. Your app fetches it, gets the role name, fetches the credentials, and returns them in the response. The attacker now has valid AWS credentials for your EC2's IAM role. This is exactly how the Capital One breach worked in 2019 — SSRF against a misconfigured WAF on EC2, credentials extracted from IMDS, attacker accessed S3 buckets containing customer data. 100 million records exposed.</div>
+        <p><strong>IMDSv1 vs IMDSv2:</strong> IMDS version 1 (IMDSv1) allows any HTTP GET to the metadata endpoint — no authentication. IMDS version 2 (IMDSv2) requires a two-step process: first PUT request to get a session token (with a TTL header), then GET requests with the session token in a header. This two-step process prevents SSRF attacks because SSRF exploits typically only follow GET redirects — a PUT request for the session token requires the attacker's application to support non-GET HTTP methods, which most SSRF vectors don't.</p>
+        <div class="prodbox"><strong>Enforce IMDSv2 on every EC2 instance — non-negotiable in production:</strong> When launching an EC2 instance, set HttpTokens to "required" — this disables IMDSv1 entirely. Existing instances: run <span class="mono">aws ec2 modify-instance-metadata-options --instance-id i-xxx --http-tokens required</span>. At the account level, use an AWS Config rule or SCP to detect or prevent IMDSv1 usage. The AWS SDK v2 and all modern AWS tools support IMDSv2 automatically. If you have legacy code that directly queries IMDS with curl-style GET requests, update it to add the IMDSv2 session token step. This is not optional for anything with a public-facing interface.</div>
+      </div>
+    </div>
+
+    <div id="e4" class="cpanel">
+      <div class="ch">Service-linked roles — IAM roles that AWS services manage for you</div>
+      <div class="csub">Understanding these prevents confusion when you see roles you didn't create in your account</div>
+      <div class="cb">
+        <p>Service-linked roles are IAM roles predefined by AWS services. They are automatically created when you use certain AWS services for the first time. They have exactly the permissions that service needs to call other AWS services on your behalf — no more, no less. You cannot modify the trust policy (the service itself must be the only principal). You cannot delete a service-linked role while the service that uses it still exists.</p>
+        <p>Examples: <span class="mono">AWSServiceRoleForElasticLoadBalancing</span> — created when you create your first ALB, used by ELB to call EC2 APIs to register and deregister targets. <span class="mono">AWSServiceRoleForAutoScaling</span> — created when you create your first Auto Scaling Group, used by ASG to launch and terminate EC2 instances, attach ENIs, etc. <span class="mono">AWSServiceRoleForRDS</span> — created when you create your first RDS instance, used by RDS to call EC2 and VPC APIs for network configuration.</p>
+        <div class="mechbox"><strong>Why you need to understand service-linked roles:</strong> When you look at your IAM console and see 20+ roles you didn't create, these are service-linked roles. Engineers unfamiliar with them often think they've been compromised or that something is wrong with their account. They're not a security risk — they're tightly scoped to the specific service's needs and cannot be assumed by arbitrary principals. However, you should audit them periodically. If a service-linked role for a service you don't use is present (e.g. AWSServiceRoleForRekognition when you've never used Rekognition), it might indicate a service was used by an unauthorized party at some point.</div>
+        <div class="prodbox"><strong>Service-linked roles in Terraform:</strong> When writing Terraform for AWS services, service-linked roles are typically created automatically by the first resource of that type. However, if you're creating IAM resources in a separate Terraform run from the service resources, you may need to explicitly create service-linked roles in your Terraform: <span class="mono">aws_iam_service_linked_role</span> resource. Failing to do so causes Terraform to fail when the service tries to create the role and gets an "already exists" error if the role was previously created.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('policies',document.querySelectorAll('.ntab')[2])">Policy anatomy — JSON structure and conditions →</button>
+  </div>
+
+  <!-- POLICY ANATOMY -->
+  <div id="p-policies" class="panel">
+    <div class="lede"><strong>IAM policy JSON is not just configuration. Every field has specific semantics that determine whether access is granted or denied. A single wrong character — a missing wildcard, an incorrect ARN format, a condition key typo — silently changes what the policy does. Read policies, don't just write them.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('p',0,this)">1 · Policy JSON structure</button>
+      <button class="cbtn" onclick="showC('p',1,this)">2 · Resource ARNs</button>
+      <button class="cbtn" onclick="showC('p',2,this)">3 · Conditions</button>
+      <button class="cbtn" onclick="showC('p',3,this)">4 · Common patterns</button>
+    </div>
+
+    <div id="p0" class="cpanel active">
+      <div class="ch">IAM Policy JSON — anatomy of every field</div>
+      <div class="csub">Every field has precise semantics — understanding each one prevents subtle security misconfigurations</div>
+      <div class="cb">
+        <p>An IAM policy is a JSON document with a Version and one or more Statement blocks. Here is a complete, annotated policy:</p>
+
+        <div class="policy-block"><code><span class="c">// This policy allows reading from a specific S3 prefix</span>
+<span class="c">// and writing logs to CloudWatch, but denies all deletes</span>
+{
+  <span class="k">"Version"</span>: <span class="v">"2012-10-17"</span>,          <span class="c">// Always use this date. It's not a year — it's the policy language version.</span>
+                                    <span class="c">// "2008-10-17" is the older version — lacks Conditions support.</span>
+  <span class="k">"Statement"</span>: [
+    {
+      <span class="k">"Sid"</span>: <span class="v">"AllowS3Read"</span>,           <span class="c">// Statement ID — optional, used for documentation and debugging.</span>
+                                    <span class="c">// Appears in CloudTrail when this statement is the matching one.</span>
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,             <span class="c">// "Allow" or "Deny". No other values accepted.</span>
+      <span class="k">"Action"</span>: [               <span class="c">// What API actions this statement covers.</span>
+        <span class="v">"s3:GetObject"</span>,          <span class="c">// Exact action: service:ActionName (case-insensitive for the action)</span>
+        <span class="v">"s3:ListBucket"</span>           <span class="c">// s3:* = all S3 actions. s3:Get* = all Get actions.</span>
+      ],
+      <span class="k">"Resource"</span>: [             <span class="c">// Which resources this statement applies to.</span>
+        <span class="v">"arn:aws:s3:::my-bucket"</span>,  <span class="c">// The bucket itself (for ListBucket)</span>
+        <span class="v">"arn:aws:s3:::my-bucket/*"</span> <span class="c">// Objects in the bucket (for GetObject)</span>
+                                    <span class="c">// Both needed — ListBucket operates on bucket, GetObject on objects.</span>
+      ]
+    },
+    {
+      <span class="k">"Sid"</span>: <span class="v">"DenyAllDeletes"</span>,
+      <span class="k">"Effect"</span>: <span class="v">"Deny"</span>,              <span class="c">// This Deny wins over any Allow, including AdministratorAccess.</span>
+      <span class="k">"Action"</span>: <span class="v">"s3:DeleteObject"</span>,    <span class="c">// Can be a string (single) or array (multiple).</span>
+      <span class="k">"Resource"</span>: <span class="v">"*"</span>,              <span class="c">// All resources. Deny statements often use * to be comprehensive.</span>
+      <span class="k">"Condition"</span>: {             <span class="c">// Optional: restricts when this statement applies.</span>
+        <span class="k">"StringNotEquals"</span>: {
+          <span class="k">"aws:PrincipalTag/Role"</span>: <span class="v">"DataAdmin"</span>
+                                    <span class="c">// Only deny if the caller does NOT have the Role=DataAdmin tag.</span>
+                                    <span class="c">// DataAdmin can delete; everyone else cannot.</span>
+        }
+      }
+    }
+  ]
+}</code></div>
+
+        <div class="mechbox"><strong>The Version field is not the year — it's a syntax version:</strong> Always use <span class="mono">"2012-10-17"</span>. The older <span class="mono">"2008-10-17"</span> version lacks support for policy variables like <span class="mono">${aws:username}</span> in resource ARNs. If you write a policy using <span class="mono">${aws:username}</span> with the 2008 version, the variable is not substituted — it becomes a literal string, silently breaking the policy. AWS will accept the 2008 version without warning — the bug is silent and hard to detect.</div>
+
+        <div class="failbox"><strong>The ListBucket vs GetObject resource ARN mistake:</strong> A common policy error — the engineer writes the policy to allow s3:GetObject and s3:ListBucket, with Resource: <span class="mono">arn:aws:s3:::my-bucket/*</span> (objects only). The user can GetObject fine but cannot ListBucket. Why? s3:ListBucket operates on the bucket itself, not objects. The resource must be <span class="mono">arn:aws:s3:::my-bucket</span> (without the /*). s3:GetObject operates on objects — resource must be <span class="mono">arn:aws:s3:::my-bucket/*</span>. You need both resource ARNs in the policy. This causes one of the most cryptic S3 access errors: "Access Denied" on listing but "success" on direct object gets — which makes no sense until you understand the action-to-resource mapping.</div>
+      </div>
+    </div>
+
+    <div id="p1" class="cpanel">
+      <div class="ch">Resource ARNs — the addressing system for every AWS resource</div>
+      <div class="csub">ARN format, wildcards, and the account ID that engineers forget to include</div>
+      <div class="cb">
+        <p>An ARN (Amazon Resource Name) uniquely identifies every AWS resource. Format: <span class="mono">arn:partition:service:region:account-id:resource-type/resource-id</span></p>
+        <div class="monoblock">arn:aws:s3:::my-bucket                                    # S3 bucket (no region, no account — S3 is global namespace)
+arn:aws:s3:::my-bucket/path/to/object.pdf                 # Specific S3 object
+arn:aws:s3:::my-bucket/*                                  # All objects in bucket
+arn:aws:iam::123456789012:role/my-role                    # IAM role (no region — IAM is global)
+arn:aws:iam::123456789012:user/zuber                      # IAM user
+arn:aws:ec2:ap-south-1:123456789012:instance/i-abc123     # EC2 instance
+arn:aws:rds:ap-south-1:123456789012:db:my-database        # RDS instance
+arn:aws:lambda:ap-south-1:123456789012:function:my-func   # Lambda function
+arn:aws:sqs:ap-south-1:123456789012:my-queue              # SQS queue
+arn:aws:kms:ap-south-1:123456789012:key/key-uuid          # KMS key
+*                                                          # All resources (use with care — only in deny statements)</div>
+        <div class="mechbox"><strong>Wildcards in ARNs — powerful but dangerous:</strong> The * wildcard in ARN resource fields matches any string of characters. <span class="mono">arn:aws:s3:::*</span> = all S3 buckets. <span class="mono">arn:aws:ec2:ap-south-1:123456789012:instance/*</span> = all EC2 instances in your account in ap-south-1. <span class="mono">arn:aws:iam::123456789012:role/app-*</span> = all roles with names starting with "app-". The ? wildcard matches exactly one character. Use the narrowest ARN that covers the resources you intend to grant access to. A policy that says <span class="mono">arn:aws:s3:::*</span> grants access to every S3 bucket in the universe, not just yours — S3 names are globally unique but the * doesn't scope to your account.</div>
+        <div class="failbox"><strong>The missing account ID privilege escalation:</strong> An engineer writes an IAM policy with Action: sts:AssumeRole and Resource: <span class="mono">arn:aws:iam::*:role/admin-role</span>. The wildcard on the account ID means this policy allows assuming any role named "admin-role" in ANY AWS account, not just their own. If any other AWS account happens to have a role named "admin-role" with a trust policy that allows all AWS accounts (common in misconfigured accounts), this identity can now assume admin-role in that external account. Always include the specific account ID in role ARNs in policies. Use the <span class="mono">${aws:PrincipalAccount}</span> condition key to dynamically scope to the caller's account.</div>
+      </div>
+    </div>
+
+    <div id="p2" class="cpanel">
+      <div class="ch">IAM Conditions — the precision tool that separates good policies from great ones</div>
+      <div class="csub">Restricting access based on IP, time, MFA, tags, VPC, and dozens of other dimensions</div>
+      <div class="cb">
+        <p>Conditions are optional blocks in policy statements that restrict when the statement applies. Without conditions, a statement applies whenever the action and resource match. With conditions, the statement only applies when all conditions are also true.</p>
+        <p>A condition has an operator, a condition key, and a value. The condition key is a global key (available in all services) prefixed with <span class="mono">aws:</span>, or a service-specific key prefixed with the service name (e.g. <span class="mono">s3:prefix</span>).</p>
+
+        <div class="monoblock"><span class="c">// Allow S3 access ONLY from within your VPC</span>
+"Condition": {
+  "StringEquals": {"aws:SourceVpc": "vpc-12345678"}
+}
+
+<span class="c">// Require MFA for all IAM actions except the session itself</span>
+"Condition": {
+  "BoolIfExists": {"aws:MultiFactorAuthPresent": "true"}
+}
+
+<span class="c">// Restrict EC2 launches to only specific instance types</span>
+"Condition": {
+  "StringEquals": {"ec2:InstanceType": ["t3.micro", "t3.small"]}
+}
+
+<span class="c">// Only allow access during business hours (UTC)</span>
+"Condition": {
+  "DateGreaterThan": {"aws:CurrentTime": "2024-01-01T09:00:00Z"},
+  "DateLessThan": {"aws:CurrentTime": "2024-01-01T18:00:00Z"}
+}
+
+<span class="c">// Allow S3 access only from specific IP ranges (your office + VPN)</span>
+"Condition": {
+  "IpAddress": {"aws:SourceIp": ["203.0.113.0/24", "198.51.100.0/24"]}
+}
+
+<span class="c">// Tag-based access: only allow accessing resources you own</span>
+"Condition": {
+  "StringEquals": {"aws:ResourceTag/Owner": "${aws:username}"}
+}</code></div>
+
+        <div class="mechbox"><strong>BoolIfExists vs Bool — the condition operator that engineers get wrong:</strong> If you use <span class="mono">"Bool": {"aws:MultiFactorAuthPresent": "true"}</span>, this condition evaluates to false when MFA is not present in the request context — blocking access for API calls that don't include MFA. But API calls using access keys (programmatic access from CLI or SDK) never include MFA context — the aws:MultiFactorAuthPresent key is absent in the request context. Absent key ≠ false for Bool — Bool with an absent key evaluates to false, which may not be what you intended. Use <span class="mono">BoolIfExists</span> when you want "if this key is present in the request, it must have this value" — it skips evaluation if the key is absent. Use <span class="mono">Bool</span> when you want to require the key to be present and true (e.g. requiring MFA for console access where the key is always present).</div>
+        <div class="prodbox"><strong>ABAC — Attribute-Based Access Control with tags:</strong> Instead of creating a new IAM policy for every new resource, use resource tags and condition keys to create policies that automatically apply to correctly tagged resources. Example: Policy that allows developers to access any resource tagged with <span class="mono">Environment=dev</span> and <span class="mono">Team=${aws:PrincipalTag/Team}</span>. When you create a new dev S3 bucket or EC2 instance with those tags, your developers automatically have access without any policy changes. This is ABAC — it scales to thousands of resources and hundreds of developers without policy explosion. Used extensively in large organisations to manage IAM at scale.</div>
+      </div>
+    </div>
+
+    <div id="p3" class="cpanel">
+      <div class="ch">Critical policy patterns every engineer must know</div>
+      <div class="csub">Production-tested patterns for the scenarios you will encounter in your first year</div>
+      <div class="cb">
+        <p><strong>Pattern 1 — Least privilege for a Spring Boot app on EC2 (what your Deloitte app needs):</strong></p>
+        <div class="monoblock">{
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::app-data-bucket/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::app-data-bucket",
+      "Condition": {"StringLike": {"s3:prefix": "app-data/*"}}
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue"],
+      "Resource": "arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:app/prod/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": "arn:aws:logs:ap-south-1:ACCOUNT:log-group:/app/prod*"
+    }
+  ]
+}</div>
+
+        <p><strong>Pattern 2 — SCP to prevent resources outside approved regions:</strong></p>
+        <div class="monoblock">{
+  "Effect": "Deny",
+  "Action": "*",
+  "Resource": "*",
+  "Condition": {
+    "StringNotEquals": {
+      "aws:RequestedRegion": ["ap-south-1", "ap-south-2"]
+    }
+  }
+}</div>
+        <div class="snote" style="font-size:12px;color:#666;margin-top:4px;display:block">This SCP denies all actions in all regions except Mumbai and Hyderabad. Attach at the OU level. Any attempt to launch resources in us-east-1 or eu-west-1 is denied at the account level — regardless of the individual IAM user's permissions. IAM global services (IAM itself, Route 53, CloudFront) automatically exempt themselves from region-based SCPs.</div>
+
+        <p><strong>Pattern 3 — Permission boundary for delegated IAM management:</strong></p>
+        <div class="monoblock"><span class="c">// Attach this as a permission boundary to developer IAM roles.
+// Developers can do anything permitted by their identity policies,
+// but cannot exceed what this boundary allows.
+// This means a developer cannot create a role with more permissions than they have.</span>
+{
+  "Effect": "Allow",
+  "Action": "*",
+  "Resource": "*",
+  "Condition": {
+    "StringEquals": {
+      "iam:PermissionsBoundary": "arn:aws:iam::ACCOUNT:policy/DeveloperBoundary"
+    }
+  }
+}
+<span class="c">// Combined with this deny: prevents removing their own boundary</span>
+{
+  "Effect": "Deny",
+  "Action": ["iam:DeleteUserPermissionsBoundary", "iam:DeleteRolePermissionsBoundary"],
+  "Resource": "*"
+}</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('advanced',document.querySelectorAll('.ntab')[3])">Advanced IAM — STS, federation, and Identity Center →</button>
+  </div>
+
+  <!-- ADVANCED IAM -->
+  <div id="p-advanced" class="panel">
+    <div class="lede"><strong>AWS STS, federated identity, IAM Identity Center, and IAM Access Analyzer are the tools that separate IAM beginners from engineers who can architect secure multi-account, multi-team organisations. These topics appear in principal engineer and solutions architect interviews.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('adv',0,this)">1 · STS deep dive</button>
+      <button class="cbtn" onclick="showC('adv',1,this)">2 · OIDC & web identity</button>
+      <button class="cbtn" onclick="showC('adv',2,this)">3 · IAM Identity Center</button>
+      <button class="cbtn" onclick="showC('adv',3,this)">4 · IAM Access Analyzer</button>
+    </div>
+
+    <div id="adv0" class="cpanel active">
+      <div class="ch">AWS STS — Security Token Service mechanics</div>
+      <div class="csub">The service that issues all temporary credentials — and the four ways to use it</div>
+      <div class="cb">
+        <p>STS is the AWS service that issues temporary credentials. Every time a role is assumed, STS generates the temporary access key, secret, and session token. STS is a global service with regional endpoints — you should use the regional endpoint (e.g. <span class="mono">sts.ap-south-1.amazonaws.com</span>) rather than the global endpoint to reduce latency and improve reliability.</p>
+        <p><strong>AssumeRole</strong> — called by IAM users, roles, or applications to assume another IAM role. Returns temporary credentials valid for the role's configured duration. The caller must have sts:AssumeRole permission on the target role ARN, and the target role's trust policy must allow the caller.</p>
+        <p><strong>AssumeRoleWithWebIdentity</strong> — called by applications authenticating via an external identity provider using OIDC (OpenID Connect). The application exchanges an OIDC token from Google, GitHub, or any OIDC provider for temporary AWS credentials. This is the mechanism behind Kubernetes service accounts with IAM roles (IRSA — IAM Roles for Service Accounts) and GitHub Actions OIDC.</p>
+        <p><strong>AssumeRoleWithSAML</strong> — called during SAML-based federation with corporate identity providers (Active Directory, Okta, etc.). Enterprises use this to allow employees to log into the AWS console using their corporate credentials without creating IAM users.</p>
+        <p><strong>GetSessionToken</strong> — used specifically to get temporary credentials that include MFA authentication. An IAM user calls GetSessionToken with their MFA code. The returned temporary credentials have MFA context (aws:MultiFactorAuthPresent = true). Subsequent API calls using these credentials satisfy MFA-required conditions in policies.</p>
+        <div class="mechbox"><strong>Why use regional STS endpoints:</strong> The global STS endpoint (sts.amazonaws.com) is located in us-east-1. Every AssumeRole call from your ap-south-1 EC2 that uses the global endpoint makes a round trip to the US and back — adding 150-300ms latency to every credential refresh. Regional endpoint (sts.ap-south-1.amazonaws.com) serves the request from Mumbai — <5ms. For Lambda functions that assume roles frequently (e.g. every invocation), this latency difference is significant. The AWS SDK v2 automatically uses regional endpoints when configured with the region. Always configure the region in your SDK.</div>
+      </div>
+    </div>
+
+    <div id="adv1" class="cpanel">
+      <div class="ch">OIDC-based role assumption — no static keys for CI/CD or Kubernetes</div>
+      <div class="csub">How GitHub Actions, GitLab CI, and Kubernetes pods get AWS credentials without any stored secrets</div>
+      <div class="cb">
+        <p>OpenID Connect (OIDC) allows external identity providers to issue tokens that AWS STS accepts. The workflow: the external system (GitHub Actions, a Kubernetes pod) authenticates with its own identity provider and receives an OIDC token (a JWT). The system presents this OIDC token to AWS STS AssumeRoleWithWebIdentity. STS validates the token against the OIDC provider's public keys, checks the role's trust policy conditions, and issues temporary credentials. No static AWS credentials are stored anywhere.</p>
+        <div class="prodbox"><strong>GitHub Actions + OIDC — the correct CI/CD pattern (replaces static access keys):</strong><br>
+          1. Create an OIDC Identity Provider in IAM: <span class="mono">token.actions.githubusercontent.com</span><br>
+          2. Create an IAM role with trust policy allowing the OIDC provider and condition scoping to your specific repo: <span class="mono">token.actions.githubusercontent.com:sub = repo:your-org/your-repo:ref:refs/heads/main</span><br>
+          3. In your GitHub Actions workflow: <span class="mono">permissions: id-token: write</span> + <span class="mono">aws-actions/configure-aws-credentials@v3</span> with role-to-assume<br>
+          4. GitHub Actions gets a fresh OIDC token per run, exchanges it for temporary AWS credentials, workflow deploys to AWS, credentials expire when the run completes.<br>
+          No secrets stored in GitHub. Credentials automatically expire. Every deployment is authenticated to a specific repo and branch. This is the architecture your CI/CD should use — replacing any setup that stores AKIA access keys as GitHub Secrets.</div>
+        <div class="mechbox"><strong>IRSA — IAM Roles for Service Accounts on Kubernetes (EKS):</strong> When running Kubernetes on AWS EKS, pods need AWS credentials to call S3, DynamoDB, SQS, etc. Without IRSA, you'd inject credentials via environment variables or ConfigMaps — static keys inside Kubernetes. With IRSA: each pod's ServiceAccount is annotated with an IAM role ARN. EKS injects an OIDC token into the pod as a projected volume. The AWS SDK inside the pod automatically exchanges this token for temporary role credentials via AssumeRoleWithWebIdentity. Each pod has exactly the AWS permissions its ServiceAccount is configured for — different pods can have different IAM roles in the same cluster. No static credentials anywhere in Kubernetes.</div>
+      </div>
+    </div>
+
+    <div id="adv2" class="cpanel">
+      <div class="ch">IAM Identity Center — the right way to manage human access at scale</div>
+      <div class="csub">Why creating IAM Users for every developer in every account doesn't scale and what replaces it</div>
+      <div class="cb">
+        <p>AWS IAM Identity Center (formerly AWS Single Sign-On) is the recommended way to manage human access to multiple AWS accounts in an AWS Organization. Instead of creating IAM users in each account, you define permission sets centrally and assign them to accounts and users.</p>
+        <p><strong>The problem it solves:</strong> A company with 50 engineers and 20 AWS accounts (dev, staging, prod for multiple teams) would need 50×20 = 1,000 IAM users if each engineer had an account in each environment. Managing password rotations, MFA, and access reviews across 1,000 IAM users is operationally impossible. When an engineer leaves, you must delete their user in 20 accounts — and inevitably someone forgets one.</p>
+        <p><strong>How it works:</strong> Connect Identity Center to your identity provider (Active Directory, Okta, Google Workspace). Define Permission Sets (collections of IAM policies — essentially IAM roles). Assign users or groups to accounts with specific permission sets. When a user logs in via the Identity Center portal (or the AWS CLI with <span class="mono">aws sso login</span>), they get temporary credentials for their assigned accounts and permission sets. One login, access to all assigned accounts. One deprovisioning action removes access from all accounts simultaneously.</p>
+        <div class="prodbox"><strong>Connecting to your Deloitte context:</strong> At a large consultancy like Deloitte, engineers access client AWS environments without having permanent IAM users in the client's account. IAM Identity Center (or equivalent federation) allows Deloitte engineers to authenticate with Deloitte's corporate identity (Okta, Active Directory) and get temporary AWS credentials for the client's account based on their role. When a consultant rotates off the project, removing them from the Deloitte identity provider removes all their AWS access automatically — no manual cleanup in each client account.</div>
+        <div class="mechbox"><strong>Permission sets and role mapping:</strong> A permission set in Identity Center corresponds to an IAM role created in each account it's assigned to. The role name follows the format: <span class="mono">AWSReservedSSO_PermissionSetName_randomhex</span>. When a user assumes a permission set, they're assuming this role in that account — getting temporary credentials valid for the configured session duration (1-12 hours). CloudTrail records the role assumption with the user's Identity Center username, providing a full audit trail of who accessed what account when.</div>
+      </div>
+    </div>
+
+    <div id="adv3" class="cpanel">
+      <div class="ch">IAM Access Analyzer — continuous validation of your IAM posture</div>
+      <div class="csub">Automated detection of unintended public and cross-account access — run this before and after every IAM change</div>
+      <div class="cb">
+        <p>IAM Access Analyzer continuously monitors IAM policies, S3 bucket policies, KMS key policies, Lambda function policies, SQS queue policies, and Secrets Manager secrets to identify resources that are accessible from outside your AWS account or AWS Organization. It uses automated reasoning — formal mathematical proof — to determine whether a policy grants access to external principals, not just pattern matching.</p>
+        <p><strong>What it finds:</strong> S3 buckets accessible from other accounts or publicly. IAM roles with trust policies allowing external accounts. KMS keys usable by external principals. Lambda functions that can be invoked cross-account. SQS queues accessible from outside your org. For each finding, it tells you: which external principal has access, which action they can perform, and which policy statement grants the access.</p>
+        <div class="prodbox"><strong>Two usage modes:</strong><br>
+          <strong>External access analysis:</strong> Continuously monitors your account for resources accessible from outside. Free tier includes external access analysis. Any unintended external access generates a finding. Every finding should be archived (if intended) or remediated (if not).<br>
+          <strong>Unused access analysis:</strong> Identifies IAM users and roles that have not been used within a configurable period. If a role hasn't made any API calls in 90 days, it appears as an unused access finding. Use this to identify zombie roles (roles from decommissioned services) and over-provisioned access that should be revoked. This tier has a per-IAM-entity cost.</div>
+        <div class="mechbox"><strong>Policy validation:</strong> Before deploying any IAM policy, run it through Access Analyzer's policy validation: <span class="mono">aws accessanalyzer validate-policy --policy-document file://policy.json --policy-type IDENTITY_POLICY</span>. It checks for: overly broad wildcards, policies that don't follow security best practices, actions that don't exist (typos), resource ARN format errors, and known security anti-patterns. Integrate this into your Terraform CI/CD pipeline as a pre-deploy check. A policy with a typo in an action name (e.g. <span class="mono">s3:GetObiect</span> instead of <span class="mono">s3:GetObject</span>) silently grants nothing for that action — the policy looks right but doesn't work. Policy validation catches this before deployment.</div>
+        <div class="failbox"><strong>The stale admin role finding you shouldn't archive:</strong> Access Analyzer shows a finding: an IAM role with AdministratorAccess has not been used in 180 days. The engineer archives it saying "it's our emergency break-glass role." Six months later, the company has an incident and an engineer uses the break-glass role. Access Analyzer shows it was used once in the last year. Is that suspicious or the intended break-glass? Without proper procedures, you cannot tell. Break-glass roles should: have a Condition requiring MFA, log to a dedicated CloudWatch alarm that alerts security team immediately on any use, be stored in a separate emergency credentials vault with documented procedure, and be tested quarterly. Unused ≠ unnecessary — but it must be managed intentionally.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('attacks',document.querySelectorAll('.ntab')[4])">Attack patterns — how IAM is actually exploited →</button>
+  </div>
+
+  <!-- ATTACK PATTERNS -->
+  <div id="p-attacks" class="panel">
+    <div class="lede"><strong>IAM misconfiguration is the #1 cause of AWS security incidents. Not zero-days, not sophisticated attacks — misconfigurations. Every pattern below represents a real attack that has compromised real production environments. Understanding attack patterns is the only way to design defences that actually work.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('atk',0,this)">1 · Credential exposure</button>
+      <button class="cbtn" onclick="showC('atk',1,this)">2 · Privilege escalation</button>
+      <button class="cbtn" onclick="showC('atk',2,this)">3 · Lateral movement</button>
+      <button class="cbtn" onclick="showC('atk',3,this)">4 · Detection & response</button>
+    </div>
+
+    <div id="atk0" class="cpanel active">
+      <div class="ch">Credential exposure — how AWS secrets are leaked and stolen</div>
+      <div class="csub">The attack surface is larger than engineers think — and the exploitation is faster than you expect</div>
+      <div class="cb">
+        <p><strong>Git repository exposure:</strong> The most common vector. Access keys committed to public or private repositories. Automated bots scan GitHub, GitLab, and Bitbucket for credential patterns (AKIA followed by 16 alphanumeric characters). Private repos are scanned too if the attacker gets repository access. AWS has its own partnership with GitHub that alerts you if credentials are found in public repos — but this detection happens after the exposure, not before. Prevention: <span class="mono">git-secrets</span> or Gitleaks as pre-commit hooks blocking commits containing credential patterns. AWS Secrets Manager rotation eliminates static credentials entirely.</p>
+        <p><strong>IMDS credential theft via SSRF:</strong> Covered in detail in the entities section. Any public-facing application with an HTTP request capability (URL fetchers, webhooks, image downloaders, link previewers) is vulnerable if it doesn't validate and restrict the URLs it fetches. The fix beyond IMDSv2: validate that no user-provided URLs resolve to 169.254.169.254 or other private IP ranges before fetching. Use an allowlist of permitted domains rather than a blocklist.</p>
+        <p><strong>Environment variable exposure:</strong> Applications log their environment variables during startup (common debugging practice) or expose them via actuator endpoints. Spring Boot Actuator's /env endpoint exposes all environment variables including AWS credentials. Ensure Actuator's sensitive endpoints require authentication. Never log environment variables in production. Use Secrets Manager and fetch secrets programmatically rather than injecting them as environment variables.</p>
+        <div class="failbox"><strong>What happens in the 10 minutes after a credential is exposed on GitHub:</strong> Minute 0 — developer commits access key. Minute 1-2 — automated scanners (both malicious and AWS's own) detect the pattern in the new commit. Minute 3 — attackers run aws sts get-caller-identity to verify the credentials work. Minute 4 — run aws iam list-roles, aws iam list-policies to understand what they can do. Minute 5 — spin up EC2 instances in all available regions for mining. Minute 7 — attempt to create new IAM users with admin access for persistence. Minute 10 — AWS's abuse detection triggers and may temporarily suspend the account. By this point, $5,000-50,000 in compute charges have been committed. The git history shows the credentials were exposed for 10 minutes.</div>
+      </div>
+    </div>
+
+    <div id="atk1" class="cpanel">
+      <div class="ch">Privilege escalation — getting more permissions than you should have</div>
+      <div class="csub">17 known IAM privilege escalation paths — every one of them uses legitimate AWS APIs</div>
+      <div class="cb">
+        <p>Privilege escalation in AWS does not require exploiting vulnerabilities. Every escalation path uses legitimate, documented AWS APIs — the problem is having the permissions to call them in the wrong combination. Security researcher Spencer Gietzen documented 17 privilege escalation paths in AWS IAM. Here are the most important ones:</p>
+        <p><strong>iam:CreatePolicyVersion:</strong> If you have permission to create new versions of an existing IAM policy, you can create a version that grants AdministratorAccess, then set it as the default version. You've upgraded a restricted policy to admin without creating new resources — only modifying an existing one.</p>
+        <p><strong>iam:AttachRolePolicy on a role you can assume:</strong> If you have iam:AttachRolePolicy on a role, and you can assume that role, you can attach AdministratorAccess to the role, then assume it. You now have admin.</p>
+        <p><strong>iam:PassRole + ec2:RunInstances:</strong> iam:PassRole allows you to pass an IAM role to an EC2 instance when launching it. If you can pass a high-privilege role to a new EC2 instance, and you can SSH into that instance (or use SSM), you can retrieve the high-privilege role's credentials from IMDS. You've escalated from your restricted identity to the high-privilege role.</p>
+        <p><strong>lambda:CreateFunction + lambda:InvokeFunction + iam:PassRole:</strong> Create a Lambda function, pass a high-privilege role to it, invoke the function with code that calls sts:GetCallerIdentity (or anything else). The function runs with the high-privilege role's credentials.</p>
+        <div class="mechbox"><strong>The permission boundary defence against escalation:</strong> Attach permission boundaries to every IAM user and role that has any IAM write permissions. The boundary limits the maximum permissions to a pre-approved set — even if the entity manages to attach AdministratorAccess to itself or its roles, the boundary limits what can actually be done. Permission boundaries are the correct technical control for IAM privilege escalation, not just procedural controls like "engineers shouldn't have iam:*".</div>
+        <div class="failbox"><strong>iam:PassRole is often over-granted:</strong> A common IAM policy anti-pattern: allowing <span class="mono">iam:PassRole</span> with Resource: <span class="mono">*</span>. This means the identity can pass ANY role to any service. If there's a high-privilege role anywhere in the account, this identity can pass it to EC2, Lambda, or ECS and use it. Correct: scope iam:PassRole to specific roles: <span class="mono">arn:aws:iam::ACCOUNT:role/allowed-roles/*</span>. Or better: only allow passing roles that have a specific permission boundary attached (using a condition on the boundary ARN). iam:PassRole without restrictions is one of the most dangerous permissions to grant.</div>
+      </div>
+    </div>
+
+    <div id="atk2" class="cpanel">
+      <div class="ch">Lateral movement — using legitimate access to reach unintended resources</div>
+      <div class="csub">How attackers move from a compromised EC2 to production databases and S3 buckets</div>
+      <div class="cb">
+        <p>Once an attacker has valid IAM credentials (via any of the exposure methods), their goal is lateral movement — using those credentials to access resources beyond their intended scope. The mechanics are all legitimate API calls.</p>
+        <p><strong>Reconnaissance phase:</strong> The first actions after getting credentials are always reconnaissance — understanding what the credentials can do. <span class="mono">sts:GetCallerIdentity</span> (who am I?), <span class="mono">iam:GetAccountAuthorizationDetails</span> (dump all IAM policies and roles), <span class="mono">ec2:DescribeInstances</span> (what EC2s exist?), <span class="mono">s3:ListAllMyBuckets</span> (what buckets exist?). These read-only actions are rarely restricted, so attackers typically get full reconnaissance even with limited credentials.</p>
+        <p><strong>Moving from EC2 role to S3:</strong> If the compromised EC2's role has overly broad S3 permissions (s3:* on *), the attacker reads all buckets, finds interesting ones (database exports, credential backups, customer data), and exfiltrates. The S3 access looks like legitimate application activity in CloudTrail — same role, same region, similar time patterns. Detection requires behavioral analytics, not just rule-based alerts.</p>
+        <p><strong>Moving from EC2 to RDS:</strong> Network-level: if the compromised EC2 has the app-sg Security Group, it can reach RDS on port 3306. The attacker installs a MySQL client, finds the DB endpoint from environment variables or config files, and connects using credentials also found in config files or Secrets Manager (if the role has secretsmanager:GetSecretValue). This is why: (1) never log database credentials, (2) use IAM database authentication for RDS instead of static passwords, (3) scope Secrets Manager access to specific secret ARNs, not wildcard.</p>
+        <div class="prodbox"><strong>The defences that actually work against lateral movement:</strong><br>
+          Least privilege — every role has only the minimum permissions needed. Reduces blast radius when a role is compromised.<br>
+          IMDSv2 — prevents SSRF-based credential theft.<br>
+          VPC Endpoints with bucket policies restricting access to specific VPC — even with valid credentials, S3 access is denied if not from the VPC.<br>
+          CloudTrail + GuardDuty — GuardDuty detects anomalous API patterns: credentials used from unusual geo, high-volume reconnaissance activity, known malicious IPs. Alert within minutes of unusual activity.<br>
+          SCP deny-delete on CloudTrail — prevents attackers from disabling audit logging to cover their tracks. The first thing sophisticated attackers do is try to disable CloudTrail.</div>
+      </div>
+    </div>
+
+    <div id="atk3" class="cpanel">
+      <div class="ch">Detection and incident response — what to do when IAM is compromised</div>
+      <div class="csub">The first 15 minutes after detecting a compromised IAM credential determine how bad the damage gets</div>
+      <div class="cb">
+        <p><strong>Detection signals:</strong> AWS GuardDuty findings: UnauthorizedAccess:IAMUser/TorIPCaller (credential used from Tor exit node), UnauthorizedAccess:IAMUser/ConsoleLoginSuccess (IAM user login from unusual location), Recon:IAMUser/MaliciousIPCaller (API calls from known malicious IP). CloudTrail: High volume of DescribeInstances, ListBuckets, or GetSecretValue calls from a single credential in a short window. Unusual IAM actions: CreateUser, AttachUserPolicy, CreateAccessKey — these are privilege escalation attempts.</p>
+        <p><strong>Immediate containment — in order:</strong></p>
+        <p>1. <strong>Attach an inline deny-all policy to the compromised entity immediately.</strong> This is faster than deleting the policy or the entity. <span class="mono">aws iam put-user-policy --user-name COMPROMISED_USER --policy-name EmergencyDenyAll --policy-document '{"Statement":[{"Effect":"Deny","Action":"*","Resource":"*"}]}'</span>. This takes effect globally in seconds. The attacker's subsequent API calls immediately fail.</p>
+        <p>2. <strong>Deactivate the access key (for IAM users):</strong> <span class="mono">aws iam update-access-key --user-name USER --access-key-id AKIA... --status Inactive</span>. This invalidates the specific key without affecting the user.</p>
+        <p>3. <strong>Revoke active sessions for IAM roles:</strong> Attach an AWSRevokeOlderSessions policy to the role — this adds a Deny condition for any sessions issued before the current time, effectively invalidating all existing sessions. Temporary credentials issued before the policy change are invalid; new assumptions of the role get the new restriction.</p>
+        <p>4. <strong>Check for persistence mechanisms:</strong> Did the attacker create new IAM users? New access keys on existing users? New IAM roles with backdoor trust policies? Run <span class="mono">aws iam get-credential-report</span> and review all user access key ages. Check CloudTrail for CreateUser, CreateRole, CreateAccessKey events in the last 24 hours.</p>
+        <div class="mechbox"><strong>Why the deny-all inline policy is faster than deleting:</strong> Deleting an IAM user or role that's actively being used risks breaking legitimate systems that depend on it. An inline deny-all policy neutralises the attacker while you investigate without disrupting legitimate access (which also gets denied, but that's an acceptable trade-off during active incident response — you can remove the policy after investigation). This is the "break glass in emergency" response and is faster to execute than any other containment option.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[5])">Interview prep →</button>
+  </div>
+
+  <!-- INTERVIEW -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>IAM interview questions test whether you understand the security model, not just the API. Every answer below is structured to demonstrate that you think about IAM from the perspective of an engineer who has seen things go wrong — not someone reading documentation for the first time.</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">An engineer says "I gave my EC2 AdministratorAccess but it still can't write to this S3 bucket." Walk me through every possible reason and how you'd diagnose each.</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is a layered IAM debugging problem. AdministratorAccess grants everything in the identity policy — but the IAM evaluation algorithm has multiple layers that can override it.</p>
+          <p><strong>1. Explicit Deny somewhere in the chain.</strong> Check: is there an explicit Deny for s3:PutObject on the EC2's role? On any policy attached to the role? On the S3 bucket policy? An explicit Deny overrides AdministratorAccess. Run <span class="mono">aws iam simulate-principal-policy</span> with the role ARN, action s3:PutObject, and the bucket ARN — the simulator shows which policy statement is the deciding factor.</p>
+          <p><strong>2. SCP preventing S3 writes.</strong> If the account is in an AWS Organization, check SCPs applied to the account or OU. An SCP that says "Deny s3:PutObject except from specific VPCs" overrides the EC2's AdministratorAccess. Check via AWS Organizations console or <span class="mono">aws organizations list-policies-for-target</span>. SCPs cannot be viewed from within the target account — you need access to the management account.</p>
+          <p><strong>3. Permission boundary on the role.</strong> Does the EC2's IAM role have a permission boundary attached? If the boundary policy doesn't include s3:PutObject, the role cannot write to S3 regardless of AdministratorAccess. Check: <span class="mono">aws iam get-role --role-name ROLE_NAME</span> and look for PermissionsBoundary field.</p>
+          <p><strong>4. S3 bucket policy explicitly denying the role or its account.</strong> The bucket might be in another account (cross-account). Or the bucket policy has an explicit Deny for this role ARN or account. Or the bucket policy has a condition like <span class="mono">aws:SourceVpc</span> that's not satisfied (the EC2 is calling S3 via the internet through NAT Gateway, not through a VPC Endpoint). Check the bucket policy directly.</p>
+          <p><strong>5. S3 Block Public Access restricting cross-account access.</strong> If the bucket is in another account and Block Public Access is enabled with RestrictPublicBuckets, cross-account access via bucket policy may be restricted. Usually affects anonymous access, but worth checking if the bucket is in an account you don't control.</p>
+          <p><strong>6. The role isn't actually attached.</strong> Verify the EC2 instance actually has the role attached (not just that the role exists). <span class="mono">aws ec2 describe-instances --instance-ids i-xxx --query 'Reservations[0].Instances[0].IamInstanceProfile'</span>. The instance profile must be attached, not just the role created.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It covers all six IAM evaluation layers in order — explicit deny, SCP, permission boundary, resource policy, cross-account, and the practical "is it actually attached" check. This systematic approach demonstrates that you understand the evaluation algorithm and can apply it to debugging, not just recite it theoretically.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">Explain IAM roles vs IAM users. Why should applications never use IAM users?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>IAM Users have long-lived credentials — an access key ID and secret that remain valid indefinitely until explicitly rotated or deleted. IAM Roles use temporary credentials issued by STS — they expire automatically (typically in 1 hour), are refreshed automatically by the SDK, and leave no long-term secrets to manage, rotate, or accidentally expose.</p>
+          <p>Applications running on AWS — whether EC2, Lambda, ECS, or EKS — should never use IAM Users for four reasons. First, temporary credentials cannot be exfiltrated usefully. If an attacker steals a role's temporary credentials from IMDS, they have at most 1 hour before those credentials expire. Stealing a static access key gives the attacker permanent access until you detect and rotate it. Second, there is no secret to store. The EC2 instance profile or Lambda execution role makes credentials available to the SDK through the metadata service — no credentials in code, config files, environment variables, or CI/CD secret stores. Third, automatic rotation happens at the platform level — you don't write rotation logic. Fourth, the principle of least privilege is easier to enforce per-role than per-user when you have many services.</p>
+          <p>In my Deloitte project, all Spring Boot microservices on EC2 use IAM instance profiles. The Spring Boot app's application.properties has no AWS credentials. The AWS SDK's DefaultCredentialsProvider automatically queries IMDS, gets temporary credentials for the attached role, and refreshes them every hour. The application code is completely credential-agnostic — it works locally (using ~/.aws/credentials or environment variables) and in production (using IMDS) without code changes.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It explains the credential model difference (long-lived vs temporary) and then gives four concrete technical reasons rather than vague "security best practice" language. The personal project context grounds it in real experience. The DefaultCredentialsProvider detail shows you know how the SDK actually works.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">What is a permission boundary and give a real scenario where you'd use one?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>A permission boundary is an IAM managed policy attached to an IAM user or role that sets the maximum permissions that entity can ever have, regardless of what identity-based policies say. The effective permission is the intersection of the identity policy and the boundary — the boundary cannot grant permissions, only restrict them. If the boundary allows s3:GetObject but the identity policy allows s3:*, the entity can only do s3:GetObject.</p>
+          <p>The canonical scenario: you want to give developers the ability to create and manage their own IAM roles for their services — without being able to create roles with more permissions than they themselves have (privilege escalation). Without permission boundaries, a developer with iam:CreateRole and iam:AttachRolePolicy could create a role with AdministratorAccess and assume it — bypassing all access restrictions.</p>
+          <p>The solution: create a DeveloperBoundary policy that defines the maximum permissions any developer-created role can have. Require developers to attach this boundary when creating roles (enforced via a condition on iam:CreateRole: <span class="mono">iam:PermissionsBoundary = arn:...DeveloperBoundary</span>). Also add a Deny for iam:DeleteRolePermissionsBoundary so developers can't remove the boundary. Now developers can create roles freely — but all roles they create are limited to DeveloperBoundary permissions. They cannot create a role that exceeds their own access level.</p>
+          <p>This is the pattern used in multi-team AWS platforms where a platform team grants development teams self-service IAM capabilities without losing security control. At a company like Deloitte with many project teams in shared AWS accounts, this pattern prevents any one team from accidentally or intentionally creating over-privileged roles.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The privilege escalation scenario makes the abstract concept concrete. The implementation details (the condition on CreateRole, the Deny on DeleteBoundary) show you know how to actually implement it, not just define it. The organizational context (multi-team platforms) shows you understand when this matters in practice.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">How would you secure an AWS account after discovering it was compromised?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is an incident response question testing whether you have a structured process or would panic and start randomly deleting things.</p>
+          <p><strong>Immediate containment (first 5 minutes):</strong> Identify the compromised entity from GuardDuty findings or CloudTrail. Attach an inline deny-all policy to that entity immediately — takes effect globally in seconds, neutralises the attacker while you investigate. Do not delete the entity yet — you need it for forensics and may need to keep it intact for audit purposes.</p>
+          <p><strong>Scope assessment (next 30 minutes):</strong> Pull the CloudTrail event history for the compromised entity for the last 24-48 hours. Look for: CreateUser, CreateRole, CreateAccessKey (persistence), ListBuckets, GetObject (data exfiltration), RunInstances (cryptocurrency mining), AttachUserPolicy, AttachRolePolicy (privilege escalation). Run aws iam get-credential-report to see all users and their last activity. Check for new IAM users or roles created by the attacker for persistence. Check for EC2 instances launched in all regions — attackers use all regions for mining.</p>
+          <p><strong>Eradication:</strong> Delete any attacker-created resources (IAM users, roles, EC2 instances). Rotate all credentials that could have been observed by the attacker: access keys for any IAM user who used the same environment, RDS passwords if the DB was accessible, any secrets the compromised role could have read via Secrets Manager. Enable MFA delete on S3 buckets if not already enabled. Verify CloudTrail is not disabled or modified.</p>
+          <p><strong>Recovery and hardening:</strong> Enable GuardDuty if not already (should have been on before the incident). Enable Security Hub. Require IMDSv2 on all EC2 instances. Audit all IAM policies for overly broad permissions using IAM Access Analyzer. Apply permission boundaries to all developer roles. Implement SCP denying sts:AssumeRole from outside approved IP ranges if the attack came from external credentials. Add CloudWatch alarms for any IAM changes going forward.</p>
+          <p><strong>Post-incident:</strong> AWS may suspend the account for policy violations (fraudulent charges). Contact AWS Support with the incident details — they may reduce charges and restore the account if you can demonstrate the compromise was external. File an abuse report with any attacker infrastructure details.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It follows a structured IR process (contain, assess, eradicate, recover) rather than random actions. The specific commands show operational knowledge. The GuardDuty and SCP hardening steps show you learn from incidents rather than just fixing the immediate problem. The AWS Support step is practical knowledge that most engineers don't think about.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q5</span>
+          <span class="iq-q">What is the difference between IAM policy evaluation for same-account vs cross-account access?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>The evaluation logic changes fundamentally when the requesting principal is from a different account than the resource owner.</p>
+          <p><strong>Same-account:</strong> Either the identity policy OR the resource policy can grant access — they are OR'd together. If the IAM role has s3:GetObject in its identity policy and there's no bucket policy, access is granted. If there's a bucket policy allowing this role and no identity policy, access is also granted. You only need one side to allow it, as long as there's no explicit deny.</p>
+          <p><strong>Cross-account:</strong> BOTH the identity policy in the requesting account AND the resource policy in the owning account must explicitly allow the access. This is AND logic. If Account A's IAM role has s3:GetObject in its identity policy but Account B's bucket has no bucket policy (or a bucket policy that doesn't mention Account A), access is denied. Account A's resource owner cannot unilaterally grant access to Account B's resources — Account B's resource owner must explicitly opt in via the resource policy.</p>
+          <p>The reason for this distinction: the AND requirement ensures mutual consent for cross-account access. Without it, Account A's admin could grant their users access to any resource in Account B simply by writing an allow policy — without Account B's knowledge or consent.</p>
+          <p>The practical implication: when debugging cross-account access denials, always check both sides. "My IAM policy says allow" is not sufficient — you also need "the resource policy says allow for my account/role." The most common debugging mistake is checking only one side and concluding "everything looks correct" when the other side is missing the explicit allow.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The OR vs AND logic framing is precise and memorable. The consent rationale explains WHY the rules are different, not just what they are. The debugging implication connects the abstract concept to the real-world consequence every engineer eventually encounters.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[6])">Start the lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab makes the IAM evaluation algorithm visceral — you'll observe explicit deny overriding allow, observe cross-account logic, observe permission boundaries in action, and set up GitHub Actions OIDC to eliminate static credentials from your CI/CD pipeline.</strong></div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Observe explicit Deny overriding AdministratorAccess</div>
+          <div class="sb">Create an IAM user with AdministratorAccess. Then attach an inline deny policy for s3:ListAllMyBuckets. Observe that the user cannot list buckets even with AdministratorAccess. This makes the evaluation algorithm real.</div>
+          <code class="cmd"># Create test user
+aws iam create-user --user-name iam-lab-user
+
+# Give full admin access
+aws iam attach-user-policy \
+  --user-name iam-lab-user \
+  --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+
+# Create access key for testing
+aws iam create-access-key --user-name iam-lab-user
+
+# Test: with AdminAccess, this should work
+AWS_ACCESS_KEY_ID=NEWKEY AWS_SECRET_ACCESS_KEY=NEWSECRET \
+  aws s3 ls  # Should succeed
+
+# Now add an explicit Deny for S3 listing
+aws iam put-user-policy \
+  --user-name iam-lab-user \
+  --policy-name DenyS3List \
+  --policy-document '{"Statement":[{"Effect":"Deny","Action":"s3:ListAllMyBuckets","Resource":"*"}]}'
+
+# Test again: should now fail with Access Denied
+AWS_ACCESS_KEY_ID=NEWKEY AWS_SECRET_ACCESS_KEY=NEWSECRET \
+  aws s3 ls  # Access Denied — Deny wins over AdminAccess</code>
+          <div class="snote">This is the most important IAM concept to observe directly. Deny always wins. No policy can override an explicit Deny. Clean up: aws iam delete-user-policy --user-name iam-lab-user --policy-name DenyS3List to restore access.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create an IAM role with a trust policy and assume it</div>
+          <div class="sb">Create an IAM role with a trust policy allowing your IAM user to assume it. Observe the AssumeRole call, the temporary credentials (ASIA prefix), and the session token requirement.</div>
+          <code class="cmd"># Get your account ID
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# Create trust policy allowing your lab user to assume this role
+cat > trust-policy.json << EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {
+      "AWS": "arn:aws:iam::${ACCOUNT_ID}:user/iam-lab-user"
+    },
+    "Action": "sts:AssumeRole"
+  }]
+}
+EOF
+
+# Create the role
+aws iam create-role \
+  --role-name lab-assumed-role \
+  --assume-role-policy-document file://trust-policy.json
+
+# Attach S3 read policy to the role
+aws iam attach-role-policy \
+  --role-name lab-assumed-role \
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+
+# Allow the lab user to call AssumeRole
+aws iam put-user-policy \
+  --user-name iam-lab-user \
+  --policy-name AllowAssumeRole \
+  --policy-document "{\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sts:AssumeRole\",\"Resource\":\"arn:aws:iam::${ACCOUNT_ID}:role/lab-assumed-role\"}]}"
+
+# Now assume the role using the lab user's credentials
+AWS_ACCESS_KEY_ID=NEWKEY AWS_SECRET_ACCESS_KEY=NEWSECRET \
+  aws sts assume-role \
+  --role-arn "arn:aws:iam::${ACCOUNT_ID}:role/lab-assumed-role" \
+  --role-session-name "lab-session"
+
+# Observe: AccessKeyId starts with ASIA (temporary), includes SessionToken</code>
+          <div class="snote">The ASIA prefix on the returned AccessKeyId confirms these are temporary credentials from STS. The SessionToken is the third required value. Without it, any API call fails even with valid ASIA keys.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Use the IAM Policy Simulator to understand evaluation</div>
+          <div class="sb">Use the IAM Policy Simulator to test what your role can and cannot do. This is the tool for debugging access issues without having to make actual API calls and guess why they fail.</div>
+          <code class="cmd">ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# Simulate whether the lab role can do s3:GetObject
+aws iam simulate-principal-policy \
+  --policy-source-arn "arn:aws:iam::${ACCOUNT_ID}:role/lab-assumed-role" \
+  --action-names "s3:GetObject" \
+  --resource-arns "arn:aws:s3:::any-bucket/*"
+
+# Simulate whether it can do s3:DeleteObject (should be denied)
+aws iam simulate-principal-policy \
+  --policy-source-arn "arn:aws:iam::${ACCOUNT_ID}:role/lab-assumed-role" \
+  --action-names "s3:DeleteObject" \
+  --resource-arns "arn:aws:s3:::any-bucket/*"
+
+# Simulate multiple actions at once
+aws iam simulate-principal-policy \
+  --policy-source-arn "arn:aws:iam::${ACCOUNT_ID}:role/lab-assumed-role" \
+  --action-names "s3:GetObject" "s3:PutObject" "s3:DeleteObject" "s3:ListBucket" \
+  --resource-arns "arn:aws:s3:::any-bucket/*"</code>
+          <div class="snote">The simulator tells you "allowed" or "implicitDeny" or "explicitDeny" for each action. This is your primary tool for debugging IAM before touching real resources. Use it before every IAM policy deployment.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Observe the IMDSv2 token requirement</div>
+          <div class="sb">On your Day 2 EC2 instance (start it from stopped state), test IMDSv1 and IMDSv2 access. Then enforce IMDSv2 and observe that IMDSv1 is rejected. This is the Capital One breach prevention step.</div>
+          <code class="cmd"># Start your Day 2 EC2 instance if stopped
+aws ec2 start-instances --instance-ids YOUR_INSTANCE_ID --region ap-south-1
+
+# SSH into the instance, then run:
+
+# IMDSv1 — works currently (insecure)
+curl -s http://169.254.169.254/latest/meta-data/instance-id
+
+# IMDSv2 — get session token first, then use it
+TOKEN=$(curl -s -X PUT \
+  "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+curl -s http://169.254.169.254/latest/meta-data/instance-id \
+  -H "X-aws-ec2-metadata-token: $TOKEN"
+
+# Now enforce IMDSv2 (from your local machine):
+aws ec2 modify-instance-metadata-options \
+  --instance-id YOUR_INSTANCE_ID \
+  --http-tokens required \
+  --region ap-south-1
+
+# SSH back in and test IMDSv1 — should now fail with 401
+curl -s http://169.254.169.254/latest/meta-data/instance-id
+# Returns 401 Unauthorized — IMDSv1 is disabled
+
+# IMDSv2 still works
+TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+curl -s http://169.254.169.254/latest/meta-data/instance-id \
+  -H "X-aws-ec2-metadata-token: $TOKEN"</code>
+          <div class="snote">You've now reproduced the defence that would have prevented the Capital One breach. IMDSv1 returns 401 after enforcing required tokens. IMDSv2 still works. Stop the instance when done.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Validate a policy with IAM Access Analyzer</div>
+          <div class="sb">Write a policy with intentional issues — a wildcard Principal, a missing resource ARN, an unused action. Run it through Access Analyzer policy validation and observe the findings. Integrate this into your mental workflow before every policy deployment.</div>
+          <code class="cmd">cat > bad-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:GetObiect"],
+      "Resource": "arn:aws:s3:::my-bucket"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::my-bucket/*"
+    }
+  ]
+}
+EOF
+
+aws accessanalyzer validate-policy \
+  --policy-document file://bad-policy.json \
+  --policy-type IDENTITY_POLICY \
+  --region ap-south-1
+
+# Observe findings:
+# - s3:GetObiect doesn't exist (typo — silently grants nothing)
+# - s3:ListBucket on /* is wrong (should be on the bucket, not objects)
+# These are exactly the silent bugs that break production and take hours to debug</code>
+          <div class="snote">The validator catches the typo (s3:GetObiect) and the wrong resource for ListBucket. Both would be silently ignored at runtime — no error, just behaviour that doesn't match expectations. Run this on every policy before deployment.</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div></div>
+        <div class="ls-r">
+          <div class="st">Clean up lab resources</div>
+          <div class="sb">Clean up the IAM resources created today. IAM users and roles are free, but leaving test users with admin access is a security risk.</div>
+          <code class="cmd">ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# Delete inline policies
+aws iam delete-user-policy --user-name iam-lab-user --policy-name DenyS3List
+aws iam delete-user-policy --user-name iam-lab-user --policy-name AllowAssumeRole
+
+# Detach managed policy
+aws iam detach-user-policy \
+  --user-name iam-lab-user \
+  --policy-arn arn:aws:iam::aws:policy/AdministratorAccess
+
+# Delete access key (get the key ID first)
+aws iam list-access-keys --user-name iam-lab-user
+aws iam delete-access-key \
+  --user-name iam-lab-user \
+  --access-key-id AKIA_YOUR_KEY_ID
+
+# Delete user
+aws iam delete-user --user-name iam-lab-user
+
+# Clean up role
+aws iam detach-role-policy \
+  --role-name lab-assumed-role \
+  --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+aws iam delete-role --role-name lab-assumed-role</code>
+          <div class="snote">Never leave test IAM users with admin access in your account. A compromised test user has the same blast radius as a compromised production user if both have AdministratorAccess.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[7])">Day 5 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Day 5 — IAM mechanics understood at depth</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">Evaluation order</div><div class="cs-d">1. Explicit Deny (wins always). 2. SCP. 3. Resource policy allow. 4. Permission boundary. 5. Identity policy allow. 6. Implicit deny (default).</div></div>
+      <div class="cs-item"><div class="cs-t">Explicit Deny</div><div class="cs-d">Overrides everything including AdministratorAccess. Cannot Allow your way out of a Deny. Use for emergency containment.</div></div>
+      <div class="cs-item"><div class="cs-t">Cross-account logic</div><div class="cs-d">Same account: OR (either side can grant). Cross-account: AND (both identity policy AND resource policy must allow). Most common IAM debugging trap.</div></div>
+      <div class="cs-item"><div class="cs-t">AKIA vs ASIA</div><div class="cs-d">AKIA = long-term IAM User key. ASIA = temporary STS credential. ASIA always requires a SessionToken — missing it fails even with valid keys.</div></div>
+      <div class="cs-item"><div class="cs-t">Permission boundaries</div><div class="cs-d">Sets maximum permissions — intersection with identity policy. Cannot grant beyond the boundary. Used to safely delegate IAM management without privilege escalation.</div></div>
+      <div class="cs-item"><div class="cs-t">SCPs</div><div class="cs-d">Org-level policy. Cannot grant — can only restrict. Applies to all principals including root. Check when account-level access is denied despite valid IAM policies.</div></div>
+      <div class="cs-item"><div class="cs-t">IMDSv2</div><div class="cs-d">Requires PUT for session token before GET. Prevents SSRF-based credential theft (Capital One breach vector). Enforce with --http-tokens required on every EC2.</div></div>
+      <div class="cs-item"><div class="cs-t">Role assumption</div><div class="cs-d">Trust policy = who can assume. Permission policy = what role can do. Both must align. Role chaining caps at 1hr session regardless of role's MaxSessionDuration.</div></div>
+      <div class="cs-item"><div class="cs-t">OIDC for CI/CD</div><div class="cs-d">GitHub Actions, GitLab CI, and Kubernetes can assume IAM roles via OIDC — no static AKIA keys stored anywhere. Credentials auto-expire per job/pod.</div></div>
+      <div class="cs-item"><div class="cs-t">Access Analyzer</div><div class="cs-d">Validates policies before deploy. Detects external access. Identifies unused credentials. Run validate-policy on every IAM policy before deployment.</div></div>
+      <div class="cs-item"><div class="cs-t">Privilege escalation</div><div class="cs-d">17 known paths. All use legitimate APIs. iam:PassRole + ec2:RunInstances is most common. Defend with permission boundaries on all IAM-managing roles.</div></div>
+      <div class="cs-item"><div class="cs-t">Incident containment</div><div class="cs-d">Attach inline deny-all policy immediately — faster than deleting. Effective globally in seconds. Investigate before eradicating — preserve forensic evidence.</div></div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Non-negotiable IAM rules for production</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      1. Applications on AWS compute (EC2, Lambda, ECS) must use IAM roles — never static access keys.<br>
+      2. Enforce IMDSv2 (HttpTokens=required) on every EC2 instance.<br>
+      3. Never commit AWS credentials to source code or config files — use git-secrets pre-commit hook.<br>
+      4. Run aws accessanalyzer validate-policy on every IAM policy before deployment.<br>
+      5. Use IAM Access Analyzer to continuously monitor for unintended external access.<br>
+      6. Replace GitHub Actions static credentials with OIDC role assumption.<br>
+      7. Apply permission boundaries to all roles that have iam:* permissions.<br>
+      8. Scope iam:PassRole to specific role ARNs — never Resource: *.<br>
+      9. Enable GuardDuty in every account — detects compromised credentials in minutes.<br>
+      10. SCP: deny cloudtrail:StopLogging and cloudtrail:DeleteTrail at org level — attackers can't cover tracks.
+    </div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

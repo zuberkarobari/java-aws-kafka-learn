@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 3 — S3 Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:860px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #BA7517;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#FAEEDA;color:#633806;border-color:#EF9F27;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-green{background:#e0f5ee;color:#085041}.p-amber{background:#FAEEDA;color:#633806}
+.p-coral{background:#FAECE7;color:#712B13}.p-blue{background:#e6f1fb;color:#0C447C}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+.sc-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:1rem}
+.sc-table th{text-align:left;padding:8px 10px;background:#f5f5f2;color:#666;font-weight:600;border-bottom:1px solid #eee}
+.sc-table td{padding:8px 10px;border-bottom:1px solid #eee;color:#444;vertical-align:top;line-height:1.5}
+.sc-table td:first-child{font-weight:600;color:#1a1a18}
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}
+.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc2{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc2.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 3 of 30</span>
+    <span class="tag">S3 — Deep Dive</span>
+    <span class="tag">Internal mechanics</span>
+    <span class="tag">Production failures</span>
+    <span class="tag">Senior interview prep</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('internals',this)">Internal mechanics</button>
+    <button class="ntab" onclick="show('storage',this)">Storage classes</button>
+    <button class="ntab" onclick="show('security',this)">Security model</button>
+    <button class="ntab" onclick="show('patterns',this)">Real patterns</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- INTERNAL MECHANICS -->
+  <div id="p-internals" class="panel active">
+    <div class="lede"><strong>Most tutorials tell you what S3 does. This teaches you how S3 actually works inside</strong> — the mechanics that explain every behaviour, every limitation, and every production failure pattern you will encounter. Understanding internals is the difference between a 2/10 and a 9/10 answer in a senior interview.</div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('c',0,this)">1 · Object model</button>
+      <button class="cbtn" onclick="showC('c',1,this)">2 · How PUTs work</button>
+      <button class="cbtn" onclick="showC('c',2,this)">3 · Consistency model</button>
+      <button class="cbtn" onclick="showC('c',3,this)">4 · Durability mechanics</button>
+      <button class="cbtn" onclick="showC('c',4,this)">5 · Multipart upload</button>
+      <button class="cbtn" onclick="showC('c',5,this)">6 · Presigned URLs</button>
+    </div>
+
+    <div id="c0" class="cpanel active">
+      <div class="ch">The S3 object model — not a filesystem</div>
+      <div class="csub">The single biggest conceptual mistake engineers make with S3</div>
+      <div class="cb">
+        <p>S3 is a <strong>flat key-value store, not a filesystem</strong>. This distinction sounds academic until it causes production bugs. A bucket contains objects. Each object is identified by a key — a string up to 1024 bytes. The key <span class="mono">invoices/2024/march/inv-001.pdf</span> looks like a folder path, but there is no "invoices" folder and no "2024" folder. Those slashes are just characters in the key string. The S3 console draws them as folders for human readability, but underneath there is no directory hierarchy whatsoever.</p>
+        <p><strong>Why this matters — listing performance.</strong> If you list objects with prefix <span class="mono">invoices/2024/</span>, S3 must scan its index for all keys that begin with that string. With 50 million objects in a bucket, this can be slow and expensive — you pay per LIST request and there's latency. Contrast this with a database where you'd have an indexed column.</p>
+        <div class="mechbox"><strong>The partition key problem:</strong> S3 internally partitions objects across its storage fleet based on the key prefix. Before 2018, if all your keys started with the same prefix (like a timestamp: <span class="mono">2024-03-15/image001.jpg</span>), all those objects landed on the same storage partition — creating a hot spot and throttling at ~3,500 PUT/s and 5,500 GET/s per prefix. Engineers deliberately randomised key prefixes to distribute load. In 2018, AWS improved S3's partitioning to be automatic. But per-prefix limits technically still apply — this is exactly the kind of depth that impresses AWS interviewers.</div>
+        <p>An object has: a key, a value (bytes — up to 5TB), system metadata (Content-Type, ETag, Last-Modified), up to 10 user-defined metadata key-value pairs, a version ID (if versioning enabled), and an access control list. The <strong>ETag is the MD5 hash for single-part uploads. For multipart uploads, the ETag is a hash of hashes</strong> — which trips engineers who use ETag for content integrity checks.</p>
+      </div>
+      <span class="pill p-amber">Flat keyspace — no real folders</span>
+      <span class="pill p-coral">Per-prefix request limits exist</span>
+    </div>
+
+    <div id="c1" class="cpanel">
+      <div class="ch">How a PUT actually works inside S3</div>
+      <div class="csub">What happens between your API call and the 200 OK response</div>
+      <div class="cb">
+        <p>When your Spring Boot app calls <span class="mono">s3.putObject()</span>, the following happens internally — and knowing this explains why S3 is durable, why it achieved eventual consistency historically, and why large uploads are slow to return.</p>
+        <p><strong>Step 1 — Request routing:</strong> Your request hits an S3 front-end server. S3 determines which storage partition owns the key based on bucket name + key hash. It routes internally to the appropriate storage node cluster.</p>
+        <p><strong>Step 2 — Data write:</strong> S3 writes the object data to multiple storage nodes simultaneously across at least three Availability Zones. S3 uses <strong>erasure coding</strong> — not simple 3x replication. The data is split into chunks and encoded so that if any subset of chunks is lost, the original can be reconstructed. More storage-efficient than storing 3 full copies.</p>
+        <p><strong>Step 3 — Index update:</strong> S3 updates its distributed metadata index to record the key exists and its storage location. From 2020 onwards, this index update is synchronous with the PUT response. Before 2020, it was asynchronous — the source of eventual consistency.</p>
+        <div class="mechbox"><strong>Why the 200 OK timing matters:</strong> S3 only returns 200 OK after the object is written across multiple AZs AND the index is updated. A successful PUT guarantees the object is durable before you get the response. Never fire-and-forget a PUT. If you get a 200 OK, the object is durably stored. If you get 5xx, retry with exponential backoff — the write may have partially succeeded, but S3's guarantees mean a retry is always safe.</div>
+      </div>
+      <span class="pill p-green">200 OK = durably stored across 3+ AZs</span>
+      <span class="pill p-blue">Erasure coding, not 3x replication</span>
+    </div>
+
+    <div id="c2" class="cpanel">
+      <div class="ch">The consistency model — what changed in 2020</div>
+      <div class="csub">The most misunderstood S3 concept and a guaranteed senior interview topic</div>
+      <div class="cb">
+        <p>Before December 2020, S3 had <strong>eventual consistency for overwrite PUTs and DELETEs</strong>. If you PUT a new version at an existing key, then immediately GET it — you might get the old version. If you DELETE an object and immediately LIST, the deleted object might still appear. This wasn't a bug — it was a documented trade-off for global scale.</p>
+        <div class="failbox"><strong>Real production failure pattern (pre-2020):</strong> A deployment pipeline uploads a new config file to S3, then immediately reads it back to validate. The read returns the old config — index hasn't propagated. The pipeline concludes the upload failed and retries — uploading a third copy, now confused about which version is authoritative. Engineers worked around this with cache-busting keys (including a UUID in the key so each upload is brand-new, never an overwrite) or DynamoDB as a coordination layer to track which version was authoritative.</div>
+        <p>In December 2020, AWS delivered <strong>strong read-after-write consistency for all S3 operations</strong> — PUTs, DELETEs, LIST operations. After a successful PUT, any subsequent GET returns the new object. Guaranteed globally, for free, with no performance cost.</p>
+        <div class="prodbox"><strong>Why you still need to know the old model:</strong> Any codebase written before December 2020 may have workarounds — random prefixes, DynamoDB coordination, retry delays. When you join a team and see these patterns, you need to know what problem they were solving, and whether they were solving multiple problems simultaneously. Blindly removing them could introduce subtle bugs.</div>
+      </div>
+      <span class="pill p-green">Strong consistency from Dec 2020</span>
+      <span class="pill p-coral">Pre-2020 workarounds exist in old code — understand why</span>
+    </div>
+
+    <div id="c3" class="cpanel">
+      <div class="ch">How S3 achieves 11 nines of durability</div>
+      <div class="csub">99.999999999% — what this number actually means and how it's engineered</div>
+      <div class="cb">
+        <p>S3 Standard promises 99.999999999% (11 nines) durability. Concretely: if you store 10 million objects, you'd expect to lose one object every 10,000 years. S3 stores data across at least three AZs using erasure coding. AWS continuously runs <strong>bit rot detection</strong> — periodically reads every object, verifies checksums, and automatically heals corrupt data from parity chunks.</p>
+        <div class="mechbox"><strong>Durability vs Availability — the distinction engineers confuse:</strong> Durability means your data is not lost. Availability means your data can be accessed right now. S3 Standard gives 11 nines durability but only 99.99% availability (four nines) — up to 52 minutes of unavailability per year. Your data still exists during unavailability — you just can't access it temporarily. S3 One Zone-IA drops to 99.5% availability because it doesn't replicate across AZs.</div>
+        <p><strong>What S3 durability does NOT protect against:</strong> Accidental deletion (you delete the object — S3 faithfully executes it). Overwrites without versioning. Bucket deletion. Ransomware using your own credentials. For protection against these: S3 Versioning, S3 Object Lock (WORM), MFA Delete, and bucket replication to a separate account the primary account cannot delete from.</p>
+        <div class="failbox"><strong>Durability failure engineers miss:</strong> A Spring Boot bug deletes an object instead of updating it. S3 faithfully deletes it. The engineer checks AWS docs, sees "11 nines durability", and is confused why the object is gone. Durability protects against S3's infrastructure failing — not against your own code. Versioning + Object Lock is mandatory for critical data.</div>
+      </div>
+      <span class="pill p-amber">Durability ≠ Availability — know the difference</span>
+      <span class="pill p-coral">Enable versioning — 11 nines doesn't protect from your own deletes</span>
+    </div>
+
+    <div id="c4" class="cpanel">
+      <div class="ch">Multipart upload — when and why it matters</div>
+      <div class="csub">The mechanism behind large file uploads and why you must use it in production</div>
+      <div class="cb">
+        <p>S3 has a single-PUT limit of 5GB. For objects larger than 5GB, multipart upload is mandatory. AWS recommends multipart for anything above 100MB. Your application splits the object into parts (minimum 5MB each). Each part uploads independently and in parallel. If one part fails, only that part retries — not the entire file.</p>
+        <div class="mechbox"><strong>Why this matters for GetWork:</strong> If workers upload video proof-of-work (500MB–2GB), a single-PUT means if the network drops at 90%, the entire upload restarts. With multipart, only the failed part retries. Additionally, uploading 8 parts simultaneously at 10MB each = 80MB/s effective throughput vs 10MB/s sequential. The AWS Java SDK's <span class="mono">TransferManager</span> does this automatically above a configurable threshold.</div>
+        <p><strong>The lifecycle policy trap:</strong> If a multipart upload is initiated but never completed (app crashes mid-upload), the parts accumulate and you are charged for their storage even though there's no usable object. AWS does not automatically clean these up. Engineers discover this when their S3 bill is mysteriously higher than expected — terabytes of incomplete multipart parts. <strong>Fix: create an S3 Lifecycle rule to abort incomplete multipart uploads after 7 days.</strong> This should be on every bucket you ever create.</p>
+        <div class="failbox"><strong>Production failure:</strong> A pipeline uploads 50GB log archives with a single PUT. Works for months. One day the upload exceeds the pipeline's timeout — process is killed at 80% complete. No object is stored (single-PUT is atomic — partial data not accessible). The pipeline reports success (bad error handling). Next day's job fails because yesterday's archive doesn't exist. Fix: TransferManager with multipart + explicit success validation.</div>
+      </div>
+      <span class="pill p-amber">Use multipart above 100MB</span>
+      <span class="pill p-coral">Set lifecycle rule to clean incomplete uploads — every bucket</span>
+    </div>
+
+    <div id="c5" class="cpanel">
+      <div class="ch">Presigned URLs — the right way to give temporary access</div>
+      <div class="csub">Share private S3 objects without making them public or exposing credentials</div>
+      <div class="cb">
+        <p>A presigned URL is a time-limited URL granting temporary access to a private S3 object — or allowing upload — without the recipient needing AWS credentials. Generated by your backend using your credentials, baked into the URL's signature, then given to the client who uses it directly against S3. Your backend is <strong>not in the upload/download data path</strong>.</p>
+        <p><strong>How the signature works:</strong> The URL contains bucket, key, expiry timestamp, your access key ID, and an HMAC-SHA256 signature computed from all those parameters using your secret key. S3 recomputes the signature using the access key ID to look up the secret key from IAM. Signatures match + expiry not passed = access granted. Your secret key never leaves your server.</p>
+        <div class="prodbox"><strong>Presigned PUT URLs — the pattern GetWork needs:</strong> Naive approach: client → your backend → backend uploads to S3. Every upload goes through your EC2, wasting bandwidth and compute. Correct pattern: client requests upload URL → backend generates presigned PUT URL with 5-minute expiry → client uploads directly to S3 → S3 stores the file. Your backend never touches the file bytes. This offloads all upload traffic to S3's infrastructure, which is built for exactly this.</div>
+        <p><strong>Expiry and the clock skew problem:</strong> Presigned URLs expire at a specific UTC timestamp. Mobile device clocks drift. Always generate presigned URLs server-side. Set 15 minutes for user-facing uploads, 5 minutes for automated backend operations.</p>
+        <div class="failbox"><strong>Security failure:</strong> A developer generates a presigned URL with 7-day expiry "to be safe" for a document with sensitive financial data. URL is sent via email. User forwards the email. Anyone with the forwarded email has 7-day access. Presigned URLs are as sensitive as the data they expose — treat them like passwords. Use the shortest expiry that works. Always HTTPS. Log S3 access via CloudTrail to detect unexpected access patterns.</div>
+      </div>
+      <span class="pill p-green">Client uploads direct to S3 — your backend not in data path</span>
+      <span class="pill p-coral">Short expiry + HTTPS always — treat like a password</span>
+    </div>
+    <button class="next-btn" onclick="show('storage',document.querySelectorAll('.ntab')[1])">Storage classes — the real cost engineering →</button>
+  </div>
+
+  <!-- STORAGE CLASSES -->
+  <div id="p-storage" class="panel">
+    <div class="lede"><strong>Storage classes are not just about cost — they encode specific durability, availability, retrieval latency, and minimum storage duration guarantees. Choosing the wrong class has caused both data loss and unexpected bills.</strong></div>
+    <table class="sc-table">
+      <thead><tr><th>Class</th><th>AZs</th><th>Availability</th><th>Min duration</th><th>Retrieval</th><th>Use case</th></tr></thead>
+      <tbody>
+        <tr><td>S3 Standard</td><td>≥3</td><td>99.99%</td><td>None</td><td>Instant, free</td><td>Active data accessed frequently. Current assets, active user uploads.</td></tr>
+        <tr><td>S3 Intelligent-Tiering</td><td>≥3</td><td>99.9%</td><td>None</td><td>Instant (most tiers)</td><td>Unknown or changing access patterns. S3 auto-moves between tiers. Small per-object monitoring fee.</td></tr>
+        <tr><td>S3 Standard-IA</td><td>≥3</td><td>99.9%</td><td>30 days</td><td>Instant, per-GB fee</td><td>Infrequently accessed but immediately available. DR backups, older archives.</td></tr>
+        <tr><td>S3 One Zone-IA</td><td>1</td><td>99.5%</td><td>30 days</td><td>Instant, per-GB fee</td><td>Re-creatable data only. If AZ fails, data unavailable until AZ recovers. Never for primary data.</td></tr>
+        <tr><td>S3 Glacier Instant</td><td>≥3</td><td>99.9%</td><td>90 days</td><td>Instant, per-GB fee</td><td>Archive with instant access. Medical images, legal records accessed quarterly.</td></tr>
+        <tr><td>S3 Glacier Flexible</td><td>≥3</td><td>99.99%</td><td>90 days</td><td>Minutes to hours</td><td>True archive. Compliance data. Won't need for months.</td></tr>
+        <tr><td>S3 Glacier Deep Archive</td><td>≥3</td><td>99.99%</td><td>180 days</td><td>Up to 12 hours</td><td>Coldest, cheapest ($0.00099/GB/month). 7–10 year regulatory retention.</td></tr>
+      </tbody>
+    </table>
+    <div class="mechbox"><strong>The minimum storage duration billing trap:</strong> Standard-IA has a 30-day minimum. If you store an object for 5 days then delete it, you are charged for 30 days. Glacier Flexible = 90-day minimum. Deep Archive = 180 days. This is why Lifecycle Policies need careful design — if objects are created and deleted within short cycles, moving them to IA increases your bill. Calculate (transition savings) vs (minimum duration cost × deletion rate) before implementing any lifecycle policy.</div>
+    <div class="failbox"><strong>Production failure — wrong storage class:</strong> A team stores application logs in Standard-IA to save money. Their log analysis pipeline runs every hour, accessing the last 24 hours — hitting thousands of objects with GETs. Standard-IA has a per-GB retrieval fee plus per-request fee. Their "cost saving" storage class ended up 3x more expensive than Standard because of retrieval fees on frequent access. Rule: Standard-IA saves money only when access frequency is truly low — less than once a month per object.</div>
+    <div class="prodbox"><strong>S3 Intelligent-Tiering internal mechanics:</strong> IT monitors access patterns per object. After 30 consecutive days without access, moves to Infrequent Access tier. After 90 days, Archive Instant Access. The moment you access an object, it moves back to Frequent Access with no retrieval fee. You pay ~$0.0025 per 1,000 objects/month for monitoring. For objects under 128KB, IT offers no saving because the monitoring fee exceeds the storage cost difference — AWS doesn't apply IT to small objects.</div>
+    <button class="next-btn" onclick="show('security',document.querySelectorAll('.ntab')[2])">Security model — the most dangerous part of S3 →</button>
+  </div>
+
+  <!-- SECURITY -->
+  <div id="p-security" class="panel">
+    <div class="lede"><strong>S3 security has caused some of the largest data breaches in cloud history — Capital One, GoDaddy, and numerous others. Every single one was misconfiguration, not AWS infrastructure failure. Understanding the security model in depth is not optional for a senior engineer.</strong></div>
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('s',0,this)">1 · Permission evaluation</button>
+      <button class="cbtn" onclick="showC('s',1,this)">2 · Bucket policies</button>
+      <button class="cbtn" onclick="showC('s',2,this)">3 · Block Public Access</button>
+      <button class="cbtn" onclick="showC('s',3,this)">4 · Encryption</button>
+    </div>
+    <div id="s0" class="cpanel active">
+      <div class="ch">How S3 permission evaluation actually works</div>
+      <div class="csub">The evaluation order that determines what gets denied — most engineers get this wrong</div>
+      <div class="cb">
+        <p><strong>1. Explicit DENY?</strong> If any policy explicitly denies the action, the request is denied immediately. No other policy can override an explicit deny. This is the most powerful rule.</p>
+        <p><strong>2. Explicit ALLOW?</strong> If any policy explicitly allows the action AND there is no explicit deny, the request is allowed. The allow can come from either IAM identity policy or bucket policy — they are OR'd together.</p>
+        <p><strong>3. Neither — implicit deny.</strong> The default is deny. No explicit allow = denied.</p>
+        <div class="mechbox"><strong>Cross-account access — the critical nuance:</strong> If the requester is from a different AWS account, BOTH the IAM policy (requester's account) AND the bucket policy (bucket's account) must allow the action. This is AND logic, not OR. A cross-account request needs explicit permission on both sides. Forgetting this causes the most common S3 access debugging session: "My IAM policy says allow, why is S3 denying?" — because the bucket policy in the other account has no allow for your account.</div>
+        <div class="failbox"><strong>The confused deputy scenario:</strong> Your EC2 instance has an IAM role allowing s3:GetObject on all buckets (*). An attacker compromises your EC2 and uses the instance metadata service to steal the role credentials. They can now read every S3 bucket in your account. Solution: Bucket policies explicitly restrict access to specific IAM roles. VPC endpoints with bucket policies deny all access except from the VPC. SCPs at the AWS Organizations level add account-wide guardrails.</div>
+      </div>
+    </div>
+    <div id="s1" class="cpanel">
+      <div class="ch">Bucket policies — the right way to control access</div>
+      <div class="csub">JSON resource policies attached to the bucket — more powerful than ACLs</div>
+      <div class="cb">
+        <p>A bucket policy is a JSON resource policy attached to the S3 bucket. Unlike IAM policies (identity-based), bucket policies are resource-based — they define who can access this specific resource. They can grant access to other AWS accounts, services, and anonymous users.</p>
+        <div class="mechbox"><strong>Two policies you should put on every production bucket:</strong><br>
+          <strong>Enforce HTTPS only</strong> — Deny all requests where <span class="mono">aws:SecureTransport = false</span>. Without this, data can be intercepted in transit. Standard compliance requirement.<br>
+          <strong>Restrict to VPC only</strong> — Deny all requests where <span class="mono">aws:SourceVpc</span> is not your VPC ID. Only resources inside your VPC can access the bucket — not even IAM users accessing from outside. Used for highly sensitive data.
+        </div>
+        <div class="failbox"><strong>The wildcard principal mistake — the root cause of every S3 data breach:</strong> Setting Principal to "*" with Action s3:GetObject makes every object publicly readable to the entire internet. This exact configuration caused almost every major S3 data breach. AWS added Block Public Access specifically to prevent this — but if BPA is disabled and a wildcard policy exists, your data is exposed to the public internet with no further authentication required.</div>
+      </div>
+    </div>
+    <div id="s2" class="cpanel">
+      <div class="ch">S3 Block Public Access — the account-level safety net</div>
+      <div class="csub">Four independent settings that override bucket policies and ACLs</div>
+      <div class="cb">
+        <p><strong>BlockPublicAcls:</strong> Blocks new ACLs that grant public access. Does NOT remove existing public ACLs.</p>
+        <p><strong>IgnorePublicAcls:</strong> Makes S3 ignore ALL public ACLs entirely — even existing ones. Stronger than BlockPublicAcls.</p>
+        <p><strong>BlockPublicPolicy:</strong> Prevents new bucket policies granting public access. Rejects Principal "*" policies. Does not affect existing policies.</p>
+        <p><strong>RestrictPublicBuckets:</strong> Restricts public and cross-account access even if a public policy somehow exists. The nuclear option.</p>
+        <div class="prodbox"><strong>AWS default since April 2023:</strong> All four BPA settings are enabled BY DEFAULT on all new S3 buckets. Any policy or ACL trying to grant public access is blocked or ignored. You must consciously opt out to make a bucket public. The friction is intentional — AWS is making you confirm public exposure is deliberate.</div>
+        <div class="failbox"><strong>Account-level vs bucket-level confusion:</strong> BPA can be set at account level (applies to all buckets) and bucket level. Account-level is stronger — it overrides bucket-level. Many teams enable BPA at account level for compliance, then are confused when a specific bucket they need to make public can't be. Solution: disable BPA at the specific bucket level for that bucket, keep account-level BPA on for all others.</div>
+      </div>
+    </div>
+    <div id="s3" class="cpanel">
+      <div class="ch">S3 encryption — at rest and in transit</div>
+      <div class="csub">Three options with very different key management and cost implications</div>
+      <div class="cb">
+        <p><strong>SSE-S3:</strong> AWS manages keys entirely. Free, automatic, enabled by default since January 2023. Sufficient for most use cases. Not acceptable when regulations require customer-controlled keys.</p>
+        <p><strong>SSE-KMS:</strong> Keys in AWS KMS. You control rotation, key policies, get CloudTrail audit of every key usage. Every S3 object GET triggers a KMS API call — costs $0.03/10,000 requests with 5,500 calls/second rate limits. Required for PCI-DSS and similar financial compliance frameworks.</p>
+        <p><strong>SSE-C:</strong> You send the encryption key with every PUT and GET. AWS encrypts/decrypts and never stores the key. If you lose the key, data is permanently inaccessible. Highest control, highest operational risk.</p>
+        <div class="failbox"><strong>KMS throttling failure:</strong> A media company stores video thumbnails with SSE-KMS. Their pipeline processes 10,000 videos simultaneously — each GET triggers a KMS decrypt call. KMS default limit is 5,500 calls/second. They hit the limit, get ThrottlingException errors, blame S3 — but S3 is fine, KMS is the bottleneck. Fix: enable S3 Bucket Keys (caches the data key for the bucket, reducing KMS calls by up to 99%) or request a KMS limit increase.</div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('patterns',document.querySelectorAll('.ntab')[3])">Real production patterns →</button>
+  </div>
+
+  <!-- PATTERNS -->
+  <div id="p-patterns" class="panel">
+    <div class="lede"><strong>These are the actual patterns used in production systems — not textbook examples. Each maps to a real decision you will face when building GetWork, Hotel microservices, or at Deloitte with JP Morgan.</strong></div>
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('pp',0,this)">1 · Static hosting</button>
+      <button class="cbtn" onclick="showC('pp',1,this)">2 · Event-driven pipeline</button>
+      <button class="cbtn" onclick="showC('pp',2,this)">3 · Spring Boot integration</button>
+      <button class="cbtn" onclick="showC('pp',3,this)">4 · Cross-region replication</button>
+    </div>
+    <div id="pp0" class="cpanel active">
+      <div class="ch">S3 static website hosting</div>
+      <div class="csub">Host a full React/Angular frontend with zero servers</div>
+      <div class="cb">
+        <p>S3 can serve static content directly. Enable "Static website hosting" on the bucket, configure index.html and error document, and S3 gives you a website endpoint. S3 alone has limitations: no HTTPS on the S3 website endpoint (HTTP only), no custom domain, no global performance.</p>
+        <div class="mechbox"><strong>The production-ready architecture — S3 + CloudFront:</strong> CloudFront sits in front of S3, provides HTTPS (ACM certificate — free), custom domain via Route 53, global edge caching (400+ locations), and AWS Shield Standard (DDoS protection — free). CloudFront serves from edge cache — your S3 bucket gets almost zero direct traffic, reducing costs and latency dramatically.</div>
+        <p><strong>SPA routing problem:</strong> React Router handles routing client-side. When a user navigates directly to <span class="mono">https://getwork.app/jobs/123</span>, S3 tries to find an object at key <span class="mono">jobs/123</span>. It doesn't exist — S3 returns 403 or 404. Fix: configure CloudFront with a custom error response — intercept 403 and 404 responses from S3 and return <span class="mono">index.html</span> with HTTP status 200. The browser loads index.html, React Router reads the URL path, renders the correct page. This catches almost every first-time deployer.</p>
+        <div class="prodbox"><strong>Cache invalidation after deployment:</strong> CloudFront caches your S3 files at edge locations. After deploying a new React build, old cached files continue serving until TTL expires. Solution: use content-addressed filenames (Webpack/Vite adds a hash — <span class="mono">main.a3b4c5.js</span>). Only <span class="mono">index.html</span> needs a CloudFront invalidation after each deploy. Create an invalidation for <span class="mono">/index.html</span> as the last step of your CI/CD pipeline. Invalidating /* (all files) costs money per path — only invalidate what changed.</div>
+      </div>
+    </div>
+    <div id="pp1" class="cpanel">
+      <div class="ch">S3 event-driven pipeline</div>
+      <div class="csub">S3 as the trigger point for an entire processing workflow</div>
+      <div class="cb">
+        <p>S3 emits events when objects are created, deleted, or restored. These trigger Lambda functions, SQS queues, or SNS topics — making S3 a natural trigger for processing pipelines.</p>
+        <div class="mechbox"><strong>GetWork worker document processing pattern:</strong> Worker uploads ID document → S3 PUT triggers Lambda → Lambda calls AWS Rekognition (ID document analysis) + Textract (text extraction) → results stored in DynamoDB → SNS notification to admin → admin reviews in dashboard. The entire pipeline is event-driven, runs only when triggered, scales to zero when idle. You pay only for Lambda invocations, not always-on servers.</div>
+        <p><strong>Event delivery and the idempotency requirement:</strong> S3 event notifications are delivered at least once — the same event can be delivered twice in rare cases. If your Lambda is triggered twice for the same object, it must be idempotent. For document processing: check DynamoDB before processing to see if the document ID was already handled. If yes, skip. Prevents charging a worker twice or creating duplicate records.</p>
+        <div class="failbox"><strong>The missing event trap:</strong> S3 events are asynchronous — in rare edge cases, an event may not be delivered. For critical pipelines where every file must be processed, don't rely solely on S3 events. Use S3 Inventory (daily manifest of all objects) as a reconciliation mechanism — compare the inventory against your processing records to find objects that were uploaded but never triggered an event. Run this reconciliation daily as a batch job.</div>
+        <p><strong>S3 + SQS for production safety:</strong> Instead of triggering Lambda directly, S3 sends events to SQS, and Lambda polls SQS. SQS buffers events if Lambda is throttled. Multiple Lambda functions can consume from the same queue concurrently. This is the production-safe pattern for high-volume S3 processing.</p>
+      </div>
+    </div>
+    <div id="pp2" class="cpanel">
+      <div class="ch">Spring Boot + S3 — the right integration pattern</div>
+      <div class="csub">How to integrate S3 with your existing Spring Boot apps correctly</div>
+      <div class="cb">
+        <p>Use AWS SDK v2 for Java. Never hardcode credentials. Use IAM instance roles on EC2 (SDK picks them up automatically from the instance metadata service) — never credentials in application.properties.</p>
+        <div class="mechbox"><strong>S3Client vs S3AsyncClient — a critical decision for WebFlux:</strong> Your Spring Boot app uses WebFlux (reactive) given your Deloitte project. Use <span class="mono">S3AsyncClient</span> which returns <span class="mono">CompletableFuture</span> — bridge to Reactor with <span class="mono">Mono.fromFuture()</span>. Using the blocking <span class="mono">S3Client</span> inside a WebFlux handler blocks the Netty event loop thread — destroying your reactive throughput. This is a real mistake causing silent performance degradation in reactive Spring Boot apps that is extremely hard to diagnose.</div>
+        <div class="prodbox"><strong>The upload pattern for GetWork (presigned PUT):</strong><br>
+          1. Worker app: POST /api/upload-url?filename=photo.jpg<br>
+          2. Backend validates session, generates presigned PUT URL with 10-minute expiry<br>
+          3. Backend creates DynamoDB record: {docId, workerId, status: PENDING, s3Key}<br>
+          4. Backend returns presigned URL to worker app<br>
+          5. Worker app PUTs file directly to S3 using presigned URL<br>
+          6. S3 event triggers Lambda → Lambda updates DynamoDB to UPLOADED<br>
+          7. Admin dashboard queries DynamoDB for UPLOADED documents<br>
+          Your backend never receives file bytes. Your EC2 just manages metadata and URLs.</div>
+        <div class="failbox"><strong>Thread pool exhaustion failure:</strong> A Spring Boot MVC app (not WebFlux) uses blocking S3Client inside a REST endpoint to upload files. Under load, concurrent requests each block a Tomcat thread while waiting for S3. Tomcat's default 200-thread pool exhausts — requests queue, latency spikes, service appears down. Fix: offload S3 operations to a dedicated @Async executor, or switch to S3AsyncClient with CompletableFuture, or use presigned URLs so S3 interaction happens entirely on the client side.</div>
+      </div>
+    </div>
+    <div id="pp3" class="cpanel">
+      <div class="ch">S3 Cross-Region Replication (CRR)</div>
+      <div class="csub">When and why you replicate across regions — and what it does NOT do</div>
+      <div class="cb">
+        <p>S3 CRR automatically copies objects from a source bucket in one region to a destination bucket in a different region. Replication is asynchronous — typically seconds to minutes delay. Requires versioning enabled on both buckets.</p>
+        <div class="mechbox"><strong>What CRR does NOT do — the misconceptions that cause incidents:</strong> CRR does not replicate existing objects — only new objects written after replication is configured. 10TB of existing data is not copied. Use S3 Batch Operations for a one-time initial sync. CRR does not replicate delete markers by default — deleting an object in the source does NOT automatically delete in the destination. This is intentional — the replica is a safety net against accidental deletes. CRR does not provide strong consistency across regions — the replica lags by seconds to minutes.</div>
+        <div class="failbox"><strong>The replication lag compliance failure:</strong> A financial services team sets up CRR and tells their compliance officer data is "replicated in real-time to the EU region". The auditor tests this — objects appear in the EU replica 45 seconds after being written. The compliance requirement specifies "real-time replication". S3 CRR is asynchronous and does not meet "real-time" requirements. Fix: either re-negotiate the compliance definition or write to both regions simultaneously in your application (synchronous dual-write), accepting the performance and complexity cost.</div>
+        <div class="prodbox"><strong>Same-Region Replication (SRR) — the underused pattern:</strong> Replicates within the same region. Use case: replicate from production bucket to a separate account's bucket for audit log isolation — the audit account can read but not write to production, preventing tampering. Use case: aggregate logs from multiple source buckets into a single destination. SRR has same mechanics as CRR but without cross-region data transfer costs.</div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[4])">Interview prep — senior level →</button>
+  </div>
+
+  <!-- INTERVIEW -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>These are not definition questions. They separate engineers who've read documentation from engineers who've run systems in production. Every answer reflects how a principal engineer or solutions architect actually thinks — not how a tutorial explains things.</strong></div>
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">S3 claims 11 nines of durability. Can you actually lose data in S3? Walk me through every way it can happen.</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Yes, absolutely — and this is one of the most important things to understand about S3. The 11 nines durability guarantee refers specifically to S3's infrastructure not losing your data due to hardware failure or bit rot. AWS's internal systems are extremely robust at preserving stored data. However, there are several ways data is legitimately lost that the durability guarantee does not protect against.</p>
+          <p><strong>Deletion by your application or your team.</strong> If your code calls s3:DeleteObject, or a developer runs the wrong CLI command, S3 faithfully executes the delete. This is not an infrastructure failure — you asked S3 to delete, and it did. Without versioning, this is permanent. With versioning enabled, a delete operation adds a delete marker — the object isn't actually removed. You can restore it by removing the delete marker.</p>
+          <p><strong>Overwrites without versioning.</strong> PUT a new version of an object at the same key without versioning enabled — the old version is gone. S3 doesn't keep history unless you explicitly enable versioning.</p>
+          <p><strong>Expired lifecycle policies.</strong> A lifecycle policy configured to delete objects after 30 days will delete them — exactly as instructed. This has caused real data loss when engineers forget lifecycle rules exist. Fix: S3 Object Lock (WORM) for data that must never be deleted regardless of lifecycle rules.</p>
+          <p><strong>Compromised AWS credentials.</strong> An attacker with IAM credentials with s3:DeleteObject can delete every object programmatically. S3 has no way to distinguish legitimate deletes from malicious ones at the API level. Fix: S3 Object Lock in Compliance mode — even the root account cannot delete locked objects. MFA Delete. Bucket replication to a separate account where the primary account has no delete permissions.</p>
+          <p><strong>Bucket deletion.</strong> If the bucket is deleted, all objects inside are gone. You can't delete a non-empty bucket via console — but you can programmatically. Fix: SCPs to deny s3:DeleteBucket for production accounts.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It reframes the question correctly — durability is about infrastructure, not protecting you from yourself. Every failure mode has a concrete mitigation, showing defence-in-depth thinking. The S3 Object Lock detail signals you know AWS's advanced security features.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">Explain the S3 consistency model and what changed in 2020. How did engineers design around the old model?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Before December 2020, S3 had a split consistency model. New object PUTs had read-after-write consistency — PUT a brand-new key and immediately GET it, you'd always get the new object. But overwrite PUTs and DELETEs had only eventual consistency. Overwrite an existing object and immediately read it — you might get the old version. Delete an object and immediately list — the deleted object might still appear. This was a documented property of S3's distributed architecture: index updates propagated asynchronously.</p>
+          <p>The reason for this design: at S3's scale, strong consistency would require synchronous coordination across all storage nodes before returning a response — massively increasing latency and reducing throughput. Eventually consistent systems trade correctness windows for performance. S3 prioritised throughput; the consistency window was typically milliseconds to a few seconds. But at high request rates, it was observable.</p>
+          <p>Engineers designed around eventual consistency in several ways. <strong>Cache-busting keys</strong> — instead of overwriting <span class="mono">config/settings.json</span>, write <span class="mono">config/settings-v42.json</span> and store the version pointer in DynamoDB. DynamoDB provided strong consistency; S3 provided storage. <strong>DynamoDB coordination layer</strong> — a DynamoDB item tracked which S3 key was the current authoritative version. <strong>Time-delayed reads</strong> — pipelines waited 5 seconds after a write before reading. Brittle but common.</p>
+          <p>In December 2020, AWS delivered strong read-after-write consistency for all S3 operations — PUTs, DELETEs, and LIST — for all buckets, with no performance degradation and no additional cost. AWS redesigned S3's metadata subsystem to make index updates synchronous with the PUT/DELETE response.</p>
+          <p>The implication for existing codebases: these workarounds are technically unnecessary for consistency. However, many workarounds — DynamoDB coordination, versioned keys — provide other benefits (DynamoDB gives atomic operations and transactions; versioned keys enable rollback). Don't blindly remove them without understanding whether they were solving multiple problems simultaneously.</p>
+          <span class="tip"><strong>Why this answer works:</strong> Explains the why behind the old design (performance vs consistency trade-off), demonstrates distributed systems fundamentals, shows real engineering workarounds, and concludes with practical advice about legacy code — the reasoning of a senior engineer who has maintained long-lived systems.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">Your S3 bill is unexpectedly 5x higher this month. Walk me through your diagnosis process.</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>I'd approach this systematically, eliminating cost categories one at a time.</p>
+          <p><strong>Step 1 — Cost Explorer breakdown.</strong> Open AWS Cost Explorer, filter to S3, group by usage type. S3 has independent cost dimensions: storage (GB-months per class), requests (PUT, GET, LIST — priced per 1,000), data retrieval (per-GB on IA and Glacier), data transfer out (per-GB to internet or other regions), replication (CRR transfer), and Intelligent-Tiering monitoring fees. The breakdown shows which dimension spiked.</p>
+          <p><strong>If storage spiked:</strong> Check if versioning is enabled and objects are being overwritten without a lifecycle rule deleting old versions — versions accumulate silently. Check for incomplete multipart uploads. Use S3 Storage Lens for per-bucket, per-class breakdown.</p>
+          <p><strong>If request costs spiked:</strong> Something is making far more API calls. Common causes: application doing LIST operations in a loop (bad pagination — calling ListObjects repeatedly without using the continuation token), CloudFront cache miss rate increased (more GETs hitting S3 origin — check CloudFront cache hit ratio metric), or an S3 event trigger Lambda that's failing and being retried in a loop.</p>
+          <p><strong>If data retrieval spiked:</strong> Data was moved to IA or Glacier, but access patterns didn't actually decrease. The IA retrieval trap — storage cost fell, but retrieval fees exceeded the savings.</p>
+          <p><strong>If data transfer out spiked:</strong> A new analytics job is reading raw data from S3 to a local machine instead of using Athena, or a CloudFront distribution has a bug causing large files to be served without range requests, or CRR is replicating large volumes to another region.</p>
+          <p>After identifying root cause: set up S3 Storage Lens with advanced metrics, configure S3 cost allocation tags, and create a CloudWatch alarm on estimated S3 charges so any future spike triggers an alert within 24 hours.</p>
+          <span class="tip"><strong>Why this answer works:</strong> Demonstrates detailed knowledge of S3's pricing model (most engineers don't know all the dimensions), structured debugging approach, and closes with prevention — not just fixing the immediate issue. This is the senior engineer diagnostic mindset interviewers are probing for.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">How would you design S3 access for a multi-tenant SaaS where tenants must never access each other's data?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Multi-tenant S3 isolation has several valid approaches with different trade-offs.</p>
+          <p><strong>Option 1 — One bucket per tenant.</strong> Each tenant gets their own S3 bucket. IAM policies restrict each tenant's role to only their bucket. Strongest isolation — a misconfigured policy on tenant A's bucket cannot affect tenant B's. However, AWS has a default limit of 100 buckets per account (raiseable, but still a constraint). For a SaaS with thousands of tenants, doesn't scale.</p>
+          <p><strong>Option 2 — One bucket, per-tenant key prefix with IAM conditions.</strong> All tenants share one bucket. Each tenant's data stored under <span class="mono">tenant-{tenantId}/</span> prefix. IAM policies use s3:prefix condition to restrict access to their prefix. Scales to millions of tenants in one bucket. Risk: a misconfigured IAM policy or key-generation bug could allow cross-tenant access. Use AWS IAM Access Analyzer to continuously validate policies.</p>
+          <p><strong>Option 3 — Separate AWS account per tenant.</strong> Enterprise SaaS. Complete account-level isolation. Your application account assumes a cross-account role to read/write to their bucket when needed. Managed via AWS Organizations and Control Tower. Used by enterprise-grade SaaS platforms with strict compliance requirements. Complex to operate at scale.</p>
+          <p><strong>Option 4 — Presigned URLs with server-side enforcement.</strong> Your backend generates presigned URLs for specific objects. Tenant authenticates to your backend, backend validates their identity and which objects they're authorised to access, then generates a presigned URL for only that specific object. S3 never knows about tenants — isolation is enforced by your application layer. Risk: your application's authorisation logic is the security boundary. A bug breaks isolation.</p>
+          <p>For GetWork: Option 2 (single bucket, per-worker prefix) with presigned URLs for all client access. The backend enforces that a worker's session token can only generate presigned URLs for their own <span class="mono">workers/{workerId}/</span> prefix. Simple, scales to millions of workers, application layer provides the authorisation boundary.</p>
+          <span class="tip"><strong>Why this answer works:</strong> Multiple options with trade-offs rather than one "correct" answer — architectural maturity. Tied to real context (GetWork). Mention of IAM Access Analyzer shows knowledge of AWS tooling beyond core services.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[5])">Start the lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab makes you observe things — the consistency model, the versioning mechanism, the presigned URL flow, the lifecycle policy — so the mechanics become visceral, not theoretical.</strong></div>
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc2" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create a bucket with production-grade settings from the start</div>
+          <div class="sb">Create a bucket in ap-south-1 with versioning enabled. Never create a bucket for real data without versioning. Create a separate logging bucket first. Enable server access logging targeting the logging bucket.</div>
+          <code class="cmd">aws s3api create-bucket \
+  --bucket zuber-learning-$(date +%s) \
+  --region ap-south-1 \
+  --create-bucket-configuration LocationConstraint=ap-south-1
+
+aws s3api put-bucket-versioning \
+  --bucket YOUR-BUCKET-NAME \
+  --versioning-configuration Status=Enabled
+
+aws s3api get-bucket-versioning --bucket YOUR-BUCKET-NAME</code>
+          <div class="snote">The $(date +%s) appends a Unix timestamp for global uniqueness. Note the bucket name — used throughout this lab.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc2" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Observe versioning — the mechanism that saves your data from yourself</div>
+          <div class="sb">Upload a file. Overwrite it. Observe both versions exist. Delete it — observe what actually happens with versioning enabled. This is the difference between data loss and data safety.</div>
+          <code class="cmd">echo "Version 1 content" > test.txt
+aws s3 cp test.txt s3://YOUR-BUCKET/test.txt
+
+echo "Version 2 content" > test.txt
+aws s3 cp test.txt s3://YOUR-BUCKET/test.txt
+
+# See BOTH versions — not just the latest
+aws s3api list-object-versions \
+  --bucket YOUR-BUCKET --prefix test.txt
+
+# "Delete" the object
+aws s3 rm s3://YOUR-BUCKET/test.txt
+
+# List again — a delete MARKER was added, not a real delete
+aws s3api list-object-versions \
+  --bucket YOUR-BUCKET --prefix test.txt
+
+# Restore: delete the delete marker (get VersionId from above)
+aws s3api delete-object \
+  --bucket YOUR-BUCKET \
+  --key test.txt \
+  --version-id DELETE-MARKER-VERSION-ID</code>
+          <div class="snote">S3 delete with versioning = delete marker added. The data is NOT gone. Remove the delete marker and the object reappears. Without versioning, that first delete would be permanent and unrecoverable.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc2" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Test strong consistency — verify the 2020 guarantee yourself</div>
+          <div class="sb">Write a script that uploads an object and immediately reads it back in a loop. Every read should return the latest version. Think about what this would have returned before December 2020.</div>
+          <code class="cmd">for i in {1..10}; do
+  echo "content-version-$i" > temp.txt
+  aws s3 cp temp.txt s3://YOUR-BUCKET/consistency-test.txt
+  RESULT=$(aws s3 cp s3://YOUR-BUCKET/consistency-test.txt -)
+  echo "Wrote: content-version-$i | Read: $RESULT"
+done</code>
+          <div class="snote">Every line should show wrote and read matching. Pre-2020, some iterations would have returned the previous version. You are now observing the December 2020 guarantee directly.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc2" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Generate and use a presigned URL — the exact pattern your apps will use</div>
+          <div class="sb">Generate a presigned GET URL. Access it from your browser with zero AWS credentials. Generate a presigned PUT URL and upload using curl. This is the GetWork worker upload pattern.</div>
+          <code class="cmd"># Presigned GET URL (60 second expiry)
+aws s3 presign s3://YOUR-BUCKET/test.txt \
+  --expires-in 60 --region ap-south-1
+# Open the URL in browser — no login required
+
+# Presigned PUT URL via Python SDK
+python3 -c "
+import boto3
+s3 = boto3.client('s3', region_name='ap-south-1')
+url = s3.generate_presigned_url(
+  'put_object',
+  Params={'Bucket': 'YOUR-BUCKET', 'Key': 'via-presigned.txt'},
+  ExpiresIn=300
+)
+print(url)
+"
+
+# Upload directly to S3 using the URL — no AWS credentials in curl
+curl -X PUT -d "Hello from presigned PUT" "PASTE-URL-HERE"
+aws s3 cp s3://YOUR-BUCKET/via-presigned.txt -</code>
+          <div class="snote">The presigned PUT succeeded without any AWS credentials in the curl command. The signature baked into the URL is sufficient. This is how 100M-user apps handle file uploads without routing through their servers.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc2" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Write a real bucket policy — enforce HTTPS only (production requirement)</div>
+          <div class="sb">Apply a bucket policy that denies all non-HTTPS requests. This is a standard compliance requirement at JP Morgan and every other regulated enterprise.</div>
+          <code class="cmd">cat > policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "DenyNonHTTPS",
+    "Effect": "Deny",
+    "Principal": "*",
+    "Action": "s3:*",
+    "Resource": [
+      "arn:aws:s3:::YOUR-BUCKET",
+      "arn:aws:s3:::YOUR-BUCKET/*"
+    ],
+    "Condition": {
+      "Bool": {"aws:SecureTransport": "false"}
+    }
+  }]
+}
+EOF
+
+aws s3api put-bucket-policy \
+  --bucket YOUR-BUCKET --policy file://policy.json
+
+aws s3api get-bucket-policy --bucket YOUR-BUCKET</code>
+          <div class="snote">AWS CLI always uses HTTPS so your normal operations still work. This policy denies any request coming over plain HTTP — a standard PCI-DSS and SOC 2 requirement.</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc2" id="s6" onclick="done('s6')">6</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Configure a lifecycle policy — automate cost management and clean up the multipart trap</div>
+          <div class="sb">Create a lifecycle policy with storage class transitions AND the incomplete multipart upload cleanup rule that should be on every S3 bucket you ever create.</div>
+          <code class="cmd">cat > lifecycle.json << 'EOF'
+{
+  "Rules": [
+    {
+      "ID": "TransitionLogs",
+      "Status": "Enabled",
+      "Filter": {"Prefix": "logs/"},
+      "Transitions": [
+        {"Days": 30, "StorageClass": "STANDARD_IA"},
+        {"Days": 90, "StorageClass": "GLACIER"}
+      ]
+    },
+    {
+      "ID": "CleanIncompleteMultipart",
+      "Status": "Enabled",
+      "Filter": {"Prefix": ""},
+      "AbortIncompleteMultipartUpload": {"DaysAfterInitiation": 7}
+    }
+  ]
+}
+EOF
+
+aws s3api put-bucket-lifecycle-configuration \
+  --bucket YOUR-BUCKET \
+  --lifecycle-configuration file://lifecycle.json
+
+aws s3api get-bucket-lifecycle-configuration --bucket YOUR-BUCKET</code>
+          <div class="snote">The CleanIncompleteMultipart rule should be on EVERY S3 bucket. Without it, abandoned multipart uploads silently accumulate and inflate your bill — invisible in the console until you run S3 Storage Lens.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[6])">Day 3 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Day 3 — concepts understood at depth</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">Flat keyspace</div><div class="cs-d">No real folders. Slashes are characters. Affects listing performance and partition key hot spots.</div></div>
+      <div class="cs-item"><div class="cs-t">PUT mechanics</div><div class="cs-d">200 OK = written across 3+ AZs via erasure coding. Not 3x replication. Index updated synchronously post-2020.</div></div>
+      <div class="cs-item"><div class="cs-t">Strong consistency</div><div class="cs-d">From Dec 2020. All ops strongly consistent. Pre-2020 workarounds exist in old code — know what they were solving.</div></div>
+      <div class="cs-item"><div class="cs-t">11 nines durability</div><div class="cs-d">Protects against AWS infrastructure failures ONLY. Your deletes, overwrites, and compromised credentials can still lose data.</div></div>
+      <div class="cs-item"><div class="cs-t">Versioning</div><div class="cs-d">Delete = delete marker. Overwrite = new version, old survives. Enable on every bucket with data you cannot recreate.</div></div>
+      <div class="cs-item"><div class="cs-t">Multipart upload</div><div class="cs-d">Mandatory above 5GB, recommended above 100MB. Incomplete parts = billed. Set lifecycle to abort after 7 days.</div></div>
+      <div class="cs-item"><div class="cs-t">Presigned URL</div><div class="cs-d">Client uploads direct to S3. Backend never touches file bytes. Short expiry. Treat like a password.</div></div>
+      <div class="cs-item"><div class="cs-t">SSE-KMS + Bucket Keys</div><div class="cs-d">KMS per object = throttle risk at scale. Bucket Keys reduce KMS calls by 99%. Always enable with SSE-KMS.</div></div>
+      <div class="cs-item"><div class="cs-t">Storage class minimums</div><div class="cs-d">Standard-IA: 30-day min. Glacier: 90 days. Deep Archive: 180 days. Early delete = charged for full minimum.</div></div>
+      <div class="cs-item"><div class="cs-t">Block Public Access</div><div class="cs-d">4 independent settings. Account-level overrides bucket-level. Enabled by default since April 2023.</div></div>
+      <div class="cs-item"><div class="cs-t">Permission evaluation</div><div class="cs-d">Explicit DENY always wins. Cross-account = BOTH IAM policy AND bucket policy must allow (AND logic).</div></div>
+      <div class="cs-item"><div class="cs-t">ETag caveat</div><div class="cs-d">Single-part upload = MD5 of data. Multipart = hash of hashes. Do NOT use ETag for content integrity on multipart objects.</div></div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Non-negotiable rules for every S3 bucket</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      1. Enable versioning on every bucket containing data you cannot recreate.<br>
+      2. Set lifecycle rule to abort incomplete multipart uploads after 7 days — every bucket.<br>
+      3. Deny non-HTTPS requests with a bucket policy.<br>
+      4. Block Public Access at account level. Opt out per-bucket only when deliberate.<br>
+      5. Enable SSE-S3 or SSE-KMS. Enable Bucket Keys if using KMS.<br>
+      6. Never set the access log target as the same bucket — infinite recursion.<br>
+      7. For sensitive data: Object Lock + CloudTrail Data Events + replication to a separate account.<br>
+      8. Never route file bytes through your EC2 — use presigned URLs for client uploads.<br>
+      9. Never use ETag for content integrity on objects uploaded with multipart.
+    </div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+const panels={c:6,s:4,pp:4};
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

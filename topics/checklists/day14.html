@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 14  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 14  ·  STUDY CHECKLIST — Microservices Patterns Part 2 — Saga, CQRS, Event Sourcing, Outbox, Distributed Tracing & API Gateway</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 14 Checklist</div>
+    <h1 style="margin-top: 0;">Microservices Patterns Part 2 — Saga, CQRS, Event Sourcing, Outbox, Distributed Tracing & API Gateway</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 14 · STUDY CHECKLIST</h3>
+    <h3>Microservices Patterns Part 2 — Saga, CQRS, Event Sourcing, Outbox, Distributed Tracing & API Gateway</h3>
+    <h3>Saga Pattern</h3>
+    <p>Choreography vs Orchestration, compensating transactions</p>
+    <h3>CQRS</h3>
+    <p>Command Query Responsibility Segregation, read/write models</p>
+    <h3>Event Sourcing</h3>
+    <p>Append-only event log, projections, snapshots</p>
+    <h3>Outbox + Tracing</h3>
+    <p>Reliable event publishing, distributed traces, API Gateway</p>
+    <p>Note:</p>
+    <p>These patterns — Saga, CQRS, Event Sourcing, Outbox — come up in architectural rounds for senior roles. Interviewers do not just want the definition. They want to know: what problem does this solve that simpler approaches cannot, what goes wrong when you implement it, and when would you not use it. Each section today builds toward that kind of answer.</p>
+    <h3>Day 14 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Saga pattern: why 2PC fails in microservices and what Saga replaces it with</span></li>
+      <li><span class="checkbox-label">Orchestration-based Saga: central orchestrator, pros and cons, Temporal/Conductor</span></li>
+      <li><span class="checkbox-label">Compensating transactions: what makes a good compensation, what cannot be compensated</span></li>
+      <li><span class="checkbox-label">CQRS: separate command and query models, why they diverge, projection pattern</span></li>
+      <li><span class="checkbox-label">Event Sourcing: append-only event log as the source of truth, replaying state</span></li>
+      <li><span class="checkbox-label">Snapshots in Event Sourcing: when you need them, how they work</span></li>
+      <li><span class="checkbox-label">Outbox pattern: the dual-write problem, how outbox solves it atomically</span></li>
+      <li><span class="checkbox-label">Transactional outbox vs change data capture (Debezium)</span></li>
+      <li><span class="checkbox-label">Distributed tracing: trace ID propagation, spans, OpenTelemetry</span></li>
+      <li><span class="checkbox-label">API Gateway: routing, auth, rate limiting, aggregation — what it should and should not do</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Saga Pattern</h2>
+    <h3>Why 2PC Fails in Microservices</h3>
+    <p>Two-Phase Commit (2PC):</p>
+    <p>A coordinator asks all participants to prepare (phase 1), then asks them to commit (phase 2). All participants must agree or all roll back. The problem in microservices: it requires a synchronous lock held across all participating services from prepare to commit. If any service is slow or unavailable, the transaction blocks. It also creates tight coupling — all services must support the same distributed transaction protocol. In practice, most modern microservices frameworks do not support 2PC across service boundaries, and holding cross-service locks for any duration is a recipe for deadlocks and cascading failures.</p>
+    <p>What Saga replaces it with:</p>
+    <p>A Saga is a sequence of local transactions. Each local transaction updates its own database and publishes an event or calls the next step. If any step fails, the Saga runs compensating transactions to undo the completed steps. There are no cross-service locks. Each service is autonomous. The trade-off: you give up atomicity in the traditional ACID sense — during the Saga, partial results are visible. You gain availability, loose coupling, and the ability to span services that do not share a database.</p>
+    <h3>Choreography-Based Saga</h3>
+    <p>How it works:</p>
+    <p>There is no central coordinator. Each service listens for events and reacts. When a service completes its local transaction, it publishes an event. The next service picks up that event and does its work. If a service fails, it publishes a failure event and previous services react with compensating transactions.</p>
+    <pre><code class="language-java">// ── Choreography Saga: Place Order flow ──
+// Step 1: Order Service receives request, creates order in PENDING state
+@KafkaListener(topics = "order.commands")
+public void handlePlaceOrder(PlaceOrderCommand cmd) {
+    Order order = orderRepository.save(Order.pending(cmd));
+    // Publish event — next service in the chain picks this up
+    kafkaTemplate.send("order.created", new OrderCreatedEvent(order.getId(), cmd));
+}
+// Step 2: Payment Service listens, charges the customer
+@KafkaListener(topics = "order.created")
+public void handleOrderCreated(OrderCreatedEvent event) {
+    try {
+        paymentService.charge(event.getCustomerId(), event.getAmount());
+        kafkaTemplate.send("payment.completed",
+            new PaymentCompletedEvent(event.getOrderId()));
+    } catch (InsufficientFundsException e) {
+        // Publish failure — Order Service must compensate
+        kafkaTemplate.send("payment.failed",
+            new PaymentFailedEvent(event.getOrderId(), "INSUFFICIENT_FUNDS"));
+    }
+}
+// Step 3: Inventory Service listens to payment.completed
+@KafkaListener(topics = "payment.completed")
+public void handlePaymentCompleted(PaymentCompletedEvent event) {
+    try {
+        inventoryService.reserve(event.getOrderId());
+        kafkaTemplate.send("inventory.reserved",
+            new InventoryReservedEvent(event.getOrderId()));
+    } catch (OutOfStockException e) {
+        kafkaTemplate.send("inventory.failed",
+            new InventoryFailedEvent(event.getOrderId()));
+        // Payment Service listens to inventory.failed and refunds
+    }
+}
+// Compensating transaction: Order Service listens to payment.failed
+@KafkaListener(topics = "payment.failed", "inventory.failed")
+public void handleFailure(SagaFailureEvent event) {
+    orderRepository.updateStatus(event.getOrderId(), OrderStatus.CANCELLED);
+    kafkaTemplate.send("order.cancelled",
+        new OrderCancelledEvent(event.getOrderId(), event.getReason()));
+}</code></pre>
+    <h3>Choreography | Orchestration</h3>
+    <h3>Coordination</h3>
+    <p>Services react to events — no central coordinator | Central orchestrator drives each step</p>
+    <h3>Coupling</h3>
+    <p>Loose — services only know about events | Orchestrator knows about all participants</p>
+    <h3>Observability</h3>
+    <h3>Adding a step</h3>
+    <p>Add a new listener — existing services unaware | Modify the orchestrator workflow</p>
+    <h3>Debugging</h3>
+    <p>Hard — need to correlate events across services | Easy — check orchestrator state</p>
+    <h3>Works well for</h3>
+    <p>Simple 2-3 step flows, teams that own individual services | Complex flows, long-running processes, business workflows</p>
+    <h3>Risk</h3>
+    <p>Cyclic event dependencies, spaghetti event flows | Orchestrator becomes a god object</p>
+    <h3>Orchestration-Based Saga</h3>
+    <p>How it works:</p>
+    <pre><code class="language-java">// ── Orchestration Saga: OrderSagaOrchestrator ──
+// The orchestrator is a Spring @Service that drives each step.
+// State is persisted in the database — crash-safe.
+@Service
+public class OrderSagaOrchestrator {
+    private final PaymentServiceClient     paymentClient;
+    private final InventoryServiceClient   inventoryClient;
+    private final ShippingServiceClient    shippingClient;
+    private final SagaStateRepository      sagaStateRepo;
+    @Transactional
+    public void startSaga(PlaceOrderCommand cmd) {
+        SagaState saga = sagaStateRepo.save(SagaState.start(cmd.getOrderId()));
+        try {
+            // Step 1: Reserve payment
+            saga.setStep("PAYMENT_RESERVE");
+            PaymentReservation payment = paymentClient.reserve(cmd);
+            saga.setPaymentReservationId(payment.getId());
+            // Step 2: Reserve inventory
+            saga.setStep("INVENTORY_RESERVE");
+            InventoryReservation inv = inventoryClient.reserve(cmd);
+            saga.setInventoryReservationId(inv.getId());
+            // Step 3: Create shipment
+            saga.setStep("SHIPMENT_CREATE");
+            shippingClient.createShipment(cmd, inv);
+            // All steps succeeded
+            saga.setStatus(SagaStatus.COMPLETED);
+            sagaStateRepo.save(saga);
+        } catch (InventoryUnavailableException e) {
+            // Compensate: refund the payment reservation
+            compensate(saga);
+        }
+    }
+    private void compensate(SagaState saga) {
+        // Run compensations in reverse order of completions
+        if (saga.getInventoryReservationId() != null) {
+            inventoryClient.cancelReservation(saga.getInventoryReservationId());
+        }
+        if (saga.getPaymentReservationId() != null) {
+            paymentClient.cancelReservation(saga.getPaymentReservationId());
+        }
+        saga.setStatus(SagaStatus.COMPENSATED);
+        sagaStateRepo.save(saga);
+    }
+}
+// In production: use Temporal.io or Netflix Conductor instead of hand-rolling.
+// Temporal gives you: durable execution, automatic retries with backoff,
+// activity heartbeats, and workflow versioning — all the things you would
+// build manually and get wrong the first time.</code></pre>
+    <p>Compensating transactions — what makes them tricky:</p>
+    <p>A compensating transaction undoes the business effect of a completed step. It is NOT a database rollback — by the time you need to compensate, the local transaction has already committed. Compensation must be a new forward transaction. Some operations cannot be compensated: sending an email, submitting a regulatory report, or a payment that already cleared at the bank. For those: use idempotency to ensure they run exactly once, and design the system to tolerate the rare case where compensation is impossible.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is the Saga pattern and what problem does it solve? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Saga is a pattern for managing distributed transactions across microservices without a two-phase commit lock. In a microservices architecture, each service has its own database — there is no single transaction that spans them all. The traditional answer was 2PC, which requires a coordinator to hold locks across all services, blocking them until all agree to commit or roll back. This is impractical at scale. Saga replaces it with a sequence of local transactions, each committed independently. If a later step fails, compensating transactions undo the completed steps. The trade-off: during the Saga, intermediate states are visible — if step 2 completes but step 3 fails, there is a window where the data is partially updated. You accept this eventual consistency in exchange for availability and loose coupling.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> When would you choose orchestration over choreography? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I would choose orchestration when the flow has more than three steps, when I need to inspect the current state of a long-running process, or when the failure and compensation logic is complex. With choreography, when something goes wrong it is very hard to answer the question 'where in the Saga did we fail?' — you have to correlate events across multiple topics. With an orchestrator, you query the saga state table and see exactly which step failed and what compensations ran. Choreography works well for simple flows between two or three services where adding a new step is straightforward. For a payment order flow that spans five services with complex compensation logic, I would use an orchestrator — or better, Temporal.io, which gives you durable workflow execution with automatic retry, crash recovery, and full visibility.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — CQRS</h2>
+    <h3>What CQRS Is</h3>
+    <p>The core idea:</p>
+    <p>Command Query Responsibility Segregation splits a service into two models: commands (writes that change state) and queries (reads that return data). These are separate code paths, often separate data stores. Commands go through domain logic, validation, and event publishing. Queries go directly to a read-optimised view — no domain logic, no locks, just fast data retrieval.</p>
+    <p>Why the models diverge:</p>
+    <p>The write model must enforce invariants — an account balance cannot go negative, an order cannot be cancelled twice. This requires domain objects with encapsulated logic. The read model needs different shapes — a dashboard might need denormalised data from five tables joined together, pre-aggregated. Trying to serve both from the same model creates friction: the domain model becomes bloated with query-specific concerns, or the query performance suffers from the normalised structure required by the domain.</p>
+    <pre><code class="language-java">// ── CQRS: Write Side (Command) ──
+// Command — intent to change state
+public record TransferMoneyCommand(
+    String fromAccountId,
+    String toAccountId,
+    BigDecimal amount,
+    String idempotencyKey
+) {}
+// Command Handler — domain logic, validation, event publishing
+@Service
+@Transactional
+public class TransferMoneyCommandHandler {
+    private final AccountRepository accounts;
+    private final EventStore        eventStore;
+    public void handle(TransferMoneyCommand cmd) {
+        Account from = accounts.findById(cmd.fromAccountId()).orElseThrow();
+        Account to   = accounts.findById(cmd.toAccountId()).orElseThrow();
+        // Domain logic — enforces invariants
+        from.debit(cmd.amount());   // throws if insufficient funds
+        to.credit(cmd.amount());
+        accounts.save(from);
+        accounts.save(to);
+        // Publish domain event — read model will consume this
+        eventStore.publish(new MoneyTransferredEvent(
+            cmd.fromAccountId(), cmd.toAccountId(), cmd.amount(), Instant.now()
+        ));
+    }
+}
+// ── CQRS: Read Side (Query) ──
+// Read model — denormalised, query-optimised, different from write model
+@Entity
+@Table(name = "account_summary_view")
+public class AccountSummaryView {
+    private String     accountId;
+    private String     ownerName;
+    private BigDecimal balance;
+    private BigDecimal totalDebits30d;   // pre-aggregated
+    private BigDecimal totalCredits30d;  // pre-aggregated
+    private Instant    lastTransactionAt;
+    private int        transactionCount30d;
+}
+// Query — no domain logic, no locks, hits the read replica directly
+@Service
+public class AccountQueryService {
+    private final AccountSummaryViewRepository viewRepo;
+    public AccountSummaryView getSummary(String accountId) {
+        return viewRepo.findById(accountId).orElseThrow();
+    }
+    public List&lt;AccountSummaryView&gt; getTopAccounts(int limit) {
+        return viewRepo.findTopByBalanceDesc(PageRequest.of(0, limit));
+    }
+}
+// ── Projection: keeps read model in sync with write model ──
+// Listens to domain events and updates the view
+@Component
+public class AccountSummaryProjection {
+    private final AccountSummaryViewRepository viewRepo;
+    @EventListener  // or @KafkaListener if events flow via Kafka
+    public void on(MoneyTransferredEvent event) {
+        // Update the FROM account view
+        AccountSummaryView from = viewRepo.findById(event.getFromAccountId()).orElseThrow();
+        from.setBalance(from.getBalance().subtract(event.getAmount()));
+        from.setLastTransactionAt(event.getOccurredAt());
+        from.setTotalDebits30d(from.getTotalDebits30d().add(event.getAmount()));
+        viewRepo.save(from);
+        // Update the TO account view
+        AccountSummaryView to = viewRepo.findById(event.getToAccountId()).orElseThrow();
+        to.setBalance(to.getBalance().add(event.getAmount()));
+        to.setTotalCredits30d(to.getTotalCredits30d().add(event.getAmount()));
+        viewRepo.save(to);
+    }
+}</code></pre>
+    <h3>Aspect</h3>
+    <h3>Traditional CRUD | CQRS</h3>
+    <h3>Read/write model</h3>
+    <p>Same model for both | Separate models optimised for each concern</p>
+    <h3>Read performance</h3>
+    <p>Joins, normalised schema, index tuning | Pre-aggregated, denormalised view — fast reads</p>
+    <h3>Write logic</h3>
+    <p>Mixed with read concerns | Clean domain model focused on invariants</p>
+    <h3>Scalability</h3>
+    <p>Scale the whole service | Scale read and write sides independently</p>
+    <h3>Consistency</h3>
+    <p>Strong — read always reflects latest write | Eventual — read model lags slightly behind write</p>
+    <h3>Complexity</h3>
+    <p>Low — one code path | Higher — two models, projection maintenance, event flow</p>
+    <h3>When to use</h3>
+    <p>Default for most services | When read/write patterns diverge significantly or high-scale reads needed</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What is CQRS and when would you introduce it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">CQRS separates the model for writing — the command side — from the model for reading — the query side. The write side enforces business rules, the read side serves queries from a denormalised view that is kept in sync via events or projections. I would introduce CQRS when: the read and write patterns are fundamentally different (lots of aggregated dashboard queries vs. strict transactional writes), when read performance is suffering because the normalised domain model is hard to query efficiently, or when I need to scale reads and writes independently. The cost is real: you now have two models to maintain, a projection that must stay in sync, and eventual consistency on the read side. For a simple CRUD service, this is not worth it. For an account service that needs to support both fast transactional processing and complex analytics views, CQRS pays off.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Event Sourcing</h2>
+    <h3>What Event Sourcing Is</h3>
+    <p>The fundamental shift:</p>
+    <p>Instead of storing the current state of an entity, you store the sequence of events that led to that state. The current state is derived by replaying the event log from the beginning (or from a snapshot). The event log is append-only — you never update or delete events. This is the source of truth.</p>
+    <p>What you gain:</p>
+    <p>Complete audit trail — every change is recorded with who did it, when, and why. Time travel — you can reconstruct the state of any entity at any point in the past. Event replay — you can build new read models from historical events without touching the live system. Natural fit for CQRS — the write side publishes events, the read side consumes them to build views.</p>
+    <p>What you give up:</p>
+    <p>Reading current state requires replaying events (mitigated by snapshots). Querying across entities is harder — you cannot simply join two tables. Changing an event schema is complex — old events must remain readable forever. Not appropriate for every domain — financial ledgers and audit-heavy systems are good fits, simple CRUD resources are not.</p>
+    <pre><code class="language-java">// ── Event Sourcing: Account domain ──
+// Events — immutable facts, past tense
+public sealed interface AccountEvent permits
+    AccountOpenedEvent, MoneyDepositedEvent, MoneyWithdrawnEvent, AccountClosedEvent {}
+public record AccountOpenedEvent(
+    String    accountId,
+    String    ownerId,
+    String    currency,
+    Instant   occurredAt
+) implements AccountEvent {}
+public record MoneyDepositedEvent(
+    String     accountId,
+    BigDecimal amount,
+    String     reference,
+    Instant    occurredAt
+) implements AccountEvent {}
+public record MoneyWithdrawnEvent(
+    String     accountId,
+    BigDecimal amount,
+    String     reference,
+    Instant    occurredAt
+) implements AccountEvent {}
+// Aggregate — rebuilt by replaying events
+public class Account {
+    private String     accountId;
+    private BigDecimal balance = BigDecimal.ZERO;
+    private String     currency;
+    private boolean    closed = false;
+    // Rebuild current state from the full event history
+    public static Account reconstitute(List&lt;AccountEvent&gt; events) {
+        Account account = new Account();
+        events.forEach(account::apply);
+        return account;
+    }
+    // Apply each event type to update in-memory state
+    private void apply(AccountEvent event) {
+        switch (event) {
+            case AccountOpenedEvent e -&gt; {
+                this.accountId = e.accountId();
+                this.currency  = e.currency();
+            }
+            case MoneyDepositedEvent e -&gt;
+                this.balance = this.balance.add(e.amount());
+            case MoneyWithdrawnEvent e -&gt; {
+                if (e.amount().compareTo(this.balance) &gt; 0)
+                    throw new InsufficientFundsException(accountId, e.amount(), balance);
+                this.balance = this.balance.subtract(e.amount());
+            }
+            case AccountClosedEvent e -&gt;
+                this.closed = true;
+        }
+    }
+    // Business method: validate intent, produce event
+    public MoneyWithdrawnEvent withdraw(BigDecimal amount, String reference) {
+        if (closed) throw new AccountClosedException(accountId);
+        // Apply locally (throws if invalid) then return the event
+        MoneyWithdrawnEvent event = new MoneyWithdrawnEvent(
+            accountId, amount, reference, Instant.now());
+        apply(event); // validates + updates in-memory
+        return event; // caller persists this to the event store
+    }
+}
+// Event Store: append-only
+@Repository
+public interface EventStore {
+    void append(String aggregateId, AccountEvent event, long expectedVersion);
+    List&lt;AccountEvent&gt; loadEvents(String aggregateId);
+    List&lt;AccountEvent&gt; loadEventsSince(String aggregateId, long fromVersion);
+}
+// ── Snapshot: avoid replaying 10,000 events every time ──
+@Service
+public class AccountRepository {
+    private final EventStore       eventStore;
+    private final SnapshotStore    snapshots;
+    private static final int       SNAPSHOT_THRESHOLD = 50;
+    public Account load(String accountId) {
+        // Try to load from snapshot first
+        Optional&lt;AccountSnapshot&gt; snap = snapshots.findLatest(accountId);
+        if (snap.isPresent()) {
+            // Only replay events AFTER the snapshot
+            List&lt;AccountEvent&gt; recent = eventStore.loadEventsSince(
+                accountId, snap.get().getVersion());
+            return Account.reconstituteFromSnapshot(snap.get(), recent);
+        }
+        // No snapshot — full replay
+        return Account.reconstitute(eventStore.loadEvents(accountId));
+    }
+    public void save(String accountId, AccountEvent event, long version) {
+        eventStore.append(accountId, event, version);
+        // Take a snapshot every N events
+        if (version % SNAPSHOT_THRESHOLD == 0) {
+            Account current = load(accountId);
+            snapshots.save(AccountSnapshot.from(current, version));
+        }
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is Event Sourcing and what are its main trade-offs? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Event Sourcing means the source of truth is an append-only log of domain events, not the current state. Current state is derived by replaying events. The gains are significant: a complete audit trail with no extra effort, the ability to reconstruct any entity's state at any point in the past, and a natural event stream that other services can consume. The trade-offs are also real: reading current state requires a replay — for an account with thousands of transactions this is slow without snapshots, so you periodically snapshot the aggregate state and only replay events since the snapshot. Schema evolution is hard — events are immutable and must be readable forever, so you need an upcasting strategy when event structure changes. Querying across aggregates requires separate read models, which is why Event Sourcing is almost always paired with CQRS. I would use it for payment ledgers and anywhere a full audit trail is a hard requirement.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — Outbox Pattern</h2>
+    <h3>The Dual-Write Problem</h3>
+    <p>What dual-write is:</p>
+    <p>You need to save data to your database AND publish an event to Kafka as part of the same logical operation. The naive approach: save to DB in a transaction, then publish to Kafka. The problem: if the app crashes between the commit and the Kafka publish, the DB has the data but no event was published — downstream services never know. If you publish first and then the DB commit fails, you have an orphan event that references data that does not exist.</p>
+    <pre><code class="language-java">// ── THE PROBLEM: dual-write race condition ──
+@Transactional
+public PaymentResult processPayment(PaymentRequest req) {
+    Payment payment = paymentRepository.save(Payment.from(req)); // DB commit
+    // CRASH HERE → DB has payment, Kafka has nothing → downstream out of sync
+    kafkaTemplate.send("payments", new PaymentCompletedEvent(payment)); // Kafka publish
+    return PaymentResult.from(payment);
+}
+// ── THE FIX: Transactional Outbox Pattern ──
+// Write the event to an outbox table IN THE SAME DATABASE TRANSACTION.
+// A separate process (relay) reads the outbox and publishes to Kafka.
+// The DB transaction gives you atomicity: either both the payment AND
+// the outbox record are committed, or neither is.
+@Entity
+@Table(name = "outbox_events")
+public class OutboxEvent {
+    @Id private String   id;           // UUID
+    private String       aggregateType; // "Payment"
+    private String       aggregateId;   // payment ID
+    private String       eventType;     // "PaymentCompleted"
+    private String       payload;       // JSON serialised event
+    private Instant      createdAt;
+    private boolean      published;     // flipped to true by the relay
+}
+@Service
+public class PaymentService {
+    private final PaymentRepository  payments;
+    private final OutboxEventRepository outbox;
+    @Transactional  // Atomic: payment row + outbox row in ONE transaction
+    public PaymentResult processPayment(PaymentRequest req) {
+        Payment payment = payments.save(Payment.from(req));
+        // Write event to outbox — same transaction as the payment
+        outbox.save(OutboxEvent.builder()
+            .id(UUID.randomUUID().toString())
+            .aggregateType("Payment")
+            .aggregateId(payment.getId())
+            .eventType("PaymentCompleted")
+            .payload(toJson(new PaymentCompletedEvent(payment)))
+            .createdAt(Instant.now())
+            .published(false)
+            .build());
+        return PaymentResult.from(payment);
+        // Transaction commits: both payment row and outbox row are durable.
+        // If crash here, outbox row exists → relay will publish on restart.
+    }
+}
+// ── Outbox Relay: polls and publishes ──
+@Component
+@Slf4j
+public class OutboxRelay {
+    private final OutboxEventRepository outbox;
+    private final KafkaTemplate&lt;String, String&gt; kafka;
+    @Scheduled(fixedDelay = 500)  // poll every 500ms
+    @Transactional
+    public void relay() {
+        List&lt;OutboxEvent&gt; pending = outbox.findByPublishedFalseOrderByCreatedAtAsc();
+        for (OutboxEvent event : pending) {
+            try {
+                kafka.send(topicFor(event.getAggregateType()), event.getPayload()).get();
+                event.setPublished(true);
+                outbox.save(event);
+            } catch (Exception e) {
+                log.warn("Failed to relay outbox event {}: {}", event.getId(), e.getMessage());
+                // Will retry on next poll — at-least-once delivery
+            }
+        }
+    }
+}
+// ── Alternative: Debezium (Change Data Capture) ──
+// Instead of a polling relay, Debezium reads the PostgreSQL WAL (write-ahead log)
+// and streams row changes directly to Kafka as they happen.
+// Benefits: no polling overhead, near real-time, no application code changes.
+// Works well with: AWS RDS PostgreSQL (with logical replication enabled),
+// self-managed PostgreSQL, MySQL.
+// Trade-off: Debezium is an operational dependency — another thing to manage.</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is the Outbox pattern and why is it needed? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When you need to write to a database and publish an event atomically, the naive approach fails because the database commit and Kafka publish are two separate operations — a crash between them leaves them out of sync. The Outbox pattern solves this by writing the event to an outbox table in the same database transaction as the main write. Atomicity is guaranteed by the DB transaction. A separate relay process (or Debezium CDC) reads unpublished outbox rows and publishes them to Kafka, then marks them published. If the relay crashes, it picks up from the last unpublished row — at-least-once delivery. Consumers must be idempotent because the relay may publish the same event more than once. Debezium is the production-grade alternative to a polling relay — it reads the database WAL directly and streams changes to Kafka in near real-time without polling.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — Distributed Tracing</h2>
+    <h3>How Distributed Tracing Works</h3>
+    <p>The problem it solves:</p>
+    <p>A single user request touches 5 microservices. Something is slow — which service caused the latency? Logs from each service are separate, timestamps may not align perfectly, and there is no way to know which log lines from service B relate to the same request as a log line from service A. Distributed tracing correlates all operations from a single logical request with a shared trace ID, giving you a timeline of every service call.</p>
+    <h3>Concept</h3>
+    <h3>Meaning</h3>
+    <h3>Trace</h3>
+    <p>The entire end-to-end journey of one request through all services — identified by a unique traceId</p>
+    <h3>Span</h3>
+    <h3>Parent span</h3>
+    <p>A span that initiated child spans — the HTTP handler creates child spans for each DB call it makes</p>
+    <h3>Trace context propagation</h3>
+    <p>The traceId and spanId are passed between services via HTTP headers (W3C Trace Context: traceparent) or Kafka headers</p>
+    <h3>Sampling</h3>
+    <p>You do not trace every request — trace a percentage (e.g., 1%) or trace based on conditions (all errors, all >500ms requests)</p>
+    <pre><code class="language-java">// ── OpenTelemetry + Spring Boot (the standard approach) ──
+// Add to pom.xml: opentelemetry-spring-boot-starter
+// Auto-instruments: Spring MVC, RestTemplate, WebClient, JDBC, Kafka
+// application.properties:
+// management.tracing.sampling.probability=0.1  # trace 10% of requests
+// spring.application.name=payment-service
+// The trace context is propagated automatically via headers:
+// Incoming HTTP: W3C traceparent header → extract traceId + spanId
+// Outgoing HTTP: RestTemplate/WebClient injects traceparent automatically
+// Kafka: KafkaTemplate injects traceId in message headers
+// Adding custom spans for business operations
+@Service
+public class PaymentService {
+    private final Tracer tracer; // injected by Spring auto-config
+    public PaymentResult process(PaymentRequest req) {
+        // Create a child span for the fraud check
+        Span fraudSpan = tracer.spanBuilder("fraud.check")
+            .setAttribute("account.id", req.getAccountId())
+            .setAttribute("amount", req.getAmount().toString())
+            .startSpan();
+        try (Scope scope = fraudSpan.makeCurrent()) {
+            FraudResult fraud = fraudService.check(req);
+            fraudSpan.setAttribute("fraud.result", fraud.getScore().toString());
+            // ... process payment
+            return doProcess(req);
+        } catch (Exception e) {
+            fraudSpan.recordException(e);
+            fraudSpan.setStatus(StatusCode.ERROR, e.getMessage());
+            throw e;
+        } finally {
+            fraudSpan.end();
+        }
+    }
+}
+// ── MDC for structured log correlation ──
+// Micrometer Tracing automatically adds traceId and spanId to MDC,
+// so every log line within a request includes the trace context.
+// logback-spring.xml pattern:
+// %d{ISO8601} [%thread] %-5level [traceId=%X{traceId}] [spanId=%X{spanId}] %logger - %msg%n
+// This means in Logs Insights you can query:
+// fields @timestamp, @message | filter traceId = "abc123"
+// and see every log line from every service for that one request.</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> How does trace context propagation work across microservices? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When a request enters the system — say, a POST to the payment service — the first service generates a traceId (a globally unique 128-bit ID). For each downstream call (HTTP to fraud service, Kafka publish, DB query) a child span is created. The traceId and the current spanId are injected into outbound headers — for HTTP using the W3C traceparent header, for Kafka using message headers. The receiving service extracts these headers and continues the trace under the same traceId. The result is a complete tree of spans you can visualise. OpenTelemetry with the Spring Boot starter instruments RestTemplate, WebClient, and KafkaTemplate automatically — you do not have to write this plumbing yourself. Custom spans are added where you need more granularity — I added one around our CloudWatch lookup to see exactly how long it took versus the rest of the request.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — API Gateway</h2>
+    <h3>What an API Gateway Does</h3>
+    <h3>Responsibility</h3>
+    <h3>What it means | Spring Cloud Gateway / AWS API GW</h3>
+    <h3>Routing</h3>
+    <p>Route /api/payments/* to payment-service, /api/accounts/* to account-service | RouteLocator or application.yml routes</p>
+    <h3>Authentication</h3>
+    <p>Validate JWT token before requests reach services — services trust the gateway | GlobalFilter extracting and validating Bearer token</p>
+    <h3>Rate Limiting</h3>
+    <p>Per-API-key or per-user token bucket limiting before downstream services are hit | RequestRateLimiter filter with Redis</p>
+    <h3>Request Aggregation</h3>
+    <p>Single client call → gateway calls 3 services and merges responses | Custom aggregation filter or separate BFF</p>
+    <h3>SSL Termination</h3>
+    <p>TLS terminates at the gateway — internal traffic uses HTTP | AWS ALB or API Gateway handles TLS</p>
+    <h3>Request/Response Transform</h3>
+    <p>Add/remove headers, transform payloads, adapt versions | RewritePath, AddRequestHeader filters</p>
+    <h3>Logging & Tracing</h3>
+    <p>Inject traceId, log all incoming requests with latency | GlobalFilter before and after chain</p>
+    <pre><code class="language-java">// ── Spring Cloud Gateway: route config ──
+// application.yml
+//
+// spring:
+//   cloud:
+//     gateway:
+//       routes:
+//         - id: payment-service
+//           uri: lb://payment-service    # lb:// uses Eureka/load balancer
+//           predicates:
+//             - Path=/api/payments/**
+//           filters:
+//             - StripPrefix=1
+//             - name: RequestRateLimiter
+//               args:
+//                 redis-rate-limiter.replenishRate: 100
+//                 redis-rate-limiter.burstCapacity: 200
+//             - name: CircuitBreaker
+//               args:
+//                 name: payment-cb
+//                 fallbackUri: forward:/fallback/payments
+// ── JWT Authentication Filter ──
+@Component
+public class JwtAuthFilter implements GlobalFilter, Ordered {
+    private final JwtValidator jwtValidator;
+    @Override
+    public Mono&lt;Void&gt; filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String authHeader = exchange.getRequest().getHeaders()
+            .getFirst(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+        String token = authHeader.substring(7);
+        try {
+            Claims claims = jwtValidator.validate(token);
+            // Add validated claims as headers for downstream services
+            ServerHttpRequest mutated = exchange.getRequest().mutate()
+                .header("X-User-Id", claims.getSubject())
+                .header("X-Roles",   claims.get("roles", String.class))
+                .build();
+            return chain.filter(exchange.mutate().request(mutated).build());
+        } catch (JwtException e) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+    }
+    @Override public int getOrder() { return -100; } // run before all other filters
+}
+// ── What an API Gateway should NOT do ──
+// Business logic — if you are writing if/else in the gateway, move it to a service.
+// Complex aggregations — a separate BFF (Backend For Frontend) service is cleaner.
+// Database calls — the gateway should not have DB dependencies.
+// Heavy computation — keep the gateway thin and fast.</code></pre>
+    <p>API Gateway vs Load Balancer:</p>
+    <p>Load balancer (L7): routes traffic to instances of the same service based on health and algorithm. No business knowledge. Fast. API Gateway: routes between different services based on path, headers, or request content. Adds auth, rate limiting, and cross-cutting concerns. Slower than a pure load balancer but far more functional. In AWS: ALB is a load balancer, API Gateway is the managed API layer. In your own infrastructure: Spring Cloud Gateway is a service that acts as the gateway, with ALB distributing traffic across gateway instances.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What belongs in an API Gateway and what does not? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The gateway is the right place for cross-cutting concerns that apply to all requests regardless of business context: authentication and JWT validation, rate limiting, SSL termination, request routing, circuit breaking on downstream services, request/response header manipulation, and access logging with trace context injection. What does not belong: business logic of any kind, database calls, complex response aggregation (use a BFF service for that), and anything that creates a strong dependency between the gateway and a specific service's domain. The anti-pattern I have seen is teams gradually adding business rules to the gateway because it is convenient — it becomes a bottleneck and a single point of change. Keep it thin.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Patterns Quick Reference</h3>
+    <h3>Pattern</h3>
+    <h3>Problem it solves | Key trade-off | When to use</h3>
+    <h3>Saga (Choreography)</h3>
+    <p>Distributed transactions without 2PC | Hard to observe, event spaghetti risk | Simple flows, 2-3 services, team owns each service</p>
+    <h3>Saga (Orchestration)</h3>
+    <p>Same as above with visibility and control | Orchestrator complexity, central dependency | Complex multi-step flows, long-running processes</p>
+    <h3>CQRS</h3>
+    <p>Read/write models diverge, read performance | Two models to maintain, eventual consistency on reads | High-scale reads, complex analytics views alongside writes</p>
+    <h3>Event Sourcing</h3>
+    <p>Full audit trail, state history, event replay | Replay cost, schema evolution, query complexity | Ledgers, audit-heavy domains, anywhere history matters</p>
+    <h3>Outbox Pattern</h3>
+    <p>Atomic DB write + event publish | Outbox table to maintain, relay process to run | Any time you need at-least-once event delivery with consistency</p>
+    <h3>Change Data Capture</h3>
+    <p>Same as Outbox but without application code | Operational dependency (Debezium/connector) | When you want near real-time event publishing from DB changes</p>
+    <h3>Distributed Tracing</h3>
+    <p>Debug latency and failures across services | Sampling overhead, tracing infrastructure | Any microservices system with more than 2 services</p>
+    <h3>API Gateway</h3>
+    <p>Single entry point, cross-cutting concerns | Single point of failure if not HA, can become a bottleneck | Always in a microservices architecture</p>
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory. After each exercise, write one sentence about the failure mode this pattern prevents and what would happen without it.</p>
+    <h3>Exercise 1 — Choreography Saga: Order Placement</h3>
+    <p>Task:</p>
+    <p>Implement a 3-step choreography Saga: PlaceOrder → ChargePayment → ReserveInventory.</p>
+    <p>Each step is a @KafkaListener that publishes a success or failure event.</p>
+    <p>On payment failure: OrderService listens to payment.failed and cancels the order.</p>
+    <p>On inventory failure: PaymentService listens to inventory.failed and refunds.</p>
+    <p>Show: what happens if the inventory failure event is published but the PaymentService is down?</p>
+    <p>How does at-least-once Kafka delivery interact with this — could compensation run twice?</p>
+    <h3>Exercise 2 — Orchestration Saga: Transfer Money</h3>
+    <p>Task:</p>
+    <p>Write a TransferSagaOrchestrator that drives: ValidateFunds → DebitSource → CreditDestination → Notify.</p>
+    <p>Persist SagaState to a table with: sagaId, currentStep, status (RUNNING/COMPLETED/COMPENSATING/FAILED), each stepId.</p>
+    <p>On DebitSource success but CreditDestination failure: compensate by calling reverseDebit().</p>
+    <p>Show how idempotency keys prevent a compensation from running twice if the orchestrator crashes during compensation.</p>
+    <h3>Exercise 3 — CQRS: Account Write and Read Models</h3>
+    <p>Task:</p>
+    <p>Write Model: Account domain object with debit() and credit() — enforces invariants.</p>
+    <p>AccountCommandHandler handles TransferMoneyCommand and publishes MoneyTransferredEvent.</p>
+    <p>Read Model: AccountSummaryView with balance, lastTransactionAt, totalDebits30d, totalCredits30d.</p>
+    <p>AccountSummaryProjection listens to MoneyTransferredEvent and updates the view.</p>
+    <p>AccountQueryService reads from the view — no domain logic, no joins.</p>
+    <p>Demonstrate: what does the read model show in the 50ms window between the write committing and the projection updating?</p>
+    <h3>Exercise 4 — Event Sourcing: Account Aggregate</h3>
+    <p>Task:</p>
+    <p>Define 4 AccountEvent types: AccountOpened, MoneyDeposited, MoneyWithdrawn, AccountClosed.</p>
+    <p>Write Account aggregate with reconstitute(List<AccountEvent>) static factory.</p>
+    <p>Write deposit() and withdraw() methods that return the event (not void) — caller appends to event store.</p>
+    <p>Write a simple in-memory EventStore: append(aggregateId, event), loadEvents(aggregateId).</p>
+    <p>Test: open account, deposit 1000, withdraw 300, withdraw 800 — verify last withdrawal fails with InsufficientFundsException.</p>
+    <p>Add snapshotting: after every 5 events, save a snapshot. On load, use snapshot + subsequent events.</p>
+    <h3>Exercise 5 — Outbox Pattern</h3>
+    <p>Task:</p>
+    <p>Write OutboxEvent entity: id, aggregateType, aggregateId, eventType, payload (JSON), createdAt, published.</p>
+    <p>Modify PaymentService.processPayment() to save OutboxEvent in same @Transactional block.</p>
+    <p>Write OutboxRelay: @Scheduled poll every 500ms, publish unpublished events to Kafka, mark published.</p>
+    <p>Handle relay failure: if Kafka publish throws, log and continue — event will be retried next poll.</p>
+    <p>Show: why consumers of these events must be idempotent. What happens if the relay publishes, Kafka confirms, but the DB update to published=true fails?</p>
+    <h3>Exercise 6 — Distributed Tracing: Custom Spans</h3>
+    <p>Task:</p>
+    <p>Add OpenTelemetry custom spans to PaymentService: one span for fraud check, one for gateway call.</p>
+    <p>Each span should include attributes: accountId, amount, and the result (approved/declined).</p>
+    <p>On exception: record the exception on the span and set status to ERROR.</p>
+    <p>Propagate traceId to the Kafka message headers when publishing PaymentCompletedEvent.</p>
+    <p>Show how MDC is used so every log line in the request includes the traceId.</p>
+    <p>Write a log query (CloudWatch Logs Insights syntax) that finds all logs for a specific traceId.</p>
+    <h3>Exercise 7 — BOSS: Full Microservices Flow</h3>
+    <p>Combine all of today's patterns in one end-to-end design:</p>
+    <p>A customer places an order. Requirements: 1) API Gateway validates JWT and rate-limits at 100 req/sec per user. 2) Order Service creates the order and writes to the Outbox atomically. 3) A Saga orchestrator drives: charge payment (PaymentService) → reserve inventory (InventoryService) → schedule delivery (DeliveryService). 4) Each service is an Event Sourced aggregate — state rebuilt from events. 5) All services publish to CQRS read models for dashboard queries. 6) Every cross-service call is traced with OpenTelemetry. Design the data flow from HTTP POST to final order confirmation, identifying: which events flow where, where the Outbox is used, what the compensation flow looks like if inventory fails, and how you would debug a latency spike in production.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Read the question, say your answer out loud, then check the model answer. Focus on the trade-off in each answer — that is what interviewers listen for.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is the Saga pattern and when would you use it over a traditional database transaction? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Saga manages distributed transactions across multiple microservices that each own their own database. Traditional ACID transactions require all participants to share the same database or support distributed 2PC — in a microservices architecture, neither is practical. Saga sequences local transactions and uses compensating transactions to undo completed steps when a failure occurs. I would use it when an operation spans two or more services with separate databases. The alternative — shared database — is worse because it creates tight coupling between services. The trade-off with Saga is that intermediate states are visible during the sequence, and compensating transactions are a new forward transaction, not a rollback.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is a compensating transaction and what makes them hard to implement? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A compensating transaction is a new business transaction that undoes the effect of a completed step. Because the local transaction has already committed, you cannot roll it back — you must create a new corrective action. Some compensations are straightforward: if you debited an account, credit it back. Some are impossible or one-sided: if you sent an email or filed a regulatory report, you cannot unsend it. For these, you design around them — use idempotency to ensure they ran exactly once, and accept that the compensation cannot undo them. Another challenge: the compensation itself can fail. You need retry with idempotency, and the Saga orchestrator must be crash-safe so it picks up pending compensations on restart.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> Choreography vs Orchestration — what is the practical difference? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">In choreography, services react to events — there is no central coordinator, just a chain of listeners. It is loosely coupled and easy to add a new step without modifying existing services. The problem is observability: when something goes wrong, you have to reconstruct the flow by correlating events across multiple topics. In orchestration, a central orchestrator drives each step and persists its state. You can always look at the orchestrator's state table and know exactly where a Saga is, what succeeded, and what failed. The orchestrator is more coupling but far easier to reason about. For flows with more than three steps or complex compensation logic, I always prefer orchestration — or a proper workflow engine like Temporal.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What is CQRS and when does it make sense to use it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">CQRS separates the write model — which enforces domain invariants — from the read model — which is optimised for querying. The write model is normalised and contains domain logic. The read model is denormalised and pre-aggregated for fast reads. They are kept in sync via domain events or projections. It makes sense when the read and write patterns are genuinely different: the write side is transactional and strict, the read side needs denormalised views with aggregations that would be expensive to compute on the fly from the normalised write model. The cost is maintaining two models and accepting eventual consistency on the read side. For a simple CRUD service, CQRS is over-engineering. For a payment service that needs real-time balance enforcement on writes and complex dashboard analytics on reads, it is the right tool.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is Event Sourcing and how does it differ from traditional state storage? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Traditional state storage keeps the current state of an entity — the row in the database reflects what the entity looks like right now. Event Sourcing stores the history of all changes as an append-only sequence of events. Current state is derived by replaying the event log. The difference matters for: audit requirements (with event sourcing, every change is an immutable fact; with traditional storage, you have to add a separate audit table), time travel (you can reconstruct the entity's state at any past point), and event replay (you can build new read models from historical events). The cost: reads require replay (mitigated by snapshots), schema evolution is complex, and querying across aggregates requires read models. I would use it for payment ledgers and anywhere a complete history is a hard requirement.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What problem does the Outbox pattern solve? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The dual-write problem: when you need to save data to the database and publish an event to Kafka atomically. The naive approach — save to DB, then publish — fails if the application crashes between the two operations. The Outbox pattern writes the event to an outbox table in the same database transaction as the business data. The transaction guarantees: either both rows commit, or neither does. A relay process then reads unpublished outbox rows and publishes them to Kafka. At-least-once delivery: if the relay publishes but fails to mark the row as published, it will publish again on the next run — so consumers must be idempotent. Debezium is the production alternative to a polling relay — it reads the database WAL and streams changes to Kafka in near real-time.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What is Change Data Capture and how does Debezium work? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Change Data Capture captures row-level changes in a database and streams them to other systems. Debezium connects to the database's replication log — the WAL in PostgreSQL, the binlog in MySQL — and converts every INSERT, UPDATE, and DELETE into a structured event on a Kafka topic. The application code does not change. You get near real-time event streaming without polling. Benefits over the polling outbox relay: no polling overhead, no delay between DB commit and event publish, and no additional outbox table to maintain. Trade-off: Debezium is an operational component — you need to run and monitor it, handle connector failures, and manage schema changes. For teams with strong Kafka operations, Debezium is usually the better long-term choice.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What is a projection in the context of CQRS? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A projection is the process of consuming domain events and building or updating a read model. When a MoneyTransferredEvent fires, the AccountSummaryProjection updates the balance, last transaction time, and 30-day aggregate fields in the read model. The projection is the bridge between the write model (events) and the read model (query-optimised views). Projections can be synchronous (in the same transaction as the event publish, strongest consistency) or asynchronous (via Kafka or Spring @EventListener, eventual consistency). Multiple projections can consume the same events and build different views — one for dashboards, one for reporting, one for fraud analysis — without touching the write model.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> What is a snapshot in Event Sourcing and when is it needed? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A snapshot is a point-in-time capture of an aggregate's current state, stored alongside the event log. On load, instead of replaying all events from the beginning, you load the latest snapshot and only replay events since that snapshot. It is needed when an aggregate accumulates many events — a bank account with years of transaction history could have thousands of events. Without snapshots, reconstituting the account means loading and processing all of them on every access. The typical threshold is every 50-100 events: after appending the Nth event, take a snapshot. The snapshot does not replace the event log — it is an optimisation. The full event history is still available for time travel and audit.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> How does distributed tracing help debug microservices issues? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">In a monolith, you can follow a single stack trace. In microservices, a request touches multiple services and each has its own logs. When a payment is slow, the question is: which service caused the latency? Distributed tracing assigns every request a unique traceId that is propagated across all service calls via HTTP and Kafka headers. Each unit of work (HTTP handler, DB query, external call) becomes a span with a start time and duration. The result is a flame graph showing the full timeline of the request. In practice: I identify the slow span, look at the attributes on that span (what account ID, what amount), then filter logs in CloudWatch by that traceId to see the detailed log context. Without this, debugging cross-service latency is guesswork.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> What is an API Gateway and what should it not do? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">An API Gateway is the single entry point to a microservices system. It handles cross-cutting concerns: routing requests to the right service, validating JWT tokens, rate limiting, SSL termination, circuit breaking on downstream services, and request/response transformation. What it should not do: business logic, database calls, complex response aggregation — those belong in a dedicated BFF service or the downstream microservice. The anti-pattern is the gateway becoming a place where teams add convenient shortcuts — routing logic that depends on business rules, hardcoded service-specific transforms. This makes the gateway a bottleneck for every team's deployments and a single point of failure for the architecture.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> How would you implement JWT authentication at the API Gateway level? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The gateway validates the JWT before forwarding requests to downstream services. On every inbound request: extract the Authorization header, strip the Bearer prefix, validate the signature against the public key (or a local JWKS endpoint), check expiry and required claims. If valid, extract the user ID and roles from the claims, inject them as trusted headers (X-User-Id, X-Roles), and forward. Downstream services trust these headers — they do not re-validate the JWT themselves. This centralises authentication logic, and downstream services receive only pre-validated, enriched requests. The gateway's public key should be fetched from an identity provider (Keycloak, Auth0) and cached with periodic refresh — not hardcoded.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> What is the difference between Event Sourcing and traditional audit logging? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Traditional audit logging is an add-on: you have a main table with current state and a separate audit table that records a history of changes. The audit table is secondary — if the main table says the balance is 500, that is the truth. Event Sourcing inverts this: the event log IS the source of truth. The current state is derived from the log. The difference matters when there is a discrepancy: with traditional audit logging, the current state table is authoritative and the audit log is informational. With Event Sourcing, the event log is authoritative and current state is just a cached projection. This gives you the ability to rebuild any read model by replaying events — something traditional audit logging cannot provide.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q21:</span> Can you combine CQRS and Event Sourcing? Are they the same thing? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">They are complementary but distinct — you can use either without the other. CQRS separates read and write models. Event Sourcing is about how state is stored on the write side. Combining them: the write side uses Event Sourcing (state stored as events), and those events are consumed by projections to build the CQRS read models. This combination is powerful because the event log naturally feeds multiple read models — you publish one event and multiple projections build different views from it. You can also use CQRS without Event Sourcing — just a separate read model updated by application events, with traditional state storage on the write side. And you can use Event Sourcing without CQRS — just an append-only event store with no separate read models, though in practice Event Sourcing usually leads to CQRS because querying across events is hard.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q22:</span> How would you debug a payment that appears completed in one service but pending in another? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">This is an eventual consistency issue in a CQRS or Saga setup. My approach: first, get the traceId from the original request log and pull all spans for that trace — this tells me which services handled the request and at what latency. Second, check the event store or outbox table: was the PaymentCompletedEvent written and published? Third, check the Kafka consumer lag on the topic the downstream service reads: if lag is high, the event was published but not yet consumed. Fourth, check the downstream service's projection or event handler logs for that traceId — did it receive and process the event, or did processing fail? Most of these issues fall into three categories: the event was never published (outbox failure), the event was published but the consumer is lagging (operational issue), or the consumer received it but threw an exception and is retrying (a bug in the projection code). Each has a different fix.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 14 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Saga: can you explain choreography vs orchestration with a real example from your project?</span></li>
+      <li><span class="checkbox-label">CQRS: can you draw the data flow from write command → event → projection → read query?</span></li>
+      <li><span class="checkbox-label">Event Sourcing: can you explain how reconstitute() works and when a snapshot is taken?</span></li>
+      <li><span class="checkbox-label">Outbox: can you explain the dual-write problem and why at-least-once delivery requires idempotent consumers?</span></li>
+      <li><span class="checkbox-label">Distributed tracing: can you explain what a span is and how traceId propagates via Kafka headers?</span></li>
+      <li><span class="checkbox-label">API Gateway: what belongs there and what does not — can you give two examples of each?</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises — Boss exercise done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Saga choreography — event chain, compensation</h3>
+    <p>/5 |</p>
+    <h3>Saga orchestration — state persistence, crash safety</h3>
+    <p>/5 |</p>
+    <h3>Compensating transactions — what cannot be undone</h3>
+    <p>/5 |</p>
+    <h3>CQRS — write model, read model, projection</h3>
+    <p>/5 |</p>
+    <h3>Event Sourcing — append-only log, reconstitute()</h3>
+    <p>/5 |</p>
+    <h3>Snapshots — when needed, how they work</h3>
+    <p>/5 |</p>
+    <h3>Outbox pattern — atomicity, relay, at-least-once</h3>
+    <p>/5 |</p>
+    <h3>Debezium CDC — WAL reading, vs polling relay</h3>
+    <p>/5 |</p>
+    <h3>Distributed tracing — traceId, spans, propagation</h3>
+    <p>/5 |</p>
+    <h3>API Gateway — what belongs, what does not</h3>
+    <p>/5 |</p>
+    <p>Day 14 complete:</p>
+    <p>Saga, CQRS, Event Sourcing, and Outbox are the patterns that separate candidates who have built real microservices from those who have only read about them. Connect each one back to your own work — your Bitbucket event processor uses an event-driven architecture that is one step from Event Sourcing, your Kafka work maps directly to the Outbox and Saga concepts. Those connections are what land offers.</p>
+    <h3>Preview: Day 15 — Phase Review + Mock Interview Day</h3>
+    <p>Day 14 of 60 · Microservices Patterns Part 2 · Prepared for Md Zuber</p>
+    <p>"The difference between a junior and a senior is not knowing more patterns — it is knowing which trade-off each pattern carries."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

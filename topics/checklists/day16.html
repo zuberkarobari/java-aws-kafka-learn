@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 16  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 16  ·  STUDY CHECKLIST — Spring Boot Internals — Auto-Configuration, Bean Lifecycle, AOP, Actuator & Micrometer</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 16 Checklist</div>
+    <h1 style="margin-top: 0;">Spring Boot Internals — Auto-Configuration, Bean Lifecycle, AOP, Actuator & Micrometer</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 16 · STUDY CHECKLIST</h3>
+    <h3>Spring Boot Internals — Auto-Configuration, Bean Lifecycle, AOP, Actuator & Micrometer</h3>
+    <h3>Auto-Configuration</h3>
+    <p>@SpringBootApplication, @Conditional, ImportCandidates</p>
+    <h3>Bean Lifecycle</h3>
+    <p>Instantiation, injection, init, destroy, BeanPostProcessor</p>
+    <h3>AOP</h3>
+    <p>Pointcuts, advices, proxy mechanics, @Transactional internals</p>
+    <h3>Actuator & Metrics</h3>
+    <p>Health indicators, Micrometer, custom metrics, CloudWatch</p>
+    <p>Note:</p>
+    <h3>Day 16 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">@SpringBootApplication: what three annotations it composes and what each does</span></li>
+      <li><span class="checkbox-label">Auto-configuration loading chain: spring.factories vs ImportCandidates (Spring Boot 2.7+)</span></li>
+      <li><span class="checkbox-label">@Conditional family: @ConditionalOnClass, @ConditionalOnMissingBean, @ConditionalOnProperty — how they gate auto-config</span></li>
+      <li><span class="checkbox-label">Bean lifecycle: the 7 steps from instantiation to destroy</span></li>
+      <li><span class="checkbox-label">BeanPostProcessor: what it can intercept, two built-in examples that use it</span></li>
+      <li><span class="checkbox-label">@PostConstruct and @PreDestroy vs InitializingBean and DisposableBean — differences</span></li>
+      <li><span class="checkbox-label">Bean scope: singleton, prototype, request, session — and which is dangerous to inject into singleton</span></li>
+      <li><span class="checkbox-label">Spring AOP: JDK proxy vs CGLIB, when each is used, the self-invocation trap</span></li>
+      <li><span class="checkbox-label">@Transactional: propagation types (REQUIRED, REQUIRES_NEW, NESTED), isolation levels, rollbackFor</span></li>
+      <li><span class="checkbox-label">@Async: how it works, why you need @EnableAsync, the thread pool behind it</span></li>
+      <li><span class="checkbox-label">Spring Actuator: /health, /metrics, /info, /env, /beans endpoints</span></li>
+      <li><span class="checkbox-label">Custom health indicator: when to write one and how</span></li>
+      <li><span class="checkbox-label">Micrometer: Counter, Gauge, Timer, DistributionSummary — which for what</span></li>
+      <li><span class="checkbox-label">Publishing custom metrics to CloudWatch via Micrometer</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Auto-Configuration Internals</h2>
+    <h3>@SpringBootApplication — What It Actually Does</h3>
+    <p>It is composed of three annotations:</p>
+    <p>@SpringBootConfiguration (marks this as a configuration class — same as @Configuration). @EnableAutoConfiguration (triggers the auto-configuration loading mechanism). @ComponentScan (scans the current package and sub-packages for @Component, @Service, @Repository, @Controller). None of these three is magic — they each have a well-defined, traceable behaviour.</p>
+    <h3>How @EnableAutoConfiguration Loads 200+ Auto-Configurations</h3>
+    <p>Spring Boot 2.6 and earlier — spring.factories:</p>
+    <p>Spring Boot 2.7+ — ImportCandidates:</p>
+    <p>Moved to META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports — one class per line. More efficient: lazy loading, cleaner override mechanism. The old spring.factories still works for backwards compatibility.</p>
+    <pre><code class="language-java">// What happens at startup — simplified
+// 1. @EnableAutoConfiguration triggers AutoConfigurationImportSelector
+// 2. Selector reads all auto-config candidates from ImportCandidates
+// 3. Each candidate is evaluated against its @Conditional annotations
+// 4. Only those passing all conditions become beans
+// Example: DataSourceAutoConfiguration
+@AutoConfiguration
+@ConditionalOnClass({ DataSource.class, EmbeddedDatabaseType.class })
+@ConditionalOnMissingBean(type = "io.r2dbc.spi.ConnectionFactory")
+@EnableConfigurationProperties(DataSourceProperties.class)
+@Import({ DataSourcePoolMetadataProvidersConfiguration.class,
+         DataSourceCheckpointRestoreConfiguration.class })
+public class DataSourceAutoConfiguration {
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnSingleCandidate(DataSource.class)
+    public DataSourceTransactionManager transactionManager(
+            Environment environment, DataSource dataSource) {
+        // Only created if: DataSource exists AND no TransactionManager bean yet
+        return new DataSourceTransactionManager(dataSource);
+    }
+}
+// Writing your own auto-configuration
+@AutoConfiguration
+@ConditionalOnClass(PaymentGateway.class)
+@ConditionalOnProperty(prefix = "payment", name = "enabled", havingValue = "true")
+@EnableConfigurationProperties(PaymentProperties.class)
+public class PaymentAutoConfiguration {
+    @Bean
+    @ConditionalOnMissingBean  // user can override by defining their own PaymentGateway bean
+    public PaymentGateway paymentGateway(PaymentProperties props) {
+        return new DefaultPaymentGateway(props.getApiKey(), props.getBaseUrl());
+    }
+}
+// Registered in: META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
+// com.example.payment.PaymentAutoConfiguration</code></pre>
+    <h3>@Conditional annotation</h3>
+    <h3>What it checks | Common use</h3>
+    <h3>@ConditionalOnClass</h3>
+    <p>Specified class is on the classpath | Only configure JDBC if DataSource.class is present</p>
+    <h3>@ConditionalOnMissingBean</h3>
+    <p>No bean of the given type exists yet | Provide a default bean but allow user override</p>
+    <h3>@ConditionalOnProperty</h3>
+    <p>application.properties has specified key=value | Feature flags, enable/disable auto-configs</p>
+    <h3>@ConditionalOnBean</h3>
+    <p>A bean of the given type IS present | Configure X only if Y was already configured</p>
+    <h3>@ConditionalOnMissingClass</h3>
+    <p>Specified class is NOT on the classpath | Provide fallback when a library is absent</p>
+    <h3>@ConditionalOnExpression</h3>
+    <p>SpEL expression evaluates to true | Complex multi-property conditions</p>
+    <h3>@ConditionalOnWebApplication</h3>
+    <p>App is a web (servlet) application | Only wire MVC configs in web context</p>
+    <h3>@ConditionalOnCloudPlatform</h3>
+    <p>Running on a specific cloud (AWS, GCP, Azure) | Cloud-specific config</p>
+    <p>A: When @EnableAutoConfiguration is processed, Spring invokes AutoConfigurationImportSelector, which reads all auto-configuration class names from META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports inside spring-boot-autoconfigure.jar. This gives it roughly 150 candidate classes. Each candidate is then evaluated against its @Conditional annotations — @ConditionalOnClass checks the classpath, @ConditionalOnMissingBean checks existing beans, @ConditionalOnProperty checks application.properties. Only the configurations that pass all their conditions are registered as bean definitions. The rest are discarded. The order matters: auto-configurations run after your own @Configuration classes, so your beans take precedence. The @ConditionalOnMissingBean pattern is how Spring ensures your custom bean always wins over the auto-configured default.</p>
+    <hr class="section-divider" />
+    <h2>Section 2 — Bean Lifecycle</h2>
+    <h3>The 7 Lifecycle Steps</h3>
+    <h3>Step</h3>
+    <h3>What happens | Your hook</h3>
+    <h3>1. Instantiation</h3>
+    <p>Spring calls the constructor (or factory method) | Constructor injection happens here</p>
+    <h3>2. Dependency injection</h3>
+    <p>Spring injects @Autowired fields, setters, and constructor args | All dependencies available after this step</p>
+    <h3>3. BeanNameAware / BeanFactoryAware</h3>
+    <p>Spring sets bean name and factory reference if implemented | Rarely used directly</p>
+    <h3>4. BeanPostProcessor.postProcessBeforeInitialization</h3>
+    <p>All registered BPPs run before init | Spring AOP proxy wrapping, @Autowired validation</p>
+    <h3>5. Initialisation</h3>
+    <h3>6. BeanPostProcessor.postProcessAfterInitialization</h3>
+    <p>All registered BPPs run after init | This is where the AOP proxy is actually applied</p>
+    <h3>7. Destroy</h3>
+    <p>@PreDestroy OR DisposableBean.destroy() OR @Bean(destroyMethod) — called on context close | Resource cleanup, connection pool shutdown</p>
+    <pre><code class="language-java">// Full lifecycle demonstration
+@Component
+public class PaymentServiceBean implements InitializingBean, DisposableBean {
+    private final PaymentGateway gateway;
+    private       ConnectionPool  pool;
+    // Step 1+2: constructor — dependency injection happens here
+    public PaymentServiceBean(PaymentGateway gateway) {
+        this.gateway = gateway;
+        System.out.println("Step 1+2: constructed and injected");
+    }
+    // Step 5a: @PostConstruct — called after injection, before bean is used
+    @PostConstruct
+    public void postConstruct() {
+        this.pool = ConnectionPool.create(gateway.getConfig());
+        System.out.println("Step 5a: @PostConstruct — pool initialised");
+    }
+    // Step 5b: InitializingBean.afterPropertiesSet() — same timing as @PostConstruct
+    // Runs AFTER @PostConstruct when both are present
+    @Override
+    public void afterPropertiesSet() {
+        System.out.println("Step 5b: afterPropertiesSet");
+    }
+    // Step 7a: @PreDestroy — called before bean is removed from context
+    @PreDestroy
+    public void preDestroy() {
+        System.out.println("Step 7a: @PreDestroy");
+    }
+    // Step 7b: DisposableBean.destroy() — runs after @PreDestroy
+    @Override
+    public void destroy() {
+        if (pool != null) pool.close();
+        System.out.println("Step 7b: destroy — pool closed");
+    }
+}
+// Preferred modern approach: @PostConstruct and @PreDestroy
+// They are JSR-250 annotations — no Spring interface coupling
+// Use InitializingBean / DisposableBean only when you need to
+// programmatically check the interface type</code></pre>
+    <h3>BeanPostProcessor — The Most Powerful Extension Point</h3>
+    <p>What BeanPostProcessor does:</p>
+    <p>It intercepts every bean in the context at two points: before initialisation (postProcessBeforeInitialization) and after initialisation (postProcessAfterInitialization). The return value replaces the original bean in the context — this is how Spring AOP replaces your @Service with a proxy. Several critical Spring features are implemented as BeanPostProcessors: AutowiredAnnotationBeanPostProcessor processes @Autowired, CommonAnnotationBeanPostProcessor processes @PostConstruct and @PreDestroy, and AbstractAutoProxyCreator is the base for all AOP proxy creation.</p>
+    <pre><code class="language-java">// Writing a custom BeanPostProcessor
+// Use case: automatically register every service bean with a metrics registry
+@Component
+public class MetricsRegistrationBeanPostProcessor implements BeanPostProcessor {
+    private final MeterRegistry meterRegistry;
+    public MetricsRegistrationBeanPostProcessor(MeterRegistry registry) {
+        this.meterRegistry = registry;
+    }
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) {
+        // After every bean is fully initialised, check if it's a service
+        if (bean.getClass().isAnnotationPresent(Service.class)) {
+            // Register a gauge for the bean's class name
+            Gauge.builder("spring.bean.active", () -&gt; 1.0)
+                .tag("bean", beanName)
+                .register(meterRegistry);
+        }
+        // IMPORTANT: return the bean (or a replacement)
+        // Returning null would remove the bean from the context
+        return bean;
+    }
+}
+// Built-in BPPs you should know:
+// AutowiredAnnotationBeanPostProcessor  → processes @Autowired and @Value
+// CommonAnnotationBeanPostProcessor     → processes @PostConstruct, @PreDestroy, @Resource
+// PersistenceAnnotationBeanPostProcessor → processes @PersistenceContext
+// AbstractAutoProxyCreator              → creates AOP proxies for @Transactional, @Async, etc.</code></pre>
+    <h3>Bean Scopes — The Injection Trap</h3>
+    <h3>Scope</h3>
+    <p>Lifecycle | Use case | Injection trap?</p>
+    <h3>singleton (default)</h3>
+    <p>One instance per ApplicationContext. Shared across all requests. | Services, repositories, default | No</p>
+    <h3>prototype</h3>
+    <p>New instance every time the bean is requested. | Stateful beans, user-specific config | Yes — see below</p>
+    <h3>request</h3>
+    <p>One instance per HTTP request (web apps only). | Request-scoped state | Yes — inject via proxy</p>
+    <h3>session</h3>
+    <p>One instance per HTTP session. | User session state | Yes — inject via proxy</p>
+    <h3>application</h3>
+    <p>One instance per ServletContext (web apps). | App-wide shared web state | No</p>
+    <p>The prototype injection trap:</p>
+    <p>If you inject a prototype bean into a singleton bean, the prototype bean is created once at injection time and never refreshed — it effectively becomes a singleton. Fix: inject ApplicationContext and call getBean() each time, or use @Lookup method injection, or use ObjectProvider<T>. The request and session scopes have the same issue if injected directly into a singleton — fix by injecting them with @ScopedProxy (creates a proxy that delegates to the correct scoped instance per request/session).</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is BeanPostProcessor and what are two things Spring uses it for? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">BeanPostProcessor is an extension point that lets you intercept every bean before and after it is initialised. The key detail is that postProcessAfterInitialization can return a different object — this is how Spring replaces your beans with proxies. Two built-in uses: first, AutowiredAnnotationBeanPostProcessor processes @Autowired — it scans each bean for @Autowired fields and performs the injection. Second, AbstractAutoProxyCreator is the BeanPostProcessor that creates AOP proxies — when it sees a bean that has @Transactional, @Async, or @Cacheable methods, postProcessAfterInitialization wraps it in a proxy and returns the proxy instead of the original bean. Every subsequent reference to that bean in the context is actually a reference to the proxy.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Spring AOP</h2>
+    <h3>How Spring AOP Works</h3>
+    <p>The core idea:</p>
+    <p>JDK proxy vs CGLIB:</p>
+    <p>JDK dynamic proxy: created when the bean implements at least one interface. Uses java.lang.reflect.Proxy. Only interface methods are intercepted. CGLIB proxy: created when the bean has no interface (Spring Boot default behaviour since 2.x, even if interfaces exist). Subclasses the concrete class using bytecode generation. All public methods can be intercepted. The practical implication: CGLIB cannot proxy final classes or final methods — @Transactional on a final method will silently have no effect.</p>
+    <pre><code class="language-java">// AOP terminology
+// Aspect:      The class that contains cross-cutting logic
+// Pointcut:    The expression that selects which methods to intercept
+// Advice:      The code that runs at the join point (before, after, around)
+// Join point:  A specific method execution matched by the pointcut
+// Weaving:     Applying aspects to target objects (Spring does this at startup)
+// Writing a custom Aspect: audit logging for all payment operations
+@Aspect
+@Component
+public class PaymentAuditAspect {
+    private final AuditService auditService;
+    private final Logger log = LoggerFactory.getLogger(getClass());
+    // Pointcut: all methods in PaymentService
+    @Pointcut("execution(* com.example.payment.PaymentService.*(..))")
+    private void paymentOperations() {}
+    // Around advice: most powerful — controls method execution entirely
+    @Around("paymentOperations()")
+    public Object auditPayment(ProceedingJoinPoint pjp) throws Throwable {
+        String method    = pjp.getSignature().getName();
+        Object[] args    = pjp.getArgs();
+        long     start   = System.currentTimeMillis();
+        log.info("Payment operation started: method={} args={}", method, args);
+        try {
+            Object result = pjp.proceed(); // call the real method
+            long elapsed  = System.currentTimeMillis() - start;
+            auditService.recordSuccess(method, args, result, elapsed);
+            return result;
+        } catch (Exception e) {
+            auditService.recordFailure(method, args, e);
+            throw e; // re-throw — do not silently swallow
+        }
+    }
+    // Before advice: runs before the method, cannot stop execution
+    @Before("@annotation(com.example.RequiresRole) &amp;&amp; args(req,..)")
+    public void checkRole(JoinPoint jp, PaymentRequest req) {
+        // SecurityContext check...
+    }
+    // AfterReturning: only runs if method returns normally
+    @AfterReturning(pointcut="paymentOperations()", returning="result")
+    public void onSuccess(JoinPoint jp, Object result) {
+        // Only called when no exception
+    }
+    // AfterThrowing: only runs if method throws
+    @AfterThrowing(pointcut="paymentOperations()", throwing="ex")
+    public void onFailure(JoinPoint jp, Exception ex) {
+        log.error("Payment operation failed: {}", ex.getMessage());
+    }
+}
+// Pointcut expression syntax:
+// execution(* com.example.service.*.*(..))  — all methods in all service classes
+// @annotation(org.springframework.transaction.annotation.Transactional) — methods annotated with @Transactional
+// within(com.example.payment.*)  — any method in the payment package
+// bean(paymentService)  — specific named bean
+// args(String, BigDecimal)  — methods with these parameter types</code></pre>
+    <h3>@Transactional — The Full Picture</h3>
+    <h3>Propagation</h3>
+    <h3>Behaviour | Use when</h3>
+    <h3>REQUIRED (default)</h3>
+    <p>Join existing transaction if one exists. Create new one if none. | 99% of cases — standard service method</p>
+    <h3>REQUIRES_NEW</h3>
+    <p>Always create a new transaction. Suspend the existing one if active. | Audit logging — must commit even if outer tx rolls back</p>
+    <h3>NESTED</h3>
+    <p>Create a savepoint within existing transaction. Rollback to savepoint on failure. | Partial rollback within a larger transaction</p>
+    <h3>MANDATORY</h3>
+    <h3>NEVER</h3>
+    <p>Must NOT have existing transaction. Throw if one exists. | Explicitly non-transactional operations</p>
+    <h3>NOT_SUPPORTED</h3>
+    <p>Run without transaction. Suspend existing if one exists. | Expensive read with no locking requirements</p>
+    <h3>SUPPORTS</h3>
+    <p>Use existing transaction if one exists. Run without one if none. | Read-only operations that can work either way</p>
+    <pre><code class="language-java">// @Transactional gotchas you must know
+// GOTCHA 1: Self-invocation — the most common mistake
+@Service
+public class PaymentService {
+    @Transactional
+    public void processPayment(PaymentRequest req) {
+        // This calls the method directly on 'this', NOT on the proxy
+        // The @Transactional on updateAudit is IGNORED
+        this.updateAudit(req); // WRONG
+    }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void updateAudit(PaymentRequest req) {
+        // This NEVER starts a new transaction when called via this.updateAudit()
+        // because the call bypasses the proxy entirely
+    }
+}
+// GOTCHA 2: @Transactional on a private method — silently ignored
+@Transactional
+private void internalMethod() { /* proxy cannot override private methods */ }
+// GOTCHA 3: Default rollback rule — only rolls back on RuntimeException and Error
+// Checked exceptions do NOT trigger rollback by default
+@Transactional
+public void transfer(String from, String to, BigDecimal amount) throws IOException {
+    debit(from, amount);
+    // IOException thrown here → transaction COMMITS (data is inconsistent)
+    credit(to, amount);
+}
+// FIX: always specify rollbackFor for checked exceptions
+@Transactional(rollbackFor = Exception.class)
+public void transfer(String from, String to, BigDecimal amount) throws IOException { }
+// GOTCHA 4: @Transactional on a final method (CGLIB)
+@Transactional
+public final void criticalOperation() {
+    // CGLIB cannot override final methods — @Transactional silently ignored
+}
+// GOTCHA 5: REQUIRES_NEW and the outer transaction
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void auditLog(String message) {
+    // This opens its own transaction, commits independently
+    // If outer transaction rolls back, the audit log still exists
+    // This is exactly what you want for audit — NOT what you want for business logic
+    auditRepo.save(new AuditEntry(message));
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What are the @Transactional pitfalls that actually matter in production? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Three that I have seen cause real incidents. First: self-invocation. Calling a @Transactional method from within the same class via 'this' bypasses the proxy — the transaction annotation has no effect. This is silent and will not throw an error, it will just not work. The fix is to inject the service into itself via ApplicationContext or restructure the code. Second: rollback only on RuntimeException by default. Checked exceptions do not trigger a rollback unless you add rollbackFor = Exception.class. I have seen services where a checked IOException left the database in a half-committed state. Third: @Transactional on private or final methods is silently ignored — CGLIB cannot proxy them. Always put @Transactional on public, non-final methods in beans that Spring controls.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — @Async and Thread Pool Configuration</h2>
+    <h3>How @Async Works</h3>
+    <p>The mechanism:</p>
+    <p>@Async is implemented via BeanPostProcessor (AsyncAnnotationBeanPostProcessor). It wraps the bean in a proxy. When an @Async method is called on the proxy, the proxy submits the method invocation to a TaskExecutor thread pool and returns immediately. The calling thread is not blocked. The method executes on a different thread.</p>
+    <pre><code class="language-java">// Enable async processing
+@SpringBootApplication
+@EnableAsync
+public class PaymentApplication { }
+// Simple @Async — uses Spring's default SimpleAsyncTaskExecutor (NOT production-ready)
+@Service
+public class NotificationService {
+    @Async
+    public void sendEmailNotification(PaymentResult result) {
+        // Runs on a separate thread from the default executor
+        emailClient.send(result.getUserEmail(), result.getSummary());
+    }
+    // @Async with a return value — caller gets a Future
+    @Async
+    public CompletableFuture&lt;Boolean&gt; sendPushNotification(PaymentResult result) {
+        boolean sent = pushClient.send(result.getDeviceToken(), result.getSummary());
+        return CompletableFuture.completedFuture(sent);
+    }
+}
+// IMPORTANT: Configure your own ThreadPoolTaskExecutor — never use the default
+// SimpleAsyncTaskExecutor creates a new thread per task — no pooling, no limits.
+@Configuration
+@EnableAsync
+public class AsyncConfig implements AsyncConfigurer {
+    @Override
+    public Executor getAsyncExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);          // always-alive threads
+        executor.setMaxPoolSize(20);           // max threads under load
+        executor.setQueueCapacity(200);        // bounded queue — back-pressure
+        executor.setThreadNamePrefix("async-payment-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        // CallerRunsPolicy: when queue is full, calling thread executes the task
+        // This provides back-pressure instead of dropping tasks
+        executor.initialize();
+        return executor;
+    }
+    @Override
+    public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
+        // Exceptions in void @Async methods are silently swallowed without this
+        return (ex, method, params) -&gt;
+            log.error("Async method {} threw: {}", method.getName(), ex.getMessage(), ex);
+    }
+}
+// Multiple named executors for different task types
+@Bean("paymentExecutor")
+public TaskExecutor paymentExecutor() {
+    ThreadPoolTaskExecutor e = new ThreadPoolTaskExecutor();
+    e.setCorePoolSize(10); e.setMaxPoolSize(50); e.setQueueCapacity(500);
+    e.setThreadNamePrefix("payment-"); e.initialize(); return e;
+}
+@Async("paymentExecutor")  // use specific named executor
+public void processPaymentAsync(PaymentRequest req) { }</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What happens to exceptions thrown in @Async void methods and how do you handle them? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Exceptions in @Async void methods are silently swallowed by default — the calling thread has already returned, there is nobody to receive the exception. This is a common source of bugs where notifications fail silently. The fix is to implement AsyncUncaughtExceptionHandler in your AsyncConfigurer and register it via getAsyncUncaughtExceptionHandler(). This handler receives the exception, the method reference, and the arguments, so you can log it properly or trigger an alert. For @Async methods that return CompletableFuture, the exception is captured in the future and the caller can handle it with exceptionally() or when the future is awaited. I always configure a custom uncaught exception handler and add an alert when async tasks fail — silent failures in notification or audit pipelines are the worst kind of bug to diagnose.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — Actuator and Micrometer Metrics</h2>
+    <h3>Spring Actuator — Production-Ready Endpoints</h3>
+    <h3>Endpoint</h3>
+    <h3>What it returns | Security consideration</h3>
+    <h3>/actuator/health</h3>
+    <p>Application health: UP/DOWN, plus component health | Expose at least this one, restrict full detail to internal only</p>
+    <h3>/actuator/metrics</h3>
+    <p>List of all registered metric names | Safe to expose, no sensitive data</p>
+    <h3>/actuator/metrics/{name}</h3>
+    <p>Values for a specific metric with tags | Safe to expose</p>
+    <h3>/actuator/info</h3>
+    <p>App version, build info, git commit | Add build-info.properties for content</p>
+    <h3>/actuator/env</h3>
+    <p>All environment properties (hides passwords) | Restrict to internal — can expose config structure</p>
+    <h3>/actuator/beans</h3>
+    <p>All beans and their dependencies | Restrict to internal — exposes architecture</p>
+    <h3>/actuator/mappings</h3>
+    <p>All @RequestMapping endpoints | Restrict to internal</p>
+    <h3>/actuator/loggers</h3>
+    <p>View and change log levels at runtime | Restrict to internal — powerful</p>
+    <h3>/actuator/threaddump</h3>
+    <p>JVM thread dump | Restrict to internal — useful for debugging deadlocks</p>
+    <h3>/actuator/heapdump</h3>
+    <p>JVM heap dump file | Restrict to internal — sensitive data may be in heap</p>
+    <pre><code class="language-java">// application.properties — production-safe Actuator config
+management.endpoints.web.exposure.include=health,metrics,info
+management.endpoints.web.exposure.exclude=env,beans,heapdump
+management.endpoint.health.show-details=when-authorized
+management.server.port=8081  // separate port for management — firewall it
+// Custom Health Indicator — for a dependency your service needs
+@Component
+public class PaymentGatewayHealthIndicator implements HealthIndicator {
+    private final PaymentGatewayClient client;
+    @Override
+    public Health health() {
+        try {
+            PingResponse ping = client.ping();
+            if (ping.isOk()) {
+                return Health.up()
+                    .withDetail("latency_ms", ping.getLatencyMs())
+                    .withDetail("gateway", ping.getVersion())
+                    .build();
+            }
+            return Health.down()
+                .withDetail("reason", "Gateway ping returned: " + ping.getStatus())
+                .build();
+        } catch (Exception e) {
+            return Health.down(e)
+                .withDetail("reason", "Cannot reach payment gateway")
+                .build();
+        }
+    }
+}
+// /actuator/health now includes 'paymentGateway' component
+// If it returns DOWN, the overall health is DOWN — load balancer stops routing</code></pre>
+    <h3>Micrometer — The Metrics API</h3>
+    <p>What Micrometer is:</p>
+    <p>Micrometer is a vendor-neutral metrics API — like SLF4J but for metrics. You instrument your code with Micrometer and choose the backend (CloudWatch, Prometheus, Datadog, Influx) via a dependency. The same instrumentation code works regardless of backend.</p>
+    <h3>Metric type</h3>
+    <h3>Use for | Example</h3>
+    <h3>Counter</h3>
+    <p>Things that only increase — request count, error count, messages processed | payment.requests.total, payment.errors.total</p>
+    <h3>Gauge</h3>
+    <p>Current value that can go up or down — queue depth, active connections, cache size | kafka.consumer.lag, db.pool.active</p>
+    <h3>Timer</h3>
+    <p>Duration of an operation — includes count, sum, max, percentiles | payment.processing.time, http.server.requests</p>
+    <h3>DistributionSummary</h3>
+    <p>Distribution of values (not time) — request payload size, response size | payment.amount.distribution</p>
+    <h3>LongTaskTimer</h3>
+    <p>Duration of long-running tasks in progress — still running at query time | batch.job.running</p>
+    <pre><code class="language-java">// Micrometer instrumentation in a payment service
+@Service
+public class PaymentService {
+    private final MeterRegistry  registry;
+    private final Counter        paymentCounter;
+    private final Counter        failureCounter;
+    private final Timer          processingTimer;
+    private final DistributionSummary amountSummary;
+    public PaymentService(MeterRegistry registry) {
+        this.registry = registry;
+        this.paymentCounter = Counter.builder("payment.requests")
+            .description("Total payment requests received")
+            .tag("service", "payment")
+            .register(registry);
+        this.failureCounter = Counter.builder("payment.failures")
+            .description("Total payment failures")
+            .register(registry);
+        this.processingTimer = Timer.builder("payment.processing.time")
+            .description("Payment processing latency")
+            .publishPercentiles(0.5, 0.95, 0.99)  // expose p50, p95, p99
+            .register(registry);
+        this.amountSummary = DistributionSummary.builder("payment.amount")
+            .description("Distribution of payment amounts in INR")
+            .baseUnit("INR")
+            .register(registry);
+    }
+    public PaymentResult process(PaymentRequest req) {
+        paymentCounter.increment();
+        amountSummary.record(req.getAmount().doubleValue());
+        return processingTimer.recordCallable(() -&gt; {
+            try {
+                return doProcess(req);
+            } catch (PaymentException e) {
+                failureCounter.increment();  // tag could include failure reason
+                throw e;
+            }
+        });
+    }
+}
+// Gauge for a live value — Kafka consumer lag
+Gauge.builder("kafka.consumer.lag", kafkaConsumer,
+    consumer -&gt; consumer.metrics().entrySet().stream()
+        .filter(e -&gt; e.getKey().name().equals("records-lag-max"))
+        .mapToDouble(e -&gt; e.getValue().metricValue())
+        .max().orElse(0.0))
+    .tag("topic", "payment.commands")
+    .register(registry);
+// @Timed shortcut — auto-instruments method with a Timer
+@Timed(value = "payment.processing.time", percentiles = {0.5, 0.95, 0.99})
+public PaymentResult process(PaymentRequest req) { return doProcess(req); }
+// Publishing to CloudWatch
+// application.properties:
+// management.cloudwatch.metrics.export.enabled=true
+// management.cloudwatch.metrics.export.namespace=PaymentService
+// management.cloudwatch.metrics.export.step=60s
+// AWS SDK credentials must be configured (IAM role on EC2 is the right way)</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> How would you add p99 latency monitoring to a Spring Boot payment service? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I use Micrometer's Timer with percentile publishing. Build a Timer with publishPercentiles(0.5, 0.95, 0.99) and register it against the MeterRegistry. Wrap the payment processing call inside timer.recordCallable(). This records the duration of every call and Micrometer automatically computes and publishes the p50, p95, and p99 percentiles. To export to CloudWatch, I add the micrometer-registry-cloudwatch2 dependency and set management.cloudwatch.metrics.export.enabled=true with the namespace. The EC2 instance needs a CloudWatch:PutMetricData IAM permission — the right way to grant this is via an IAM instance profile, not hardcoded credentials. Then I set a CloudWatch alarm on the p99 metric with a threshold of 500ms. In the Deloitte project, this is how we detected the compliance service latency issue — the p99 started climbing before p50 moved, which was the signal that a small fraction of requests were hitting a slow path.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — Configuration and Profiles</h2>
+    <h3>@ConfigurationProperties vs @Value</h3>
+    <h3>@Value | @ConfigurationProperties</h3>
+    <h3>Binding style</h3>
+    <p>Single property injection | Binds a whole prefix to a POJO</p>
+    <h3>Type conversion</h3>
+    <p>Limited, manual | Full type conversion, JSR-303 validation</p>
+    <h3>Relaxed binding</h3>
+    <p>No | Yes — payment.api-key, payment.apiKey, PAYMENT_API_KEY all bind</p>
+    <h3>IDE support</h3>
+    <p>Limited | Full — generates metadata for IDE autocomplete</p>
+    <h3>Testability</h3>
+    <p>Hard to override per-test | Easy — @TestPropertySource or @SpringBootTest properties</p>
+    <h3>Use for</h3>
+    <p>Quick one-off injection | Structured config blocks — always prefer for more than 2 properties</p>
+    <pre><code class="language-java">// @ConfigurationProperties — the right way to handle structured config
+@ConfigurationProperties(prefix = "payment")
+@Validated  // enables JSR-303 validation on fields
+public class PaymentProperties {
+    @NotBlank
+    private String  apiKey;
+    @NotBlank
+    private String  baseUrl;
+    @Min(1) @Max(60)
+    private int     timeoutSeconds = 10;
+    private boolean retryEnabled  = true;
+    @NotNull
+    private RetryConfig retry = new RetryConfig();
+    // getters and setters (or use @ConstructorBinding for immutable)
+    public static class RetryConfig {
+        private int     maxAttempts  = 3;
+        private long    backoffMs    = 500;
+        // getters + setters
+    }
+}
+// application.yml
+// payment:
+//   api-key: sk_live_abc123
+//   base-url: https://api.stripe.com
+//   timeout-seconds: 15
+//   retry:
+//     max-attempts: 3
+//     backoff-ms: 1000
+// Profile-specific config
+// application-dev.yml, application-prod.yml, application-test.yml
+// Active profile set via: spring.profiles.active=prod
+// Or: SPRING_PROFILES_ACTIVE=prod environment variable
+// @Profile on a bean — only created when the profile is active
+@Bean
+@Profile("dev")
+public PaymentGateway mockGateway() { return new MockPaymentGateway(); }
+@Bean
+@Profile("prod")
+public PaymentGateway realGateway(PaymentProperties props) {
+    return new StripePaymentGateway(props.getApiKey());
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How does Spring Boot load configuration and what is relaxed binding? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Spring Boot loads configuration from multiple sources in a defined priority order: command-line arguments override environment variables, which override application-{profile}.yml, which override application.yml, which override @PropertySource files. Relaxed binding means Spring is flexible about property name casing — payment.apiKey, payment.api-key, payment.api_key, and PAYMENT_API_KEY all bind to the same field in a @ConfigurationProperties class. This matters because environment variables typically use underscores and caps, but code uses camelCase or kebab-case. With @Value you have to match the exact property name. With @ConfigurationProperties, relaxed binding handles the translation automatically. For production config I always use @ConfigurationProperties over @Value for anything beyond a single property — it gives you type safety, validation with @Validated, IDE autocomplete through generated metadata, and clean testing with @TestPropertySource.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory. After each exercise, write one sentence about what would go wrong at runtime without this knowledge.</p>
+    <h3>Exercise 1 — Custom Auto-Configuration</h3>
+    <p>Task:</p>
+    <p>Write a PaymentGatewayAutoConfiguration class that conditionally creates a PaymentGateway bean.</p>
+    <p>Conditions: @ConditionalOnClass(PaymentGateway.class), @ConditionalOnProperty(prefix='payment', name='enabled', havingValue='true'), @ConditionalOnMissingBean.</p>
+    <p>Bind config with PaymentProperties using @ConfigurationProperties(prefix='payment').</p>
+    <p>Register in META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports.</p>
+    <p>Write a test: verify the bean IS created when the property is set, and is NOT created when absent.</p>
+    <h3>Exercise 2 — Bean Lifecycle with BeanPostProcessor</h3>
+    <p>Task:</p>
+    <p>Write a bean with @PostConstruct (opens a connection pool) and @PreDestroy (closes it).</p>
+    <p>Write a custom BeanPostProcessor that logs every bean name as it passes through postProcessAfterInitialization.</p>
+    <p>Add a second BPP that wraps any bean annotated with a custom @Monitored annotation in a timing proxy.</p>
+    <p>Verify order: constructor → @PostConstruct → your BPP after-init.</p>
+    <p>Show what happens if your BPP returns null — what is the effect on the context?</p>
+    <h3>Exercise 3 — AOP: Audit Aspect</h3>
+    <p>Task:</p>
+    <p>Write a PaymentAuditAspect with @Around advice on all methods in PaymentService.</p>
+    <p>The advice must: log method name + arguments before, record duration after, log exceptions with stack trace.</p>
+    <p>Write a second @Before advice that checks for a custom @RequiresApiKey annotation and validates the API key from the request header.</p>
+    <p>Demonstrate the self-invocation problem: show code where calling another @Transactional method via 'this' fails silently, and show the fix.</p>
+    <p>Test the aspect in isolation using AspectJProxyFactory.</p>
+    <h3>Exercise 4 — @Transactional: All the Traps</h3>
+    <p>Task:</p>
+    <p>Write a TransferService with transfer(from, to, amount) — debit one account, credit another.</p>
+    <p>Reproduce and fix: the checked exception rollback trap — throw an IOException mid-transfer and show the data is inconsistent without rollbackFor.</p>
+    <p>Reproduce and fix: REQUIRES_NEW for audit logging — show the audit log survives even when the main transaction rolls back.</p>
+    <p>Reproduce: the @Transactional on private method silently not working.</p>
+    <p>Reproduce: self-invocation where an inner method's propagation is ignored. Show the correct fix.</p>
+    <h3>Exercise 5 — @Async with Custom Thread Pool</h3>
+    <p>Task:</p>
+    <p>Write a NotificationService with three @Async methods: sendEmail, sendPush, sendSms.</p>
+    <p>Configure a ThreadPoolTaskExecutor: core=5, max=20, queue=200, CallerRunsPolicy.</p>
+    <p>Handle exceptions: implement AsyncUncaughtExceptionHandler that logs and alerts on failure.</p>
+    <p>Write a method that calls all three notifications in parallel and waits for all: List<CompletableFuture<Boolean>>.</p>
+    <p>Demonstrate what happens with the default SimpleAsyncTaskExecutor under high load (no pooling).</p>
+    <h3>Exercise 6 — Custom Health Indicator and Actuator</h3>
+    <p>Task:</p>
+    <p>Write a KafkaHealthIndicator that checks broker connectivity and consumer lag.</p>
+    <p>If lag > 10,000: Health.down() with lag detail. If lag > 1,000: Health.status('DEGRADED') with lag detail. Otherwise Health.up().</p>
+    <p>Write a DatabaseHealthIndicator that runs SELECT 1 with a 1-second timeout.</p>
+    <p>Configure Actuator: expose health and metrics only, show-details=when-authorized, management on port 8081.</p>
+    <p>Show how the health status affects ALB target group health checks.</p>
+    <h3>Exercise 7 — BOSS: Full Observability Stack</h3>
+    <p>Instrument a PaymentService end-to-end:</p>
+    <p>Requirements: 1) Micrometer Counter for total payments and per-status (SUCCESS, FAILED, PENDING). 2) Timer with p50/p95/p99 percentiles, tagged by payment type (DEBIT, CREDIT, TRANSFER). 3) Gauge for current queue depth (number of payments in PENDING state — read from DB). 4) Custom health indicator: DOWN if failure rate > 10% in last 60 seconds. 5) Publish all metrics to CloudWatch with namespace 'PaymentService/Production'. 6) Write a CloudWatch alarm definition (JSON) that fires when p99 > 500ms or failure counter increments > 100 in 5 minutes. Connect every part — from the service method instrumentation to the CloudWatch alarm that wakes you at 2am.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Answer out loud before reading. Every answer here is written the way you should speak it in an interview — clear, direct, with the trade-off or gotcha included.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What does @SpringBootApplication actually do? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">It is a composed annotation of three things. @SpringBootConfiguration marks the class as a configuration class — same as @Configuration, it just signals that this is the primary configuration. @ComponentScan scans the current package and all sub-packages for @Component, @Service, @Repository, and @Controller classes and registers them as beans. @EnableAutoConfiguration is the interesting one — it triggers the auto-configuration mechanism that reads all auto-config candidates from spring-boot-autoconfigure.jar, evaluates their @Conditional annotations, and registers only the ones that pass as bean definitions. Without @EnableAutoConfiguration you would have to manually configure DataSource, JPA, MVC, Jackson, and everything else that Spring Boot gives you automatically.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> How does Spring Boot auto-configuration avoid creating beans you do not want? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@Conditional annotations gate every auto-configured bean. The most important ones: @ConditionalOnClass only creates the bean if the specified class is on the classpath — so JPA auto-config only runs if Hibernate is present. @ConditionalOnMissingBean only creates the bean if you have not already defined one of the same type — this is the override mechanism that lets you replace any Spring Boot default by just defining your own bean. @ConditionalOnProperty gates on application.properties values — useful for feature flags. This layered approach means Spring Boot only configures what is actually needed, and you always win over the defaults without any explicit exclusions.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> Walk me through the Spring bean lifecycle. [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">It starts with instantiation — Spring calls the constructor, injecting any constructor dependencies at this point. Then it processes field and setter injection for @Autowired. Then it checks for BeanNameAware and BeanFactoryAware and calls those setters. Then BeanPostProcessors run their before-init hook — this is where @Autowired validation happens. Then the initialisation methods run: @PostConstruct first, then afterPropertiesSet() if the bean implements InitializingBean, then any initMethod specified on @Bean. Then BeanPostProcessors run their after-init hook — this is where AOP proxies are created. The bean is now ready for use. On context shutdown, @PreDestroy runs first, then destroy() if the bean implements DisposableBean.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is BeanPostProcessor and how does Spring AOP use it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">BeanPostProcessor is an interface with two methods: postProcessBeforeInitialization and postProcessAfterInitialization. Spring calls these for every single bean in the context. The key detail is that the return value replaces the original bean — returning a different object is how proxies work. AbstractAutoProxyCreator, which is the BeanPostProcessor behind all AOP, looks at each bean in postProcessAfterInitialization: if the bean has methods annotated with @Transactional, @Async, @Cacheable, or matches an AOP pointcut, it creates a proxy wrapping the bean and returns the proxy. Everything in the context that holds a reference to that bean now holds a reference to the proxy, not the original.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> Why does @Transactional sometimes not work? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Four situations. First: self-invocation — calling a @Transactional method from within the same class via 'this' bypasses the proxy, so no transaction starts. Second: @Transactional on a private or final method — CGLIB proxies cannot override them, so the annotation is silently ignored. Third: the default rollback rule only rolls back on RuntimeException and Error — checked exceptions do not trigger rollback unless you add rollbackFor = Exception.class. I have seen this cause real data inconsistency. Fourth: the bean is not managed by Spring — if you create the object with 'new' instead of getting it from the context, there is no proxy and @Transactional has no effect.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What is the difference between @Transactional REQUIRED and REQUIRES_NEW? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">REQUIRED, the default, joins an existing transaction if one is active. If there is no active transaction, it starts a new one. All operations run in the same unit of work — if the outer transaction rolls back, everything rolls back. REQUIRES_NEW always starts a brand new transaction, suspending the existing one if any. The new transaction commits or rolls back independently. The classic use case: audit logging. You want the audit record to persist even when the main business transaction rolls back — put @Transactional(propagation = REQUIRES_NEW) on the audit method. If you used REQUIRED, the audit log would be rolled back along with the failed business transaction, and you would lose the audit trail of the failure.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> How does @Async work and what goes wrong if you do not configure a thread pool? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@Async is implemented via a BeanPostProcessor that wraps the bean in a proxy. When an @Async method is called on the proxy, the proxy submits the invocation to a TaskExecutor and returns immediately — the calling thread is not blocked. If you do not configure a TaskExecutor, Spring uses SimpleAsyncTaskExecutor, which creates a brand new thread for every single @Async call. Under load this means unbounded thread creation — each thread takes roughly 512KB of stack space, and with enough concurrent requests you will run out of memory or hit the OS thread limit. Always define a ThreadPoolTaskExecutor with explicit bounds. The other thing to know: exceptions in void @Async methods are silently swallowed unless you implement AsyncUncaughtExceptionHandler.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What is the difference between JDK dynamic proxy and CGLIB and when does Spring use each? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">JDK dynamic proxy uses java.lang.reflect.Proxy and requires the target class to implement at least one interface. The proxy implements the same interfaces. Only methods defined in the interfaces are intercepted — concrete methods not in any interface are not proxied. CGLIB generates a subclass of the target class at runtime using bytecode manipulation. It works even when the class has no interface. Since Spring Boot 2.x, CGLIB is used by default even when interfaces are present, because it avoids the interface mismatch issues. The practical limits of CGLIB: final classes cannot be subclassed — Spring will throw an exception if you try to proxy one. Final methods cannot be overridden — @Transactional on a final method will be silently ignored.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What is Spring Actuator and how do you secure it in production? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Actuator exposes management endpoints over HTTP: /health, /metrics, /info, /beans, /env, /threaddump, and others. It is invaluable in production for monitoring and diagnosis. In production, I configure it on a separate management port (management.server.port=8081) so it is never exposed on the same port as the public API — the management port is only accessible within the VPC or via a bastion host. I expose only health, metrics, and info publicly. I restrict /env, /beans, /loggers, and /heapdump to require authentication. For the health endpoint, I set show-details=when-authorized so the load balancer sees UP/DOWN without exposing internal component details to anyone who probes the endpoint.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What is Micrometer and what types of metrics does it support? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Micrometer is a vendor-neutral metrics API — you instrument your code once and choose the monitoring backend (CloudWatch, Prometheus, Datadog) by adding the corresponding dependency. The four main types: Counter for things that only increase, like request count or error count. Gauge for a current value that can go up or down, like queue depth or active DB connections. Timer for operation duration, which automatically tracks count, sum, max, and configurable percentiles (p50, p95, p99). DistributionSummary for the distribution of a value that is not time, like payment amount. I use @Timed as a convenient shortcut on methods to get a Timer automatically. Tags allow you to slice metrics by dimensions — I tag every payment timer by type (DEBIT, CREDIT, TRANSFER) so I can see if one type is slower than others.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> How do you write a custom health indicator? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Implement the HealthIndicator interface and annotate the class with @Component. The health() method returns a Health object: Health.up(), Health.down(), or Health.status() for custom statuses. I add details with .withDetail(key, value) to give operators context — I always include the thing I checked, the result, and any relevant numbers like latency. A good custom health indicator checks whether a dependency your service actually needs is reachable — the payment gateway, Kafka broker, Redis. The health endpoint aggregates all indicators — if any returns DOWN, the overall status is DOWN. Load balancers typically call /health on a short interval and remove instances that return DOWN from the target group. So a health indicator that falsely reports DOWN will cause the instance to be deregistered unnecessarily — test your indicators carefully.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What is @ConfigurationProperties and why is it better than @Value? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@ConfigurationProperties binds a whole prefix of properties to a POJO. @Value injects a single property. @ConfigurationProperties is better for more than a couple of properties because: it gives you relaxed binding so payment.api-key, payment.apiKey, and PAYMENT_API_KEY all bind to the same field; it supports JSR-303 validation with @Validated so you get startup-time failure if a required property is missing; it generates IDE metadata for autocomplete; and it is much easier to test — you can override a whole block of properties with @TestPropertySource or in @SpringBootTest properties. With @Value, you have to match the exact property name, there is no validation, and overriding individual fields in tests requires mocking or reflection.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> How does Spring decide the order in which beans are created? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Spring builds a dependency graph from constructor injection and @Autowired relationships — if bean A requires bean B, B is created first. You can explicitly control order with @DependsOn('beanName') if there is no direct injection relationship but a creation order still matters, like a database schema migrator that must run before the data access layer. BeanPostProcessors are created early in the lifecycle before ordinary beans. @Configuration classes are processed before component-scanned beans. For auto-configurations, the @AutoConfiguration annotation supports before() and after() attributes to declare ordering relative to other auto-configurations. The general rule: use constructor injection wherever possible because it makes dependencies explicit and Spring will figure out the order automatically.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What is the prototype scope injection trap? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">If you inject a prototype-scoped bean into a singleton bean, the prototype bean is created once at injection time and then held by the singleton. From that point on, every call to the singleton's injected field gets the same prototype instance — it never gets a fresh one. The prototype effectively becomes a singleton. The fix depends on the use case. If you need a new instance per method call: inject ObjectProvider<T> and call objectProvider.getObject() each time — Spring creates a new instance on every getObject() call. Alternatively use @Lookup method injection — Spring overrides the method to return a new prototype instance each time. The request and session scopes have the same problem when injected into singletons — fix with @ScopedProxy, which creates a proxy that delegates to the correct scoped instance for the current request or session.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 16 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you trace the auto-configuration loading chain from @SpringBootApplication to a bean being created?</span></li>
+      <li><span class="checkbox-label">Can you name the 7 bean lifecycle steps and which of your hooks runs at each?</span></li>
+      <li><span class="checkbox-label">Can you explain the four @Transactional traps without notes?</span></li>
+      <li><span class="checkbox-label">Do you know why SimpleAsyncTaskExecutor is dangerous under load?</span></li>
+      <li><span class="checkbox-label">Can you write a HealthIndicator and explain how it affects load balancer routing?</span></li>
+      <li><span class="checkbox-label">Counter vs Timer vs Gauge — can you pick the right one for any use case?</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises done — Boss observability exercise complete?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Auto-configuration: @Conditional chain</h3>
+    <p>/5 |</p>
+    <h3>Bean lifecycle: 7 steps in order</h3>
+    <p>/5 |</p>
+    <h3>BeanPostProcessor: what it intercepts, when</h3>
+    <p>/5 |</p>
+    <h3>Spring AOP: JDK vs CGLIB, self-invocation trap</h3>
+    <p>/5 |</p>
+    <h3>@Transactional: 4 traps, propagation types</h3>
+    <p>/5 |</p>
+    <h3>@Async: thread pool config, exception handling</h3>
+    <p>/5 |</p>
+    <h3>Actuator: endpoint security, HealthIndicator</h3>
+    <p>/5 |</p>
+    <h3>Micrometer: Counter/Gauge/Timer, CloudWatch export</h3>
+    <p>/5 |</p>
+    <h3>@ConfigurationProperties: relaxed binding, @Validated</h3>
+    <p>/5 |</p>
+    <p>Day 16 complete:</p>
+    <h3>Preview: Day 17 — Spring Boot Testing Deep Dive</h3>
+    <p>@SpringBootTest vs @WebMvcTest vs @DataJpaTest — when to use each and why it matters. MockMvc, TestRestTemplate, @MockBean vs @SpyBean, Testcontainers for integration tests, WireMock for external API mocking, and testing @Async and @Transactional code correctly.</p>
+    <p>Day 16 of 60 · Spring Boot Internals · Prepared for Md Zuber</p>
+    <p>"Spring Boot is not magic. It is about 150 @Conditional checks and a few BeanPostProcessors. Once you see the mechanism, the magic disappears and you are left with something you fully control."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 44  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 44  ·  STUDY CHECKLIST — API Gateway Patterns — Spring Cloud Gateway, Rate Limiting, Circuit Breaking and Security</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 44 Checklist</div>
+    <h1 style="margin-top: 0;">API Gateway Patterns — Spring Cloud Gateway, Rate Limiting, Circuit Breaking and Security</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 44 · STUDY CHECKLIST</h3>
+    <h3>Gateway Basics</h3>
+    <p>What belongs at the gateway, what does not</p>
+    <h3>Routing & Filters</h3>
+    <p>Route config, GlobalFilter, GatewayFilter chain</p>
+    <h3>Security & Rate Limit</h3>
+    <p>JWT validation filter, Redis rate limiter</p>
+    <h3>Resilience</h3>
+    <p>Note:</p>
+    <p>The API gateway is the most visible part of your microservices architecture — every external request passes through it. Interviewers ask whether you know what belongs there (authentication, rate limiting, routing) and what does not (business logic, database calls). They also want to know how you keep it thin enough not to become a bottleneck and how you handle cross-cutting concerns consistently across all your services.</p>
+    <h3>Day 44 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Gateway responsibilities: what belongs at the gateway and what does not</span></li>
+      <li><span class="checkbox-label">Spring Cloud Gateway architecture: reactive, non-blocking, Netty-based</span></li>
+      <li><span class="checkbox-label">Route configuration: predicates, filters, load balancing with lb:// scheme</span></li>
+      <li><span class="checkbox-label">GlobalFilter vs GatewayFilter: scope difference and use cases for each</span></li>
+      <li><span class="checkbox-label">JWT validation filter: where it sits, what it validates, how it enriches requests</span></li>
+      <li><span class="checkbox-label">Rate limiting: Redis RequestRateLimiter filter, token bucket algorithm</span></li>
+      <li><span class="checkbox-label">Retry filter: when to retry, what NOT to retry, exponential backoff</span></li>
+      <li><span class="checkbox-label">Request/response transformation: AddRequestHeader, RewritePath, ModifyRequestBody</span></li>
+      <li><span class="checkbox-label">CORS configuration at the gateway level</span></li>
+      <li><span class="checkbox-label">Observability: logging, tracing, metrics at the gateway</span></li>
+      <li><span class="checkbox-label">Gateway anti-patterns: business logic creep, DB calls, over-aggregation</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Gateway Responsibilities</h2>
+    <h3>What Belongs at the Gateway and What Does Not</h3>
+    <h3>Belongs at the gateway</h3>
+    <h3>Does NOT belong at the gateway</h3>
+    <p>Authentication — validate JWT, verify signature, check expiry | Business logic of any kind — if you are writing if/else for domain rules, it goes in a service</p>
+    <p>Request routing — route /api/payments/* to payment-service | Database calls — the gateway should have no persistence layer</p>
+    <p>Rate limiting — per-user or per-API-key token bucket | Complex response aggregation — use a Backend For Frontend service instead</p>
+    <p>SSL termination — TLS ends at the gateway, internal traffic uses HTTP | Orchestration — calling multiple services and combining results</p>
+    <p>CORS handling — cross-origin headers applied once centrally | Service-specific transforms — if a transform only applies to one service, put it there</p>
+    <p>Request ID injection — add X-Request-Id header to every request | Caching application data — cache belongs in Redis, close to the service</p>
+    <h3>Distributed tracing — inject/propagate trace context | Heavy computation — keep the gateway thin and non-blocking</h3>
+    <p>The anti-pattern to name in every interview:</p>
+    <p>The most common gateway mistake is letting it accumulate business logic over time. A team adds one special rule for a VIP customer, then another for a partner API, then a feature flag check. Within a year the gateway is a tangled mess of service-specific conditionals that require a deploy for every new rule. Keep the gateway as a policy enforcement point — not a business logic layer.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is an API gateway and what should it not do? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">An API gateway is the single entry point for all external traffic to a microservices system. It handles the cross-cutting concerns that apply to every request regardless of which service handles it — authentication, rate limiting, SSL termination, routing, CORS, and request tracing. What it should not do is accumulate business logic. The moment you write an if/else in the gateway for a domain rule, you have made the gateway into a service, and a bad one — it has no domain model, no tests at the right level, and no ownership boundary. The other thing to avoid is making the gateway stateful with database calls or complex response aggregation. Heavy processing blocks the reactor threads that Spring Cloud Gateway relies on. A gateway that blocks is a gateway that becomes the bottleneck for everything behind it. If you need response aggregation — combining data from multiple services for one client request — that belongs in a dedicated Backend For Frontend service, not the gateway.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — Routing and Filter Chain</h2>
+    <h3>Route Configuration</h3>
+    <pre><code class="language-java"># application.yml — Spring Cloud Gateway route configuration
+spring:
+  cloud:
+    gateway:
+      routes:
+        # Payment service route
+        - id: payment-service
+          uri: lb://payment-service   # lb:// uses Spring Cloud LoadBalancer
+          predicates:
+            - Path=/api/payments/**
+            - Method=GET,POST,DELETE
+          filters:
+            - StripPrefix=1            # removes /api prefix before forwarding
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 100
+                redis-rate-limiter.burstCapacity: 200
+                key-resolver: '#{@userKeyResolver}'
+            - name: CircuitBreaker
+              args:
+                name: payment-cb
+                fallbackUri: forward:/fallback/payments
+            - AddRequestHeader=X-Gateway-Version, 1.0
+        # Account service route
+        - id: account-service
+          uri: lb://account-service
+          predicates:
+            - Path=/api/accounts/**
+          filters:
+            - StripPrefix=1
+            - name: Retry
+              args:
+                retries: 3
+                methods: GET          # only retry idempotent methods
+                backoff:
+                  firstBackoff: 100ms
+                  maxBackoff: 1000ms
+                  factor: 2
+                  basedOnPreviousValue: false
+      # Global default filters applied to ALL routes
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+        - AddRequestHeader=X-Request-Id, #{T(java.util.UUID).randomUUID().toString()}
+      # Global CORS configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - https://app.example.com
+              - https://admin.example.com
+            allowed-methods: [GET, POST, PUT, DELETE, OPTIONS]
+            allowed-headers: [Authorization, Content-Type, X-Request-Id]
+            allow-credentials: true
+            max-age: 3600</code></pre>
+    <h3>GlobalFilter vs GatewayFilter</h3>
+    <h3>Type</h3>
+    <h3>Scope | Configured how | Use for</h3>
+    <h3>GlobalFilter</h3>
+    <p>Applies to ALL routes automatically | Spring @Bean | Cross-cutting concerns: authentication, tracing, request ID injection, logging</p>
+    <h3>GatewayFilter</h3>
+    <pre><code class="language-java">// GlobalFilter — runs on every request
+// Example: inject a unique request ID and log all requests
+@Component
+@Order(-1) // run early in the filter chain
+public class RequestLoggingFilter implements GlobalFilter {
+    private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
+    @Override
+    public Mono&lt;Void&gt; filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String requestId = exchange.getRequest().getHeaders()
+            .getFirst("X-Request-Id");
+        if (requestId == null) requestId = UUID.randomUUID().toString();
+        final String reqId = requestId;
+        long startTime = System.currentTimeMillis();
+        return chain.filter(exchange)
+            .doOnSuccess(v -&gt; {
+                long duration = System.currentTimeMillis() - startTime;
+                int status = exchange.getResponse().getStatusCode().value();
+                log.info("method={} path={} status={} durationMs={} requestId={}"
+                    , exchange.getRequest().getMethod()
+                    , exchange.getRequest().getPath()
+                    , status, duration, reqId);
+            })
+            .doOnError(e -&gt; log.error("Gateway error requestId={}: {}", reqId, e.getMessage()));
+    }
+}
+// GatewayFilter factory — applies to specific routes
+// Built-in factories: AddRequestHeader, RemoveRequestHeader,
+//                     RewritePath, StripPrefix, SetStatus
+//                     RequestRateLimiter, CircuitBreaker, Retry
+// Custom GatewayFilter factory
+@Component
+public class ApiVersionGatewayFilterFactory
+        extends AbstractGatewayFilterFactory&lt;ApiVersionGatewayFilterFactory.Config&gt; {
+    @Override
+    public GatewayFilter apply(Config config) {
+        return (exchange, chain) -&gt; {
+            // Add API version header before forwarding
+            ServerHttpRequest mutated = exchange.getRequest().mutate()
+                .header("X-Api-Version", config.getVersion())
+                .build();
+            return chain.filter(exchange.mutate().request(mutated).build());
+        };
+    }
+    public static class Config { private String version; /* getter/setter */ }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What is the difference between a GlobalFilter and a GatewayFilter in Spring Cloud Gateway? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A GlobalFilter applies to every route automatically — no configuration needed per route. It is the right place for anything that should happen on every request: injecting a request ID, logging, tracing context propagation, or the JWT authentication filter. A GatewayFilter applies only to the routes that explicitly include it. Rate limiting belongs here because different services may have different limits. Circuit breaking belongs here because each service has its own breaker with its own thresholds. Path rewriting belongs here because not every route needs its prefix stripped. In code, a GlobalFilter is a Spring bean implementing GlobalFilter. A GatewayFilter is created by a factory class extending AbstractGatewayFilterFactory, which allows passing configuration parameters. The order of GlobalFilters matters and is controlled by @Order or implementing Ordered — the JWT filter should run before the rate limiter so we know who the user is before applying per-user limits.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — JWT Authentication Filter</h2>
+    <h3>Where the JWT Filter Sits and What It Does</h3>
+    <p>The gateway authentication model:</p>
+    <p>The JWT filter validates the token at the gateway. If validation passes, it extracts the user ID and roles from the claims and injects them as trusted headers (X-User-Id, X-Roles) on the forwarded request. Downstream services trust these headers because only the gateway can set them — they should never be accepted from external callers. This centralises authentication logic and keeps downstream services simple.</p>
+    <pre><code class="language-java">// JWT Authentication GlobalFilter
+@Component
+@Order(-2) // run before rate limiter and other filters
+public class JwtAuthenticationFilter implements GlobalFilter {
+    private final JwtValidator  jwtValidator;
+    private final Set&lt;String&gt;   publicPaths = Set.of(
+        "/api/auth/login",
+        "/api/auth/register",
+        "/actuator/health"
+    );
+    @Override
+    public Mono&lt;Void&gt; filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        String path = exchange.getRequest().getPath().value();
+        // Skip auth for public endpoints
+        if (publicPaths.stream().anyMatch(path::startsWith)) {
+            return chain.filter(exchange);
+        }
+        String authHeader = exchange.getRequest().getHeaders()
+            .getFirst(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return unauthorised(exchange, "Missing or invalid Authorization header");
+        }
+        String token = authHeader.substring(7);
+        return Mono.fromCallable(() -&gt; jwtValidator.validate(token))
+            .subscribeOn(Schedulers.boundedElastic()) // JWT validation is blocking
+            .flatMap(claims -&gt; {
+                // Inject validated claims as trusted headers
+                ServerHttpRequest mutated = exchange.getRequest().mutate()
+                    .header("X-User-Id",  claims.getSubject())
+                    .header("X-Roles",    String.join(",", claims.getRoles()))
+                    .header("X-Tenant-Id",claims.getTenantId())
+                    // Remove the Authorization header if downstream services
+                    // should not see the raw token
+                    // .headers(h -&gt; h.remove(HttpHeaders.AUTHORIZATION))
+                    .build();
+                return chain.filter(exchange.mutate().request(mutated).build());
+            })
+            .onErrorResume(JwtException.class,
+                e -&gt; unauthorised(exchange, "Invalid or expired token"));
+    }
+    private Mono&lt;Void&gt; unauthorised(ServerWebExchange exchange, String message) {
+        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        exchange.getResponse().getHeaders()
+            .setContentType(MediaType.APPLICATION_JSON);
+        byte[] body = ("{\"status\":401,\"detail\":\"" + message + "\"}").getBytes();
+        DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(body);
+        return exchange.getResponse().writeWith(Mono.just(buffer));
+    }
+}
+// IMPORTANT: JWT validation uses RSA public key — fetch from JWKS endpoint
+// Cache the public keys locally — refresh periodically or on 'kid' mismatch
+@Component
+public class JwtValidator {
+    private volatile JWKSet cachedJwks;
+    public Claims validate(String token) {
+        // 1. Decode header, find 'kid'
+        // 2. Look up public key from cachedJwks by kid
+        // 3. Verify RS256 signature
+        // 4. Check exp, iss, aud
+        // 5. Return claims
+        // Throw JwtException on any failure
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> How do you implement JWT authentication at the gateway and what do downstream services see? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The gateway runs a GlobalFilter that intercepts every non-public request. It extracts the Bearer token from the Authorization header, validates the signature using the RS256 public key fetched from the auth server's JWKS endpoint, and checks expiry, issuer, and audience. If validation passes, it extracts the user ID, roles, and tenant ID from the claims and injects them as HTTP headers on the forwarded request — X-User-Id, X-Roles, X-Tenant-Id. Downstream services receive these headers and trust them because they come from the gateway, which sits behind a network boundary that external callers cannot reach directly. Downstream services never need to validate JWTs themselves. The one thing to be careful about: the gateway must strip these trusted headers from incoming external requests before processing them. An attacker who sends X-User-Id: admin-123 in their request should not have that header passed through. The filter must remove any incoming X-User-Id, X-Roles, or similar headers and replace them only with gateway-validated values.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — Rate Limiting with Redis</h2>
+    <h3>How the RequestRateLimiter Filter Works</h3>
+    <p>Token bucket at the gateway:</p>
+    <p>Spring Cloud Gateway's RequestRateLimiter uses a Redis-backed token bucket. Tokens are added at the replenishRate (tokens per second). The bucket can hold up to burstCapacity tokens. Each request consumes one token. When the bucket is empty, the request gets a 429 Too Many Requests response. The key_resolver determines what to key the bucket on — per user, per IP, per API key.</p>
+    <pre><code class="language-java">// Rate limiter configuration
+@Configuration
+public class RateLimiterConfig {
+    // Key resolver: limit per authenticated user
+    @Bean
+    @Primary
+    public KeyResolver userKeyResolver() {
+        return exchange -&gt; {
+            // X-User-Id was injected by the JWT filter
+            String userId = exchange.getRequest().getHeaders()
+                .getFirst("X-User-Id");
+            if (userId != null) return Mono.just(userId);
+            // Fall back to IP for unauthenticated endpoints
+            return Mono.just(exchange.getRequest().getRemoteAddress()
+                .getAddress().getHostAddress());
+        };
+    }
+    // Key resolver: limit per API key
+    @Bean
+    public KeyResolver apiKeyResolver() {
+        return exchange -&gt; Mono.justOrEmpty(
+            exchange.getRequest().getHeaders().getFirst("X-API-Key"));
+    }
+    // Custom rate limiter for tiered access
+    @Bean
+    public RateLimiter tieredRateLimiter() {
+        return new RedisRateLimiter(100, 200); // default: 100/s, burst 200
+    }
+}
+// Route configuration using the rate limiter
+// In application.yml:
+// filters:
+//   - name: RequestRateLimiter
+//     args:
+//       redis-rate-limiter.replenishRate: 100   # tokens per second
+//       redis-rate-limiter.burstCapacity: 200   # max bucket size
+//       redis-rate-limiter.requestedTokens: 1   # tokens per request
+//       key-resolver: '#{@userKeyResolver}'
+// Rate limit response headers (added automatically by the filter):
+// X-RateLimit-Remaining: 42
+// X-RateLimit-Replenish-Rate: 100
+// X-RateLimit-Burst-Capacity: 200
+// 429 response when bucket is empty:
+// HTTP/1.1 429 Too Many Requests
+// X-RateLimit-Remaining: 0
+// The filter does NOT add Retry-After by default — add it in a custom filter
+// GlobalFilter to add Retry-After on 429 responses
+@Component
+public class RateLimitResponseFilter implements GlobalFilter, Ordered {
+    @Override
+    public Mono&lt;Void&gt; filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        return chain.filter(exchange).then(Mono.fromRunnable(() -&gt; {
+            if (exchange.getResponse().getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                exchange.getResponse().getHeaders()
+                    .add("Retry-After", "1"); // retry after 1 second
+            }
+        }));
+    }
+    @Override public int getOrder() { return 0; }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> How does the Redis rate limiter work in Spring Cloud Gateway? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">It implements a token bucket algorithm in Redis using a Lua script that runs atomically. The Lua script is atomic because Redis executes it as a single command — no race conditions between reading and updating the bucket. For each request, the script: calculates how many tokens to add based on the elapsed time and the replenish rate, adds them up to the burst capacity, then attempts to consume one token. If a token is available, the request proceeds and the script returns allowed=true with the remaining count. If not, the request gets a 429 and the script returns allowed=false. The bucket state lives in Redis as two values per key: the current token count and the last refill timestamp. The replenishRate controls steady-state throughput and the burstCapacity controls short burst tolerance. For a payment API with 100 requests per second and a burst capacity of 200, a user who is idle for 2 seconds can then make 200 requests in quick succession before being throttled back to 100 per second.</p>
+        </div>
+      </div>
+    </div>
+            
+    <pre><code class="language-java"># Circuit breaker configuration in application.yml
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: payment-cb
+                fallbackUri: forward:/fallback/payments
+                statusCodes:
+                  - 500
+                  - 503
+                  - 504
+# Resilience4j circuit breaker configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      payment-cb:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10        # last 10 calls
+        failureRateThreshold: 50     # open if 50% fail
+        waitDurationInOpenState: 10s # stay open for 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+// Fallback controller — must be in the gateway application
+@RestController
+@RequestMapping("/fallback")
+public class FallbackController {
+    @RequestMapping("/payments")
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; paymentsFallback(
+            ServerWebExchange exchange) {
+        // Log that the circuit breaker fired
+        log.warn("Circuit breaker open for payment-service");
+        return ResponseEntity
+            .status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(Map.of(
+                "status", 503,
+                "title", "Service Temporarily Unavailable",
+                "detail", "The payment service is temporarily unavailable. Please try again in a few seconds.",
+                "retryAfter", 10
+            ));
+    }
+}
+// Retry filter — be careful with what you retry
+// NEVER retry POST requests (not idempotent) unless you have idempotency keys
+// SAFE to retry: GET, HEAD, OPTIONS
+// Route filter config:
+// - name: Retry
+//   args:
+//     retries: 3
+//     statuses: SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT
+//     methods: GET  # only GET is safe to retry automatically
+//     backoff:
+//       firstBackoff: 50ms
+//       maxBackoff: 500ms
+//       factor: 2</code></pre>
+    <hr class="section-divider" />
+    <h2>Section 6 — Observability, Transforms and CORS</h2>
+    <h3>Request and Response Transformation</h3>
+    <pre><code class="language-java"># Common built-in filter examples
+# Path rewriting — /api/v1/payments → /payments
+filters:
+  - RewritePath=/api/v1/(?&lt;segment&gt;.*), /${segment}
+# Strip prefix — /api/payments/TXN-123 → /payments/TXN-123
+  - StripPrefix=1
+# Add request headers (visible to downstream service)
+  - AddRequestHeader=X-Gateway-Source, api-gateway
+  - AddRequestHeader=X-Request-Time, #{T(java.time.Instant).now().toString()}
+# Remove a header before forwarding (e.g. internal debug header)
+  - RemoveRequestHeader=X-Internal-Debug
+# Set response status override
+  - SetStatus=200  # transform a 204 to 200 for a specific client
+# Redirect
+  - RedirectTo=301, https://new.example.com
+// Modifying request body — custom GatewayFilter
+// Use sparingly — modifying body requires buffering which uses memory
+@Bean
+public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
+    return builder.routes()
+        .route("payment-route", r -&gt; r
+            .path("/api/payments/**")
+            .filters(f -&gt; f
+                .stripPrefix(1)
+                .addRequestHeader("X-Tenant-Id", "default")
+                .requestRateLimiter(c -&gt; c
+                    .setRateLimiter(redisRateLimiter())
+                    .setKeyResolver(userKeyResolver()))
+                .circuitBreaker(c -&gt; c
+                    .setName("payment-cb")
+                    .setFallbackUri("forward:/fallback/payments")))
+            .uri("lb://payment-service"))
+        .build();
+}
+// Observability — metrics and tracing at the gateway
+// Spring Cloud Gateway auto-exports metrics:
+// spring.cloud.gateway.requests (Timer) — per route, per status
+// Includes: routeId, uri, outcome (SUCCESSFUL, CLIENT_ERROR, SERVER_ERROR)
+// application.yml
+management:
+  metrics:
+    tags:
+      application: api-gateway
+      environment: prod
+  tracing:
+    sampling:
+      probability: 1.0  # trace 100% at the gateway — it is the entry point</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How do you handle CORS at the gateway versus at individual services? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">CORS should be handled at the gateway, not at individual services. Each service handling CORS means duplicated configuration that can drift out of sync. The gateway applies CORS headers centrally to every response. In Spring Cloud Gateway, the globalcors configuration sets allowed origins, methods, headers, and the max-age for preflight caching. I set allow-credentials: true only for origins that need cookie-based auth, never for wildcard origins — the browser rejects that combination. The preflight OPTIONS request is handled automatically by the gateway. Downstream services never see the preflight and never need CORS configuration. The one exception: if a service is directly accessible via an internal URL that bypasses the gateway (for example, a debug endpoint), that service needs its own CORS config for any internal dashboard that calls it directly. That scenario is itself a sign that something is not properly behind the gateway.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write each exercise from memory. After each one, name the production failure scenario it handles.</p>
+    <h3>Exercise 1 — Route Configuration</h3>
+    <p>Task:</p>
+    <p>Write the Spring Cloud Gateway YAML route configuration for three services: payment-service (/api/payments/**), account-service (/api/accounts/**), fraud-service (/api/fraud/**), all using lb:// load balancing.</p>
+    <p>Add StripPrefix=1 to all routes.</p>
+    <p>Add a rate limiter to payment-service: 100 req/s, burst 200, keyed on X-User-Id header.</p>
+    <p>Add a Retry filter to account-service: 3 retries, GET only, exponential backoff.</p>
+    <h3>Exercise 2 — JWT Authentication GlobalFilter</h3>
+    <p>Task:</p>
+    <p>Write a JwtAuthenticationFilter implementing GlobalFilter with @Order(-2).</p>
+    <p>Validate Bearer token using a JwtValidator; on success inject X-User-Id, X-Roles, X-Tenant-Id headers.</p>
+    <p>Strip any incoming X-User-Id or X-Roles headers that arrive from external callers before injecting the validated values.</p>
+    <p>Return 401 with RFC 7807 JSON body on missing token or validation failure.</p>
+    <h3>Exercise 3 — Redis Rate Limiter</h3>
+    <p>Task:</p>
+    <p>Write KeyResolver beans for: per-user (using X-User-Id header), per-IP (using remote address).</p>
+    <p>Configure the RequestRateLimiter filter in a route with replenishRate=100 and burstCapacity=200.</p>
+    <p>Write a GlobalFilter that adds a Retry-After: 1 header to all 429 responses.</p>
+    <p>Explain: why the token bucket algorithm is implemented in Redis using a Lua script rather than Java code.</p>
+    <p>Show: how you would implement tiered limits (free=10/s, paid=100/s) using a custom RateLimiter bean.</p>
+    <p>Task:</p>
+    <p>Write the FallbackController with a meaningful 503 response including retryAfter and traceId.</p>
+    <p>Explain: why you should NOT retry POST requests automatically and what the alternative is.</p>
+    <h3>Exercise 5 — Request Logging GlobalFilter</h3>
+    <p>Task:</p>
+    <p>Write a RequestLoggingFilter implementing GlobalFilter that logs: method, path, status, durationMs, requestId, userId (from X-User-Id header).</p>
+    <p>Use doOnSuccess for the response phase and doOnError for error cases.</p>
+    <p>Show how to avoid logging sensitive paths (e.g. /api/auth/login request body).</p>
+    <p>Explain: why logging at the gateway is different from logging at individual services and what additional context the gateway has.</p>
+    <p>Add a Micrometer Timer that records request duration per route.</p>
+    <h3>Exercise 6 — CORS Configuration</h3>
+    <p>Task:</p>
+    <p>Write the globalcors configuration for the gateway allowing two frontend origins.</p>
+    <p>Allow credentials: true only for specific origins, not wildcard.</p>
+    <p>Include Authorization, Content-Type, and X-Request-Id in allowed headers.</p>
+    <p>Set maxAge: 3600 to reduce preflight request frequency.</p>
+    <p>Explain: what happens if a downstream service also has CORS configuration — which headers win?</p>
+    <h3>Exercise 7 — BOSS: Complete Gateway Configuration</h3>
+    <p>Write the complete Spring Cloud Gateway setup for a payment microservices system:</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Every answer connects the gateway pattern to the operational or security consequence it addresses.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What is an API gateway and how is it different from a load balancer? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A load balancer distributes traffic across multiple instances of the same service. It operates at L4 (TCP) or L7 (HTTP) and its job is to spread load and provide high availability. It has no knowledge of the application or its business context. An API gateway operates at L7 and adds application-level intelligence: it routes different paths to different services, validates authentication, enforces rate limits, handles CORS, and applies request and response transformations. It is the single entry point that every external request passes through. You typically have both: a load balancer in front of the gateway to distribute traffic across multiple gateway instances, and the gateway sitting in front of your services adding the application-level logic. AWS ALB as a load balancer and Spring Cloud Gateway as the API gateway is a common combination.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> Why is Spring Cloud Gateway reactive and why does that matter? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Spring Cloud Gateway is built on Spring WebFlux and Netty rather than Spring MVC and Tomcat. This means it is non-blocking — it handles many concurrent requests on a small number of threads using reactive programming. A traditional servlet-based gateway (like Zuul 1) allocates one thread per request. Under high concurrency, those threads sit idle waiting for responses from downstream services. With a reactive gateway, one thread handles many in-flight requests concurrently by using callbacks when responses arrive. The practical consequence: the gateway can handle tens of thousands of concurrent requests with a small thread pool, which matters because the gateway is the single entry point for all external traffic. A blocking gateway under load becomes a bottleneck for every service behind it. The trade-off: reactive code is harder to write and debug, and any blocking call on a reactor thread — like a synchronous database query or a blocking JWT validation — stalls the event loop. This is why the JWT filter uses subscribeOn(Schedulers.boundedElastic()) for the blocking RSA verification.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> How do you prevent the gateway from becoming a single point of failure? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Three approaches. First, deploy multiple gateway instances behind a cloud load balancer — AWS ALB or NLB in front of an Auto Scaling Group of gateway instances. If one instance fails, the load balancer routes to the others. Second, keep the gateway stateless. Rate limiting state lives in Redis, circuit breaker state lives in Resilience4j (with optional Redis backing for cluster-wide state). Any gateway instance can handle any request. Third, use health checks aggressively. The ALB health check hits the gateway's /actuator/health endpoint. If a gateway instance becomes unhealthy, it is removed from the target group within seconds. For the JWT validator, cache the JWKS public keys in memory — if the auth server is temporarily unavailable, the cached keys allow validation to continue without a dependency on the auth server for every request.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is the risk of putting business logic in the gateway? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The gateway is supposed to be a thin policy enforcement layer. When business logic accumulates there, several things go wrong. It becomes a deployment dependency for features that should be independently deployable — to change a business rule you have to redeploy the gateway which affects all services. The gateway has no domain model, no proper domain testing, and no clear ownership. When a rule needs to call a database or another service, it turns the gateway into a service itself but without the usual service patterns — no proper error handling, no circuit breaking on the database call, no owned schema. The pattern I have seen fail is feature flag checks in the gateway — one flag, then another, then tenant-specific rules, until the gateway has hundreds of conditions that nobody fully understands. Feature flags belong in the services or in a dedicated feature flag service. The gateway should route the request to the right service, apply cross-cutting policies, and get out of the way.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How do you handle service discovery in Spring Cloud Gateway? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Spring Cloud Gateway integrates with Spring Cloud LoadBalancer for client-side service discovery. The lb:// URI scheme tells the gateway to resolve the service name through the registered service registry — Eureka, Consul, or Kubernetes service discovery — and load balance across the available instances. When a route has uri: lb://payment-service, the gateway uses the service registry to get the list of healthy instances and routes each request to one of them using the configured load balancing strategy (round-robin by default). In Kubernetes, the lb:// scheme typically resolves to the Kubernetes Service DNS name, which provides its own load balancing via kube-proxy. The advantage over hard-coded URLs is that the gateway automatically picks up new instances as they are added to the registry and stops routing to instances that fail their health checks.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What happens when the Redis instance used by the rate limiter goes down? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">By default, if Redis is unavailable, the rate limiter fails open — all requests are allowed through. This is the safe failure mode because denying all requests due to a rate limiter outage would be worse than temporarily allowing some traffic through without rate limiting. The alternative — failing closed — would take down your API whenever Redis has a hiccup. For production, I configure a Redis Sentinel or Redis Cluster setup so the rate limiter has a highly available Redis backing. I also monitor the rate limiter's error rate — if the gateway is logging Redis connection errors, that is a signal that rate limiting is effectively disabled. A short Redis outage is acceptable. A sustained outage means potential abuse is possible until Redis recovers, which is a risk I accept in exchange for availability.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> Why should the Retry filter only retry GET requests and not POST? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">POST requests are not idempotent — sending the same POST twice can create duplicate resources or execute the same action twice. If a POST to /api/payments succeeds on the first attempt but the response is lost due to a network failure, the gateway does not know that. Retrying would create a second payment. The gateway cannot know whether the first request succeeded or not — only the server knows that. For GET requests, the operation is read-only and idempotent — reading the same data twice is safe. Retrying a failed GET will not cause any side effects. For POST requests, the correct approach is to have the client include an idempotency key in the request header and handle retries at the client level. The server uses the idempotency key to detect and deduplicate retries. The gateway should not automatically retry POST even with a 503 response from the service, because the 503 might have come after the service processed the request but before it sent the response.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> How do you test a Spring Cloud Gateway configuration? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I test at three levels. Unit level: Spring Cloud Gateway provides a @GatewayTest annotation and a test starter that lets you test route configuration in isolation with a mock downstream service. You can verify that a request to /api/payments/* is routed to the payment-service with the correct headers, path transformations, and that the rate limiter filter is present. Integration level: use Testcontainers with a Redis container and a WireMock server as the downstream service. Test the full filter chain including the JWT validation, rate limiter behaviour (verify the 429 response when the rate is exceeded), and circuit breaker (stub the downstream to return 503 and verify the fallback response). Security testing: verify that the JWT filter correctly rejects requests without tokens, rejects expired tokens, and — critically — strips incoming X-User-Id headers before injecting the gateway-validated values. This last test is the one most teams forget to write.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What is the difference between a timeout at the gateway and a timeout at the service? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A timeout at the service means: if this operation takes longer than N milliseconds, give up and return an error. This is close to the actual work and can be tuned per operation. A timeout at the gateway means: if the downstream service does not respond within N milliseconds, return an error to the client. Gateway timeouts are coarser — they apply to the entire round trip including network overhead. The practical difference: a service might have a 500ms timeout on its database calls and a separate 2-second overall request timeout. The gateway might have a 5-second timeout for the same service to give it headroom for retries. If the gateway timeout is shorter than the service's internal retry timeout, the gateway will give up and return 504 to the client while the service is still processing. Configure gateway timeouts to be slightly longer than the service's worst-case processing time, including retries, but short enough to fail fast if the service is truly unresponsive.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> How do you handle versioning of downstream services at the gateway? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The gateway is well-positioned to handle API versioning because it controls the routing. For URI path versioning (/api/v1/payments, /api/v2/payments), I can route each version to a different service deployment or a different service version. During a migration, v1 routes to the old deployment and v2 routes to the new one. Clients migrate at their own pace. The gateway handles the path prefix stripping so the downstream service sees the same path regardless of which version the client called. For content-negotiation versioning (using the Accept header), I can route based on the Accept header value using a custom predicate. The gateway makes the versioning mechanism transparent to the downstream service — the service does not need to know which version the client is using if the gateway has already translated the request. I also add Deprecation and Sunset response headers via a filter to notify clients that v1 is going away.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> What should you log at the gateway and what should you not log? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Log at the gateway: every request's HTTP method, path, response status, duration, request ID, and the user ID (from the validated JWT claims). This gives you a complete access log for every API call. Log circuit breaker state changes — CLOSED to OPEN and back — because these signal that a downstream service is having problems. Log rate limit violations with the key that was limited. What not to log: request bodies, especially for authentication endpoints — logging passwords or tokens is a security incident. Response bodies — they can be large and contain PII. Authorization header values — even though they are tokens not passwords, logging them creates a token extraction vulnerability. For debugging specific issues, I temporarily enable debug logging in a staging environment rather than permanently logging sensitive data in production. The gateway access log should be something you can share with the security team without redaction.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> How do you route to different service versions using the gateway for a canary deployment? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">For a canary deployment, I run two versions of the service simultaneously and gradually shift traffic from stable to canary. In Spring Cloud Gateway, I can use a custom predicate combined with a weighted round-robin approach. One approach uses the Weighted filter — configure two routes with the same predicate but different weights, one pointing to the stable service and one to the canary. You increase the canary weight incrementally as confidence in the new version grows. Another approach uses a custom GlobalFilter that reads a canary cookie or header: clients in the canary group get a routing header set, and the gateway has a separate route for canary-flagged requests. This gives you user-level canary control rather than random sampling. For observability, I tag metrics and traces with the service version so I can compare p99 latency and error rates between stable and canary in the same dashboard.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> What is the order of filters in Spring Cloud Gateway and why does it matter? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Filters execute in a specific order: pre-filters run in ascending order number, post-filters run in descending order number. The order matters because filters depend on each other. The JWT filter must run before the rate limiter so that by the time the rate limiter runs, the X-User-Id header has been set and the rate limiter can key on it. The request ID injection filter must run very early so that the request ID is available to all other filters for logging. Circuit breaker and rate limiting filters need to run before the request is forwarded. Logging and metrics filters need to run after the response is received. In Spring Cloud Gateway, you control order with @Order on GlobalFilter beans and with the order of filters listed in the route configuration for GatewayFilters. A well-ordered filter chain is the difference between correct behaviour and subtle bugs where a filter depends on state set by a later filter.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> How do you handle the case where a downstream service changes its API contract? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The gateway can absorb breaking changes in downstream services by adding a transformation filter. If a downstream service renames a response field or adds a required request field, a custom GatewayFilter can transform requests and responses to bridge the old and new contracts. This gives clients time to migrate without requiring a coordinated release. However, this approach has limits — complex transformations in the gateway are hard to test and maintain. The better long-term approach is to version the downstream service's API rather than masking the change in the gateway. For minor, mechanical transformations (field rename, case change), a gateway transform is acceptable. For semantic changes, the service should version its API. The gateway should be a thin routing and policy layer, not an adapter for every downstream service's API evolution.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> How do you monitor the health and performance of the gateway itself? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The gateway exposes its own metrics automatically via Micrometer. The most important metric is spring.cloud.gateway.requests — a Timer that records request duration per route, per HTTP method, and per response status. I set up a CloudWatch alarm on p99 gateway latency — if the gateway itself is slow, all services behind it are slow. I also monitor the circuit breaker state metrics (resilience4j.circuitbreaker.state) to see which breakers are open and how often they trip. Rate limiter metrics show the rejection rate per key. For capacity planning, I watch gateway CPU and thread pool utilisation — since it is reactive, thread pool saturation is less of a concern than in blocking gateways, but memory pressure and GC pauses can still cause issues. For the gateway log volume, I monitor it as a leading indicator of overall system traffic — sudden spikes in gateway access logs often precede alerts from the downstream services.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 44 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you name five things that belong at the gateway and three that do not?</span></li>
+      <li><span class="checkbox-label">Can you explain the difference between GlobalFilter and GatewayFilter?</span></li>
+      <li><span class="checkbox-label">Can you describe the JWT filter: what it validates, what headers it injects, what it strips?</span></li>
+      <li><span class="checkbox-label">Can you explain how the Redis token bucket rate limiter works?</span></li>
+      <li><span class="checkbox-label">Can you explain why POST should not be retried automatically?</span></li>
+      <li><span class="checkbox-label">All 7 exercises — Boss exercise (complete gateway) done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Gateway responsibilities: belongs vs does not</h3>
+    <p>/5 |</p>
+    <h3>GlobalFilter vs GatewayFilter scope and use</h3>
+    <p>/5 |</p>
+    <h3>JWT filter: validate, strip, inject trusted headers</h3>
+    <p>/5 |</p>
+    <h3>Redis rate limiter: token bucket, key resolver</h3>
+    <p>/5 |</p>
+    <p>/5 |</p>
+    <h3>Retry filter: safe methods only, backoff</h3>
+    <p>/5 |</p>
+    <h3>Route config: predicates, filters, lb:// scheme</h3>
+    <p>/5 |</p>
+    <h3>CORS: central config at gateway, no duplication</h3>
+    <p>/5 |</p>
+    <p>Day 44 complete:</p>
+    <p>The gateway is where architectural discipline shows. Every team wants to add things there because it is convenient — a special rule for a VIP customer, an aggregation for the mobile app, a quick feature flag. The senior engineer's job is to recognise those proposals and route them to the right place. A thin, fast, well-tested gateway is a competitive advantage. A fat gateway is a shared liability.</p>
+    <h3>Preview: Day 45 — gRPC and Protocol Buffers</h3>
+    <p>When gRPC is better than REST, Protocol Buffer schema design and backwards compatibility, streaming RPCs, gRPC-Java with Spring Boot, interceptors, deadline propagation, error handling, and service-to-service communication patterns in production microservices.</p>
+    <p>Day 44 of 60 · API Gateway Patterns · Prepared for Md Zuber</p>
+    <p>"The gateway is a doorman, not a business partner. Keep it thin, keep it fast, keep it honest."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

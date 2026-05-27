@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 12  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 12  ·  STUDY CHECKLIST — Design Patterns — 12 Essential Patterns Every Senior Java Engineer Must Know</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 12 Checklist</div>
+    <h1 style="margin-top: 0;">Design Patterns — 12 Essential Patterns Every Senior Java Engineer Must Know</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 12 · STUDY CHECKLIST</h3>
+    <h3>Design Patterns — 12 Essential Patterns Every Senior Java Engineer Must Know</h3>
+    <h3>Creational</h3>
+    <p>Singleton, Factory, Builder, Prototype</p>
+    <h3>Structural</h3>
+    <p>Adapter, Decorator, Facade, Proxy</p>
+    <h3>Behavioural</h3>
+    <p>Observer, Strategy, Template, Command</p>
+    <h3>Spring Connections</h3>
+    <p>IoC, AOP, Template, Event</p>
+    <p>Note:</p>
+    <h3>Day 12 Study Checklist</h3>
+    <h3>Pattern Category</h3>
+    <h3>Patterns to Cover</h3>
+    <h3>Creational (4)</h3>
+    <p>Singleton — 5 implementations + which to use and when</p>
+    <p>Factory Method + Abstract Factory — when each applies</p>
+    <p>Builder — fluent API, immutable objects, Spring usage</p>
+    <p>Prototype — clone vs copy constructor</p>
+    <h3>Structural (4)</h3>
+    <p>Adapter — object adapter vs class adapter, Spring @Component wrapping</p>
+    <p>Decorator — layered behaviour, Java I/O streams, Spring AOP</p>
+    <p>Facade — simplified interface over complex subsystem</p>
+    <p>Proxy — dynamic proxy, Spring AOP, JPA lazy loading</p>
+    <h3>Behavioural (4)</h3>
+    <p>Observer — event-driven, Spring ApplicationEvent, Kafka as observer</p>
+    <p>Strategy — algorithm family, Spring @Qualifier, payment routing</p>
+    <p>Template Method — invariant skeleton, Spring JdbcTemplate</p>
+    <p>Command — encapsulate request, undo/redo, async dispatch</p>
+    <h3>Coding Lab</h3>
+    <p>8 exercises — implement each pattern in a payment system context</p>
+    <h3>Q&A</h3>
+    <p>15 interview questions with natural, interview-ready answers</p>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Creational patterns — 4 patterns with code</span></li>
+      <li><span class="checkbox-label">Structural patterns — 4 patterns with code</span></li>
+      <li><span class="checkbox-label">Behavioural patterns — 4 patterns with code</span></li>
+      <li><span class="checkbox-label">Spring Boot connections for every pattern</span></li>
+      <li><span class="checkbox-label">All 8 coding exercises</span></li>
+    </ul>
+    <h3>Creational Patterns</h3>
+    <p>What creational patterns do:</p>
+    <p>They abstract the object creation process — decoupling the client from what gets created and how. The goal is to give the calling code a clean interface to get objects without knowing the construction details.</p>
+    <h3>Pattern 1 — Singleton</h3>
+    <p>Intent:</p>
+    <p>Ensure a class has exactly one instance and provide a global access point to it. In a Spring Boot application, every @Bean is a singleton by default — but understanding the raw pattern is still expected in interviews.</p>
+    <h3>5 Implementations — Know All of Them</h3>
+    <pre><code class="language-java">// ── IMPLEMENTATION 1: Eager initialisation ──
+// Instance created at class load time. Simple, thread-safe by JVM class loading.
+// Drawback: created even if never used.
+public class PaymentEngine {
+    private static final PaymentEngine INSTANCE = new PaymentEngine();
+    private PaymentEngine() {}
+    public static PaymentEngine getInstance() { return INSTANCE; }
+}
+// ── IMPLEMENTATION 2: Lazy — NOT thread-safe ──
+// Created on first use. Broken in multithreaded env — two threads can both
+// pass the null check and create two instances.
+public class PaymentEngine {
+    private static PaymentEngine instance;
+    private PaymentEngine() {}
+    public static PaymentEngine getInstance() {
+        if (instance == null) instance = new PaymentEngine(); // RACE CONDITION
+        return instance;
+    }
+}
+// ── IMPLEMENTATION 3: Double-checked locking (correct) ──
+// volatile prevents partial construction reordering.
+// Lazy + thread-safe + fast after first init (no lock after creation).
+public class PaymentEngine {
+    private static volatile PaymentEngine instance;
+    private PaymentEngine() {}
+    public static PaymentEngine getInstance() {
+        if (instance == null) {
+            synchronized (PaymentEngine.class) {
+                if (instance == null) {
+                    instance = new PaymentEngine();
+                }
+            }
+        }
+        return instance;
+    }
+}
+// ── IMPLEMENTATION 4: Bill Pugh / Holder class ──
+// Best of all worlds: lazy, thread-safe, no synchronisation overhead.
+// JVM guarantees the holder class is loaded only when getInstance() is called.
+// This is the preferred implementation for most production code.
+public class PaymentEngine {
+    private PaymentEngine() {}
+    private static class Holder {
+        static final PaymentEngine INSTANCE = new PaymentEngine();
+    }
+    public static PaymentEngine getInstance() { return Holder.INSTANCE; }
+}
+// ── IMPLEMENTATION 5: Enum singleton ──
+// JVM guarantees one instance. Handles serialisation and reflection attacks.
+// Drawback: cannot extend another class.
+public enum PaymentEngine {
+    INSTANCE;
+    public void process(PaymentRequest req) { /* ... */ }
+}
+// Usage: PaymentEngine.INSTANCE.process(req);</code></pre>
+    <h3>Implementation</h3>
+    <h3>Thread-safe? | Lazy? | Serialisation-safe? | When to use</h3>
+    <h3>Eager</h3>
+    <p>Yes (JVM) | No | Needs readResolve | Simple, low cost to create</p>
+    <h3>Lazy (no sync)</h3>
+    <p>No | Yes | No | Single-threaded only — avoid</p>
+    <h3>Double-checked locking</h3>
+    <p>Yes | Yes | Needs readResolve | When you need lazy + performance</p>
+    <h3>Bill Pugh / Holder</h3>
+    <p>Yes | Yes | Needs readResolve | Best general-purpose choice</p>
+    <h3>Enum</h3>
+    <p>Yes | No | Yes (automatic) | When serialisation + reflection safety matter</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is the Singleton pattern and how do you implement it correctly in Java? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Singleton ensures only one instance of a class exists. The naive lazy version has a race condition — two threads can both pass the null check before either creates the instance. The correct approach is either: Bill Pugh holder class (JVM guarantees the inner class loads only on first getInstance() call — lazy, thread-safe, no locks), double-checked locking with volatile (volatile prevents partial construction being visible to other threads), or an enum (serialisation and reflection safe). In Spring Boot, you rarely implement Singleton manually — @Bean is singleton scope by default. I would use the enum approach when serialisation matters, and Bill Pugh for everything else.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> Why is the naive double-checked locking broken without volatile? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Object creation is not atomic — new SomeClass() involves allocating memory, initialising fields, and assigning the reference. A CPU can reorder the last two steps: assign the reference first, then initialise fields. Without volatile, a second thread can see a non-null reference and return a partially-constructed object. volatile adds a memory barrier that prevents this reordering — the assignment is only visible to other threads after initialisation completes.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 2 — Factory Method + Abstract Factory</h3>
+    <p>Intent:</p>
+    <p>Factory Method defines an interface for creating an object but lets subclasses decide which class to instantiate. Abstract Factory groups related factories together, creating families of objects without specifying concrete classes.</p>
+    <pre><code class="language-java">// ── FACTORY METHOD ──
+// Define a creation interface; let subclasses or implementations decide what to create.
+public interface PaymentGateway {
+    PaymentResult process(PaymentRequest req);
+}
+public class StripeGateway  implements PaymentGateway { /* ... */ }
+public class RazorpayGateway implements PaymentGateway { /* ... */ }
+public class PaytmGateway   implements PaymentGateway { /* ... */ }
+// Factory method — returns the right implementation based on context
+public class PaymentGatewayFactory {
+    public static PaymentGateway create(String provider) {
+        return switch (provider.toUpperCase()) {
+            case "STRIPE"   -&gt; new StripeGateway();
+            case "RAZORPAY" -&gt; new RazorpayGateway();
+            case "PAYTM"    -&gt; new PaytmGateway();
+            default -&gt; throw new IllegalArgumentException("Unknown provider: " + provider);
+        };
+    }
+}
+// Callers only know PaymentGateway — completely decoupled from implementations.
+// ── ABSTRACT FACTORY ──
+// Creates families of related objects. Example: payment infra per region.
+public interface PaymentInfraFactory {
+    PaymentGateway   createGateway();
+    FraudDetector    createFraudDetector();
+    NotificationSvc  createNotificationService();
+}
+// Indian market: Razorpay + ML fraud model + SMS notifications
+public class IndiaPaymentFactory implements PaymentInfraFactory {
+    public PaymentGateway  createGateway()             { return new RazorpayGateway(); }
+    public FraudDetector   createFraudDetector()       { return new IndiaFraudDetector(); }
+    public NotificationSvc createNotificationService() { return new SmsNotificationSvc(); }
+}
+// US market: Stripe + rule-based fraud + email notifications
+public class USPaymentFactory implements PaymentInfraFactory {
+    public PaymentGateway  createGateway()             { return new StripeGateway(); }
+    public FraudDetector   createFraudDetector()       { return new RuleBasedFraudDetector(); }
+    public NotificationSvc createNotificationService() { return new EmailNotificationSvc(); }
+}
+// Spring Boot usage: @ConditionalOnProperty or @Profile to select factory
+@Bean
+@ConditionalOnProperty(name="payment.region", havingValue="india")
+public PaymentInfraFactory indiaFactory() { return new IndiaPaymentFactory(); }</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What is the difference between Factory Method and Abstract Factory? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Factory Method is about one product — you define an interface for creating a single type of object and let subclasses or implementations decide the concrete type. Abstract Factory is about families of related products — it groups multiple factory methods together so all created objects are compatible with each other. If you have one thing to create (a payment gateway), use Factory Method. If you need a consistent set of collaborating objects (gateway + fraud detector + notifier all configured for the same region), use Abstract Factory. In Spring, @Bean methods in a @Configuration class are essentially Abstract Factory.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 3 — Builder</h3>
+    <p>Intent:</p>
+    <p>Construct a complex object step by step. The builder pattern shines when an object has many optional parameters, when telescoping constructors become unreadable, or when you need immutable objects with a clean construction API.</p>
+    <pre><code class="language-java">// The problem Builder solves — telescoping constructors are unreadable:
+// new PaymentRequest("ACC-001", "ACC-002", new BigDecimal("500"), "INR", null, null, false, null)
+// You cannot tell which argument is which just by reading the call site.
+// Builder pattern: named, fluent, readable construction
+public class PaymentRequest {
+    private final String        fromAccount;   // required
+    private final String        toAccount;     // required
+    private final BigDecimal    amount;        // required
+    private final String        currency;      // required
+    private final String        description;   // optional
+    private final String        referenceId;   // optional
+    private final boolean       idempotent;    // optional, default false
+    private final Instant       scheduledAt;   // optional
+    private PaymentRequest(Builder b) {
+        this.fromAccount = b.fromAccount;
+        this.toAccount   = b.toAccount;
+        this.amount      = b.amount;
+        this.currency    = b.currency;
+        this.description = b.description;
+        this.referenceId = b.referenceId;
+        this.idempotent  = b.idempotent;
+        this.scheduledAt = b.scheduledAt;
+    }
+    // ─ Inner Builder ─
+    public static class Builder {
+        // Required fields
+        private final String     fromAccount;
+        private final String     toAccount;
+        private final BigDecimal amount;
+        private final String     currency;
+        // Optional fields with defaults
+        private String  description;
+        private String  referenceId;
+        private boolean idempotent = false;
+        private Instant scheduledAt;
+        public Builder(String from, String to, BigDecimal amount, String currency) {
+            this.fromAccount = Objects.requireNonNull(from, "fromAccount required");
+            this.toAccount   = Objects.requireNonNull(to,   "toAccount required");
+            this.amount      = Objects.requireNonNull(amount, "amount required");
+            this.currency    = Objects.requireNonNull(currency, "currency required");
+        }
+        public Builder description(String d)  { this.description = d;  return this; }
+        public Builder referenceId(String r)  { this.referenceId = r;  return this; }
+        public Builder idempotent(boolean i)  { this.idempotent  = i;  return this; }
+        public Builder scheduledAt(Instant t) { this.scheduledAt = t;  return this; }
+        public PaymentRequest build() {
+            // Validate before building — fail fast
+            if (amount.compareTo(BigDecimal.ZERO) &lt;= 0)
+                throw new IllegalStateException("Amount must be positive");
+            return new PaymentRequest(this);
+        }
+    }
+}
+// Clean, readable, self-documenting construction:
+PaymentRequest req = new PaymentRequest.Builder("ACC-001", "ACC-002",
+        new BigDecimal("500.00"), "INR")
+    .description("Rent payment")
+    .referenceId("REF-2024-001")
+    .idempotent(true)
+    .build();
+// Lombok @Builder generates all of this — but interviewers want to see
+// you understand what Lombok is generating under the hood.
+// Spring WebClient — Builder pattern in production
+WebClient client = WebClient.builder()
+    .baseUrl("https://api.payment-gateway.com")
+    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+    .filter(loggingFilter())
+    .build();</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What problem does the Builder pattern solve and when would you use it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">It solves two problems: telescoping constructors (objects with many optional parameters become impossible to read), and inconsistent partially-constructed objects (you want to enforce that an object is only created in a valid state). I use it when a class has more than 3-4 parameters, when some are optional, or when the object should be immutable after creation. In our payment service, PaymentRequest has about 8 fields — without Builder you end up with several overloaded constructors and it becomes unclear at the call site what each argument represents. Lombok's @Builder does this automatically in Spring Boot projects, but I understand what it generates.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 4 — Prototype</h3>
+    <p>Intent:</p>
+    <pre><code class="language-java">// Prototype via Cloneable — avoid this approach.
+// clone() is protected in Object, Cloneable is a marker with no methods,
+// and it does a shallow copy by default — mutable fields are shared.
+// ── PREFERRED: Copy constructor ──
+public class TransactionTemplate {
+    private final String  accountId;
+    private final String  currency;
+    private final String  category;
+    private final Map&lt;String, String&gt; metadata; // mutable — needs deep copy
+    // Copy constructor — explicit, clear, deep copy where needed
+    public TransactionTemplate(TransactionTemplate source) {
+        this.accountId = source.accountId;
+        this.currency  = source.currency;
+        this.category  = source.category;
+        this.metadata  = new HashMap&lt;&gt;(source.metadata); // deep copy of mutable field
+    }
+    public TransactionTemplate withAccount(String newAccountId) {
+        TransactionTemplate copy = new TransactionTemplate(this);
+        // Not quite — field is final. Use Builder with prototype instead:
+        return new TransactionTemplate.Builder(this).accountId(newAccountId).build();
+    }
+}
+// ── PROTOTYPE + BUILDER — most practical combination ──
+// Create a template for recurring salary credits, then copy with minor changes each month.
+PaymentRequest salaryTemplate = new PaymentRequest.Builder("CORP-001", "EMP-101",
+        new BigDecimal("85000.00"), "INR")
+    .description("Monthly salary")
+    .category("SALARY")
+    .build();
+// Next month: same template, just a new reference ID
+PaymentRequest monthlyRun = PaymentRequest.Builder.from(salaryTemplate)
+    .referenceId("SAL-2024-12")
+    .scheduledAt(Instant.parse("2024-12-01T00:00:00Z"))
+    .build();</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is the difference between shallow copy and deep copy in the Prototype pattern? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Shallow copy copies field values — for primitives and immutable types (String, Integer) that is fine. For mutable reference types (List, HashMap), a shallow copy means both the original and the copy point to the same underlying object. Changing the list through the copy changes it for the original too. Deep copy creates new instances of all mutable fields recursively. In Java, Cloneable.clone() does a shallow copy by default, which is why it causes subtle bugs. The copy constructor approach is cleaner because it is explicit about what gets copied deeply.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Structural Patterns</h3>
+    <p>What structural patterns do:</p>
+    <p>They deal with how classes and objects are composed to form larger structures. The key insight is that structural patterns make it easy to add new capabilities to existing code without modifying it — which directly supports the Open/Closed Principle.</p>
+    <h3>Pattern 5 — Adapter</h3>
+    <p>Intent:</p>
+    <p>Convert the interface of a class into the interface a client expects. Makes incompatible interfaces work together. This is one of the most commonly used patterns in real backend code — any time you integrate a third-party library with your domain model.</p>
+    <pre><code class="language-java">// Scenario: your domain uses PaymentGateway interface,
+// but you are integrating a third-party Razorpay SDK that has its own API.
+// Your domain interface
+public interface PaymentGateway {
+    PaymentResult charge(String accountId, BigDecimal amount, String currency);
+    RefundResult  refund(String transactionId, BigDecimal amount);
+}
+// Third-party SDK — you cannot change this
+public class RazorpayClient {
+    public RazorpayOrder createOrder(double amountPaise, String currencyCode) { /* ... */ return null; }
+    public RazorpayPayment capturePayment(String orderId, double amountPaise)  { /* ... */ return null; }
+    public RazorpayRefund  initiateRefund(String paymentId, double amountPaise){ /* ... */ return null; }
+}
+// Adapter: wraps RazorpayClient, exposes PaymentGateway interface
+@Component
+public class RazorpayAdapter implements PaymentGateway {
+    private final RazorpayClient razorpay;
+    public RazorpayAdapter(RazorpayClient razorpay) {
+        this.razorpay = razorpay;
+    }
+    @Override
+    public PaymentResult charge(String accountId, BigDecimal amount, String currency) {
+        // Adapt: BigDecimal INR → double paise (Razorpay uses smallest unit)
+        double amountPaise = amount.multiply(BigDecimal.valueOf(100)).doubleValue();
+        RazorpayOrder   order   = razorpay.createOrder(amountPaise, currency);
+        RazorpayPayment payment = razorpay.capturePayment(order.getId(), amountPaise);
+        return new PaymentResult(payment.getId(), payment.getStatus());
+    }
+    @Override
+    public RefundResult refund(String transactionId, BigDecimal amount) {
+        double amountPaise  = amount.multiply(BigDecimal.valueOf(100)).doubleValue();
+        RazorpayRefund ref  = razorpay.initiateRefund(transactionId, amountPaise);
+        return new RefundResult(ref.getId(), ref.getStatus());
+    }
+}
+// Service uses PaymentGateway — has no idea Razorpay is behind it.
+// Swapping to Stripe: write StripeAdapter, update one @Bean. No service changes.</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> When would you use the Adapter pattern in a real Spring Boot project? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Any time you are wrapping a third-party library that has its own API and you want to keep your domain code clean. In my Deloitte project I used this to wrap AWS SDK calls — the service layer calls a CloudWatchPort interface, and the adapter translates those calls to the AWS SDK. This means if we ever migrate to another cloud, only the adapter changes. The same approach works for payment gateways, SMS providers, and any external dependency. It also makes testing much easier — in tests I can inject a mock implementation of my interface without touching the AWS SDK at all.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 6 — Decorator</h3>
+    <p>Intent:</p>
+    <p>Attach additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending behaviour. Java I/O streams are the classic example — BufferedInputStream decorates FileInputStream without changing it.</p>
+    <pre><code class="language-java">// Core interface
+public interface PaymentService {
+    PaymentResult process(PaymentRequest req);
+}
+// Core implementation
+@Service
+public class BasicPaymentService implements PaymentService {
+    public PaymentResult process(PaymentRequest req) {
+        // actual payment processing
+        return processInternal(req);
+    }
+}
+// Decorator 1: adds logging
+public class LoggingPaymentDecorator implements PaymentService {
+    private final PaymentService delegate;
+    private final Logger log = LoggerFactory.getLogger(getClass());
+    public LoggingPaymentDecorator(PaymentService delegate) {
+        this.delegate = delegate;
+    }
+    @Override
+    public PaymentResult process(PaymentRequest req) {
+        log.info("Processing payment: accountId={} amount={}", req.getAccountId(), req.getAmount());
+        PaymentResult result = delegate.process(req);
+        log.info("Payment complete: transactionId={} status={}", result.getId(), result.getStatus());
+        return result;
+    }
+}
+// Decorator 2: adds metrics
+public class MetricsPaymentDecorator implements PaymentService {
+    private final PaymentService delegate;
+    private final MeterRegistry  meterRegistry;
+    public MetricsPaymentDecorator(PaymentService delegate, MeterRegistry registry) {
+        this.delegate      = delegate;
+        this.meterRegistry = registry;
+    }
+    @Override
+    public PaymentResult process(PaymentRequest req) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            PaymentResult result = delegate.process(req);
+            sample.stop(meterRegistry.timer("payment.process", "status", "success"));
+            return result;
+        } catch (Exception e) {
+            sample.stop(meterRegistry.timer("payment.process", "status", "error"));
+            throw e;
+        }
+    }
+}
+// Decorator 3: adds retry
+// Wrap them together — order matters: logging wraps metrics wraps retry wraps core
+@Bean
+public PaymentService paymentService(BasicPaymentService core, MeterRegistry registry) {
+    return new LoggingPaymentDecorator(
+               new MetricsPaymentDecorator(
+                   new RetryPaymentDecorator(core, 3),
+               registry));
+}
+// In practice, Spring AOP does this declaratively — but the Decorator pattern
+// is what AOP is implementing under the hood.</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> How does the Decorator pattern differ from inheritance? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Inheritance is static — you decide at compile time what behaviour a class has. Decorator is dynamic — you compose behaviour at runtime by wrapping objects. With inheritance, adding three cross-cutting concerns (logging, metrics, retry) to ten service classes means thirty subclasses. With Decorator, you write three decorators and wrap any service. Decorator also follows the Single Responsibility Principle better — each decorator does one thing. Java I/O is the canonical example: BufferedInputStream, GZIPInputStream, and CipherInputStream are all decorators that wrap any InputStream. Spring AOP is Decorator applied automatically via proxies.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 7 — Facade</h3>
+    <p>Intent:</p>
+    <p>Provide a simplified interface to a complex subsystem. The facade does not add new functionality — it makes an existing system easier to use by hiding complexity behind a clean, focused API.</p>
+    <pre><code class="language-java">// Complex subsystem — many independent services
+@Service public class AccountService     { /* validate, debit, credit */ }
+@Service public class FraudService       { /* run fraud checks */ }
+@Service public class NotificationService{ /* send SMS, email, push */ }
+@Service public class AuditService       { /* write audit trail */ }
+@Service public class LedgerService      { /* double-entry bookkeeping */ }
+// Without Facade: every controller and consumer must orchestrate all 5 services.
+// With Facade: one entry point that handles the orchestration.
+@Service
+public class PaymentFacade {
+    private final AccountService      accounts;
+    private final FraudService        fraud;
+    private final NotificationService notifications;
+    private final AuditService        audit;
+    private final LedgerService       ledger;
+    // Constructor injection omitted for brevity
+    public PaymentResult transfer(PaymentRequest req) {
+        // Clients call ONE method — Facade orchestrates everything
+        fraud.check(req);                              // 1. Fraud check
+        accounts.debit(req.getFrom(), req.getAmount()); // 2. Debit source
+        accounts.credit(req.getTo(), req.getAmount());  // 3. Credit dest
+        ledger.record(req);                            // 4. Ledger entry
+        audit.log(req, "TRANSFER_COMPLETE");          // 5. Audit trail
+        notifications.sendConfirmation(req);           // 6. Notify user
+        return PaymentResult.success(generateTxId());
+    }
+}
+// Controller just calls the facade — has no idea about the 5 internal services.
+@RestController
+public class PaymentController {
+    private final PaymentFacade facade;
+    @PostMapping("/transfer")
+    public ResponseEntity&lt;PaymentResult&gt; transfer(@RequestBody PaymentRequest req) {
+        return ResponseEntity.ok(facade.transfer(req));
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is the Facade pattern and how does it help in a microservices architecture? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Facade provides a single simplified entry point to a complex subsystem. In microservices, the API Gateway is a Facade — clients call one service and it routes, aggregates, and transforms responses from multiple downstream services. Within a single service, the service layer is a Facade over the repository, fraud, notification, and audit layers. The benefit is that the controller only knows about the facade — if the internal orchestration changes, only the facade changes. It also makes testing easier: to test the controller you mock the facade, not five separate services.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 8 — Proxy</h3>
+    <p>Intent:</p>
+    <p>Provide a surrogate that controls access to another object. The proxy has the same interface as the real object — the client cannot tell the difference. Common uses: lazy loading, access control, caching, remote access, and logging.</p>
+    <pre><code class="language-java">// ── STATIC PROXY ──
+public interface AccountRepository {
+    Account findById(String accountId);
+    void    save(Account account);
+}
+// Caching proxy — sits in front of the real repository
+public class CachingAccountRepository implements AccountRepository {
+    private final AccountRepository    real;
+    private final Map&lt;String, Account&gt; cache = new ConcurrentHashMap&lt;&gt;();
+    public CachingAccountRepository(AccountRepository real) { this.real = real; }
+    @Override
+    public Account findById(String accountId) {
+        return cache.computeIfAbsent(accountId, real::findById);
+    }
+    @Override
+    public void save(Account account) {
+        real.save(account);
+        cache.put(account.getId(), account); // keep cache consistent
+    }
+}
+// ── DYNAMIC PROXY (java.lang.reflect) ──
+// Creates a proxy at runtime without a pre-written proxy class.
+// This is exactly how Spring AOP and Spring Data JPA work.
+AccountRepository proxy = (AccountRepository) Proxy.newProxyInstance(
+    AccountRepository.class.getClassLoader(),
+    new Class[]{ AccountRepository.class },
+    (proxyObj, method, args) -&gt; {
+        long start = System.currentTimeMillis();
+        Object result = method.invoke(realRepository, args); // delegate to real
+        long elapsed = System.currentTimeMillis() - start;
+        log.info("{}() took {}ms", method.getName(), elapsed);
+        return result;
+    }
+);
+// ── SPRING AOP IS A PROXY ──
+// @Transactional, @Cacheable, @Async, @Retryable all work by wrapping
+// your @Bean in a proxy at application startup.
+// This is why self-invocation (calling @Transactional from within the same class)
+// does not work — you bypass the proxy when calling this.method().
+// ── JPA LAZY LOADING IS A PROXY ──
+// account.getTransactions() returns a Hibernate proxy — the actual SELECT
+// is deferred until you first access the collection.</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is the Proxy pattern and how does Spring use it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A proxy wraps the real object with the same interface and adds behaviour around method calls. Spring uses JDK dynamic proxies or CGLIB byte-code proxies for almost everything AOP-related. When you annotate a @Bean method with @Transactional, Spring replaces the bean with a proxy that opens a transaction before the method and commits/rolls back after. Same for @Cacheable, @Async, and @Retryable. The practical consequence is the self-invocation problem: if you call a @Transactional method from within the same class using this.method(), you bypass the proxy and the transaction annotation has no effect. The fix is to inject the proxy via the application context or restructure the code.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Behavioural Patterns</h3>
+    <p>What behavioural patterns do:</p>
+    <p>They define how objects communicate and share responsibility. The recurring theme is separating what you do from how and when you do it — which directly enables extensibility, testability, and loose coupling.</p>
+    <h3>Pattern 9 — Observer</h3>
+    <p>Intent:</p>
+    <p>Define a one-to-many dependency between objects so that when one object changes state, all dependents are notified and updated automatically. This is the foundation of event-driven architecture.</p>
+    <pre><code class="language-java">// ── PURE JAVA OBSERVER ──
+public interface PaymentEventListener {
+    void onPaymentCompleted(PaymentCompletedEvent event);
+}
+public class PaymentEventPublisher {
+    private final List&lt;PaymentEventListener&gt; listeners = new CopyOnWriteArrayList&lt;&gt;();
+    public void subscribe(PaymentEventListener listener)   { listeners.add(listener); }
+    public void unsubscribe(PaymentEventListener listener) { listeners.remove(listener); }
+    public void publish(PaymentCompletedEvent event) {
+        listeners.forEach(l -&gt; l.onPaymentCompleted(event));
+    }
+}
+// Concrete listeners — each handles its own concern
+@Component
+public class AuditEventListener implements PaymentEventListener {
+    public void onPaymentCompleted(PaymentCompletedEvent e) {
+        auditService.record(e.getTransactionId(), e.getAmount());
+    }
+}
+// ── SPRING ApplicationEvent — Spring's built-in Observer ──
+// 1. Define the event
+public class PaymentCompletedEvent extends ApplicationEvent {
+    private final String transactionId;
+    private final BigDecimal amount;
+    public PaymentCompletedEvent(Object source, String txId, BigDecimal amount) {
+        super(source);
+        this.transactionId = txId;
+        this.amount        = amount;
+    }
+}
+// 2. Publish from service
+@Service
+public class PaymentService {
+    @Autowired private ApplicationEventPublisher publisher;
+    public PaymentResult process(PaymentRequest req) {
+        PaymentResult result = processInternal(req);
+        publisher.publishEvent(new PaymentCompletedEvent(this, result.getId(), req.getAmount()));
+        return result;
+    }
+}
+// 3. Listen with @EventListener
+@Component
+public class NotificationEventHandler {
+    @EventListener
+    public void handle(PaymentCompletedEvent event) {
+        notificationService.sendConfirmation(event.getTransactionId());
+    }
+}
+// @Async on the listener makes it non-blocking — handler runs in a separate thread.
+// @TransactionalEventListener: fires only after the publishing transaction commits.
+// Kafka is Observer at distributed scale — producers publish, consumer groups observe.</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> What is the Observer pattern and how does Spring implement it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Observer defines a one-to-many relationship where a publisher notifies all registered subscribers when something happens. The publisher does not know or care who is listening — it just fires the event. Spring implements this with ApplicationEventPublisher and @EventListener. The practical benefit is decoupling: when a payment completes, the PaymentService does not need to call the NotificationService, AuditService, and LedgerService directly — it just fires an event and each service listens independently. This means you can add a new listener (say, a fraud alert service) without touching the PaymentService. For async listeners I use @Async so the payment service is not blocked waiting for notifications to send.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 10 — Strategy</h3>
+    <p>Intent:</p>
+    <p>Define a family of algorithms, encapsulate each one, and make them interchangeable. Strategy lets the algorithm vary independently from the clients that use it.</p>
+    <pre><code class="language-java">// Strategy interface
+public interface PaymentRoutingStrategy {
+    PaymentGateway selectGateway(PaymentRequest req, List&lt;PaymentGateway&gt; available);
+}
+// Strategy 1: lowest fee routing
+@Component("lowestFeeRouting")
+public class LowestFeeRoutingStrategy implements PaymentRoutingStrategy {
+    @Override
+    public PaymentGateway selectGateway(PaymentRequest req, List&lt;PaymentGateway&gt; available) {
+        return available.stream()
+            .min(Comparator.comparing(g -&gt; g.getFeePercentage(req.getAmount())))
+            .orElseThrow();
+    }
+}
+// Strategy 2: highest reliability routing
+@Component("highReliabilityRouting")
+public class HighReliabilityRoutingStrategy implements PaymentRoutingStrategy {
+    @Override
+    public PaymentGateway selectGateway(PaymentRequest req, List&lt;PaymentGateway&gt; available) {
+        return available.stream()
+            .max(Comparator.comparing(PaymentGateway::getUptimePercentage))
+            .orElseThrow();
+    }
+}
+// Strategy 3: round-robin for load balancing
+@Component("roundRobinRouting")
+public class RoundRobinRoutingStrategy implements PaymentRoutingStrategy {
+    private final AtomicInteger counter = new AtomicInteger(0);
+    @Override
+    public PaymentGateway selectGateway(PaymentRequest req, List&lt;PaymentGateway&gt; available) {
+        int idx = counter.getAndIncrement() % available.size();
+        return available.get(idx);
+    }
+}
+// Context: uses whichever strategy is injected
+@Service
+public class PaymentRouter {
+    private final List&lt;PaymentGateway&gt;    gateways;
+    private final PaymentRoutingStrategy  strategy;
+    // @Qualifier selects which strategy Spring injects
+    public PaymentRouter(List&lt;PaymentGateway&gt; gateways,
+                         @Qualifier("lowestFeeRouting") PaymentRoutingStrategy strategy) {
+        this.gateways = gateways;
+        this.strategy = strategy;
+    }
+    public PaymentResult route(PaymentRequest req) {
+        PaymentGateway gateway = strategy.selectGateway(req, gateways);
+        return gateway.process(req);
+    }
+}
+// In Java 8+, simple strategies are often just lambdas:
+PaymentRoutingStrategy cheapest = (req, gateways) -&gt;
+    gateways.stream().min(Comparator.comparing(g -&gt; g.getFeePercentage(req.getAmount()))).orElseThrow();</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> How does the Strategy pattern relate to the Open/Closed Principle? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Open/Closed says a class should be open for extension but closed for modification. Strategy achieves this: when you need a new payment routing algorithm you add a new strategy class — you do not touch the PaymentRouter. The router is closed for modification. The strategy interface is open for extension. In Spring, this maps naturally to @Component + @Qualifier: each strategy is a separate bean and you inject the right one by qualifier or with @ConditionalOnProperty. Without Strategy, you would have a big if-else block in the router — adding a new routing algorithm means modifying the router and risking breaking existing ones.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 11 — Template Method</h3>
+    <p>Intent:</p>
+    <p>Define the skeleton of an algorithm in a base class and defer some steps to subclasses. Template Method ensures the overall structure is fixed while allowing subclasses to override specific steps without changing the overall flow.</p>
+    <pre><code class="language-java">// The algorithm skeleton is fixed — what varies is the specific steps.
+public abstract class PaymentProcessor {
+    // Template method — defines the invariant flow, marked final
+    public final PaymentResult process(PaymentRequest req) {
+        validate(req);             // step 1: always runs
+        String txId = initiateTransaction(req); // step 2: varies by processor
+        PaymentResult result = executePayment(req, txId); // step 3: varies
+        if (result.isSuccessful()) {
+            postProcess(req, result); // step 4: optional hook
+        }
+        audit(req, result);        // step 5: always runs
+        return result;
+    }
+    // Fixed steps — shared logic
+    private void validate(PaymentRequest req) {
+        if (req.getAmount().compareTo(BigDecimal.ZERO) &lt;= 0)
+            throw new IllegalArgumentException("Amount must be positive");
+    }
+    private void audit(PaymentRequest req, PaymentResult result) {
+        // shared audit logging
+    }
+    // Abstract steps — subclasses must implement
+    protected abstract String        initiateTransaction(PaymentRequest req);
+    protected abstract PaymentResult executePayment(PaymentRequest req, String txId);
+    // Hook — subclasses may optionally override (empty default)
+    protected void postProcess(PaymentRequest req, PaymentResult result) {}
+}
+// Stripe implementation — fills in the gaps
+public class StripePaymentProcessor extends PaymentProcessor {
+    @Override
+    protected String initiateTransaction(PaymentRequest req) {
+        return stripeClient.createPaymentIntent(req.getAmount(), req.getCurrency());
+    }
+    @Override
+    protected PaymentResult executePayment(PaymentRequest req, String txId) {
+        return stripeClient.confirm(txId);
+    }
+}
+// ── SPRING TEMPLATE METHOD IN THE WILD ──
+// JdbcTemplate.query(): fixed skeleton (get connection, prepare statement,
+//   execute, map results, close) — you provide the SQL and RowMapper.
+// AbstractMessageListenerContainer: fixed lifecycle (start, poll, stop) —
+//   you provide handleMessage().
+// Spring Security's AbstractAuthenticationProcessingFilter: fixed auth flow —
+//   you implement attemptAuthentication().</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is the Template Method pattern and where does Spring use it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Template Method defines a fixed algorithm skeleton in a base class and lets subclasses fill in the varying steps. The key is the template method is final — subclasses cannot change the overall flow, only the specific steps. Spring uses this everywhere: JdbcTemplate.query() handles connection management, statement preparation, and resource cleanup — you only provide the SQL and how to map rows. AbstractMessageListenerContainer in Spring Kafka handles the polling loop, error handling, and offset management — you just implement the message handling logic. I used this pattern in my payment processor hierarchy to ensure every payment type goes through the same validation and audit steps, regardless of the underlying gateway.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Pattern 12 — Command</h3>
+    <p>Intent:</p>
+    <p>Encapsulate a request as an object. This lets you queue, log, and undo operations, and makes it easy to implement retry logic, scheduling, and transactional behaviour around any action.</p>
+    <pre><code class="language-java">// Command interface
+public interface PaymentCommand {
+    PaymentResult execute();
+    void          undo();  // optional — for reversible operations
+}
+// Concrete command: encapsulates everything needed to execute a debit
+public class DebitCommand implements PaymentCommand {
+    private final AccountService accountService;
+    private final String         accountId;
+    private final BigDecimal     amount;
+    private       boolean        executed = false;
+    public DebitCommand(AccountService svc, String accountId, BigDecimal amount) {
+        this.accountService = svc;
+        this.accountId      = accountId;
+        this.amount         = amount;
+    }
+    @Override
+    public PaymentResult execute() {
+        accountService.debit(accountId, amount);
+        executed = true;
+        return PaymentResult.success(accountId);
+    }
+    @Override
+    public void undo() {
+        if (executed) accountService.credit(accountId, amount); // reverse the debit
+    }
+}
+// Invoker: runs commands, can queue them, retry them, or roll them back
+public class PaymentCommandInvoker {
+    private final Deque&lt;PaymentCommand&gt; history = new ArrayDeque&lt;&gt;();
+    public PaymentResult execute(PaymentCommand cmd) {
+        PaymentResult result = cmd.execute();
+        history.push(cmd); // remember for potential undo
+        return result;
+    }
+    public void undoLast() {
+        if (!history.isEmpty()) history.pop().undo();
+    }
+}
+// ── COMMAND AS MESSAGE — connecting to Kafka ──
+// In an event-driven system, Kafka messages ARE commands:
+// A ProcessPaymentCommand is serialised to Kafka, consumed by the processor.
+// This gives you: async processing, retry (consumer reprocesses on failure),
+// audit trail (Kafka log IS the command history), and replay.
+public record ProcessPaymentCommand(
+    String commandId,
+    String accountId,
+    BigDecimal amount,
+    String currency,
+    Instant issuedAt
+) {}
+@KafkaListener(topics = "payment.commands")
+public void handle(ProcessPaymentCommand command) {
+    paymentService.process(command); // execute the encapsulated request
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What is the Command pattern and how does it relate to Kafka message processing? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Command encapsulates a request — everything needed to perform an action — as an object. This means you can queue it, log it, retry it, and undo it. The connection to Kafka is direct: a Kafka message is essentially a Command object serialised onto a topic. The producer encapsulates the request as a message, Kafka queues it, and consumers execute it. You get retry for free (consumer re-reads on failure), audit trail for free (the Kafka log is the history of all commands), and replay for free (reset the consumer offset). In my VISA payment system at Infosys, every payment instruction was a message on Kafka — the Command pattern applied at distributed scale.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Patterns Quick Reference</h3>
+    <h3>Pattern</h3>
+    <h3>One-line intent | Key Spring connection | Real example</h3>
+    <h3>Singleton</h3>
+    <p>One instance globally | @Bean default scope | Spring ApplicationContext, DB connection pool</p>
+    <h3>Factory Method</h3>
+    <p>Decouple creation from use | @Bean factory methods, @ConditionalOn... | PaymentGateway by provider string</p>
+    <h3>Abstract Factory</h3>
+    <p>Families of related objects | @Configuration class | RegionPaymentFactory (gateway + fraud + notifier)</p>
+    <h3>Builder</h3>
+    <p>Readable construction of complex objects | WebClient.builder(), UriComponentsBuilder | PaymentRequest.Builder for 8-field DTO</p>
+    <h3>Prototype</h3>
+    <h3>Adapter</h3>
+    <p>Make incompatible interfaces work together | Any @Component wrapping a third-party SDK | RazorpayAdapter implements PaymentGateway</p>
+    <h3>Decorator</h3>
+    <p>Add responsibilities without subclassing | Spring AOP (what @Transactional does) | LoggingDecorator + MetricsDecorator around service</p>
+    <h3>Facade</h3>
+    <p>Simplify a complex subsystem | @Service orchestration layer | PaymentFacade over fraud + ledger + notification</p>
+    <h3>Proxy</h3>
+    <p>Control access to an object | Spring AOP proxies, JPA lazy loading | CachingAccountRepository, @Transactional proxy</p>
+    <h3>Observer</h3>
+    <p>Notify dependents on state change | ApplicationEventPublisher + @EventListener | Fire PaymentCompletedEvent, listeners handle audit/notify</p>
+    <h3>Strategy</h3>
+    <p>Interchangeable algorithms | @Component + @Qualifier | Routing strategies: cheapest / fastest / round-robin</p>
+    <h3>Template Method</h3>
+    <p>Fixed algorithm, variable steps | JdbcTemplate, AbstractKafkaListener | PaymentProcessor: validate → execute → audit</p>
+    <h3>Command</h3>
+    <p>Encapsulate request as object | Kafka messages, Spring @Async | ProcessPaymentCommand on Kafka topic</p>
+    <h3>Coding Lab — 8 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory. For each exercise connect it to the payment system context. After writing the code, write one sentence explaining which SOLID principle this pattern supports and why.</p>
+    <h3>Exercise 1 — Singleton: Thread-safe Config Manager</h3>
+    <p>Task:</p>
+    <p>Write a ConfigManager class that holds payment gateway config (API keys, timeouts, URLs).</p>
+    <p>Implement using the Bill Pugh holder class pattern.</p>
+    <p>Add a reload() method that replaces config atomically — explain what thread-safety issue this introduces.</p>
+    <p>Write the same class as an enum singleton — show the trade-off.</p>
+    <p>Which implementation would you choose in a real Spring Boot app, and why?</p>
+    <h3>Exercise 2 — Factory + Abstract Factory: Multi-gateway Payment System</h3>
+    <p>Task:</p>
+    <p>Write PaymentGateway interface with charge() and refund().</p>
+    <p>Write StripeGateway, RazorpayGateway, and PaytmGateway implementations.</p>
+    <p>Write PaymentGatewayFactory.create(String provider) using switch expression.</p>
+    <p>Extend to Abstract Factory: RegionalPaymentFactory with createGateway() + createFraudDetector() + createNotifier().</p>
+    <p>Write IndiaPaymentFactory and USPaymentFactory implementations.</p>
+    <p>Show how Spring @ConditionalOnProperty selects the factory.</p>
+    <h3>Exercise 3 — Builder: Immutable PaymentRequest</h3>
+    <p>Task:</p>
+    <p>Write PaymentRequest with 8 fields (4 required, 4 optional) using the inner Builder pattern.</p>
+    <p>Required fields validated in the Builder constructor. Optional fields with sensible defaults.</p>
+    <p>Add a validate() method in build() that throws IllegalStateException for invalid combinations.</p>
+    <p>Demonstrate at the call site how readable the construction is vs a telescoping constructor.</p>
+    <h3>Exercise 4 — Adapter: AWS S3 Storage Adapter</h3>
+    <p>Task:</p>
+    <p>Write a FileStorage interface with upload(String key, byte[] data), download(String key), delete(String key).</p>
+    <p>Write S3StorageAdapter implementing FileStorage — wraps a mock AWS S3 client.</p>
+    <p>Adapt the method signatures: S3 uses PutObjectRequest, GetObjectRequest etc.</p>
+    <p>Write LocalStorageAdapter for local dev/testing with same FileStorage interface.</p>
+    <p>Show how a Spring @Configuration selects adapter based on active profile.</p>
+    <h3>Exercise 5 — Decorator: Layered Payment Service</h3>
+    <p>Task:</p>
+    <p>Write PaymentService interface with process(PaymentRequest): PaymentResult.</p>
+    <p>Write CorePaymentService — the base implementation.</p>
+    <p>Write LoggingPaymentDecorator — logs request and result.</p>
+    <p>Write MetricsPaymentDecorator — records timer metric via MeterRegistry.</p>
+    <p>Write RetryPaymentDecorator — retries up to 3 times on gateway timeout.</p>
+    <p>Show the Bean wiring that stacks all three decorators around CorePaymentService.</p>
+    <p>Explain: what is the execution order when process() is called?</p>
+    <h3>Exercise 6 — Observer: Payment Event System</h3>
+    <p>Task:</p>
+    <p>Define PaymentCompletedEvent extending ApplicationEvent with transactionId, amount, accountId.</p>
+    <p>Write PaymentService that publishes the event after successful processing.</p>
+    <p>Write three @EventListener beans: AuditEventHandler, NotificationEventHandler, AnalyticsEventHandler.</p>
+    <p>Make the notification handler @Async — explain why and what the threading implications are.</p>
+    <p>Write a @TransactionalEventListener for the audit handler — explain when it fires vs @EventListener.</p>
+    <p>Test: show how to capture events in a unit test with ApplicationEvents.</p>
+    <h3>Exercise 7 — Strategy: Payment Routing Engine</h3>
+    <p>Task:</p>
+    <p>Write PaymentRoutingStrategy interface with selectGateway(req, available): PaymentGateway.</p>
+    <p>Implement three strategies: LowestFeeStrategy, HighestReliabilityStrategy, RoundRobinStrategy.</p>
+    <p>Write PaymentRouter that is injected with a strategy via constructor + @Qualifier.</p>
+    <p>Add a dynamic version: RoutingStrategyRegistry that maps String names to strategies.</p>
+    <p>Show how to select strategy at runtime based on the payment amount (>10,000 INR: reliability; else: lowest fee).</p>
+    <h3>Exercise 8 — BOSS: Command + Template Method + Facade</h3>
+    <p>Combine three patterns in one design:</p>
+    <p>Design a batch payment processor. Requirements: 1) Each payment is a Command (encapsulates everything to execute and undo it). 2) The overall processing flow uses Template Method — validate, execute, record, notify — with the execute step as abstract. 3) A BatchPaymentFacade exposes a single processBatch(List<PaymentRequest>) method that orchestrates everything. 4) On any failure mid-batch: undo all previously executed commands (rollback). 5) Write the BatchResult showing how many succeeded, failed, and which ones were rolled back. Connect to your Deloitte JP Morgan experience: how would this design handle a batch of 500 salary credits where 3 fail?</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Read the question, pause and say your answer out loud before reading the model answer. The model answers are written in a natural, conversational style — the kind of answer that lands well in a real interview, not a textbook recitation.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What are the three categories of design patterns from the Gang of Four? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Creational, Structural, and Behavioural. Creational patterns deal with how objects are created — Singleton, Factory, Builder, Prototype. Structural patterns deal with how objects are composed — Adapter, Decorator, Facade, Proxy. Behavioural patterns deal with how objects communicate — Observer, Strategy, Template Method, Command. The practical split I think about is: Creational = control what you get, Structural = control how things fit together, Behavioural = control how things talk to each other.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What is the Singleton pattern and how do you implement it correctly in Java? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Singleton guarantees exactly one instance. The naive lazy version has a race condition. I use the Bill Pugh holder class in most cases — the inner static class loads lazily via JVM class loading guarantees, no locks needed, no volatile. For anything that needs serialisation safety I use an enum. In Spring, I rarely write Singleton manually because @Bean is singleton scope by default, but understanding the pattern matters when the interviewer wants to explore thread safety and JVM internals.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> Why is the naive double-checked locking broken without volatile? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Object creation is not atomic. new SomeClass() involves allocate memory, initialise fields, and assign the reference. The CPU can reorder the last two: assign first, initialise later. Without volatile, another thread can see a non-null reference and return a partially-constructed object. volatile adds a memory barrier — the assignment is visible to other threads only after initialisation completes.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What problem does the Builder pattern solve? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Telescoping constructors and partially-constructed objects. When a class has many optional parameters you end up with multiple overloaded constructors, or one giant constructor where you cannot tell what each argument means at the call site. Builder gives every parameter a name and lets you skip optionals. It also ensures the object is validated and complete before build() returns — you cannot get a half-baked PaymentRequest into the system. Lombok's @Builder generates this automatically, but I understand what it produces.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> When would you use Abstract Factory over Factory Method? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When you need a family of related objects that must be compatible with each other. Factory Method creates one type of object. Abstract Factory creates multiple related types together. Example: a payment system for different regions — India needs Razorpay + SMS notifications + India fraud rules, the US needs Stripe + email + US fraud rules. If you mixed them you would get an inconsistent system. Abstract Factory ensures the entire family is internally consistent. In Spring, a @Configuration class is essentially an Abstract Factory.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What is the difference between Adapter and Facade? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Adapter makes an existing interface compatible with what the client expects — it adapts without hiding. The client still uses a rich interface, just one that maps to the underlying library. Facade simplifies — it hides a complex subsystem behind a much simpler interface, usually exposing far fewer methods than the underlying components. Adapter is about compatibility, Facade is about simplicity. In practice: RazorpayAdapter makes the Razorpay SDK look like my PaymentGateway interface (same richness, different shape). PaymentFacade hides five internal services behind one transfer() method (radically simpler).</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> How does the Decorator pattern differ from subclassing? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Subclassing is static — decided at compile time, tightly coupled to the base class. Decorator is dynamic — you wrap objects at runtime and can combine decorators freely. Adding logging, metrics, and retry to ten services via subclassing means thirty subclasses. With Decorator you write three wrappers and compose them. Decorators also follow Single Responsibility better — each one does exactly one thing. Java I/O is the classic example. Spring AOP is Decorator applied automatically via proxies.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q21:</span> What is a Proxy and how does Spring use it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A proxy has the same interface as the real object and adds behaviour around method calls. Spring creates JDK dynamic proxies or CGLIB proxies for @Transactional, @Cacheable, @Async, @Retryable. The practical consequence is the self-invocation trap: calling a @Transactional method from within the same class via this bypasses the proxy, so the transaction does not start. The fix is to either inject the bean into itself via ApplicationContext or restructure the code so the transactional method is on a separate bean. JPA lazy loading is also a proxy — Hibernate creates a subclass proxy that defers the SELECT until you first access the collection.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q22:</span> Explain the Observer pattern and give a Spring Boot example. [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Observer is one-to-many: when something happens, all registered listeners are notified. The publisher does not know who is listening. Spring's ApplicationEventPublisher and @EventListener implement this. The benefit is decoupling — my PaymentService fires a PaymentCompletedEvent and never directly calls NotificationService or AuditService. Each service listens independently. Adding a new listener means a new @EventListener class, no changes to PaymentService. For async I add @Async on the listener. For audit I use @TransactionalEventListener so the audit record only writes if the payment transaction actually commits.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q23:</span> What is the Strategy pattern and how does it relate to Spring @Qualifier? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Strategy defines a family of interchangeable algorithms behind an interface. In Spring, multiple implementations of the same interface are multiple strategies — @Qualifier picks which one to inject. My PaymentRouter accepts a PaymentRoutingStrategy. There are three implementations: lowest fee, highest reliability, round-robin. The router does not care which one it has. I can switch strategies by changing the @Qualifier or making it config-driven. This is the Open/Closed Principle in practice — add a new routing algorithm without touching the router.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q24:</span> What is the Template Method pattern and where does Spring use it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Template Method defines the invariant skeleton of an algorithm in a base class, marked final, and lets subclasses fill in the varying steps. The overall flow is fixed — only the specific steps change. Spring uses this everywhere: JdbcTemplate.query() handles all JDBC boilerplate and asks you for the SQL and RowMapper. Spring Kafka's AbstractMessageListenerContainer handles polling, thread management, and error handling — you provide handleMessage(). I used it in my payment processor hierarchy to ensure every payment goes through the same validation, audit, and error handling regardless of the gateway underneath.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q25:</span> How does the Command pattern relate to event-driven systems and Kafka? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Command encapsulates a request as an object — which makes it serialisable, queueable, and replayable. A Kafka message is a Command object serialised onto a topic. The producer encapsulates the request, Kafka queues it durably, and consumers execute it. You get retry for free (re-read on failure), audit trail for free (the log IS the history), and replay for free (reset consumer offset). In my VISA payment system at Infosys, every payment instruction was a ProcessPaymentCommand on Kafka. The undo operation maps to a compensation message on a separate topic.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q26:</span> What is the Open/Closed Principle and which patterns implement it best? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Open for extension, closed for modification — you should be able to add new behaviour without changing existing code. Strategy implements it most directly: add a new algorithm by adding a new class, never touching the context. Decorator adds new behaviour by wrapping without modifying. Observer adds new listeners without touching the publisher. In my payment service, every time a new post-payment action was needed (say, loyalty points) I added a new @EventListener — never touched the PaymentService. That is Open/Closed in practice.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q27:</span> Can you give an example of a design pattern you used in your Deloitte project? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">In the Bitbucket event processing system I used Adapter to wrap the Bitbucket webhook payload into our internal domain events. The raw JSON from Bitbucket is quite different from what downstream consumers expect — the adapter normalised it. I also used Strategy for the event routing: depending on the event type (push, PR opened, PR merged) a different handler strategy was invoked. For the CloudWatch log lookup feature I used Facade — the service layer exposed a single getLogs(accountId, timeRange) method and internally coordinated CloudWatch Logs, S3 archival, and the response assembly. The controllers never knew about the underlying AWS complexity.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q28:</span> What is the difference between Command and Strategy? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Strategy encapsulates an algorithm — it is about HOW something is done. You swap strategies to change the implementation. Command encapsulates a request — it is about WHAT should be done, along with all the context to do it. Commands are typically one-time, stateful (they carry the data), and can be queued, logged, and undone. Strategies are stateless (usually) and swappable. In a payment system: LowestFeeRoutingStrategy is a Strategy. ProcessPaymentCommand(accountId, amount, currency, timestamp) is a Command. You might use a Strategy to decide HOW to execute a Command.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 12 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you explain all 4 Creational patterns with one real example each?</span></li>
+      <li><span class="checkbox-label">Can you explain all 4 Structural patterns and their Spring connections?</span></li>
+      <li><span class="checkbox-label">Can you explain all 4 Behavioural patterns with a payment system example?</span></li>
+      <li><span class="checkbox-label">The self-invocation proxy trap — can you explain it and give the fix?</span></li>
+      <li><span class="checkbox-label">All 8 coding exercises completed — Boss exercise (3 patterns combined) done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Pattern</h3>
+    <h3>Confidence (1-5) | Real example I can give</h3>
+    <h3>Singleton — 5 implementations</h3>
+    <p>/5 |</p>
+    <h3>Factory Method + Abstract Factory</h3>
+    <p>/5 |</p>
+    <h3>Builder — fluent API, validation</h3>
+    <p>/5 |</p>
+    <h3>Prototype — copy constructor vs Cloneable</h3>
+    <p>/5 |</p>
+    <h3>Adapter — incompatible interface wrapping</h3>
+    <p>/5 |</p>
+    <h3>Decorator — layered behaviour composition</h3>
+    <p>/5 |</p>
+    <h3>Facade — subsystem simplification</h3>
+    <p>/5 |</p>
+    <h3>Proxy — Spring AOP, self-invocation trap</h3>
+    <p>/5 |</p>
+    <h3>Observer — Spring events, @EventListener</h3>
+    <p>/5 |</p>
+    <h3>Strategy — algorithm family, @Qualifier</h3>
+    <p>/5 |</p>
+    <h3>Template Method — JdbcTemplate connection</h3>
+    <p>/5 |</p>
+    <h3>Command — Kafka as Command pattern</h3>
+    <p>/5 |</p>
+    <p>Day 12 complete:</p>
+    <p>Twelve patterns down. What separates good answers from great ones in interviews is connecting each pattern to real code you have written. Go back through the patterns table and for every row write one sentence from your own project experience. That personalisation is what makes interviewers remember you.</p>
+    <h3>Preview: Day 13 — System Design Fundamentals</h3>
+    <p>Horizontal vs vertical scaling, CAP theorem, database sharding, caching strategies (write-through, write-behind, cache-aside), load balancing, rate limiting, consistent hashing, and designing for 100k+ RPS. System design rounds are increasingly common even for mid-level backend roles.</p>
+    <p>Day 12 of 60 · Design Patterns · Prepared for Md Zuber</p>
+    <p>"A pattern is only useful when you can say: I used this because it solved a specific problem I had."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

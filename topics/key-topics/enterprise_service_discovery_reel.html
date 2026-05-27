@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Discovery - Enterprise Architecture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;500&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #020617; /* Very dark blue */
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 9:16 Aspect Ratio Container for Mobile Reels */
+        #reel-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            max-height: 880px;
+            background: #0b1120;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            border: 1px solid #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Tech Grid Background */
+            background-image: 
+                linear-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: center center;
+        }
+
+        /* Header */
+        .header {
+            padding: 25px 20px 5px;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(to right, #2dd4bf, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 11px;
+            font-family: 'Fira Code', monospace;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Visualization Area */
+        .canvas {
+            flex: 1;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Nodes */
+        .node {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            z-index: 20;
+        }
+
+        .node-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #334155;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+            transition: all 0.3s ease;
+            position: relative;
+            backdrop-filter: blur(4px);
+        }
+
+        .node-label {
+            margin-top: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            color: #cbd5e1;
+            text-align: center;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: rgba(2, 6, 23, 0.85);
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid #1e293b;
+        }
+        
+        .node-ip {
+            font-family: 'Fira Code', monospace;
+            font-size: 8px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* Node Positioning */
+        #node-gateway { top: 12%; left: 50%; }
+        
+        /* Central Registry */
+        #node-registry { top: 38%; left: 50%; }
+        
+        /* Microservice Instances (Payment Service) */
+        #node-inst1 { top: 68%; left: 20%; }
+        #node-inst2 { top: 68%; left: 50%; }
+        #node-inst3 { top: 68%; left: 80%; }
+
+        /* Customizing Registry */
+        #node-registry .node-icon {
+            width: 64px; height: 64px;
+            border-radius: 16px;
+            background: rgba(2, 6, 23, 1);
+            border: 2px solid #2dd4bf;
+            box-shadow: 0 0 20px rgba(45, 212, 191, 0.2);
+        }
+
+        /* Database Simulation */
+        .registry-db {
+            position: absolute;
+            top: -15px; right: -15px;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            padding: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 8px;
+            color: #2dd4bf;
+            display: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            width: 100px;
+            text-align: left;
+        }
+
+        /* Active states & Colors */
+        .node.active .node-icon { transform: scale(1.15); }
+        .node.processing .node-icon { animation: pulse 1s infinite; }
+        .node.dead .node-icon { 
+            border-color: #ef4444; 
+            background: rgba(239, 68, 68, 0.1);
+            opacity: 0.5;
+        }
+        .node.dead .node-label { color: #ef4444; text-decoration: line-through; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(var(--rgb), 0); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0); }
+        }
+
+        .theme-gateway { --rgb: 56, 189, 248; }
+        .theme-registry { --rgb: 45, 212, 191; }
+        .theme-instance { --rgb: 52, 211, 153; }
+        .theme-dead { --rgb: 239, 68, 68; }
+
+        .active-gateway .node-icon { border-color: #38bdf8; box-shadow: 0 0 25px rgba(56, 189, 248, 0.6); }
+        .active-registry .node-icon { border-color: #2dd4bf; box-shadow: 0 0 30px rgba(45, 212, 191, 0.7); }
+        .active-instance .node-icon { border-color: #34d399; box-shadow: 0 0 20px rgba(52, 211, 153, 0.6); }
+
+        /* Data Packets */
+        .packet {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        .packet-register { background-color: #34d399; box-shadow: 0 0 15px 5px rgba(52, 211, 153, 0.6); }
+        .packet-heartbeat { background-color: #facc15; box-shadow: 0 0 12px 4px rgba(250, 204, 21, 0.6); width: 8px; height: 8px; }
+        .packet-query { background-color: #38bdf8; box-shadow: 0 0 15px 5px rgba(56, 189, 248, 0.6); }
+        .packet-response { background-color: #2dd4bf; box-shadow: 0 0 15px 5px rgba(45, 212, 191, 0.6); }
+        .packet-traffic { background-color: #c084fc; box-shadow: 0 0 15px 5px rgba(192, 132, 252, 0.6); width: 14px; height: 14px; }
+
+        /* Connections */
+        svg.connections {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        path.line {
+            fill: none;
+            stroke: #1e293b;
+            stroke-width: 2;
+            stroke-dasharray: 4 4;
+            transition: stroke 0.3s ease;
+        }
+
+        path.line.active {
+            stroke: #475569;
+            stroke-dasharray: none;
+            animation: dash 0.8s linear infinite;
+        }
+        
+        path.line.danger { stroke: #7f1d1d; }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -20; }
+        }
+
+        /* Explainer Panel at Bottom */
+        .explainer-panel {
+            background: linear-gradient(to top, rgba(2, 6, 23, 1) 75%, rgba(2, 6, 23, 0.95) 90%, transparent);
+            padding: 30px 24px 30px;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            z-index: 30;
+            min-height: 290px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            backdrop-filter: blur(4px);
+            border-top: 1px solid rgba(30, 41, 59, 0.5);
+        }
+
+        .step-badge {
+            display: inline-block;
+            background: rgba(15, 23, 42, 0.8);
+            color: #2dd4bf;
+            font-family: 'Fira Code', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #334155;
+            align-self: flex-start;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .explainer-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .explainer-text {
+            font-size: 13px;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            min-height: 80px;
+        }
+        
+        .explainer-text code {
+            background: #1e293b;
+            color: #2dd4bf;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            border: 1px solid #334155;
+        }
+        
+        .explainer-text span.highlight {
+            color: #facc15;
+            font-weight: 600;
+        }
+        
+        .explainer-text span.danger {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+            color: white;
+            border: 1px solid #5eead4;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(20, 184, 166, 0.4);
+            transition: all 0.2s;
+            width: 100%;
+            font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-next:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 10px rgba(20, 184, 166, 0.4);
+        }
+        
+        .btn-next:disabled {
+            background: #1e293b;
+            border-color: #334155;
+            color: #64748b;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="reel-container">
+        <!-- Header -->
+        <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+            <h1>Service Discovery</h1>
+            <p>HashiCorp Consul / Netflix Eureka</p>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas" id="canvas">
+            <!-- Connections -->
+            <svg class="connections" id="svg-lines">
+                <!-- Gateway to Registry -->
+                <path id="line-gw-reg" class="line" d=""></path>
+                <!-- Gateway direct to Instances (drawn later) -->
+                <path id="line-gw-inst1" class="line" style="stroke-dasharray: 2 6;" d=""></path>
+                <path id="line-gw-inst2" class="line" style="stroke-dasharray: 2 6;" d=""></path>
+                <!-- Registry to Instances -->
+                <path id="line-reg-inst1" class="line" d=""></path>
+                <path id="line-reg-inst2" class="line" d=""></path>
+                <path id="line-reg-inst3" class="line" d=""></path>
+            </svg>
+
+            <!-- Nodes -->
+            <div class="node theme-gateway" id="node-gateway">
+                <div class="node-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg></div>
+                <div class="node-label">API Gateway</div>
+            </div>
+
+            <div class="node theme-registry" id="node-registry">
+                <div class="node-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                </div>
+                <div class="node-label" style="color:#2dd4bf;">Registry</div>
+                <div class="node-ip">Consul/Eureka</div>
+                
+                <!-- Internal DB visual -->
+                <div class="registry-db" id="reg-db">
+                    <div style="color:#94a3b8; border-bottom:1px solid #475569; padding-bottom:2px; margin-bottom:2px;">[PAYMENTS]</div>
+                    <div id="db-1" style="opacity:0;">• 10.0.1.41:80</div>
+                    <div id="db-2" style="opacity:0;">• 10.0.1.42:80</div>
+                    <div id="db-3" style="opacity:0;">• 10.0.1.43:80</div>
+                </div>
+            </div>
+
+            <!-- Microservice Pods -->
+            <div class="node theme-instance" id="node-inst1">
+                <div class="node-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+                <div class="node-label">Pod-A</div>
+                <div class="node-ip">10.0.1.41</div>
+            </div>
+
+            <div class="node theme-instance" id="node-inst2">
+                <div class="node-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+                <div class="node-label">Pod-B</div>
+                <div class="node-ip">10.0.1.42</div>
+            </div>
+
+            <div class="node theme-instance" id="node-inst3">
+                <div class="node-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></div>
+                <div class="node-label">Pod-C</div>
+                <div class="node-ip">10.0.1.43</div>
+            </div>
+            
+            <!-- Animated Packets Container -->
+            <div id="packet-container"></div>
+        </div>
+
+        <!-- Text Overlay / Explainer -->
+        <div class="explainer-panel">
+            <div id="step-badge" class="step-badge">[ARCH_PATTERN]</div>
+            <h2 id="explainer-title" class="explainer-title">The "Hardcoded IP" Problem</h2>
+            <p id="explainer-text" class="explainer-text">"In Kubernetes or AWS, microservices restart and IPs change constantly. An API Gateway cannot hardcode IPs like <code>10.0.1.41</code>. It needs a dynamic directory. Let's trace how Service Discovery solves this."</p>
+            
+            <button id="btn-next" class="btn-next" onclick="nextStep()">Start Demo</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const badge = document.getElementById('step-badge');
+        const title = document.getElementById('explainer-title');
+        const text = document.getElementById('explainer-text');
+        const btnNext = document.getElementById('btn-next');
+        const packetContainer = document.getElementById('packet-container');
+        let currentStep = 0;
+        let isAnimating = false;
+        let heartbeatInterval = null;
+
+        // Draw Lines setup
+        function getPx(id) {
+            const el = document.getElementById(id);
+            return { x: el.offsetLeft, y: el.offsetTop };
+        }
+
+        function drawLine(pathId, startId, endId) {
+            const start = getPx(startId);
+            const end = getPx(endId);
+            document.getElementById(pathId).setAttribute('d', `M${start.x},${start.y} L${end.x},${end.y}`);
+        }
+
+        function updateLines() {
+            drawLine('line-gw-reg', 'node-gateway', 'node-registry');
+            drawLine('line-reg-inst1', 'node-inst1', 'node-registry');
+            drawLine('line-reg-inst2', 'node-inst2', 'node-registry');
+            drawLine('line-reg-inst3', 'node-inst3', 'node-registry');
+            drawLine('line-gw-inst1', 'node-gateway', 'node-inst1');
+            drawLine('line-gw-inst2', 'node-gateway', 'node-inst2');
+        }
+
+        window.addEventListener('load', updateLines);
+        window.addEventListener('resize', updateLines);
+
+        // Animation Helpers
+        function clearNodes() {
+            document.querySelectorAll('.node').forEach(n => {
+                if(!n.classList.contains('dead')) {
+                    n.classList.remove('active', 'processing');
+                }
+            });
+            document.querySelectorAll('.line').forEach(l => l.classList.remove('active'));
+        }
+
+        function setActive(nodeId, themeClass, processing = false) {
+            const node = document.getElementById(nodeId);
+            node.classList.add('active', themeClass);
+            if(processing) node.classList.add('processing');
+        }
+
+        function setLineActive(lineId) {
+            document.getElementById(lineId).classList.add('active');
+        }
+
+        // Spawn a packet dynamically for parallel animations
+        function spawnPacket(startNode, endNode, packetClass, duration = 600) {
+            return new Promise(resolve => {
+                const pkt = document.createElement('div');
+                pkt.className = `packet ${packetClass}`;
+                packetContainer.appendChild(pkt);
+
+                const startId = document.getElementById(startNode);
+                const endId = document.getElementById(endNode);
+                
+                const startTop = startId.style.top || window.getComputedStyle(startId).top;
+                const startLeft = startId.style.left || window.getComputedStyle(startId).left;
+                const endTop = endId.style.top || window.getComputedStyle(endId).top;
+                const endLeft = endId.style.left || window.getComputedStyle(endId).left;
+
+                pkt.style.top = startTop;
+                pkt.style.left = startLeft;
+                pkt.style.opacity = '1';
+
+                void pkt.offsetWidth; // reflow
+
+                pkt.style.transition = `top ${duration}ms ease-in-out, left ${duration}ms ease-in-out`;
+                pkt.style.top = endTop;
+                pkt.style.left = endLeft;
+
+                setTimeout(() => {
+                    pkt.remove();
+                    resolve();
+                }, duration);
+            });
+        }
+
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        // JPMC Architect Detailed Flow for Service Discovery
+        const steps = [
+            {
+                badge: "Step 1: Self-Registration",
+                title: "Service Registration",
+                text: "When Spring Boot instances boot up, the Eureka Client inside them automatically sends a <code>POST /eureka/apps/PAYMENTS</code> request. They register their dynamic, ephemeral IP addresses.",
+                btn: "Next: Populate Registry",
+                action: async () => {
+                    document.getElementById('reg-db').style.display = 'block';
+                    
+                    // Activate instances
+                    setActive('node-inst1', 'active-instance');
+                    setActive('node-inst2', 'active-instance');
+                    setActive('node-inst3', 'active-instance');
+                    setLineActive('line-reg-inst1');
+                    setLineActive('line-reg-inst2');
+                    setLineActive('line-reg-inst3');
+
+                    await sleep(300);
+
+                    // Send register packets simultaneously
+                    Promise.all([
+                        spawnPacket('node-inst1', 'node-registry', 'packet-register', 600),
+                        spawnPacket('node-inst2', 'node-registry', 'packet-register', 600),
+                        spawnPacket('node-inst3', 'node-registry', 'packet-register', 600)
+                    ]).then(async () => {
+                        setActive('node-registry', 'active-registry', true);
+                        
+                        // Populate DB visually
+                        document.getElementById('db-1').style.opacity = '1';
+                        await sleep(200);
+                        document.getElementById('db-2').style.opacity = '1';
+                        await sleep(200);
+                        document.getElementById('db-3').style.opacity = '1';
+                    });
+                    
+                    await sleep(1000);
+                }
+            },
+            {
+                badge: "Step 2: TTL / Liveness",
+                title: "The Heartbeat Pattern",
+                text: "IPs are useless if the service crashes. To maintain the registry, each healthy node must send a <span class='highlight'>Heartbeat (TTL)</span> every 30 seconds to say 'I am still alive'.",
+                btn: "Next: Simulate Node Crash",
+                action: async () => {
+                    // Start a recurring heartbeat animation
+                    heartbeatInterval = setInterval(() => {
+                        if(!document.getElementById('node-inst1').classList.contains('dead')) {
+                            spawnPacket('node-inst1', 'node-registry', 'packet-heartbeat', 500);
+                        }
+                        if(!document.getElementById('node-inst2').classList.contains('dead')) {
+                            spawnPacket('node-inst2', 'node-registry', 'packet-heartbeat', 500);
+                        }
+                        if(!document.getElementById('node-inst3').classList.contains('dead')) {
+                            spawnPacket('node-inst3', 'node-registry', 'packet-heartbeat', 500);
+                        }
+                    }, 1200);
+
+                    setActive('node-registry', 'active-registry', false);
+                }
+            },
+            {
+                badge: "Step 3: Eviction",
+                title: "Node Failure & Deregistration",
+                text: "Pod-C suddenly runs Out-Of-Memory and crashes. It stops sending heartbeats. After 90 seconds (3 missed heartbeats), the Registry <span class='danger'>evicts</span> Pod-C from the routing table.",
+                btn: "Next: The Discovery Call",
+                action: async () => {
+                    // Kill node 3
+                    const node3 = document.getElementById('node-inst3');
+                    node3.classList.add('dead');
+                    document.getElementById('line-reg-inst3').classList.add('danger');
+                    
+                    await sleep(1500); // let heartbeats happen for 1, 2
+                    
+                    // Cross out in DB
+                    setActive('node-registry', 'active-registry', true);
+                    document.getElementById('db-3').style.textDecoration = 'line-through';
+                    document.getElementById('db-3').style.color = '#ef4444';
+                    
+                    await sleep(800);
+                }
+            },
+            {
+                badge: "Step 4: Client Query",
+                title: "Gateway Discovery Call",
+                text: "A user makes a payment. The API Gateway doesn't know any IPs. It queries the Registry: <code>GET /eureka/apps/PAYMENTS</code>. The Registry returns the list of <span class='highlight'>only healthy IPs</span>.",
+                btn: "Next: Client-side LB",
+                action: async () => {
+                    clearInterval(heartbeatInterval); // stop background heartbeats
+                    clearNodes();
+                    
+                    // Keep node 3 dead
+                    document.getElementById('node-inst3').classList.add('dead');
+
+                    setActive('node-gateway', 'active-gateway');
+                    setLineActive('line-gw-reg');
+                    
+                    // Gateway queries registry
+                    await spawnPacket('node-gateway', 'node-registry', 'packet-query', 500);
+                    setActive('node-registry', 'active-registry', true);
+                    
+                    await sleep(400);
+                    
+                    // Registry responds with DB 1 and 2
+                    await spawnPacket('node-registry', 'node-gateway', 'packet-response', 500);
+                    setActive('node-gateway', 'active-gateway', true);
+                    
+                    // Visually highlight the DB to show what was sent
+                    document.getElementById('db-1').style.color = '#38bdf8';
+                    document.getElementById('db-2').style.color = '#38bdf8';
+                }
+            },
+            {
+                badge: "Step 5: Execution",
+                title: "Client-Side Load Balancing",
+                text: "The Gateway now has <code>[10.0.1.41, 10.0.1.42]</code> cached locally. Using Spring Cloud LoadBalancer (formerly Ribbon), it picks one via Round-Robin and routes the traffic directly to the Pod.",
+                btn: "Reset Architecture",
+                action: async () => {
+                    clearNodes();
+                    document.getElementById('node-inst3').classList.add('dead');
+                    
+                    setActive('node-gateway', 'active-gateway');
+                    
+                    await sleep(300);
+                    
+                    // Pick Node 2
+                    setLineActive('line-gw-inst2');
+                    await spawnPacket('node-gateway', 'node-inst2', 'packet-traffic', 600);
+                    setActive('node-inst2', 'active-instance', true);
+                    
+                    await sleep(1000);
+                }
+            }
+        ];
+
+        async function nextStep() {
+            if (isAnimating) return;
+            
+            if (currentStep >= steps.length) {
+                // Hard Reset
+                currentStep = 0; 
+                clearInterval(heartbeatInterval);
+                clearNodes();
+                document.getElementById('node-inst3').classList.remove('dead');
+                document.getElementById('line-reg-inst3').classList.remove('danger');
+                document.getElementById('reg-db').style.display = 'none';
+                document.getElementById('db-1').style.opacity = '0';
+                document.getElementById('db-2').style.opacity = '0';
+                document.getElementById('db-3').style.opacity = '0';
+                document.getElementById('db-1').style.color = '#2dd4bf';
+                document.getElementById('db-2').style.color = '#2dd4bf';
+                document.getElementById('db-3').style.color = '#2dd4bf';
+                document.getElementById('db-3').style.textDecoration = 'none';
+                
+                badge.innerText = "[ARCH_PATTERN]";
+                title.innerText = "The 'Hardcoded IP' Problem";
+                text.innerHTML = "\"In Kubernetes or AWS, microservices restart and IPs change constantly. An API Gateway cannot hardcode IPs like <code>10.0.1.41</code>. It needs a dynamic directory. Let's trace how Service Discovery solves this.\"";
+                btnNext.innerText = "Initialize Demo";
+                return;
+            }
+
+            isAnimating = true;
+            btnNext.disabled = true;
+            clearNodes();
+
+            const stepData = steps[currentStep];
+            
+            badge.innerText = stepData.badge;
+            title.innerText = stepData.title;
+            text.innerHTML = stepData.text;
+            btnNext.innerText = stepData.btn;
+
+            await stepData.action();
+            
+            currentStep++;
+            isAnimating = false;
+            btnNext.disabled = false;
+        }
+    </script>
+</body>
+</html>

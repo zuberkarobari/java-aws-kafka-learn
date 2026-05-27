@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 43  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 43  ·  STUDY CHECKLIST — Microservices Observability — OpenTelemetry, Distributed Tracing and Production Debugging</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 43 Checklist</div>
+    <h1 style="margin-top: 0;">Microservices Observability — OpenTelemetry, Distributed Tracing and Production Debugging</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 43 · STUDY CHECKLIST</h3>
+    <h3>Microservices Observability — OpenTelemetry, Distributed Tracing and Production Debugging</h3>
+    <h3>Observability Pillars</h3>
+    <p>Logs, metrics, traces — how they differ and fit together</p>
+    <h3>OpenTelemetry</h3>
+    <p>SDK, auto-instrumentation, custom spans, OTLP export</p>
+    <h3>Tracing in Practice</h3>
+    <p>Context propagation, Kafka headers, sampling strategy</p>
+    <h3>Production Debugging</h3>
+    <p>Using traces and logs together to find the actual problem</p>
+    <p>Note:</p>
+    <p>Observability questions at senior level are not about knowing what a span is. They are about knowing how to use observability to find a problem that took down production at 2am, and how to build systems so that the next incident is diagnosable in minutes instead of hours. Connect every answer to a real debugging scenario.</p>
+    <h3>Day 43 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">The three pillars: logs, metrics, traces — what each tells you that the others cannot</span></li>
+      <li><span class="checkbox-label">OpenTelemetry: SDK vs auto-instrumentation, what gets instrumented automatically</span></li>
+      <li><span class="checkbox-label">Trace anatomy: traceId, spanId, parent span, span attributes, span events, span status</span></li>
+      <li><span class="checkbox-label">W3C traceparent header: format, how it propagates across HTTP calls</span></li>
+      <li><span class="checkbox-label">Kafka trace propagation: injecting and extracting trace context in message headers</span></li>
+      <li><span class="checkbox-label">Custom spans: when to add them, what attributes to include</span></li>
+      <li><span class="checkbox-label">Sampling: head-based vs tail-based, when 100% sampling is a problem</span></li>
+      <li><span class="checkbox-label">OTLP export: what the OpenTelemetry Collector does, why it sits between SDK and backend</span></li>
+      <li><span class="checkbox-label">Structured logging: correlating logs to traces with traceId in MDC</span></li>
+      <li><span class="checkbox-label">Micrometer + OpenTelemetry: how they complement each other</span></li>
+      <li><span class="checkbox-label">Production debugging workflow: incident → traces → logs → fix</span></li>
+      <li><span class="checkbox-label">Baggage: propagating business context across service boundaries</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — The Three Pillars of Observability</h2>
+    <h3>What Each Pillar Tells You</h3>
+    <p>Why you need all three:</p>
+    <p>Each pillar answers a different question. Metrics tell you something is wrong — p99 latency is up, error rate spiked. Traces tell you where the problem is — which service, which operation, which database call is slow. Logs tell you why — the exact error message, the stack trace, the specific input that caused the failure. You need all three to go from alert to root cause.</p>
+    <h3>Pillar</h3>
+    <h3>What it tells you | What it cannot tell you | Cardinality</h3>
+    <h3>Metrics</h3>
+    <p>Whether the system is healthy — latency, error rate, throughput, saturation | Which specific request was slow or why | Low — aggregated numbers, not per-request data</p>
+    <h3>Traces</h3>
+    <p>The journey of a specific request across services — where time was spent, which calls failed | Why a service returned an error (need logs for that) | High — one trace per request</p>
+    <h3>Logs</h3>
+    <p>The detail of what happened at a specific point — error messages, stack traces, business events | How one log line relates to another across services without correlation | Very high — many lines per request</p>
+    <p>The correlation that makes them powerful:</p>
+    <p>A metric alarm fires: p99 payment processing latency exceeded 2 seconds. You open the tracing tool, filter for payment service spans over 2 seconds in the last 5 minutes, and find a slow database call. You click on that span, copy the traceId, and query your log search for all log lines with that traceId. The logs show a query that is doing a sequential scan on a missing index. Three tools, one answer. Without the correlation, you would spend hours guessing.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is the difference between metrics, traces, and logs and how do they work together? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">They answer different questions and you need all three. Metrics are aggregated numbers — average latency, error count per minute, request throughput. They are cheap to store and easy to alert on, but they lose per-request detail. A metric spike tells you something is wrong but not which specific requests are affected or why. Traces follow a single request end-to-end across every service it touches, showing you exactly where time was spent and which calls failed. But a trace does not contain the error message or the input that caused the failure. Logs contain the detail — error messages, stack traces, the exact SQL query. But individual log lines are disconnected without a correlation ID. The combination is: a metrics alert fires, I find slow traces during that window, I extract the traceId from a slow trace, I query logs filtered by that traceId, and the logs tell me the exact error. In the Deloitte CloudWatch work, we used this exact workflow — metric alarm to detect the problem, X-Ray traces to isolate which service and operation was slow, and CloudWatch Logs Insights with the traceId filter to find the specific error.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — OpenTelemetry</h2>
+    <h3>What OpenTelemetry Is and How It Fits Together</h3>
+    <p>The vendor-neutrality problem it solves:</p>
+    <p>Before OpenTelemetry, every observability vendor had its own SDK — Jaeger had one, Zipkin had one, Datadog had its own. If you instrumented with Jaeger's SDK and later switched to Datadog, you rewrote all your instrumentation code. OpenTelemetry is a single open-standard SDK. You instrument once. You choose the backend by configuring the exporter. Switching from Jaeger to Tempo to Datadog is a config change, not a code change.</p>
+    <h3>Component</h3>
+    <h3>What it does | Runs where</h3>
+    <h3>OpenTelemetry API</h3>
+    <p>Interfaces for creating spans, setting attributes, propagating context | In your application code</p>
+    <h3>OpenTelemetry SDK</h3>
+    <p>Implements the API — manages span lifecycle, batching, sampling | In your application process</p>
+    <h3>Auto-instrumentation</h3>
+    <h3>OTLP (OpenTelemetry Protocol)</h3>
+    <p>Standard wire protocol for sending telemetry data | Between SDK/agent and Collector</p>
+    <h3>OpenTelemetry Collector</h3>
+    <p>Receives, processes, and exports telemetry — batching, filtering, routing | As a sidecar or standalone deployment</p>
+    <h3>Backend</h3>
+    <p>Stores and visualises traces — Jaeger, Tempo, Zipkin, Datadog, X-Ray | Separate infrastructure</p>
+    <p>Auto-Instrumentation — What You Get for Free</p>
+    <pre><code class="language-java"># Add the OpenTelemetry Java agent to your JVM startup
+# This single line instruments Spring MVC, JDBC, Kafka, Redis,
+# RestTemplate, WebClient, and many more — no code changes needed
+# In your Kubernetes Deployment:
+env:
+  - name: JAVA_TOOL_OPTIONS
+    value: &gt;-
+      -javaagent:/otel/opentelemetry-javaagent.jar
+      -Dotel.service.name=payment-service
+      -Dotel.exporter.otlp.endpoint=http://otel-collector:4317
+      -Dotel.traces.exporter=otlp
+      -Dotel.metrics.exporter=otlp
+      -Dotel.logs.exporter=otlp
+      -Dotel.resource.attributes=environment=prod,team=payments
+# What gets auto-instrumented:
+# HTTP inbound:  every @GetMapping, @PostMapping — creates root span
+# HTTP outbound: RestTemplate, WebClient, Feign — creates child spans
+# JDBC:          every SQL query — creates child span with db.statement
+# Kafka produce: KafkaTemplate.send() — injects trace headers into message
+# Kafka consume: @KafkaListener — extracts trace headers, creates child span
+# Redis:         Lettuce, Jedis calls — creates child spans
+# Spring Scheduler: @Scheduled methods — creates root span per execution
+# application.yml — Spring Boot 3 with Micrometer Tracing
+management:
+  tracing:
+    sampling:
+      probability: 0.1   # trace 10% of requests — adjust per environment
+  otlp:
+    tracing:
+      endpoint: http://otel-collector:4317</code></pre>
+    <h3>Adding Custom Spans</h3>
+    <p>When to add custom spans:</p>
+    <p>Auto-instrumentation covers framework-level operations. It does not know about your business logic. Add custom spans when: an operation takes significant time but is not a framework call (a complex calculation, a third-party SDK call, a file I/O operation), or when you want to capture business attributes on a span (the payment amount, the account ID, the fraud score) to make traces searchable by business context.</p>
+    <pre><code class="language-java">// Adding custom spans with the OpenTelemetry API
+@Service
+public class PaymentService {
+    private final Tracer tracer;
+    private final FraudService fraudService;
+    private final PaymentGatewayClient gatewayClient;
+    public PaymentResult process(PaymentRequest request) {
+        // Create a child span for fraud checking
+        Span fraudSpan = tracer.spanBuilder("fraud.check")
+            .setAttribute("payment.id",      request.getId())
+            .setAttribute("payment.amount",  request.getAmount().toString())
+            .setAttribute("account.id",      request.getAccountId())
+            .startSpan();
+        FraudResult fraud;
+        try (Scope scope = fraudSpan.makeCurrent()) {
+            fraud = fraudService.check(request);
+            fraudSpan.setAttribute("fraud.score",  fraud.getScore());
+            fraudSpan.setAttribute("fraud.verdict",fraud.getVerdict().name());
+        } catch (Exception e) {
+            fraudSpan.recordException(e);
+            fraudSpan.setStatus(StatusCode.ERROR, e.getMessage());
+            throw e;
+        } finally {
+            fraudSpan.end();
+        }
+        if (fraud.isBlocked()) {
+            throw new FraudBlockedException(request.getId());
+        }
+        // Create a child span for the gateway call
+        Span gatewaySpan = tracer.spanBuilder("payment.gateway.submit")
+            .setAttribute("gateway.name",    "stripe")
+            .setAttribute("payment.amount",  request.getAmount().toString())
+            .startSpan();
+        try (Scope scope = gatewaySpan.makeCurrent()) {
+            GatewayResponse response = gatewayClient.submit(request);
+            gatewaySpan.setAttribute("gateway.transaction.id", response.getTransactionId());
+            return PaymentResult.success(response);
+        } catch (GatewayException e) {
+            gatewaySpan.recordException(e);
+            gatewaySpan.setStatus(StatusCode.ERROR, e.getMessage());
+            throw e;
+        } finally {
+            gatewaySpan.end();
+        }
+    }
+}
+// Simpler approach with @WithSpan annotation (Spring Boot 3 / Micrometer)
+@WithSpan("fraud.check")
+public FraudResult checkFraud(@SpanAttribute("account.id") String accountId,
+                               @SpanAttribute("amount")     BigDecimal amount) {
+    // The span is created and ended automatically around this method
+    return fraudClient.check(accountId, amount);
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What does the OpenTelemetry Java agent do and what do you still need to do manually? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The Java agent attaches to the JVM at startup and instruments your frameworks without any code changes. Spring MVC, JDBC, RestTemplate, WebClient, Kafka, Redis, and others all get spans automatically. Every HTTP request creates a root span, every SQL query creates a child span with the query text, every Kafka produce and consume creates spans with the topic and partition. You get a complete picture of framework-level operations for free. What you still add manually: spans for significant business logic that is not a framework call — a fraud check that calls a third-party SDK, a complex calculation that takes time, or any operation where you want to capture business attributes like the payment amount, customer ID, or fraud score. These attributes make your traces searchable by business context. Without them, you can find slow spans but you cannot ask which account's payment was slow. The attributes on spans are what turn a tracing tool from a latency graph into an investigation tool.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Context Propagation</h2>
+    <h3>How a Trace Crosses Service Boundaries</h3>
+    <p>The core mechanic:</p>
+    <p>A trace is only meaningful if all the spans from all the services involved in one request carry the same traceId. Context propagation is the mechanism that passes the traceId and the current spanId from one service to the next. For HTTP calls, this happens via the W3C traceparent header. For Kafka messages, it happens via message headers. The OpenTelemetry SDK handles injection and extraction automatically for instrumented frameworks.</p>
+    <pre><code class="language-java">// W3C traceparent header format
+// traceparent: {version}-{traceId}-{parentSpanId}-{traceFlags}
+// traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+//              ^^                                                      ^^
+//              version=00                                         flags=01 (sampled)
+//
+// traceId:      128-bit (32 hex chars) — same across all services for one request
+// parentSpanId: 64-bit  (16 hex chars) — the span that made this call
+// flags:        01 = sampled (record this trace), 00 = not sampled
+// Auto-instrumented HTTP: OpenTelemetry injects traceparent automatically
+// RestTemplate call → traceparent header added by the SDK interceptor
+// @KafkaListener → traceparent extracted from message headers by SDK
+// Manual propagation when using a non-instrumented HTTP client
+@Component
+public class TracingHttpInterceptor implements ClientHttpRequestInterceptor {
+    @Override
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body,
+                                        ClientHttpRequestExecution execution)
+            throws IOException {
+        // Inject current span context into the outgoing request headers
+        OpenTelemetry.getGlobalPropagators()
+            .getTextMapPropagator()
+            .inject(Context.current(), request.getHeaders(),
+                    (headers, key, value) -&gt; headers.add(key, value));
+        return execution.execute(request, body);
+    }
+}
+// Kafka trace propagation — injecting into producer records
+@Service
+public class PaymentEventPublisher {
+    private final KafkaTemplate&lt;String, PaymentEvent&gt; kafkaTemplate;
+    public void publish(PaymentEvent event) {
+        ProducerRecord&lt;String, PaymentEvent&gt; record =
+            new ProducerRecord&lt;&gt;("payments.completed", event.getId(), event);
+        // Inject trace context into Kafka message headers
+        // OpenTelemetry SDK does this automatically for KafkaTemplate,
+        // but here is how manual injection looks
+        OpenTelemetry.getGlobalPropagators()
+            .getTextMapPropagator()
+            .inject(Context.current(), record.headers(),
+                    (headers, key, value) -&gt;
+                        headers.add(key, value.getBytes(StandardCharsets.UTF_8)));
+        kafkaTemplate.send(record);
+    }
+}
+// Kafka consumer: the SDK extracts trace context and creates a child span
+// When auto-instrumented, the @KafkaListener method inherits the trace context
+// from the message headers automatically — no manual extraction needed</code></pre>
+    <h3>Baggage — Propagating Business Context</h3>
+    <p>What baggage is:</p>
+    <p>Baggage is key-value data attached to the trace context that propagates across service boundaries alongside the traceId. Unlike span attributes (which are local to one span), baggage is visible to every service in the trace. Use it for business context that is needed downstream but not part of the service's own request — the user's tenant ID, the A/B test cohort, or a request priority level. Be conservative: baggage adds overhead to every propagated call.</p>
+    <pre><code class="language-java">// Setting baggage at the entry point
+@GetMapping("/api/payments")
+public ResponseEntity&lt;List&lt;PaymentResponse&gt;&gt; getPayments(
+        @RequestHeader("X-Tenant-Id") String tenantId,
+        @RequestHeader("X-User-Id")   String userId) {
+    // Attach tenant and user context to the trace as baggage
+    // This propagates to all downstream services automatically
+    Baggage baggage = Baggage.current().toBuilder()
+        .put("tenant.id", tenantId)
+        .put("user.id",   userId)
+        .build();
+    try (Scope scope = baggage.makeCurrent()) {
+        return ResponseEntity.ok(paymentService.getAll());
+    }
+}
+// Reading baggage in a downstream service
+@Service
+public class FraudService {
+    public FraudResult check(PaymentRequest request) {
+        String tenantId = Baggage.current().getEntryValue("tenant.id");
+        // Use tenantId for tenant-specific fraud rules
+        return fraudEngine.evaluate(request, tenantId);
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> How does trace context propagate from one microservice to another? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The trace context is carried in the W3C traceparent header for HTTP calls. The header contains the 128-bit traceId, the current spanId (the ID of the span that is making this call), and a sampled flag. When Service A calls Service B, the OpenTelemetry SDK running in Service A injects the traceparent header into the outgoing HTTP request automatically if you are using an instrumented client like RestTemplate or WebClient. Service B's SDK extracts the header, creates a new span as a child of the span identified by the parentSpanId, and attaches it to the same traceId. The trace is now a tree: Service A's span is the parent, Service B's span is the child. For Kafka, the same context is injected into message headers at produce time and extracted at consume time. The result is that all spans from all services for one logical request share the same traceId, and the visualisation tool can build a complete timeline of the entire request journey.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — Sampling Strategy</h2>
+    <h3>Why You Cannot Trace Everything</h3>
+    <p>The cost of 100% sampling:</p>
+    <p>At 10,000 requests per second, 100% sampling means storing and processing 10,000 traces per second. Each trace can contain dozens of spans. The storage cost is substantial and the processing overhead of creating spans adds latency to every request. At high throughput, most traces are identical and uninteresting — they all look the same and completed successfully. Sampling lets you record enough traces to understand system behaviour without recording every single one.</p>
+    <h3>Sampling type</h3>
+    <h3>How it works | Advantage | Disadvantage | Use when</h3>
+    <h3>Always-on (100%)</h3>
+    <p>Record every trace | No missing data | Very high cost at scale | Development and testing only</p>
+    <h3>Head-based (probabilistic)</h3>
+    <p>Decision made at the first span — sample X% of all requests at the entry point | Simple, low overhead | Interesting traces (errors, slow) may be discarded before you know they are interesting | Low-traffic services or when error rates are low</p>
+    <h3>Rate-based</h3>
+    <p>Sample N traces per second regardless of traffic volume | Predictable storage cost | At high traffic, only N/total_rps % of requests are sampled | Services with highly variable traffic</p>
+    <h3>Tail-based</h3>
+    <p>Collect all spans, make sampling decision at trace completion based on outcome | Always keeps errors and slow traces | Requires buffering all spans until trace is complete — memory intensive | Production where you need guaranteed capture of all errors</p>
+    <h3>Adaptive/dynamic</h3>
+    <p>Adjust sampling rate based on current system state — increase during incidents | Right coverage when you need it | Complex to implement and configure | Large-scale production with a mature observability stack</p>
+    <pre><code class="language-java"># Practical sampling configuration
+# application.yml — Spring Boot Micrometer Tracing
+management:
+  tracing:
+    sampling:
+      probability: 0.1   # 10% head-based sampling in production
+# Always sample errors and slow requests regardless of the probability
+# This requires a custom sampler or tail-based sampling in the Collector
+# OpenTelemetry Collector tail-based sampling policy
+# otel-collector-config.yaml
+processors:
+  tail_sampling:
+    decision_wait: 10s       # wait 10s for all spans before deciding
+    num_traces: 50000        # buffer up to 50k concurrent traces
+    policies:
+      - name: errors-policy
+        type: status_code
+        status_code: {status_codes: [ERROR]}  # always keep error traces
+      - name: slow-traces-policy
+        type: latency
+        latency: {threshold_ms: 500}          # keep traces &gt; 500ms
+      - name: probabilistic-policy
+        type: probabilistic
+        probabilistic: {sampling_percentage: 5} # 5% of the rest
+# Result: 100% of errors, 100% of slow requests, 5% of everything else
+# This is the production sampling strategy that gives you full coverage
+# on incidents while keeping costs manageable</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is the difference between head-based and tail-based sampling? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Head-based sampling makes the decision at the start of a trace — at the entry point service. If a request is selected, all its spans across all services are recorded. If not selected, nothing is recorded. It is simple and cheap because the decision happens once and the sampled flag in the traceparent header tells downstream services whether to record. The problem is that you make the decision before you know the outcome — you might discard a trace that turns out to be an error or a slow outlier. Tail-based sampling buffers all spans and makes the decision after the trace is complete, when you know what happened. You can then apply policies: always keep error traces, always keep traces over 500ms, sample 5% of everything else. This gives you guaranteed capture of all interesting events at the cost of buffering. For a production payment service, I prefer tail-based sampling via the OpenTelemetry Collector. Errors and slow traces are exactly what you need during incidents, and they are precisely what head-based sampling might discard.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — Structured Logging and Log-Trace Correlation</h2>
+    <h3>Correlating Logs to Traces with MDC</h3>
+    <p>The connection that makes debugging fast:</p>
+    <p>Traces show you where the problem is. Logs tell you what the problem is. For this to work, every log line written during a trace must carry the traceId so you can filter logs by trace. OpenTelemetry's Micrometer bridge adds traceId and spanId to MDC automatically. Every log line written within a traced request includes these fields. In CloudWatch Logs Insights or Kibana, you can filter by traceId and see every log line from every service for one specific request.</p>
+    <pre><code class="language-java">// Logback configuration for structured JSON logging with trace correlation
+// logback-spring.xml
+// Use logstash-logback-encoder with Micrometer Tracing MDC integration
+// The log output — one JSON object per line
+// {
+//   "timestamp":   "2024-01-15T10:30:00.123Z",
+//   "level":        "INFO",
+//   "logger":       "com.example.payment.PaymentService",
+//   "message":      "Payment processed",
+//   "traceId":      "4bf92f3577b34da6a3ce929d0e0e4736",
+//   "spanId":       "00f067aa0ba902b7",
+//   "paymentId":    "TXN-123",
+//   "amount":       500.00,
+//   "status":       "COMPLETED",
+//   "durationMs":   142
+// }
+// Micrometer Tracing auto-populates traceId and spanId in MDC
+// No manual MDC.put() needed when using Micrometer Tracing bridge
+// Adding business fields to the log using MDC directly
+@Service
+public class PaymentService {
+    public PaymentResult process(PaymentRequest request) {
+        // These MDC values appear in all log lines within this method
+        MDC.put("paymentId", request.getId());
+        MDC.put("accountId", request.getAccountId());
+        try {
+            log.info("Processing payment amount={}", request.getAmount());
+            PaymentResult result = doProcess(request);
+            log.info("Payment completed status={} durationMs={}"
+                , result.getStatus(), result.getDurationMs());
+            return result;
+        } catch (Exception e) {
+            log.error("Payment failed reason={}", e.getMessage(), e);
+            throw e;
+        } finally {
+            MDC.remove("paymentId");
+            MDC.remove("accountId");
+        }
+    }
+}
+// CloudWatch Logs Insights queries for debugging
+// 1. All log lines for one specific trace
+// fields @timestamp, level, logger, message, paymentId
+// | filter traceId = "4bf92f3577b34da6a3ce929d0e0e4736"
+// | sort @timestamp asc
+// 2. All errors in the last hour with their trace IDs
+// fields @timestamp, message, traceId, paymentId
+// | filter level = "ERROR"
+// | sort @timestamp desc
+// | limit 50
+// 3. p99 payment latency by 5-minute window
+// filter message like /Payment completed/
+// | stats pct(durationMs, 99) as p99, count() as requests by bin(5m)</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How do you correlate logs and traces in a microservices system? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The traceId is the correlation key. Micrometer Tracing automatically puts the traceId and spanId into MDC when a request is being traced. Any log statement written while that MDC context is active includes the traceId in the output. Since all services are using the same traceId for a given request, filtering logs by traceId across all log groups gives you every log line from every service for that one request. In practice, when I am debugging a payment failure I do this: find the trace in the tracing tool by filtering on payment service error spans, click on the failing span, copy the traceId, then open CloudWatch Logs Insights and run a query filtering on that traceId across all log groups for all payment-related services. I get the complete log story in chronological order. Without the traceId, I would be manually correlating timestamps across different services, which is slow and error-prone.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — Production Debugging Workflow</h2>
+    <h3>The Workflow: From Alarm to Root Cause</h3>
+    <pre><code class="language-java">// Production debugging scenario:
+// Alert: p99 payment processing latency exceeded 2 seconds
+// Affected period: last 30 minutes
+// Step 1: Look at the metrics dashboard
+// - Which service's latency is elevated? (Payment service p99 = 3.2s)
+// - Is error rate also up? (No — requests are completing, just slowly)
+// - Is this affecting all requests or a subset? (All requests to POST /payments)
+// Step 2: Find slow traces in the tracing tool
+// Filter: service=payment-service, operation=POST /api/payments,
+//         duration &gt; 2s, last 30 minutes
+// Pick 3-5 representative slow traces
+// Step 3: Analyse the trace waterfall
+// payment-service: POST /api/payments  [3.2s total]
+//   fraud-check span:          [120ms]  ← normal
+//   db: SELECT from accounts   [2.8s]   ← THIS IS THE PROBLEM
+//   gateway.submit span:       [180ms]  ← normal
+// Step 4: Check the span attributes
+// db.statement: SELECT * FROM accounts WHERE status = 'ACTIVE'
+// db.rows_affected: 847,293
+// The query is scanning a huge number of rows — missing index
+// Step 5: Confirm with logs
+// Filter logs by traceId of the slow trace
+// Look for warnings about slow queries
+// logs/payment-service: WARN Slow query: 2847ms accounts table
+// Step 6: Verify the diagnosis
+// Run EXPLAIN ANALYZE on the query against the prod read replica
+// EXPLAIN shows: Seq Scan on accounts (cost=0..847293 rows=847293)
+// Missing index on accounts.status
+// Step 7: Fix and verify
+// CREATE INDEX CONCURRENTLY idx_accounts_status ON accounts(status)
+// Monitor: p99 latency drops back to &lt;200ms within 2 minutes of index creation
+// This entire diagnosis took under 10 minutes because:
+// - Metrics alerted immediately
+// - Traces showed which span was slow in one click
+// - Span attributes showed the query
+// - Logs confirmed with stack trace
+// Without observability: hours of guessing, log grepping, and database queries</code></pre>
+    <h3>The OpenTelemetry Collector — Why It Sits in the Middle</h3>
+    <h3>Collector capability</h3>
+    <h3>What it does | Why it matters in production</h3>
+    <h3>Batching</h3>
+    <p>Groups spans into batches before exporting to the backend | Reduces the number of API calls to the tracing backend — critical at high throughput</p>
+    <h3>Retry and buffering</h3>
+    <p>Buffers spans in memory and retries failed exports | Backend outages do not cause span loss</p>
+    <h3>Tail-based sampling</h3>
+    <p>Buffers complete traces and applies sampling policies based on trace outcome | Keeps error and slow traces without keeping everything</p>
+    <h3>Fan-out</h3>
+    <p>Exports to multiple backends simultaneously | Send to Jaeger for developers and Datadog for operations without changing application code</p>
+    <h3>Attribute processing</h3>
+    <p>Add, modify, or remove span attributes before export | Scrub PII (email, card numbers) from spans before they leave your infrastructure</p>
+    <h3>Cost control</h3>
+    <p>Filter out low-value spans — health checks, metrics scrapes | Reduces backend storage cost without changing application code</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> Why do you deploy an OpenTelemetry Collector instead of sending directly to the backend? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The Collector solves several production problems that sending directly from the application does not. First, tail-based sampling — the application cannot make a sampling decision based on the trace outcome because it does not know the full trace at the time it creates spans. The Collector buffers the complete trace and applies policies: keep all errors, keep all slow traces, sample 5% of everything else. Second, the Collector decouples the application from the backend. If you want to switch from Jaeger to Grafana Tempo, you change the Collector's exporter configuration. The application does not change. Third, the Collector can scrub sensitive data — PII like email addresses or payment card numbers that might end up in span attributes — before they are exported outside your network. Fourth, it handles batching and retry so a temporary backend outage does not cause span loss in the application. The cost is an additional infrastructure component to operate, but for any production system the benefits outweigh that cost.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write each exercise from memory. After each one, name one production incident that would be faster to diagnose with this in place.</p>
+    <h3>Exercise 1 — Auto-Instrumentation Setup</h3>
+    <p>Task:</p>
+    <p>Write the Kubernetes Deployment env section to attach the OpenTelemetry Java agent.</p>
+    <p>Set service name, OTLP endpoint (pointing to the Collector), and resource attributes for environment and team.</p>
+    <p>Add the sampling probability configuration in application.yml.</p>
+    <p>Show what you would set differently in development vs production for sampling.</p>
+    <p>List five operations that are instrumented automatically without any code changes.</p>
+    <h3>Exercise 2 — Custom Spans with Business Attributes</h3>
+    <p>Task:</p>
+    <p>Add a custom span around a fraud check method. Include attributes: payment.id, account.id, amount, fraud.score, fraud.verdict.</p>
+    <p>Record the exception on the span with setStatus(ERROR) when the fraud service throws.</p>
+    <p>Use the @WithSpan annotation approach as an alternative for simpler methods.</p>
+    <p>Show: what the span looks like in a trace viewer — parent span, child span relationship.</p>
+    <p>Explain: why fraud.score as a span attribute is more useful than logging it.</p>
+    <h3>Exercise 3 — Kafka Trace Propagation</h3>
+    <p>Task:</p>
+    <p>Write a PaymentEventPublisher that produces to Kafka with trace context injected into message headers.</p>
+    <p>Write the corresponding @KafkaListener that extracts trace context and continues the trace.</p>
+    <p>Show the resulting trace: HTTP span → Kafka produce span → Kafka consume span all with the same traceId.</p>
+    <p>Explain: what happens to the trace if the consumer processes the message 5 minutes after it was produced.</p>
+    <p>Show how to add a span event when a message is retried.</p>
+    <h3>Exercise 4 — Structured Logging with MDC</h3>
+    <p>Task:</p>
+    <p>Configure Logback to output JSON with: timestamp, level, logger, message, traceId, spanId, and custom business fields.</p>
+    <p>Write a PaymentService that uses MDC to add paymentId and accountId to all log lines within a request.</p>
+    <p>Write five CloudWatch Logs Insights queries: all events for a traceId, errors with traceId, p99 by time window, failed payments, slow operations.</p>
+    <p>Show: how MDC values from a parent thread do NOT automatically propagate to @Async child threads — and the fix.</p>
+    <h3>Exercise 5 — OpenTelemetry Collector Configuration</h3>
+    <p>Task:</p>
+    <p>Write the key sections of an OpenTelemetry Collector config: OTLP receiver, tail-based sampling processor, OTLP exporter.</p>
+    <p>Sampling policy: always keep ERROR status traces, always keep traces > 500ms, keep 5% of everything else.</p>
+    <p>Add a filter processor that removes health check spans (/actuator/health) before export.</p>
+    <p>Show how to fan-out: export to Jaeger for developers AND to a cloud backend simultaneously.</p>
+    <h3>Exercise 6 — Debugging a Latency Spike</h3>
+    <p>Task:</p>
+    <p>Describe step by step how you would use metrics, traces, and logs together to diagnose a p99 latency spike.</p>
+    <p>Write the Logs Insights query you would run once you have a traceId from a slow trace.</p>
+    <p>Show: what span attributes would have made the diagnosis faster if they had been added upfront.</p>
+    <p>Describe: how you verify the fix worked using the same observability tools.</p>
+    <h3>Exercise 7 — BOSS: Full Observability Stack</h3>
+    <p>Instrument a payment service end-to-end with production-grade observability:</p>
+    <p>OpenTelemetry Java agent for auto-instrumentation. Custom spans on fraud check (with fraud score attribute) and gateway call (with gateway transaction ID). Kafka produce and consume with trace context propagation. Structured JSON logging with traceId/spanId in MDC plus business fields. Micrometer Counter for payment success/failure, Timer with p50/p95/p99 for processing latency, Gauge for active payments in flight. CloudWatch metric alarm on p99 > 500ms. OTel Collector with tail-based sampling: keep all errors, keep all > 500ms, sample 5% of the rest. Write the complete Logs Insights query that, given only a customer complaint 'my payment was slow', lets you find the traceId, the slow span, the cause, and the fix in under 10 minutes.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Every answer connects observability to a real debugging or operational scenario.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What is distributed tracing and what problem does it solve? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Distributed tracing tracks a single user request as it travels through multiple microservices, recording each operation as a span and linking them all under one traceId. The problem it solves: in a monolith, debugging a slow request means looking at one stack trace. In a microservices system, a single user request might touch five services. A performance problem in Service D — deep in the chain — shows up as a slow response in Service A. Without tracing, you look at Service A's logs, see it is slow, look at Service B's logs, find nothing obviously wrong, and so on. With tracing, you open the trace viewer, filter for slow requests, and the waterfall diagram immediately shows you that Service D's database call is taking 3 seconds while everything else is fast. That diagnosis that takes hours without tracing takes 2 minutes with it.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is a span and what information does it carry? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A span is the unit of work in a distributed trace. It has a start time and a duration, a name describing the operation, a spanId that is unique within the trace, and a parentSpanId that links it to the span that created it. Beyond timing, spans carry attributes — key-value metadata about the operation. Auto-instrumented spans include things like the HTTP method and URL, the database query text, the Kafka topic and partition. Custom spans carry whatever business context you add — payment amount, account ID, fraud score. Spans also have events (timestamped annotations within the span, like 'retry attempt 2') and status (OK, ERROR, UNSET). Together, the spans from all services form a tree that you can visualise as a waterfall diagram showing the full timeline of a request.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is OpenTelemetry and why is it the standard now? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">OpenTelemetry is an open-source observability framework and specification — a standard SDK and wire protocol for collecting traces, metrics, and logs. Before it, every vendor had their own SDK. If you instrumented your code with Jaeger's SDK and later wanted Datadog, you rewrote the instrumentation. OpenTelemetry separates the instrumentation from the backend. You instrument once with the OpenTelemetry API, and you choose the backend by configuring an exporter. Switching backends is a configuration change. It also provides auto-instrumentation via a Java agent that instruments frameworks like Spring, JDBC, Kafka, and Redis without any code changes. For new services today, there is no reason not to use OpenTelemetry — it is the CNCF standard, every major observability vendor supports it, and it avoids vendor lock-in.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How do you instrument a Kafka consumer to be part of the same trace as the producer? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When the producer sends a message, the OpenTelemetry SDK (or manual injection) puts the traceparent header into the Kafka message headers. The header carries the traceId and the producer's spanId. When the consumer reads the message, the SDK extracts these headers and creates a new child span with the producer's span as the parent. This means all the work done by the consumer — including any downstream HTTP calls or database queries — appears in the same trace as the original producer request. There is a nuance here: if the message sits in Kafka for minutes or hours before being consumed, the trace spans a long time window. Most tracing backends handle this correctly, but some visualisations assume short-lived traces. The traceId is still the same, so correlation works regardless of the time gap.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What is tail-based sampling and when would you use it over head-based? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Head-based sampling decides at the start of a trace — the decision is made at the entry point service and propagated via the sampled flag in traceparent. It is simple but blind: you make the decision before you know what will happen. You might discard a trace that turns out to be an error. Tail-based sampling buffers all spans until the trace is complete, then applies policies based on the outcome: always keep traces with errors, always keep traces over a latency threshold, sample a small percentage of everything else. This guarantees you capture 100% of interesting events at the cost of buffering. I use tail-based sampling in production via the OpenTelemetry Collector. For a payment service, errors are exactly what I need to debug, and they are exactly what head-based sampling might discard if only 5% of traces are sampled. The Collector configuration for this is a few dozen lines of YAML and it runs as a sidecar.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What span attributes would you add to a payment processing span? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The goal is to make traces searchable and actionable by business context, not just by technical properties. For a payment span I would add: payment.id, account.id, payment.amount (as a string to avoid floating point issues), payment.currency, payment.type (DEBIT, CREDIT, TRANSFER), fraud.score, fraud.verdict (APPROVED, BLOCKED), gateway.name, gateway.transaction.id. These attributes serve two purposes. In the tracing tool, I can filter 'show me all traces where fraud.verdict = BLOCKED' — immediately isolating that segment. In an incident, I can see on the trace what the payment amount and account were without going back to the logs. The attributes turn a trace from a latency graph into a transaction record. The things I do not put in span attributes: PII like email addresses, card numbers, or passwords — those get scrubbed by the Collector before export.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> How do you prevent sensitive data from appearing in traces? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Three layers. First, be thoughtful about what you put in span attributes to begin with. Never add passwords, API keys, card numbers, or raw email addresses as attributes. Second, use the OpenTelemetry Collector's attribute processing to scrub or hash any sensitive values before they are exported to the backend. You can configure the Collector to delete specific attribute keys or replace their values with a hash. Third, apply RBAC on the tracing backend so only engineers who need to investigate security incidents can see traces with attributes that might contain sensitive context. The Collector is the critical control point — it sits between your services and the backend and can apply transformations that would be impractical to do in every service individually. In regulated environments, I audit the span attributes being emitted using the Collector's debug exporter in a staging environment before enabling export to any external backend.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What does it mean for a service to be observable and how do you know when yours is? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">An observable service is one where you can answer any question about its behaviour from its external outputs — without deploying new code to add more instrumentation. A practical test: if the p99 latency spikes tonight, can you identify which operation is slow, which downstream call is causing it, and which specific request context is affected — all from existing metrics, traces, and logs? If yes, the service is observable. If not, you are missing either the tracing depth, the log detail, or the metrics. The three questions I use as a checklist: can I tell which service in my dependency chain is the source of a latency issue (traces), can I tell what the system is doing right now (metrics), and can I reconstruct exactly what happened for a specific failed request (logs with traceId). If I can answer all three without adding new instrumentation, the service is observable enough for production.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What is baggage in OpenTelemetry and how does it differ from span attributes? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Span attributes are local to one span — they describe that specific operation and are visible only on that span in the trace. Baggage is context that propagates across the entire trace, through every service, alongside the traceId. Any service can read baggage set upstream. The canonical use case is tenant ID in a multi-tenant system: the API gateway sets the tenant ID as baggage, and every downstream service can read it without needing it passed as a header or query parameter. Baggage adds overhead to every propagated call because it travels in the traceparent context header, so I keep it small — a few short key-value pairs at most. The important restriction: baggage is not automatically written to span attributes. If you want the tenant ID to be visible on every span in the trace viewer, you have to explicitly read the baggage and write it as a span attribute.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> How do you monitor the health of your observability pipeline itself? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The observability pipeline — the Collector, the tracing backend, the log ingestion pipeline — is itself infrastructure that can fail. The Collector exposes its own metrics: spans_received, spans_dropped, export_failures. I scrape these with Prometheus and alert when spans_dropped is non-zero (spans being dropped due to backpressure or backend unavailability) or when export_failures rises above zero for more than a few minutes. The tracing backend's ingestion rate is another signal — if it suddenly drops, the Collector may not be exporting. I also check the Collector's memory usage: tail-based sampling buffers traces in memory and if traffic spikes beyond the buffer limit, the Collector drops traces. Monitoring your monitoring is not optional — an observability pipeline that silently fails during an incident is worse than no observability at all, because you waste time looking at an empty trace view thinking there are no slow requests.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What is the W3C traceparent header and what does each part mean? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The traceparent header carries the trace context from one service to the next. Its format is: version-traceId-parentSpanId-traceFlags. The version is always 00 in the current spec. The traceId is 128 bits (32 hex characters) — the globally unique identifier for this entire trace, the same across every service. The parentSpanId is 64 bits (16 hex characters) — it identifies the specific span in the upstream service that made this call, allowing the trace to be assembled into a tree. The traceFlags is one byte — the lowest bit is the sampled flag: 01 means this trace is sampled and all services should record their spans, 00 means not sampled and services can skip span creation for performance. The OpenTelemetry SDK handles reading and writing this header automatically for instrumented frameworks.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> How does Micrometer complement OpenTelemetry in a Spring Boot service? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">They cover different concerns. OpenTelemetry is primarily for distributed traces and has a metrics API, but its metrics model is less mature than Micrometer's for the Spring ecosystem. Micrometer is the standard metrics facade in Spring Boot — it provides Counter, Gauge, Timer, and DistributionSummary with integrations for CloudWatch, Prometheus, and Datadog. Spring Boot auto-configures Micrometer metrics for HTTP endpoints, JVM memory, thread pools, and HikariCP connection pools out of the box. Micrometer Tracing (the tracing bridge) connects Micrometer to OpenTelemetry so that both your custom business metrics and your traces share the same context. The traceId and spanId in MDC come from Micrometer Tracing. In practice, I use Micrometer for business metrics — payment counters, fraud scores, queue depths — and OpenTelemetry for traces. They complement each other rather than duplicate.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What is a span event and when would you use it? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A span event is a timestamped annotation within a span — a point-in-time occurrence that happened during the operation the span represents. Unlike span attributes (which describe the operation as a whole), a span event marks something that happened at a specific moment. The most common use cases: recording a retry attempt with the attempt number and the error that caused it; marking when a lock was acquired and released within a longer operation; recording a significant state transition within a long-running operation. In code: span.addEvent('retry.attempt', Attributes.of(AttributeKey.longKey('attempt.number'), 2L)). Span events appear as markers on the span timeline in the trace viewer, which makes it easy to see exactly when within a slow operation something notable happened.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> How do you handle trace context propagation in asynchronous code? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Context propagation does not automatically follow threads. When you submit work to a thread pool or use @Async, the current span context is NOT carried to the new thread by default — it stays on the original thread. The fix depends on the executor. For Java's ExecutorService, wrap it with OpenTelemetry's ContextPropagatingExecutorService which copies the context to the child thread. For Spring's @Async, configure a ThreadPoolTaskExecutor wrapped with the OTel context wrapper. For CompletableFuture chains using thenApplyAsync, the context also needs to be explicitly propagated using Context.current().wrap(). Micrometer Tracing provides utilities for this. The symptom of getting this wrong: trace fragments — you see the parent span in the trace view but the async child operation appears as a disconnected root span with no parent, making it impossible to correlate the async work to the originating request.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q21:</span> How do you use observability to prove that a deployment fixed a problem? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">This is the verification step that closes the loop on an incident or a performance improvement. Before the deployment, I screenshot or record the metric values that showed the problem — p99 latency, error rate, specific span durations. After deploying, I watch those same metrics in real time. For a latency fix, I look at the p99 timer metric in CloudWatch — within a few minutes of the fix, the percentile should drop visibly. I then pull traces from after the deployment and compare the slow span that was identified before against the same operation after. If the fix was adding a database index, the db span duration should have dropped from seconds to milliseconds. The before-and-after trace comparison is also useful to share with the team to confirm the fix worked as expected and to put in the incident postmortem. The discipline is: never close an incident until the metrics confirm the problem is gone, not just until the fix is deployed.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 43 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you explain the three pillars and what question each one answers?</span></li>
+      <li><span class="checkbox-label">Can you explain what the OTel Java agent instruments automatically?</span></li>
+      <li><span class="checkbox-label">Can you describe the W3C traceparent header format from memory?</span></li>
+      <li><span class="checkbox-label">Can you explain head-based vs tail-based sampling and when each applies?</span></li>
+      <li><span class="checkbox-label">Can you describe the production debugging workflow from alarm to root cause?</span></li>
+      <li><span class="checkbox-label">Can you explain why the OTel Collector sits between the SDK and the backend?</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises — Boss full observability stack done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Three pillars: logs, metrics, traces — when each</h3>
+    <p>/5 |</p>
+    <h3>OTel agent auto-instrumentation: what it covers</h3>
+    <p>/5 |</p>
+    <h3>Custom spans: when to add, which attributes</h3>
+    <p>/5 |</p>
+    <h3>W3C traceparent: format and propagation</h3>
+    <p>/5 |</p>
+    <h3>Kafka trace propagation: inject and extract</h3>
+    <p>/5 |</p>
+    <h3>Sampling: head-based vs tail-based</h3>
+    <p>/5 |</p>
+    <h3>OTel Collector: why it exists, what it does</h3>
+    <p>/5 |</p>
+    <h3>Structured logging + MDC: traceId correlation</h3>
+    <p>/5 |</p>
+    <h3>Production debugging workflow end-to-end</h3>
+    <p>/5 |</p>
+    <p>Day 43 complete:</p>
+    <p>Observability is the skill that makes you the person other engineers call during an incident. Knowing how to wire up OpenTelemetry is table stakes. What matters is knowing how to use traces and logs together to find a problem in minutes that would otherwise take hours, and knowing how to design services so the next problem is equally diagnosable. Both of those skills come from having done it in production, and now you have the mental model to do it.</p>
+    <h3>Preview: Day 44 — API Gateway Patterns</h3>
+    <p>Day 43 of 60 · Microservices Observability · Prepared for Md Zuber</p>
+    <p>"You cannot fix what you cannot see. Observability is not a feature — it is the foundation that makes everything else debuggable."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

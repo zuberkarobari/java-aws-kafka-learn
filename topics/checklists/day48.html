@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 48  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 48  ·  STUDY CHECKLIST — Database Deep Dive — PostgreSQL Internals, MVCC, Indexes and Query Optimisation</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 48 Checklist</div>
+    <h1 style="margin-top: 0;">Database Deep Dive — PostgreSQL Internals, MVCC, Indexes and Query Optimisation</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 48 · STUDY CHECKLIST</h3>
+    <h3>Database Deep Dive — PostgreSQL Internals, MVCC, Indexes and Query Optimisation</h3>
+    <h3>MVCC</h3>
+    <p>Multi-version concurrency, visibility, vacuum</p>
+    <h3>Indexing</h3>
+    <p>B-tree, GIN, GiST, partial, covering indexes</p>
+    <h3>Query Planning</h3>
+    <p>EXPLAIN ANALYZE, statistics, planner decisions</p>
+    <h3>Advanced SQL</h3>
+    <p>CTEs, window functions, partitioning, full-text</p>
+    <p>Note:</p>
+    <p>PostgreSQL internals questions come up in senior interviews because understanding MVCC, vacuum, and the query planner separates candidates who have used a database from candidates who understand why it behaves the way it does. These are the questions that reveal depth.</p>
+    <h3>Day 48 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">MVCC: how PostgreSQL implements concurrent reads and writes without locking</span></li>
+      <li><span class="checkbox-label">Transaction visibility: which rows a transaction sees based on xmin/xmax</span></li>
+      <li><span class="checkbox-label">VACUUM: why PostgreSQL needs it, autovacuum, bloat</span></li>
+      <li><span class="checkbox-label">TOAST: how PostgreSQL stores large values</span></li>
+      <li><span class="checkbox-label">B-tree index internals: structure, when scans become sequential scans</span></li>
+      <li><span class="checkbox-label">Index types: GIN (full-text, arrays, jsonb), GiST, partial indexes, covering indexes</span></li>
+      <li><span class="checkbox-label">EXPLAIN ANALYZE: reading seq scan vs index scan, cost estimates vs actual</span></li>
+      <li><span class="checkbox-label">Query planner statistics: ANALYZE, pg_stats, how planner decides on join order</span></li>
+      <li><span class="checkbox-label">Table partitioning: range, list, hash — constraint exclusion, pruning</span></li>
+      <li><span class="checkbox-label">CTEs: materialized vs non-materialized, recursive CTEs</span></li>
+      <li><span class="checkbox-label">Window functions: OVER clause, PARTITION BY, ROWS vs RANGE</span></li>
+      <li><span class="checkbox-label">Connection pool sizing: why more connections can reduce throughput</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — MVCC and Transaction Visibility</h2>
+    <p>How MVCC works:</p>
+    <p>PostgreSQL uses Multi-Version Concurrency Control. Every row version has xmin (the transaction that created it) and xmax (the transaction that deleted it). When a transaction reads a row, it applies visibility rules: is xmin committed and before my snapshot? Is xmax not yet committed or after my snapshot? If yes to both, the row is visible. This means readers never block writers and writers never block readers — a fundamental difference from lock-based databases.</p>
+    <pre><code class="language-java">-- MVCC visibility rules (simplified)
+-- A row version is visible to a transaction T if:
+-- 1. xmin is committed AND xmin.txid &lt; T.snapshot_min
+--    (the row was created by a committed transaction before my snapshot)
+-- 2. xmax is not committed OR xmax.txid &gt; T.snapshot_max
+--    (the row has not been deleted, or was deleted after my snapshot)
+-- Example: two concurrent transactions
+-- T1 starts: UPDATE payments SET status='COMPLETED' WHERE id=123
+--   PostgreSQL creates a NEW row version with xmin=T1, marks old row xmax=T1
+-- T2 starts (before T1 commits): SELECT * FROM payments WHERE id=123
+--   T2 sees the OLD version (xmin committed, xmax=T1 not yet committed)
+--   T2 does NOT wait for T1 — reads proceed without locking
+-- After T1 commits:
+-- T3 starts: SELECT * FROM payments WHERE id=123
+--   T3 sees the NEW version (xmin=T1 now committed)
+-- WHY VACUUM IS NEEDED:
+-- Old row versions (dead tuples) accumulate over time.
+-- The old version is kept until no transaction can still see it.
+-- VACUUM reclaims space from dead tuples.
+-- Without vacuum, tables grow indefinitely — this is 'table bloat'.
+-- Check table bloat
+SELECT schemaname, tablename,
+       n_dead_tup, n_live_tup,
+       ROUND(n_dead_tup::numeric/NULLIF(n_live_tup,0)*100,2) AS dead_pct
+FROM pg_stat_user_tables
+ORDER BY n_dead_tup DESC;
+-- Check autovacuum activity
+SELECT relname, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze
+FROM pg_stat_user_tables
+WHERE relname = 'payments';</code></pre>
+    <h3>Index Types — Choosing the Right One</h3>
+    <h3>Index type</h3>
+    <h3>Best for | Operator classes | Size</h3>
+    <h3>B-tree (default)</h3>
+    <p>Equality, range, sorting on scalar types | =, <, >, <=, >=, BETWEEN, LIKE 'prefix%' | Small</p>
+    <h3>GIN</h3>
+    <p>Full-text search, array containment, JSONB key existence | @>, <@, @@, ?, ?|, ?& | Larger than B-tree</p>
+    <h3>GiST</h3>
+    <p>Geometric types, nearest-neighbour, range overlap | &&, @>, <@, | | Variable</p>
+    <h3>BRIN</h3>
+    <p>Very large tables with natural correlation (time-series) | =, <, >, range | Tiny — stores only min/max per page range</p>
+    <h3>Hash</h3>
+    <p>Equality only — rarely used (B-tree handles equality too) | = | Similar to B-tree</p>
+    <h3>Partial</h3>
+    <p>B-tree/GIN on a subset of rows (WHERE clause) | Any | Smaller than full index</p>
+    <h3>Covering (INCLUDE)</h3>
+    <p>Index-only scans that need non-indexed columns | Any | Slightly larger</p>
+    <pre><code class="language-java">-- Partial index — only index what you query
+-- Index only PENDING payments (not all 100M historical payments)
+CREATE INDEX idx_payments_pending ON payments(account_id, created_at)
+WHERE status = 'PENDING';
+-- Query that uses this index:
+SELECT * FROM payments WHERE account_id = 123 AND status = 'PENDING';
+-- Covering index — avoid heap fetches for common queries
+CREATE INDEX idx_payments_cover ON payments(account_id)
+INCLUDE (amount, status, created_at);
+-- Query answered entirely from the index — no table read needed:
+SELECT amount, status, created_at FROM payments WHERE account_id = 123;
+-- GIN index for JSONB queries
+CREATE INDEX idx_payments_metadata ON payments USING GIN (metadata);
+-- Supports: metadata @&gt; '{"channel": "mobile"}' -- containment check
+-- Also: metadata ? 'channel'  -- key existence
+-- Index on expression
+CREATE INDEX idx_payments_lower_email ON users(LOWER(email));
+-- Query must use the same expression:
+SELECT * FROM users WHERE LOWER(email) = 'zuber@example.com';
+-- EXPLAIN ANALYZE to see if index is used
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM payments WHERE account_id = 123 AND status = 'PENDING';
+-- Look for: Index Scan vs Seq Scan
+-- Buffers: hit=X (cache) vs read=X (disk) — more hits is better
+-- Actual rows vs estimated rows — large gap means stale statistics</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is MVCC and why does PostgreSQL need VACUUM? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">MVCC — Multi-Version Concurrency Control — is how PostgreSQL allows concurrent reads and writes without locking. Instead of updating a row in place, PostgreSQL creates a new version of the row when it is modified and marks the old version as deleted with an xmax timestamp. The old version remains physically in the table because some ongoing transaction might still need to read it. This is what allows readers never to block writers. The cost: over time, dead row versions accumulate in the table — this is called bloat. VACUUM reclaims the space from dead tuples once no transaction can see them. Without VACUUM, table files grow indefinitely, query performance degrades because sequential scans read more blocks, and eventually you hit transaction ID wraparound — a 32-bit integer overflow that PostgreSQL must avoid at all costs. Autovacuum runs in the background to manage this, but for tables with very high write rates, you may need to tune it aggressively or run manual VACUUM ANALYZE.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — Exercises</h2>
+    <h3>Exercise 1 — EXPLAIN ANALYZE Reading</h3>
+    <p>Task:</p>
+    <p>Given an EXPLAIN ANALYZE output showing Seq Scan on a 10M-row payments table with actual rows=5 vs estimated rows=500000, identify: why the planner chose a seq scan despite low selectivity, what ANALYZE would do, and what index would help. Write the CREATE INDEX and verify with a second EXPLAIN ANALYZE.</p>
+    <h3>Exercise 2 — Index Selection</h3>
+    <p>Task:</p>
+    <p>For these query patterns, choose and create the right index type: 1) LIKE 'pay%' on description. 2) JSONB @> check on metadata column. 3) status='PENDING' with WHERE clause filter (most rows are COMPLETED). 4) Full-text search on notes column. 5) Range query on created_at for last 7 days on a 1B-row table.</p>
+    <h3>Exercise 3 — Window Functions</h3>
+    <p>Task:</p>
+    <p>Write queries using window functions: 1) Rank payments by amount within each account (RANK, DENSE_RANK, ROW_NUMBER — show the difference). 2) Running total of payment amounts per account ordered by date. 3) Previous payment amount for each payment (LAG). 4) Percentage of each payment relative to the account's total.</p>
+    <h3>Exercise 4 — Table Partitioning</h3>
+    <p>Task:</p>
+    <p>Design a partitioned payments table partitioned by month (RANGE on created_at). Show: CREATE TABLE PARTITION OF syntax for January and February 2024. Show how constraint exclusion means a query for 'last 30 days' only scans the relevant partition. Show the default partition. Explain: what happens to a row that does not fit any partition.</p>
+    <h3>Exercise 5 — Recursive CTE</h3>
+    <p>Task:</p>
+    <p>Write a recursive CTE to traverse an organisational hierarchy: employees table with (id, name, manager_id). Find all reports under a given manager (all levels deep). Show: the anchor query, the recursive query, and the UNION ALL. Add a depth column. Explain when a recursive CTE is appropriate vs a materialised path approach.</p>
+    <h3>Exercise 6 — Vacuum and Bloat</h3>
+    <p>Task:</p>
+    <p>Write the query to find the tables with the highest dead tuple percentage. Configure autovacuum to be more aggressive for a high-write payments table: autovacuum_vacuum_scale_factor, autovacuum_analyze_scale_factor. Explain: what is transaction ID wraparound and how does PostgreSQL protect against it?</p>
+    <h3>Exercise 7 — BOSS: Query Optimisation Investigation</h3>
+    <p>Task:</p>
+    <p>A query: SELECT p.*, u.email FROM payments p JOIN users u ON p.user_id = u.id WHERE p.status='COMPLETED' AND p.created_at > NOW() - INTERVAL '7 days' ORDER BY p.amount DESC LIMIT 100 is taking 8 seconds on a 50M-row payments table. Walk through: EXPLAIN ANALYZE output analysis, index strategy (composite? partial? covering?), statistics staleness, join order, whether the LIMIT changes things. Show the final query plan after optimisation.</p>
+    <h3>Interview Q&A — 12 Questions</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What happens during a VACUUM in PostgreSQL? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">VACUUM scans a table's pages looking for dead tuples — row versions that are no longer visible to any running transaction. It marks those pages as reusable without actually shrinking the file (VACUUM FULL does that, but requires an exclusive lock). It also updates the free space map so PostgreSQL knows where to insert new rows. ANALYZE updates statistics used by the query planner — row counts, value distributions, common values. Autovacuum runs both in the background. The critical scenario: if a long-running transaction holds a snapshot, VACUUM cannot remove dead tuples that are still theoretically visible to that transaction. A query running for hours (or a replication slot with a lagging replica) prevents VACUUM from doing its job, causing unbounded bloat.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> Why does PostgreSQL sometimes choose a sequential scan instead of an index? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The planner estimates the cost of each plan and picks the cheapest. Sequential scan cost is proportional to table size. Index scan cost includes index traversal plus random heap fetches for each row found. If the planner estimates a query will return 30% of the table's rows, random heap fetches for 30% of rows are more expensive than a single sequential pass — sequential scan wins. The break-even is typically around 10-20% of rows. If the planner is wrong about selectivity (because statistics are stale), it can make the wrong choice. Running ANALYZE updates the statistics and usually fixes the wrong plan. The other case: very small tables. PostgreSQL's minimum cost for anything includes sequential scan of the whole table, so for tables with a few thousand rows, sequential scan is nearly always cheapest.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is a covering index and when does it eliminate heap fetches? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A covering index includes all the columns needed by a query — not just the index key columns but also the output columns, added via the INCLUDE clause. When a query can be answered entirely from the index without touching the main table, PostgreSQL uses an index-only scan. This is much faster for large tables where the table is not in the buffer cache — the index is typically smaller and more likely to be cached. A covering index for SELECT amount, status FROM payments WHERE account_id = 123 would be CREATE INDEX ON payments(account_id) INCLUDE (amount, status). Without INCLUDE, the index lookup returns the account_id match but then needs to fetch the full row from the heap to get amount and status. The INCLUDE columns are not part of the search key — they are just stored in the leaf pages for retrieval.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is pg_stat_user_tables and what can you learn from it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">pg_stat_user_tables is a system view that shows table-level statistics: the number of sequential scans vs index scans (a high seq_scan count on a large table suggests a missing index), the number of live and dead tuples (high dead tuple count means vacuum is not keeping up), the last time VACUUM and ANALYZE ran, and the number of rows inserted, updated, and deleted. It is the first place I look when investigating table health. A table with 10 million dead tuples and no autovacuum in the last week has a problem. A table with 10 million sequential scans per day and only 1 million rows might be fine — or it might have a missing index if those scans are for selective queries.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What is transaction ID wraparound and why is it dangerous? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">PostgreSQL uses 32-bit transaction IDs. After 2 billion transactions, the IDs wrap around. Without countermeasures, rows from before the wraparound would look like they are from the future and become invisible. PostgreSQL prevents this with autovacuum's anti-wraparound vacuum, which marks old tuples with a frozen status that is always visible regardless of transaction ID. If autovacuum cannot keep up — typically because of a high write rate or because autovacuum is misconfigured — PostgreSQL will eventually shut down and refuse all writes, displaying the error 'database is not accepting commands to avoid wraparound data loss'. This is one of the most serious operational issues in PostgreSQL and requires careful monitoring of pg_stat_user_tables' n_mod_since_analyze and age(relfrozenxid) values.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> When would you use a partial index? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A partial index indexes only the rows that match a WHERE condition. Use it when a small subset of rows is queried frequently and the rest are rarely accessed. The classic example: a payments table with 99% COMPLETED payments and 1% PENDING. Queries for pending payments — the active processing queue — are frequent and latency-sensitive. An index on just the PENDING rows is tiny compared to a full index on status, and it serves all pending payment queries efficiently. The full index would also work but wastes space indexing the 99% of rows that are never queried by status. Another case: soft-deleted records where you almost always query WHERE deleted_at IS NULL — index only the non-deleted rows.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is a GIN index and when would you use it over a B-tree? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">GIN (Generalised Inverted Index) indexes composite values — arrays, JSONB, and tsvector for full-text search. A B-tree indexes a single scalar value per row; a GIN indexes all the elements within a composite value. For a JSONB column containing payment metadata, a GIN index allows queries like metadata @> '{"channel": "mobile"}' to use an index scan instead of a sequential scan. Without a GIN index, every row's JSONB value would need to be parsed and checked. GIN indexes are larger than B-tree indexes and slower to update, so they are best for data that is read much more than written. For full-text search, GIN on a tsvector column is the standard approach in PostgreSQL — it stores the pre-computed lexemes for fast keyword lookup.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is the difference between a materialized CTE and a non-materialized CTE? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Before PostgreSQL 12, all CTEs (WITH clauses) were materialised — evaluated once and stored in memory as a temporary result set. This meant the query planner could not push predicates into the CTE, which sometimes prevented index use. From PostgreSQL 12 onward, CTEs are non-materialised by default for simple cases — the planner can inline them and optimise the whole query together. Materialised CTEs are still useful when: the CTE result is referenced multiple times (you want it computed once, not twice); the CTE has side effects (INSERT, UPDATE, DELETE inside a CTE should always be materialised); or when you want to fence off a subquery for clarity. You can force materialisation with WITH my_cte AS MATERIALIZED (...) or prevent it with AS NOT MATERIALIZED.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How do window functions differ from GROUP BY aggregations? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">GROUP BY collapses rows into groups — for each unique combination of grouped columns, you get one result row. Window functions compute aggregates but keep all the original rows visible in the result. Each row gets the aggregate value for its partition alongside its original columns. This means you can answer questions like 'what is each payment's amount as a percentage of the account's total' — something impossible with GROUP BY alone (which would lose the individual payment rows). The PARTITION BY clause in a window function defines the grouping for the calculation. ORDER BY within OVER defines the ordering for ordered window functions like ROW_NUMBER, RANK, LAG, and LEAD. ROWS vs RANGE defines what counts as the window frame for running aggregates.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> How does table partitioning improve query performance? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Partitioning splits a large table into smaller child tables based on a partition key. The key benefit is partition pruning: when a query includes a filter on the partition key, PostgreSQL reads only the relevant partitions rather than the entire table. A payments table partitioned by month with 36 partitions (3 years) means a query for last month's payments reads only 1/36 of the data. Constraints on each partition (this partition contains only 2024-01 dates) allow the planner to eliminate 35 partitions at planning time. Other benefits: VACUUM and index maintenance operate on smaller tables, which is faster. Old partitions can be dropped instantly (DROP TABLE on a partition is atomic and does not leave bloat, unlike DELETE from a large table). The operational cost: foreign keys to partitioned tables have limitations, and some query plans become more complex.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What does EXPLAIN BUFFERS tell you and when is it useful? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">EXPLAIN (ANALYZE, BUFFERS) adds information about which data blocks were served from the buffer cache (shared_buffers) versus read from disk. Buffers: shared hit=X means X blocks were found in cache. read=X means X blocks required disk I/O. A query that reads 10,000 blocks from disk is much slower than one that reads 10,000 blocks from cache, even if the EXPLAIN plan looks identical. This output is useful for understanding whether a slow query is slow because the data is not cached (a cold cache problem, possibly a buffer cache sizing issue) or because it is genuinely accessing too much data regardless of caching. After adding an index, comparing buffers before and after shows whether the index reduced the amount of data accessed.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What is TOAST in PostgreSQL? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">TOAST (The Oversized Attribute Storage Technique) is PostgreSQL's mechanism for storing values larger than about 2KB. PostgreSQL's page size is typically 8KB and a single row cannot span pages. When a column value exceeds the threshold, PostgreSQL transparently compresses it and/or moves it to a separate TOAST table. The main table stores a pointer to the TOAST data. This is transparent to SQL queries — you do not interact with TOAST directly. The implications: SELECTs that retrieve large TOAST values (like a large JSONB column or a TEXT column with essay-length content) require additional I/O to fetch the TOAST data. If you query only small columns from a table with large TOAST columns, those TOAST I/Os are avoided. Index scans on non-TOAST columns can serve queries without touching TOAST data, which is why covering indexes are especially beneficial on tables with large TOAST columns.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Self-Assessment</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>MVCC: xmin/xmax, visibility rules</h3>
+    <p>/5 |</p>
+    <h3>VACUUM: purpose, bloat, autovacuum</h3>
+    <p>/5 |</p>
+    <h3>Index types: which for which query</h3>
+    <p>/5 |</p>
+    <h3>EXPLAIN ANALYZE: reading the plan</h3>
+    <p>/5 |</p>
+    <h3>Partial and covering indexes</h3>
+    <p>/5 |</p>
+    <h3>Window functions: OVER, PARTITION BY</h3>
+    <p>/5 |</p>
+    <p>Day 48 complete:</p>
+    <p>PostgreSQL internals are what separate candidates who have used a database from candidates who understand it. MVCC and vacuum are the two concepts that interviewers reach for most often.</p>
+    <p>Day 48 of 60 · Database Deep Dive · Prepared for Md Zuber</p>
+    <p>"Understanding why your database behaves the way it does is the difference between a DBA and a developer who uses databases."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Boot Actuator - Claude Aesthetic</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+        /* Anthropic Claude Inspired Palette */
+        --bg-canvas: #F8F7F4; /* Warm off-white */
+        --bg-panel: #FFFFFF; /* Pure white for contrast */
+        --text-main: #23221F; /* Soft black/charcoal */
+        --text-muted: #737373; /* Warm gray */
+        --accent-rust: #D97757; /* Claude rust/terracotta */
+        --accent-sand: #D3C4B1; /* Warm sand border */
+        --accent-sage: #6B7D6A; /* Muted sage green */
+        --accent-blue: #5C7B99; /* Muted slate blue */
+        --border-light: #E8E5DF; /* Subtle border */
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #E5E0D8; color: var(--text-main);
+        font-family: 'Inter', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Strict Flex Layout */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-canvas); position: relative;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08); border: 1px solid var(--border-light);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 20px;
+    }
+
+    /* Minimalist Background Grid */
+    .grid-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            linear-gradient(var(--border-light) 1px, transparent 1px),
+            linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+        background-size: 40px 40px;
+        opacity: 0.5; z-index: 0;
+    }
+
+    /* Header */
+    .header { padding: 30px 24px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Lora', serif; font-size: 24px; font-weight: 600;
+        color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--accent-rust); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Top Half: Visual Canvas Area */
+    .canvas {
+        flex: 1.3; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 10px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scene 1: Black Box */
+    .black-box-container { position: relative; display: flex; flex-direction: column; align-items: center; }
+    .black-box { 
+        width: 140px; height: 140px; background: #23221F; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center; color: #fff;
+        font-family: 'JetBrains Mono', monospace; font-size: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        transition: all 0.6s ease; position: relative;
+    }
+    .ping-req { position: absolute; left: -80px; top: 50px; font-family: monospace; font-size: 10px; color: var(--accent-sage); background: rgba(107, 125, 106, 0.1); padding: 4px; border-radius: 4px;}
+    .ping-res { position: absolute; right: -80px; top: 50px; font-family: monospace; font-size: 10px; color: var(--accent-sage); background: rgba(107, 125, 106, 0.1); padding: 4px; border-radius: 4px; opacity: 0;}
+    .internal-db-fail { position: absolute; bottom: -30px; color: var(--accent-rust); font-size: 11px; font-weight: 500; font-family: monospace; opacity: 0;}
+
+    /* Scene 2: Actuator Exposed */
+    .open-box {
+        width: 220px; height: 160px; background: var(--bg-panel); border: 1px solid var(--accent-sand); border-radius: 12px;
+        display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; padding: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+    .endpoint-pill {
+        background: var(--bg-canvas); border: 1px solid var(--border-light); color: var(--text-main);
+        padding: 6px 12px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        transition: all 0.3s;
+    }
+    .endpoint-pill.danger { border-color: var(--accent-rust); color: var(--accent-rust); background: rgba(217, 119, 87, 0.05); }
+
+    /* Scene 3: Health Aggregator */
+    .agg-tree { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 15px;}
+    .agg-root { background: var(--bg-panel); border: 2px solid var(--text-main); padding: 12px 24px; border-radius: 8px; font-family: 'Lora', serif; font-weight: 600; font-size: 14px; position: relative; transition: all 0.4s;}
+    .agg-branches { display: flex; gap: 15px; position: relative;}
+    .agg-branch { display: flex; flex-direction: column; align-items: center; gap: 8px;}
+    .branch-line { width: 1px; height: 15px; background: var(--border-light); }
+    .indicator { background: var(--bg-canvas); border: 1px solid var(--border-light); padding: 8px; border-radius: 6px; text-align: center; font-family: monospace; font-size: 9px; width: 80px;}
+    .status-up { color: var(--accent-sage); font-weight: bold;}
+    .status-down { color: var(--accent-rust); font-weight: bold;}
+
+    /* Scene 4: K8s Probes */
+    .k8s-scene { display: flex; align-items: center; justify-content: center; gap: 20px; width: 100%;}
+    .k8s-box { background: var(--accent-blue); color: white; padding: 12px; border-radius: 8px; font-family: 'Lora', serif; font-size: 14px; box-shadow: 0 4px 15px rgba(92, 123, 153, 0.2);}
+    .probe-req { display: flex; flex-direction: column; gap: 10px;}
+    .probe { background: var(--bg-panel); border: 1px solid var(--border-light); padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 10px; display: flex; justify-content: space-between; width: 160px; align-items: center;}
+    .p-live { border-left: 3px solid var(--accent-rust); }
+    .p-ready { border-left: 3px solid var(--accent-sage); }
+
+    /* Scene 5: Dynamic Logger */
+    .logger-panel { background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 12px; padding: 20px; width: 85%; box-shadow: 0 4px 15px rgba(0,0,0,0.03);}
+    .log-level-wrap { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; margin-bottom: 10px;}
+    .log-pkg { font-family: monospace; font-size: 11px; color: var(--text-main); font-weight: 600;}
+    .log-badge { background: rgba(115, 115, 115, 0.1); color: var(--text-muted); padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 10px; transition: all 0.3s;}
+    .log-badge.debug { background: rgba(217, 119, 87, 0.1); color: var(--accent-rust); }
+    
+    .post-req { background: var(--bg-canvas); border: 1px dashed var(--accent-rust); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 9px; color: var(--accent-rust); opacity: 0; transform: translateY(10px); transition: all 0.4s;}
+
+    /* Scene 6: Code */
+    .custom-code { background: #FCFCFA; border: 1px solid var(--border-light); border-radius: 8px; padding: 15px; font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.6; color: var(--text-main); width: 90%; box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);}
+
+    /* Bottom Half: Explainer Panel */
+    .explainer-panel {
+        background: var(--bg-panel);
+        padding: 24px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid var(--border-light);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: var(--accent-sand); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: var(--bg-canvas); color: var(--accent-rust);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; text-transform: uppercase;
+        border: 1px solid var(--accent-sand); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Lora', serif; font-size: 19px; font-weight: 600; color: var(--text-main);
+        margin-bottom: 10px; letter-spacing: -0.5px; line-height: 1.2;
+    }
+
+    .explainer-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 15px; }
+
+    /* Code Block in Explainer */
+    .code-block {
+        background: #F9F8F6; border: 1px solid var(--border-light); border-radius: 8px;
+        padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.6; color: #3A3A3A; margin-bottom: 10px; overflow-x: auto;
+    }
+    
+    .c-kw { color: #8F5E4D; font-weight: 500; } /* Earthy brown/purple */
+    .c-ty { color: #5C7B99; } /* Muted blue */
+    .c-st { color: #6B7D6A; } /* Sage green */
+    .c-cm { color: #A3A3A3; font-style: italic; } /* Gray comment */
+    .c-an { color: #D97757; } /* Rust annotation */
+
+    .btn-next {
+        background: var(--text-main); color: var(--bg-canvas);
+        border: none; padding: 14px 24px; border-radius: 8px;
+        font-weight: 500; font-size: 13px; cursor: pointer;
+        transition: all 0.2s; width: 100%; font-family: 'Inter', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="grid-bg"></div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Spring Boot Actuator</h1>
+        <p>Production Observability</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        
+        <!-- Scene 1: Black Box -->
+        <div class="scene-container active" id="scene-1">
+            <div class="black-box-container">
+                <div class="ping-req" id="ping-1">GET /ping</div>
+                <div class="black-box" id="black-box">Application.jar</div>
+                <div class="ping-res" id="ping-2">200 OK</div>
+                <div class="internal-db-fail" id="db-fail">DB CONNECTION: DEAD</div>
+            </div>
+            <div style="font-family: 'Lora', serif; font-size: 13px; color: var(--text-muted); margin-top: 40px; text-align: center; max-width: 80%;" id="s1-msg">
+                A simple <code>/ping</code> endpoint is a liar. It returns 200 OK even if your database is down.
+            </div>
+        </div>
+
+        <!-- Scene 2: Actuator Exposed -->
+        <div class="scene-container" id="scene-2">
+            <div class="open-box">
+                <div class="endpoint-pill">/health</div>
+                <div class="endpoint-pill">/info</div>
+                <div class="endpoint-pill">/metrics</div>
+                <div class="endpoint-pill">/loggers</div>
+                <div class="endpoint-pill danger">/env (Keys!)</div>
+                <div class="endpoint-pill danger">/heapdump</div>
+            </div>
+            <div style="font-family: 'Lora', serif; font-size: 13px; color: var(--text-muted); margin-top: 20px; text-align: center; max-width: 80%;">
+                Actuator opens the black box, but exposes severe security risks if public.
+            </div>
+        </div>
+
+        <!-- Scene 3: Health Aggregator -->
+        <div class="scene-container" id="scene-3">
+            <div class="agg-tree">
+                <div class="agg-root" id="agg-root">
+                    Status: <span class="status-up" id="agg-status">UP</span>
+                </div>
+                <div class="agg-branches">
+                    <div class="agg-branch">
+                        <div class="branch-line"></div>
+                        <div class="indicator">DB<br><span class="status-up">UP</span></div>
+                    </div>
+                    <div class="agg-branch">
+                        <div class="branch-line"></div>
+                        <div class="indicator" style="border-color: var(--accent-rust);">Kafka<br><span class="status-down" style="opacity:0;" id="k-fail">DOWN</span></div>
+                    </div>
+                    <div class="agg-branch">
+                        <div class="branch-line"></div>
+                        <div class="indicator">Disk<br><span class="status-up">UP</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 4: K8s Probes -->
+        <div class="scene-container" id="scene-4">
+            <div class="k8s-scene">
+                <div class="k8s-box">Kubelet</div>
+                <div class="probe-req">
+                    <div class="probe p-live">
+                        <span>/health/liveness</span>
+                        <span style="color: var(--accent-sage); font-weight: bold;">200 OK</span>
+                    </div>
+                    <div class="probe p-ready" id="probe-ready">
+                        <span>/health/readiness</span>
+                        <span style="color: var(--accent-rust); font-weight: bold; opacity: 0;" id="r-fail">503</span>
+                    </div>
+                </div>
+            </div>
+            <div style="font-family: 'Lora', serif; font-size: 12px; color: var(--text-muted); margin-top: 30px; text-align: center; max-width: 85%;">
+                <strong>Liveness</strong> = Am I dead? Restart me.<br>
+                <strong>Readiness</strong> = Am I busy? Don't send traffic.
+            </div>
+        </div>
+
+        <!-- Scene 5: Loggers -->
+        <div class="scene-container" id="scene-5">
+            <div class="logger-panel">
+                <div class="log-level-wrap">
+                    <span class="log-pkg">com.myapp.database</span>
+                    <span class="log-badge" id="log-badge">INFO</span>
+                </div>
+                <div class="log-level-wrap" style="border:none; padding:0; margin:0;">
+                    <span class="log-pkg">org.springframework</span>
+                    <span class="log-badge">ERROR</span>
+                </div>
+            </div>
+            <div class="post-req" id="post-req">
+                POST /actuator/loggers/com.myapp.database<br>
+                {"configuredLevel": "DEBUG"}
+            </div>
+        </div>
+
+        <!-- Scene 6: Custom Code -->
+        <div class="scene-container" id="scene-6">
+            <div class="custom-code">
+<span class="c-an">@Component</span>
+<span class="c-kw">public class</span> <span class="c-ty">PartnerApiHealthIndicator</span> 
+       <span class="c-kw">implements</span> <span class="c-ty">HealthIndicator</span> {
+
+    <span class="c-an">@Override</span>
+    <span class="c-kw">public</span> <span class="c-ty">Health</span> <span class="c-fn">health</span>() {
+        <span class="c-kw">if</span> (api.isReachable()) {
+            <span class="c-kw">return</span> Health.up().build();
+        }
+        <span class="c-kw">return</span> Health.down()
+            .withDetail(<span class="c-st">"error"</span>, <span class="c-st">"Timeout"</span>)
+            .build();
+    }
+}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[OBSERVABILITY]</div>
+            <h2 id="explainer-title" class="explainer-title">The Black Box Problem</h2>
+            <p id="explainer-text" class="explainer-text">Deploying an app without Actuator is like driving a car with no dashboard. A simple <code>/ping</code> endpoint is a liar—it returns 200 OK even if the database is completely severed.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Open The Black Box</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setScene(index) {
+        document.querySelectorAll('.scene-container').forEach((el, i) => {
+            if(i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+    }
+
+    const steps = [
+        {
+            badge: "Endpoints 1/6",
+            title: "Opening the Engine",
+            text: "Adding <code>spring-boot-starter-actuator</code> weaves management endpoints into your app. But beware: exposing <code>/env</code> leaks AWS keys, and <code>/heapdump</code> leaks user memory. Spring secures all but <code>/health</code> and <code>/info</code> by default.",
+            code: `
+<span class="c-cm"># application.yml</span>
+<span class="c-ty">management:</span>
+  <span class="c-ty">endpoints:</span>
+    <span class="c-ty">web:</span>
+      <span class="c-ty">exposure:</span>
+        <span class="c-cm"># DANGER: Exposing all endpoints!</span>
+        <span class="c-ty">include:</span> <span class="c-st">"*"</span> 
+            `,
+            action: async () => {
+                const p1 = document.getElementById('ping-1');
+                const p2 = document.getElementById('ping-2');
+                const dbf = document.getElementById('db-fail');
+                
+                p1.style.transform = 'translateX(20px)';
+                await sleep(400);
+                p2.style.opacity = '1';
+                p2.style.transform = 'translateX(-20px)';
+                await sleep(500);
+                dbf.style.opacity = '1';
+                
+                await sleep(1000);
+                setScene(1);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Architecture 2/6",
+            title: "The Health Aggregator",
+            text: "<code>/actuator/health</code> is not a ping. It is an <strong>Aggregator</strong>. It concurrently checks dozens of <code>HealthIndicator</code> beans (DB, Redis, Disk). If even ONE component is down, the entire app returns <code>503 Service Unavailable</code>.",
+            code: `
+<span class="c-cm"># Show full details in response</span>
+<span class="c-ty">management:</span>
+  <span class="c-ty">endpoint:</span>
+    <span class="c-ty">health:</span>
+      <span class="c-ty">show-details:</span> <span class="c-st">always</span>
+            `,
+            action: async () => {
+                setScene(2);
+                codeContainer.style.display = 'block';
+                
+                await sleep(800);
+                document.getElementById('k-fail').style.opacity = '1';
+                
+                await sleep(400);
+                const root = document.getElementById('agg-root');
+                root.style.borderColor = 'var(--accent-rust)';
+                document.getElementById('agg-status').className = 'status-down';
+                document.getElementById('agg-status').innerText = 'DOWN (503)';
+            }
+        },
+        {
+            badge: "DevOps 3/6",
+            title: "Liveness vs Readiness",
+            text: "In Kubernetes, mixing these up is fatal. <strong>Liveness:</strong> 'Am I dead?' (If failed, K8s restarts the Pod). <strong>Readiness:</strong> 'Am I busy?' (If failed, K8s stops routing traffic). Never tie a database check to Liveness, or a DB blip will infinite-restart your entire cluster!",
+            code: `
+<span class="c-cm"># K8s Probes automatically exposed</span>
+<span class="c-ty">management:</span>
+  <span class="c-ty">health:</span>
+    <span class="c-ty">livenessstate:</span>
+      <span class="c-ty">enabled:</span> <span class="c-st">true</span>
+    <span class="c-ty">readinessstate:</span>
+      <span class="c-ty">enabled:</span> <span class="c-st">true</span>
+            `,
+            action: async () => {
+                setScene(3);
+                codeContainer.style.display = 'block';
+                
+                await sleep(1000);
+                document.getElementById('probe-ready').style.borderColor = 'var(--accent-rust)';
+                document.getElementById('r-fail').style.opacity = '1';
+            }
+        },
+        {
+            badge: "Operations 4/6",
+            title: "Dynamic Loggers",
+            text: "A bug happens in Prod, but your logs are set to INFO. Normally, you'd redeploy to change to DEBUG. With Actuator, you send a <code>POST /actuator/loggers/{package}</code> request. Spring hot-swaps the log level in the JVM instantly. Zero downtime.",
+            code: `
+<span class="c-cm"># Change log level LIVE via curl</span>
+curl -X POST \\
+  http://api.com/actuator/loggers/com.app \\
+  -H <span class="c-st">"Content-Type: application/json"</span> \\
+  -d <span class="c-st">'{"configuredLevel": "DEBUG"}'</span>
+            `,
+            action: async () => {
+                setScene(4);
+                codeContainer.style.display = 'block';
+                
+                await sleep(500);
+                const req = document.getElementById('post-req');
+                req.style.opacity = '1';
+                req.style.transform = 'translateY(0)';
+                
+                await sleep(600);
+                const badge = document.getElementById('log-badge');
+                badge.innerText = 'DEBUG';
+                badge.className = 'log-badge debug';
+            }
+        },
+        {
+            badge: "Monitoring 5/6",
+            title: "Micrometer Metrics",
+            text: "Micrometer is the SLF4J of metrics. It automatically instruments HTTP latencies, GC pauses, and DB connections. Add the Prometheus registry dependency, and Actuator formats it natively for scraping. Instant Grafana dashboards.",
+            code: `
+&lt;dependency&gt;
+    &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
+    &lt;artifactId&gt;<span class="c-st">micrometer-registry-prometheus</span>&lt;/artifactId&gt;
+&lt;/dependency&gt;
+
+<span class="c-cm">// Endpoint exposed at: /actuator/prometheus</span>
+            `,
+            action: async () => {
+                setScene(-1); // Just show code
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Extensibility 6/6",
+            title: "Custom Health Indicators",
+            text: "If your app relies on an external Partner API, you can write a custom <code>HealthIndicator</code>. If the partner API drops, your custom bean returns <code>Health.down()</code>, and Actuator automatically integrates it into the master <code>/health</code> status.",
+            code: ``,
+            action: async () => {
+                setScene(5);
+                codeContainer.style.display = 'none';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            setScene(-1);
+            codeContainer.style.display = 'none';
+            
+            // Reset Visuals
+            document.getElementById('ping-1').style.transform = 'translateX(0)';
+            document.getElementById('ping-2').style.opacity = '0';
+            document.getElementById('ping-2').style.transform = 'translateX(0)';
+            document.getElementById('db-fail').style.opacity = '0';
+            
+            const root = document.getElementById('agg-root');
+            root.style.borderColor = 'var(--text-main)';
+            document.getElementById('agg-status').className = 'status-up';
+            document.getElementById('agg-status').innerText = 'UP';
+            document.getElementById('k-fail').style.opacity = '0';
+            
+            document.getElementById('probe-ready').style.borderColor = 'var(--border-light)';
+            document.getElementById('r-fail').style.opacity = '0';
+            
+            document.getElementById('post-req').style.opacity = '0';
+            document.getElementById('post-req').style.transform = 'translateY(10px)';
+            const lb = document.getElementById('log-badge');
+            lb.innerText = 'INFO';
+            lb.className = 'log-badge';
+
+            badge.innerText = "[OBSERVABILITY]";
+            title.innerText = "The Black Box Problem";
+            text.innerHTML = "Deploying an app without Actuator is like driving a car with no dashboard. A simple <code>/ping</code> endpoint is a liar—it returns 200 OK even if the database is completely severed.";
+            btnNext.innerText = "Open The Black Box";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Architecture" : "Next Phase →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

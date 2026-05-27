@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 9 — RDS Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #BA7517;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#FAEEDA;color:#633806;border-color:#EF9F27;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-amber{background:#FAEEDA;color:#633806}.p-green{background:#E1F5EE;color:#085041}
+.p-blue{background:#E6F1FB;color:#0C447C}.p-coral{background:#FAECE7;color:#712B13}
+.p-purple{background:#EEEDFE;color:#3C3489}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+.code-block{background:#1a1a18;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.code-block code{font-family:monospace;font-size:12px;line-height:1.7;color:#e8e6e0;display:block;white-space:pre}
+.k{color:#9FE1CB}.v{color:#FAC775}.s{color:#F0997B}.c{color:#666;font-style:italic}.cmd-g{color:#97C459}
+.storage-viz{background:#f5f5f2;border-radius:10px;padding:1rem;margin:12px 0}
+.storage-layer{border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:12px}
+.layer-blue{background:#E6F1FB;border:1px solid #85B7EB;color:#0C447C}
+.layer-amber{background:#FAEEDA;border:1px solid #EF9F27;color:#633806}
+.layer-green{background:#E1F5EE;border:1px solid #5DCAA5;color:#085041}
+.layer-label{font-weight:600;margin-bottom:3px}
+.cg-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.cg-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:12px 0}
+.cc{background:#fff;border:1px solid #eee;border-radius:10px;padding:1rem}
+.cc-t{font-size:13px;font-weight:600;margin-bottom:8px}
+.cc-b{font-size:12px;color:#555;line-height:1.65}
+.cc.hl{border-color:#BA7517;background:#FAEEDA}
+.cc.hl .cc-t{color:#633806}
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 9 of 30</span>
+    <span class="tag">RDS — Relational Database Service</span>
+    <span class="tag">Phase 2 — Application Deployment</span>
+    <span class="tag">Multi-AZ · Aurora · Connection pooling</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('internals',this)">RDS internals</button>
+    <button class="ntab" onclick="show('multiaz',this)">Multi-AZ & failover</button>
+    <button class="ntab" onclick="show('replicas',this)">Read Replicas</button>
+    <button class="ntab" onclick="show('aurora',this)">Aurora deep dive</button>
+    <button class="ntab" onclick="show('connections',this)">Connection pooling</button>
+    <button class="ntab" onclick="show('operations',this)">Operations & backup</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- RDS INTERNALS -->
+  <div id="p-internals" class="panel active">
+    <div class="lede"><strong>RDS is not just "MySQL in the cloud." It is a managed database service built on a multi-layer architecture: a compute layer (the database engine on EC2), a storage layer (a custom distributed block storage system called Aurora Storage for Aurora, or EBS for other engines), and a management layer (the RDS control plane that handles patching, backups, monitoring, and failover). Understanding each layer explains every operational behaviour, every performance characteristic, and every failure mode you will encounter.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('i',0,this)">1 · RDS architecture layers</button>
+      <button class="cbtn" onclick="showC('i',1,this)">2 · Storage deep dive</button>
+      <button class="cbtn" onclick="showC('i',2,this)">3 · The managed service trade-off</button>
+      <button class="cbtn" onclick="showC('i',3,this)">4 · Parameter groups</button>
+    </div>
+
+    <div id="i0" class="cpanel active">
+      <div class="ch">RDS architecture — what's actually running under the hood</div>
+      <div class="csub">Three independent layers each with distinct failure modes and performance characteristics</div>
+      <div class="cb">
+        <p>When you create an RDS instance, AWS provisions several distinct components that together form the managed database service. Understanding which layer is responsible for what determines how you diagnose problems and design for reliability.</p>
+
+        <div class="storage-viz">
+          <div style="font-size:12px;font-weight:600;color:#444;margin-bottom:8px">RDS three-layer architecture (MySQL/Postgres/Oracle engines)</div>
+          <div class="storage-layer layer-blue">
+            <div class="layer-label">Layer 1 — RDS Control Plane (AWS-managed)</div>
+            Handles: automated backups, patching, parameter management, Multi-AZ orchestration, monitoring, scaling. Runs in AWS's management account — invisible to you. The "magic" of managed service.
+          </div>
+          <div class="storage-layer layer-amber">
+            <div class="layer-label">Layer 2 — Database Engine (EC2 instance under the hood)</div>
+            Your MySQL 8.0, PostgreSQL 15, Oracle 19c, or SQL Server instance. Runs on a provisioned EC2 instance type (db.t3.micro through db.r6g.16xlarge). The engine handles query parsing, query planning, execution, buffer pool management, WAL (Write-Ahead Log), and replication. You cannot SSH into this — the control plane manages it.
+          </div>
+          <div class="storage-layer layer-green">
+            <div class="layer-label">Layer 3 — EBS Storage (gp2, gp3, io1, io2 — your choice)</div>
+            The database data files, WAL/redo logs, and InnoDB tablespace live here. Each RDS instance has dedicated EBS storage. For Multi-AZ: two separate EBS volumes (primary AZ + standby AZ) synchronously replicated. Your IOPS configuration on this layer determines database write performance.
+          </div>
+        </div>
+
+        <div class="mechbox"><strong>Why "I can't SSH into RDS" is not just a limitation — it's the security model:</strong> The RDS instance runs as an EC2 instance internally, but AWS manages the OS layer. There is no bastion for the OS, no direct console access, no SSH. AWS applies OS patches, security updates, and engine patches without your involvement. The tradeoff: you give up OS-level control and visibility in exchange for AWS handling the operational burden of patch management, storage management, and availability. This is the IaaS-to-PaaS shift. You only manage: schema, data, users, parameter groups, and connectivity. Everything below is AWS's responsibility — a direct consequence of the Shared Responsibility Model from Day 1.</div>
+
+        <p><strong>The db instance class determines two things simultaneously:</strong> The compute power (vCPUs and RAM for the database engine — query execution, buffer pool, sort memory) and the network bandwidth to EBS storage (critical for write-heavy workloads). A db.t3.micro has 2 vCPUs and 1GB RAM — the InnoDB buffer pool will be tiny, causing frequent disk reads. A db.r6g.2xlarge has 8 vCPUs and 64GB RAM — the buffer pool can hold most of your hot working set in memory, turning many queries that would hit disk into memory operations. For Spring Boot applications with PostgreSQL or MySQL, the database buffer pool hitting 100% utilisation (measured by BufferCacheHitRatio in CloudWatch) is the most common cause of sudden database performance degradation.</p>
+
+        <div class="failbox"><strong>The db.t3 credit exhaustion for RDS — the pattern from EC2 repeats here:</strong> db.t3 instance classes for RDS have the same CPU credit model as EC2 t3 instances. Under sustained high CPU load (complex queries, heavy write activity), the instance exhausts its burst credits and drops to baseline CPU. A database that was responding in 5ms suddenly responds in 200ms. No errors — just dramatically increased latency. Symptoms: CloudWatch shows CPUSurplusCreditBalance reaching 0, followed by CPUUtilization plateauing at the baseline %. Diagnosis: check CloudWatch's CPUSurplusCreditBalance metric. Fix: either move to an instance class without bursting (db.m5, db.r5) or optimise the queries that are causing sustained CPU load. Never use db.t3 for production databases with sustained workloads.</div>
+      </div>
+    </div>
+
+    <div id="i1" class="cpanel">
+      <div class="ch">RDS storage mechanics — how your data actually gets written and read</div>
+      <div class="csub">EBS volume types, IOPS provisioning, and the storage autoscaling feature that prevents disk-full outages</div>
+      <div class="cb">
+        <p>RDS instances use EBS storage (for non-Aurora engines). The choice of EBS volume type directly determines your database's write latency and IOPS ceiling — the same concepts from Day 7's EBS deep dive apply here, but with database-specific implications.</p>
+        <p><strong>gp2 storage (legacy, still widely used):</strong> Burstable IOPS (3 IOPS/GB, burst to 3,000 IOPS). Fine for small dev databases. Problematic for production: burst credits exhaust during peak load, IOPS drops to baseline, query latency spikes with no obvious error. The unpredictability makes performance troubleshooting very difficult.</p>
+        <p><strong>gp3 storage (recommended for most workloads):</strong> 3,000 IOPS and 125 MB/s baseline guaranteed regardless of storage size. Provision additional IOPS (up to 16,000) and throughput (up to 1,000 MB/s) independently. For a typical Spring Boot application with PostgreSQL doing moderate read/write: gp3 with 3,000-6,000 IOPS handles most workloads. Migrate all gp2 RDS instances to gp3.</p>
+        <p><strong>io1/io2 (provisioned IOPS, for demanding databases):</strong> Up to 64,000 IOPS (io1) or 256,000 IOPS (io2 Block Express). Sub-millisecond latency. Required for: high-transaction databases, financial systems processing thousands of writes per second, OLTP workloads with strict latency SLAs. io2 Block Express also provides 99.999% durability (vs 99.9% for gp3).</p>
+        <div class="mechbox"><strong>Storage autoscaling — the feature that prevents the most avoidable outage:</strong> RDS Storage Autoscaling automatically increases storage when it detects that free space is running low (by default, when less than 10% or 20GB remains, whichever is less). It scales up in 10% increments with a configurable maximum. Enable this on every RDS instance with a reasonable maximum. A database full scenario is catastrophic — MySQL InnoDB stops all writes, PostgreSQL refuses connections, the application sees write failures across all services. Storage autoscaling prevents this for less than a cent per GB of auto-expanded storage. Set the maximum at 3-5x your expected data size to provide room for unexpected growth while bounding unexpected costs. Important: storage can only be increased, never decreased for RDS. Once storage is expanded, it cannot be contracted — plan accordingly.</div>
+        <div class="failbox"><strong>The storage autoscaling trigger that fires too late:</strong> Storage autoscaling fires when free space drops below 10% of allocated storage. On a 20GB volume, this is 2GB. If your application has a bulk insert operation that writes 3GB in one transaction, the autoscaling trigger fires too late — the transaction has already failed with "disk full" before the new storage is provisioned (which takes minutes). Solution: set the autoscaling trigger threshold higher (use enhanced monitoring to track storage growth rate and provision autoscaling with a higher baseline allocation) or pre-provision storage generously for workloads with large infrequent writes.</div>
+        <p><strong>Maximum storage sizes by engine:</strong> MySQL and PostgreSQL on RDS: up to 64TiB. Oracle and SQL Server: up to 64TiB. Aurora MySQL and Aurora PostgreSQL: effectively unlimited (Aurora's distributed storage auto-scales in 10GB increments with no pre-provisioned limit — you pay per GB used, not per GB allocated). This is one of Aurora's most operationally significant advantages.</p>
+      </div>
+    </div>
+
+    <div id="i2" class="cpanel">
+      <div class="ch">The managed service trade-off — what RDS controls that you don't</div>
+      <div class="csub">Understanding the operational boundaries prevents the most common RDS surprises in production</div>
+      <div class="cb">
+        <p>RDS manages several aspects of the database that you control on a self-hosted MySQL instance. Understanding what AWS controls and what you control prevents configuration surprises and helps you understand why certain changes require a maintenance window or cause a reboot.</p>
+        <p><strong>Automatic minor version upgrades:</strong> By default, RDS auto-applies minor version upgrades (e.g., MySQL 8.0.28 → 8.0.32) during the configured maintenance window. Minor versions include bug fixes and security patches. This is generally safe but can occasionally cause brief connection interruptions. Some teams disable auto-minor-upgrade and manage upgrades explicitly to maintain a known-good version. For production systems with strict change control (like your JP Morgan project): disable auto-minor-upgrade, test new versions in staging, apply manually during a scheduled maintenance window.</p>
+        <p><strong>Major version upgrades:</strong> Major version upgrades (MySQL 5.7 → 8.0, PostgreSQL 13 → 15) require explicit action. AWS provides upgrade pathways but they typically require 15-60 minutes of downtime. Test all application queries against the new version before production upgrade — major versions often have behavioral differences in query planning, default settings, and deprecated features.</p>
+        <div class="mechbox"><strong>The maintenance window — when AWS does disruptive operations:</strong> Every RDS instance has a weekly maintenance window (e.g., Sunday 03:00-04:00 AM IST). During this window, AWS applies: pending software updates, hardware maintenance, and for Multi-AZ instances — any changes that require a failover. For single-AZ instances, the maintenance window is the time of potential brief downtime. For Multi-AZ instances, AWS performs a failover to the standby, applies maintenance to the former primary, and fails back — typically causing 20-30 seconds of elevated latency. Choose a maintenance window during your lowest traffic period. For ap-south-1 serving India: Sunday 0300-0400 IST (2130-2230 UTC Saturday) is typically very low traffic.</div>
+        <p><strong>Parameter groups — your configuration lever:</strong> RDS parameter groups are the mechanism for setting database engine configuration. You cannot edit my.cnf or postgresql.conf directly — instead, you create a custom parameter group and modify parameters within it. Parameter changes are either static (require instance reboot to take effect) or dynamic (take effect immediately without reboot). Attaching a default parameter group cannot be modified — always create a custom parameter group for every production RDS instance before you launch it, so you have a lever to tune configuration without needing to provision a new instance.</p>
+        <div class="failbox"><strong>The default parameter group trap:</strong> An engineer needs to increase <span class="mono">max_connections</span> for their MySQL RDS instance (too many Spring Boot HikariCP connection pools are exhausting the default limit). They try to modify the parameter group — but the instance is using the default parameter group, which cannot be modified. They must create a custom parameter group, set the parameter, and associate it with the instance (which requires a reboot for static parameters). Had they created a custom parameter group at launch time, this would be a 2-minute parameter change instead of a reboot. This is the most common RDS operational surprise for engineers new to managed databases.</div>
+      </div>
+    </div>
+
+    <div id="i3" class="cpanel">
+      <div class="ch">Parameter groups — tuning your database engine correctly</div>
+      <div class="csub">The parameters that matter for Spring Boot + HikariCP workloads on MySQL and PostgreSQL</div>
+      <div class="cb">
+        <p>Parameter groups contain hundreds of configurable database engine settings. Most defaults are fine. A handful are critical to review for any production Spring Boot application.</p>
+        <p><strong>Critical MySQL parameters for Spring Boot HikariCP applications:</strong></p>
+        <div class="code-block"><code><span class="c"># max_connections — total connections the MySQL server accepts</span>
+<span class="c"># Default: varies by instance class (150 for db.t3.micro, 16,000 for db.r6g.16xl)</span>
+<span class="c"># Formula: max_connections = (available_RAM_bytes / 12582880)</span>
+<span class="c"># HikariCP default pool size = 10 connections per app instance</span>
+<span class="c"># With 5 Spring Boot EC2 instances: 5 * 10 = 50 connections minimum</span>
+<span class="c"># Plus monitoring agents, admin connections: set max_connections to 2-3x expected peak</span>
+max_connections = 300
+
+<span class="c"># innodb_buffer_pool_size — the most impactful MySQL parameter</span>
+<span class="c"># How much RAM MySQL uses to cache data and index pages</span>
+<span class="c"># Default: 128MB (absurdly small for production)</span>
+<span class="c"># Best practice: 70-80% of available instance RAM</span>
+<span class="c"># On db.r6g.xlarge (32GB RAM): set to 24GB</span>
+<span class="c"># AWS RDS uses DBInstanceClassMemory variable: {DBInstanceClassMemory*3/4}</span>
+innodb_buffer_pool_size = {DBInstanceClassMemory*3/4}
+
+<span class="c"># slow_query_log — identify slow queries for optimization</span>
+slow_query_log = 1
+long_query_time = 1  <span class="c"># Log queries taking more than 1 second</span>
+log_queries_not_using_indexes = 1  <span class="c"># Also log queries without index usage</span>
+
+<span class="c"># wait_timeout / interactive_timeout — connection idle cleanup</span>
+<span class="c"># Default: 28800 seconds (8 hours)</span>
+<span class="c"># If a Spring Boot app crashes without closing its connection pool,</span>
+<span class="c"># ghost connections persist for 8 hours, exhausting max_connections</span>
+wait_timeout = 300  <span class="c"># 5 minutes — clean up idle connections faster</span>
+interactive_timeout = 300
+
+<span class="c"># Critical PostgreSQL parameters</span>
+<span class="c"># shared_buffers: equivalent to innodb_buffer_pool_size</span>
+<span class="c"># Default: 128MB — set to 25% of RAM for dedicated DB instances</span>
+shared_buffers = {DBInstanceClassMemory/32768}  <span class="c"># ~25% of RAM in 8KB pages</span>
+
+<span class="c"># effective_cache_size: hint to query planner about OS cache</span>
+<span class="c"># Set to 75% of total RAM — affects query plan selection</span>
+effective_cache_size = {DBInstanceClassMemory*3/32768}
+
+<span class="c"># max_connections for PostgreSQL</span>
+<span class="c"># PostgreSQL is more aggressive about per-connection memory than MySQL</span>
+<span class="c"># Default: 100 — may be fine, may not. Monitor with pgAdmin or pg_stat_activity</span>
+max_connections = 200  <span class="c"># With PgBouncer: can reduce this significantly</span></code></div>
+        <div class="prodbox"><strong>The {DBInstanceClassMemory} parameter group variable:</strong> RDS parameter groups support a dynamic variable that resolves to the instance's actual RAM in bytes. Using this variable means the parameter scales automatically when you resize the instance — you don't need to update the parameter group after an instance class change. Always use this variable for memory-based parameters rather than hardcoded values.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('multiaz',document.querySelectorAll('.ntab')[1])">Multi-AZ and failover mechanics →</button>
+  </div>
+
+  <!-- MULTI-AZ -->
+  <div id="p-multiaz" class="panel">
+    <div class="lede"><strong>Multi-AZ is not a performance feature and not a backup strategy. It is a high-availability mechanism that provides automatic failover in under 2 minutes when the primary database instance fails. Understanding exactly how synchronous replication works, what triggers a failover, what happens to connections during failover, and how to design your application to survive it — these are the production fundamentals every engineer touching RDS must know.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('m',0,this)">1 · Synchronous replication mechanics</button>
+      <button class="cbtn" onclick="showC('m',1,this)">2 · Failover sequence</button>
+      <button class="cbtn" onclick="showC('m',2,this)">3 · What happens to connections</button>
+      <button class="cbtn" onclick="showC('m',3,this)">4 · Multi-AZ vs Read Replica</button>
+    </div>
+
+    <div id="m0" class="cpanel active">
+      <div class="ch">How Multi-AZ synchronous replication actually works</div>
+      <div class="csub">The write acknowledgement model that guarantees zero data loss on failover</div>
+      <div class="cb">
+        <p>When Multi-AZ is enabled, AWS creates a standby instance in a different Availability Zone. The standby receives every write synchronously — before the primary acknowledges a write to your application, the write must be committed on the standby as well. This is <strong>synchronous block-level replication</strong>, not logical replication.</p>
+        <p><strong>The write path in Multi-AZ:</strong></p>
+        <p>1. Your Spring Boot app executes an INSERT or UPDATE via the JDBC connection.</p>
+        <p>2. The primary RDS instance writes the data to its EBS storage and generates a WAL (Write-Ahead Log) record.</p>
+        <p>3. The WAL record is sent synchronously to the standby instance over a dedicated, low-latency network link within the AWS region.</p>
+        <p>4. The standby writes the WAL record to its own EBS storage and acknowledges receipt.</p>
+        <p>5. Only after the standby acknowledges does the primary return a success response to your application.</p>
+        <div class="mechbox"><strong>The write latency cost of synchronous replication:</strong> Synchronous replication adds the round-trip latency between the primary and standby AZs to every write operation. Within a region, inter-AZ latency is under 1ms. So every write takes ~0.5-1ms longer than without Multi-AZ. For applications making 100 writes/second, this is 50-100ms of additional latency per second — completely negligible at the per-write level. For applications making 10,000 writes/second under high load, this extra latency accumulates and should be factored into capacity planning. This is why the choice of synchronous (Multi-AZ) vs asynchronous (Read Replicas) replication matters for write-heavy workloads.</div>
+        <p><strong>What the standby does NOT do:</strong> The standby instance serves no read or write traffic. You cannot connect to it. It is purely a warm spare. The RDS endpoint always points to the primary. If you run a SELECT on the RDS endpoint, it goes to the primary — the standby receives no query load. This is a critical distinction from Read Replicas, which serve read traffic. Multi-AZ is for availability, not performance.</p>
+        <div class="failbox"><strong>The Multi-AZ misconception that causes over-engineering:</strong> An engineer says "we have Multi-AZ so we have high availability AND double the read capacity." This is incorrect. The standby in Multi-AZ serves no traffic. Adding Multi-AZ does not reduce read load on the primary. To distribute reads, you need Read Replicas (which have asynchronous replication and are covered next). Many over-engineered RDS configurations add Multi-AZ thinking it helps with read performance — it doesn't. Multi-AZ only activates during a failover event. On a normal day, only the primary instance handles any traffic.</div>
+        <p><strong>Multi-AZ deployment options:</strong> The original Multi-AZ (one primary, one standby in a different AZ — covered here) and the newer Multi-AZ DB Cluster (one primary writer, two readable standby instances in three different AZs). The DB Cluster option provides both HA and read scaling from standbys, with failover under 35 seconds. For new deployments, the Multi-AZ DB Cluster is superior — but only available for MySQL 8.0.28+ and PostgreSQL 13.4+.</div>
+      </div>
+    </div>
+
+    <div id="m1" class="cpanel">
+      <div class="ch">The failover sequence — what happens second by second</div>
+      <div class="csub">The exact sequence of events from failure detection to restored connectivity — and why 20-120 seconds</div>
+      <div class="cb">
+        <p>When the primary RDS instance fails (hardware failure, OS crash, AZ network disruption, or forced failover during maintenance), the following sequence occurs:</p>
+        <p><strong>T+0: Failure occurs.</strong> The primary instance stops responding. This could be an AZ power outage, a storage fault, an OS kernel panic, or an explicit reboot for maintenance.</p>
+        <p><strong>T+10-15 seconds: Detection.</strong> The RDS control plane detects that the primary is unhealthy via health monitoring. This detection takes 10-15 seconds — AWS monitors the primary more aggressively than you might expect, but some buffer is required to distinguish a transient network hiccup from a genuine failure.</p>
+        <p><strong>T+15-30 seconds: Promotion decision.</strong> The RDS control plane promotes the standby to become the new primary. The standby already has all data current up to the last acknowledged write (synchronous replication guarantees this — zero data loss). The standby begins accepting new connections.</p>
+        <p><strong>T+30-120 seconds: DNS update.</strong> The RDS endpoint DNS record is updated to point to the new primary's IP address. The old DNS record had the primary's IP. The new record has the standby's (now primary's) IP. DNS TTL for RDS endpoints is 5 seconds. Once the TTL expires on all DNS caches in the network path, new connection attempts resolve to the new primary.</p>
+        <div class="mechbox"><strong>Why the failover takes up to 120 seconds despite the DNS TTL being 5 seconds:</strong> DNS propagation depends on multiple caches in the resolution chain. Your application's JVM DNS cache, the OS resolver cache, corporate proxy DNS caches, and intermediate resolver caches may all have cached the old IP address for varying TTLs. The 5-second TTL on the RDS CNAME means recursive resolvers should have the new IP within 5 seconds. But your application's JVM may cache DNS for 30 seconds by default (configurable with <span class="mono">networkaddress.cache.ttl</span> JVM property). After all caches expire, new connections go to the new primary. Existing broken connections must be retried — they will resolve to the new IP on retry. Setting JVM DNS TTL to 5-10 seconds ensures your application re-resolves quickly after a failover: add <span class="mono">-Dnetworkaddress.cache.ttl=5</span> to your JVM startup flags in your systemd service file.</div>
+        <div class="failbox"><strong>The application that never recovers from a failover:</strong> HikariCP (your Spring Boot connection pool) has existing connections to the old primary IP. After failover, those connections are closed (the old primary is gone). HikariCP marks the connections as invalid. By default, HikariCP retries connections with exponential backoff. If the JVM DNS TTL is set to 0 (security best practice in some environments — no caching), the retry immediately resolves to the new primary IP. If JVM DNS TTL is set to -1 (cache forever — a common JVM security hardening setting), the application never re-resolves and keeps failing to connect to the old IP indefinitely. Check your JVM DNS TTL setting before deploying to production. The correct value is 5-30 seconds — not 0 (unnecessary overhead) and not -1 (breaks failover).</div>
+      </div>
+    </div>
+
+    <div id="m2" class="cpanel">
+      <div class="ch">What happens to active database connections during failover</div>
+      <div class="csub">Every active connection is dropped — and how to design your application to recover gracefully</div>
+      <div class="cb">
+        <p>During a Multi-AZ failover, every active connection to the primary database is terminated. In-flight transactions that were not yet committed are rolled back. There is no graceful connection draining. From the application's perspective, the database disappears and reappears at a new IP within 20-120 seconds.</p>
+        <p><strong>What your Spring Boot application experiences:</strong> HikariCP's connections to the old primary receive a TCP RST (connection reset) when the old primary fails. HikariCP marks those connections as invalid. The pool attempts to establish new connections. The new connections fail (DNS hasn't updated yet, or the new primary isn't ready). HikariCP retries with backoff. Eventually, the DNS update propagates, new connections succeed, the pool refills, and the application resumes normal operation.</p>
+        <p><strong>Spring Boot + HikariCP configuration for Multi-AZ resilience:</strong></p>
+        <div class="code-block"><code><span class="c"># application.properties — HikariCP configuration for Multi-AZ RDS</span>
+
+<span class="c"># Connection validation — detect dead connections before using them</span>
+<span class="v">spring.datasource.hikari.connection-test-query</span>=SELECT 1
+<span class="v">spring.datasource.hikari.validation-timeout</span>=3000  <span class="c"># 3 seconds to validate</span>
+
+<span class="c"># Connection timeout — how long to wait for a connection from the pool</span>
+<span class="v">spring.datasource.hikari.connection-timeout</span>=30000  <span class="c"># 30 seconds</span>
+
+<span class="c"># Idle timeout — remove idle connections (reduces stale connection risk)</span>
+<span class="v">spring.datasource.hikari.idle-timeout</span>=600000  <span class="c"># 10 minutes</span>
+
+<span class="c"># Max lifetime — force connection recycling before MySQL wait_timeout closes it</span>
+<span class="c"># Must be less than MySQL's wait_timeout (we set to 300s above)</span>
+<span class="c"># Set to 270 seconds to recycle before the 300-second MySQL timeout</span>
+<span class="v">spring.datasource.hikari.max-lifetime</span>=270000
+
+<span class="c"># Pool size — start conservatively, monitor and increase</span>
+<span class="v">spring.datasource.hikari.minimum-idle</span>=5
+<span class="v">spring.datasource.hikari.maximum-pool-size</span>=10
+
+<span class="c"># CRITICAL: keepalive-time — test idle connections regularly</span>
+<span class="c"># Prevents stale connections from surviving across a failover</span>
+<span class="v">spring.datasource.hikari.keepalive-time</span>=60000  <span class="c"># Test idle connections every 60s</span>
+
+<span class="c"># CRITICAL: Allow HikariCP to recover from database failures</span>
+<span class="c"># Without initializationFailTimeout=-1, the app FAILS TO START if DB is unreachable</span>
+<span class="c"># With -1: pool starts empty, fills lazily when DB becomes available</span>
+<span class="v">spring.datasource.hikari.initialization-fail-timeout</span>=-1
+
+<span class="c"># JDBC URL with additional resilience options</span>
+<span class="v">spring.datasource.url</span>=jdbc:mysql://your-rds-endpoint:3306/yourdb\
+  ?useSSL=true\
+  &requireSSL=true\
+  &autoReconnect=false\  <span class="c"># Don't use autoReconnect — it causes issues, let HikariCP handle it</span>
+  &connectTimeout=10000\
+  &socketTimeout=30000</code></div>
+
+        <div class="prodbox"><strong>The keepalive-time parameter is the most important one most engineers don't set:</strong> Without keepalive-time, HikariCP never actively tests idle connections. A connection can sit idle in the pool for 10 minutes. During that time, a failover occurs. The connection is dead — but HikariCP doesn't know until a request tries to use it. The first request to that connection fails with a connection error, is retried against a new pool connection that actually works. With keepalive-time=60000, HikariCP tests every idle connection every 60 seconds using the connection-test-query. If the connection is dead (failover happened), it's removed from the pool before a request tries to use it. New healthy connections are added. The failover recovery happens in the background at the 60-second validation cycle, not during a user request.</div>
+      </div>
+    </div>
+
+    <div id="m3" class="cpanel">
+      <div class="ch">Multi-AZ vs Read Replicas — the distinction that architecture depends on</div>
+      <div class="csub">They look similar from the outside but are fundamentally different mechanisms serving different purposes</div>
+      <div class="cb">
+        <div class="cg-2">
+          <div class="cc hl">
+            <div class="cc-t">Multi-AZ Standby</div>
+            <div class="cc-b">
+              <strong>Purpose:</strong> High availability / automatic failover<br><br>
+              <strong>Replication:</strong> Synchronous — every write committed on standby before acknowledged to app. Zero data loss on failover.<br><br>
+              <strong>Traffic:</strong> Receives zero traffic. Cannot be accessed. Purely a hot spare.<br><br>
+              <strong>Failover:</strong> Automatic, 20-120 seconds, DNS update. No manual intervention.<br><br>
+              <strong>Same region:</strong> Always in same region, different AZ.<br><br>
+              <strong>Cost:</strong> 2x instance cost (you pay for both primary and standby). No additional data transfer cost.
+            </div>
+          </div>
+          <div class="cc">
+            <div class="cc-t">Read Replica</div>
+            <div class="cc-b">
+              <strong>Purpose:</strong> Read scaling / offloading reads from primary<br><br>
+              <strong>Replication:</strong> Asynchronous — replica may lag behind primary by seconds to minutes. Small data loss possible if used as failover.<br><br>
+              <strong>Traffic:</strong> Receives read traffic. You connect to the replica's endpoint for SELECT queries.<br><br>
+              <strong>Failover:</strong> Manual promotion required — not automatic. You must change application connection strings.<br><br>
+              <strong>Cross-region:</strong> Can be in a different region (for DR). Same or different AZ.<br><br>
+              <strong>Cost:</strong> Additional instance cost per replica. Plus data transfer cost for cross-region.
+            </div>
+          </div>
+        </div>
+        <div class="mechbox"><strong>The key question that determines which you need:</strong> "Does my application need to survive a database failure automatically?" → Multi-AZ. "Does my application need to handle more read queries than a single database can serve?" → Read Replicas. In production, the answer to both is usually "yes" — you want Multi-AZ for HA and Read Replicas for scale. These are not mutually exclusive. You can have a Multi-AZ primary with read replicas. The Multi-AZ standby and the Read Replicas are independent.</div>
+        <div class="failbox"><strong>Promoting a Read Replica as a Multi-AZ failover — the data loss trap:</strong> Some engineers use a Read Replica as a "cheap Multi-AZ" — they plan to manually promote it if the primary fails. This is dangerous. Read Replicas have asynchronous replication — they lag behind the primary. If the primary fails catastrophically before the last write is replicated, that data is gone. For a financial transaction system at JP Morgan, any data loss is a regulatory incident. Multi-AZ uses synchronous replication — zero data loss guaranteed on failover. The cost premium for Multi-AZ (2x instance cost) is justified for any system where data loss is unacceptable.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('replicas',document.querySelectorAll('.ntab')[2])">Read Replicas deep dive →</button>
+  </div>
+
+  <!-- READ REPLICAS -->
+  <div id="p-replicas" class="panel">
+    <div class="lede"><strong>Read Replicas are how you scale database read capacity beyond what a single instance can serve. The asynchronous replication model, the replication lag, and the architectural patterns for correctly routing reads and writes — these determine whether Read Replicas actually help or silently introduce stale data bugs into your application.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('rr',0,this)">1 · How replication works</button>
+      <button class="cbtn" onclick="showC('rr',1,this)">2 · Replication lag</button>
+      <button class="cbtn" onclick="showC('rr',2,this)">3 · Read/write routing in Spring Boot</button>
+      <button class="cbtn" onclick="showC('rr',3,this)">4 · Cross-region replicas</button>
+    </div>
+
+    <div id="rr0" class="cpanel active">
+      <div class="ch">How Read Replica replication works under the hood</div>
+      <div class="csub">Binlog-based asynchronous replication and what "asynchronous" actually means for your data</div>
+      <div class="cb">
+        <p>Read Replicas use the database engine's native replication protocol. For MySQL: binary log (binlog) replication — the primary writes changes to its binary log, the replica reads and applies them asynchronously. For PostgreSQL: WAL streaming replication — the primary streams Write-Ahead Log records to the replica, which applies them asynchronously. "Asynchronous" means the primary does not wait for the replica to confirm before acknowledging the write to the application.</p>
+        <p><strong>The replication sequence for MySQL binlog:</strong> Application writes row to primary → primary commits to disk and binary log → primary returns success to application → (some time later) replica reads new binlog entry → replica applies the change → replica reflects the new data. The "some time later" gap is the replication lag — typically milliseconds in a healthy system, but potentially seconds or minutes under write-heavy load.</p>
+        <div class="mechbox"><strong>Why asynchronous replication doesn't mean "eventually stale" in practice — usually:</strong> Under normal operating conditions, MySQL and PostgreSQL replicas lag the primary by 10-100 milliseconds. For typical web application read patterns (read a product, read a user profile, read recent orders), 100ms lag is imperceptible — the data you're reading was written well before the user's current session. The staleness problem arises in specific scenarios: read-after-write consistency (user submits a form, data is written to primary, next page load reads from replica — if replication is slow, user sees old data), and reporting queries that need point-in-time accuracy.</div>
+        <p><strong>RDS replica limits:</strong> MySQL: up to 15 Read Replicas per primary (though practical limits depend on primary write throughput). PostgreSQL: up to 15 Read Replicas. Replicas can themselves have replicas (cascaded replication) — a second-tier replica reads from a first-tier replica, reducing the write load on the primary from replication traffic. Each replica is a separate db instance class — you can use smaller (cheaper) instance types for read replicas than for the primary if reads are less intensive.</p>
+        <div class="failbox"><strong>The replica that causes more load than it relieves:</strong> A team adds a Read Replica to reduce primary database load. They route all complex analytical queries to the replica. The analytical queries are long-running (5-30 seconds each) and IO-intensive. The replica can't keep up — analytical queries hold row-level locks (even on replicas applying replication), causing replication lag to spike to 60+ seconds. Now the replica is both falling behind AND serving degraded queries. The primary was working fine; the replica is the problem. Solution: replicas work best for short read queries, not heavy analytical workloads. Use separate Redshift, Athena, or dedicated analytics instances for long-running reports — not your OLTP read replica.</div>
+      </div>
+    </div>
+
+    <div id="rr1" class="cpanel">
+      <div class="ch">Replication lag — measuring it, accepting it, and knowing when it breaks your application</div>
+      <div class="csub">The ReplicaLag CloudWatch metric and the application scenarios where lag causes data integrity problems</div>
+      <div class="cb">
+        <p>Replication lag is measured in seconds of how far behind the replica's applied position is from the primary's current binlog/WAL position. CloudWatch metric: <span class="mono">ReplicaLag</span> on the Read Replica instance. Healthy lag: 0-1 seconds under normal operation. Concerning lag: 5-30 seconds (replica struggling to keep up with write load). Dangerous lag: 60+ seconds (significant query staleness, replica falling further behind).</p>
+        <p><strong>What causes replication lag to spike:</strong> Primary write throughput exceeds replica's apply capacity (the replica can't apply changes as fast as they arrive), long-running queries on the replica blocking replication thread (replica SQL thread serialises apply and queries), large transactions on the primary (a single transaction with 10 million row updates creates a large binlog event that takes the replica a long time to apply atomically), network congestion between AZs.</p>
+        <div class="mechbox"><strong>The replication lag alert threshold to set:</strong> Set a CloudWatch alarm: ReplicaLag > 60 seconds for 5 minutes. This is early warning that something is wrong before it becomes a user-visible problem. When this alert fires: check replica CPU and IO utilisation (replica may be overloaded), check for long-running read queries on the replica (use SHOW PROCESSLIST on MySQL), check primary write rate has increased (correlated with a deployment or batch job), check for large transactions on the primary. Respond within 30 minutes — a replica that falls minutes behind is very hard to catch up without reducing primary write load.</div>
+        <p><strong>When replication lag breaks application logic:</strong></p>
+        <p><strong>Read-after-write:</strong> User creates a job posting (write to primary). User is redirected to "view your posting" page. Page reads from replica. Lag is 3 seconds. The job posting doesn't exist yet on the replica. User sees an error or empty page. They think their post was lost. They post again. Duplicate posting. Fix: for read-after-write scenarios, read from the primary. Route all reads that follow a recent write (within the same user session) to the primary. Spring Data can be configured with routing data sources to handle this.</p>
+        <p><strong>Aggregate queries:</strong> A dashboard shows "total active workers: 4,521". The write path adds new workers to the primary. The dashboard reads from the replica with 30 seconds of lag. The count is 4,498. Not incorrect enough to cause a crash but incorrect enough to confuse business stakeholders. For exact counts that must be current, read from primary.</p>
+        <div class="prodbox"><strong>The read routing strategy for GetWork:</strong><br>
+          Route to replica: job listing browsing, worker profile views, search results, analytics dashboards — all read-heavy, read-only, tolerant of slight staleness.<br>
+          Route to primary: anything following a write in the same transaction, payment verifications, inventory checks, anything where stale data has a business consequence.<br>
+          Implementation: Spring's AbstractRoutingDataSource or Spring Cloud AWS DataSource routing can switch between primary and replica endpoints based on @Transactional(readOnly=true) annotation — making the routing transparent to application code.</div>
+      </div>
+    </div>
+
+    <div id="rr2" class="cpanel">
+      <div class="ch">Read/write routing in Spring Boot — implementation patterns</div>
+      <div class="csub">How to transparently route @Transactional(readOnly=true) to replicas without changing business logic</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">// DataSourceRoutingConfig.java — route reads to replica, writes to primary</span>
+<span class="cmd-g">@Configuration</span>
+<span class="k">public class</span> DataSourceRoutingConfig {
+
+    <span class="cmd-g">@Bean</span>
+    <span class="cmd-g">@Primary</span>
+    <span class="k">public</span> DataSource routingDataSource(
+            <span class="cmd-g">@Qualifier</span>(<span class="s">"primaryDataSource"</span>) DataSource primary,
+            <span class="cmd-g">@Qualifier</span>(<span class="s">"replicaDataSource"</span>) DataSource replica) {
+
+        <span class="k">return new</span> AbstractRoutingDataSource() {
+            <span class="cmd-g">@Override</span>
+            <span class="k">protected</span> Object determineCurrentLookupKey() {
+                <span class="c">// TransactionSynchronizationManager tells us if current tx is read-only</span>
+                <span class="k">return</span> TransactionSynchronizationManager.isCurrentTransactionReadOnly()
+                    ? <span class="s">"replica"</span> : <span class="s">"primary"</span>;
+            }
+
+            {
+                Map&lt;Object, Object&gt; targets = <span class="k">new</span> HashMap&lt;&gt;();
+                targets.put(<span class="s">"primary"</span>, primary);
+                targets.put(<span class="s">"replica"</span>, replica);
+                setTargetDataSources(targets);
+                setDefaultTargetDataSource(primary);  <span class="c">// Default to primary</span>
+            }
+        };
+    }
+
+    <span class="cmd-g">@Bean("primaryDataSource")</span>
+    <span class="k">public</span> DataSource primaryDataSource() {
+        <span class="k">return</span> DataSourceBuilder.create()
+            .url(<span class="s">"jdbc:mysql://primary-rds-endpoint:3306/getwork"</span>)
+            .username(<span class="s">"appuser"</span>).password(fetchFromSecretsManager())
+            .build();
+    }
+
+    <span class="cmd-g">@Bean("replicaDataSource")</span>
+    <span class="k">public</span> DataSource replicaDataSource() {
+        <span class="k">return</span> DataSourceBuilder.create()
+            .url(<span class="s">"jdbc:mysql://replica-rds-endpoint:3306/getwork"</span>)
+            .username(<span class="s">"appuser"</span>).password(fetchFromSecretsManager())
+            .build();
+    }
+}
+
+<span class="c">// Service layer — transparent routing via annotation</span>
+<span class="cmd-g">@Service</span>
+<span class="k">public class</span> JobService {
+
+    <span class="cmd-g">@Transactional(readOnly = true)</span>  <span class="c">// Routes to replica</span>
+    <span class="k">public</span> List&lt;Job&gt; findAvailableJobs(String city) {
+        <span class="k">return</span> jobRepository.findByCityAndStatus(city, JobStatus.ACTIVE);
+    }
+
+    <span class="cmd-g">@Transactional</span>  <span class="c">// Routes to primary (readOnly=false by default)</span>
+    <span class="k">public</span> Job createJob(CreateJobRequest request) {
+        <span class="k">return</span> jobRepository.save(<span class="k">new</span> Job(request));
+    }
+
+    <span class="cmd-g">@Transactional</span>  <span class="c">// Routes to primary — write followed by read in same tx</span>
+    <span class="k">public</span> Job updateAndReturn(Long id, UpdateJobRequest request) {
+        Job job = jobRepository.findById(id).orElseThrow();
+        job.update(request);
+        <span class="k">return</span> jobRepository.save(job);  <span class="c">// Read-after-write stays on primary</span>
+    }
+}</code></div>
+        <div class="mechbox"><strong>The transaction propagation gotcha with routing:</strong> When a read-only service method calls a write service method (via a Spring @Service method call), the outer transaction context (readOnly=true) propagates to the inner call if using PROPAGATION_REQUIRED (the default). The inner write goes to the replica — which cannot accept writes. This causes a "Read-only connection error." Solution: use PROPAGATION_REQUIRES_NEW on write methods that might be called from read transactions, or restructure to never call write methods from read transaction contexts. The AbstractRoutingDataSource approach makes this visible — you'll catch it in testing, not just in production.</div>
+      </div>
+    </div>
+
+    <div id="rr3" class="cpanel">
+      <div class="ch">Cross-region Read Replicas — disaster recovery and global latency</div>
+      <div class="csub">When you need a database in another region and the operational implications of asynchronous cross-region replication</div>
+      <div class="cb">
+        <p>Read Replicas can exist in different AWS regions. Cross-region replicas use the same native asynchronous replication as same-region replicas, but the replication traffic crosses AWS's global network backbone (not the public internet). Lag is higher than same-region — typically 10-100 seconds depending on network conditions and write volume.</p>
+        <p><strong>Use cases for cross-region replicas:</strong></p>
+        <p><strong>Disaster recovery (DR):</strong> Primary in ap-south-1 (Mumbai), cross-region replica in ap-southeast-1 (Singapore). If ap-south-1 has a prolonged regional outage (extremely rare, but the AWS ap-south-1 outage in 2021 lasted several hours for some services), you can promote the Singapore replica as the new primary and update your application's database endpoint. This is manual — cross-region replica promotion requires explicit action, not automatic failover.</p>
+        <p><strong>Global read latency reduction:</strong> If GetWork expands to users in UAE or Southeast Asia, a cross-region replica in ap-southeast-1 or me-south-1 allows those users' read queries to hit a geographically closer database. Browse job listings from Singapore with Singapore-region latency instead of Mumbai-region latency. Writes still go to Mumbai (the primary). Read-heavy international traffic is served locally.</p>
+        <div class="mechbox"><strong>Cross-region replication data transfer costs:</strong> Unlike same-region replication (which is free), cross-region replication charges for data transfer out of the source region — at the standard inter-region data transfer rate (~$0.09/GB from ap-south-1 to ap-southeast-1). For a database with 10GB/day of write changes: $0.90/day = ~$27/month in data transfer, plus the replica instance cost. This is manageable. For a database with 1TB/day of changes: $90/day in transfer alone. Evaluate the cost model before committing to cross-region replication for high-write databases.</div>
+        <div class="failbox"><strong>Promoting a cross-region replica — the operational procedure engineers forget to test:</strong> A company has a cross-region replica as their DR plan. ap-south-1 has an outage. On-call engineer promotes the Singapore replica. The promotion succeeds — the replica becomes a standalone DB instance. Application team updates the connection string in AWS Secrets Manager. Application restarts with new endpoint. But nobody had tested this procedure. The application uses a hard-coded region in its SSM Parameter Store calls — which now fail because the application is pointing at Singapore but SSM calls are still going to ap-south-1 (which is down). DR runbooks must be tested quarterly. Every dependency that is region-specific must be in the DR checklist.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('aurora',document.querySelectorAll('.ntab')[3])">Aurora deep dive →</button>
+  </div>
+
+  <!-- AURORA -->
+  <div id="p-aurora" class="panel">
+    <div class="lede"><strong>Aurora is not just a faster version of MySQL or PostgreSQL. It is a fundamentally different database architecture — a cloud-native distributed database that separates compute from storage in a way that makes its performance, availability, and scaling characteristics entirely unlike traditional RDS. Understanding Aurora's storage engine is what makes its behaviour predictable rather than magical.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('au',0,this)">1 · Aurora storage architecture</button>
+      <button class="cbtn" onclick="showC('au',1,this)">2 · Aurora vs RDS MySQL</button>
+      <button class="cbtn" onclick="showC('au',2,this)">3 · Aurora Serverless v2</button>
+      <button class="cbtn" onclick="showC('au',3,this)">4 · Aurora Global Database</button>
+    </div>
+
+    <div id="au0" class="cpanel active">
+      <div class="ch">Aurora's distributed storage architecture — the core innovation</div>
+      <div class="csub">Why Aurora's architecture makes it fundamentally different from MySQL on EBS</div>
+      <div class="cb">
+        <p>Traditional RDS (MySQL, PostgreSQL) uses a two-layer architecture: database engine on EC2 writing to EBS. Aurora separates these layers completely. Aurora has a compute layer (the database engine, MySQL-compatible or PostgreSQL-compatible) and a dedicated distributed storage system — the <strong>Aurora Storage</strong> — that is shared across all compute nodes in a cluster.</p>
+        <p><strong>Aurora Storage mechanics:</strong> Data is automatically distributed across 6 storage nodes in 3 Availability Zones (2 per AZ). Each write is acknowledged after 4 of 6 nodes confirm receipt (a quorum write). Reads require only 3 of 6 nodes to agree (quorum read). This means Aurora can tolerate: 1 AZ failure (loses 2 nodes, still has 4 remaining — above read and write quorums), 2 individual node failures across different AZs. With 6 copies across 3 AZs, Aurora achieves 99.999999999% (11 nines) durability — the same as S3.</p>
+        <div class="mechbox"><strong>Why Aurora writes are faster than MySQL on EBS despite 6 copies:</strong> Traditional MySQL writes to EBS: the write must be flushed to the EBS volume (one copy, one ack). With Multi-AZ MySQL, the write must be replicated to the standby EBS volume synchronously before ack (two copies, two acks, across an AZ boundary). Aurora writes 4 of 6 redo log records across 3 AZs for each write. But Aurora only writes redo log records — not full data pages. The storage nodes reconstruct pages lazily from the redo log chain. Writing a small redo log record (typically hundreds of bytes) to 4 distributed nodes is faster than writing a 16KB page to a remote EBS volume across an AZ boundary. Aurora typically achieves 5x the write throughput of an equivalent MySQL RDS instance for this reason.</div>
+        <p><strong>Aurora storage auto-scaling:</strong> Aurora storage is not pre-provisioned. You don't set "20GB" or "100GB" at creation time. Storage grows automatically in 10GB increments as your data grows. You pay per GB-month consumed. There is no upper limit other than Aurora's maximum of 128TiB per cluster. For traditional RDS, you pre-provision storage, pay for all of it whether used or not, and must manually expand when approaching limits. Aurora's pay-per-use storage eliminates both over-provisioning waste and under-provisioning outage risk.</p>
+        <div class="failbox"><strong>The Aurora storage cost surprise:</strong> Aurora's storage appears cheaper at low volumes — you only pay for what you use. But Aurora charges $0.10/GB-month for storage (more than gp3 EBS at $0.08/GB-month) and $0.02/million I/O requests (traditional RDS includes I/O in the instance price for gp3). For a 1TB Aurora database with 10 billion I/O requests per month: storage = $100, I/O = $200, total = $300/month on Aurora vs $80 (1TB gp3) + included I/O on traditional RDS. Aurora is not always cheaper — it's often more expensive per GB for large databases. Aurora shines for: high-availability requirements (Aurora's HA is superior), variable storage needs (pay-per-use vs pre-provision), and write-intensive workloads (higher write throughput justifies the cost).</div>
+      </div>
+    </div>
+
+    <div id="au1" class="cpanel">
+      <div class="ch">Aurora vs RDS MySQL — when each is the right choice</div>
+      <div class="csub">Concrete comparison across the dimensions that matter for your GetWork and Deloitte projects</div>
+      <div class="cb">
+        <div class="cg-2">
+          <div class="cc">
+            <div class="cc-t">RDS MySQL — when to choose</div>
+            <div class="cc-b">
+              <strong>Cost:</strong> Cheaper at low-medium scale, especially for read-heavy workloads with large storage. gp3 EBS includes I/O; Aurora charges per I/O.<br><br>
+              <strong>Familiarity:</strong> Standard MySQL behaviour. No Aurora-specific gotchas or limitations. Self-migration to on-premise is straightforward if needed.<br><br>
+              <strong>Regulatory:</strong> Some financial compliance frameworks require using "standard" database engines without proprietary extensions.<br><br>
+              <strong>Development databases:</strong> db.t3.micro RDS MySQL for dev/test — Aurora's minimum instance class is larger and more expensive.<br><br>
+              <strong>Write-light, read-heavy with large datasets:</strong> gp3 with provisioned IOPS + read replica at lower cost than Aurora.
+            </div>
+          </div>
+          <div class="cc hl">
+            <div class="cc-t">Aurora MySQL — when to choose</div>
+            <div class="cc-b">
+              <strong>Write throughput:</strong> 5x higher than RDS MySQL on same instance class. For GetWork during peak job posting periods or for your Deloitte financial transaction processing.<br><br>
+              <strong>Failover speed:</strong> Aurora failover (promote a read replica to writer) takes 30-120 seconds. RDS Multi-AZ failover takes 60-120 seconds. Both are fast, but Aurora cluster failover is generally faster in practice.<br><br>
+              <strong>Variable storage:</strong> Auto-scaling storage — don't pre-provision. Eliminates storage capacity planning and emergency expansion incidents.<br><br>
+              <strong>Aurora Serverless v2:</strong> Scales compute capacity in fine-grained units from 0.5 ACUs to 128 ACUs in seconds — ideal for unpredictable or intermittent workloads.<br><br>
+              <strong>Global Database:</strong> Active-active cross-region writes with sub-second replication. RDS cross-region is read-only replica only.
+            </div>
+          </div>
+        </div>
+        <div class="mechbox"><strong>Aurora endpoint types — the multiple DNS names you need to understand:</strong> An Aurora cluster has multiple endpoint types. The <strong>cluster endpoint</strong> always points to the current writer instance — use this for writes and transactions. The <strong>reader endpoint</strong> is a load-balanced endpoint that routes across all Aurora Replicas (Aurora's equivalent of Read Replicas) — use this for read-only queries. The <strong>instance endpoint</strong> is the direct endpoint for a specific instance — use this only for administrative operations. Your Spring Boot app should use: cluster endpoint for the write DataSource, reader endpoint for the read-only DataSource. If you use the cluster endpoint for reads, you bypass the replica fleet and overload the writer.</div>
+      </div>
+    </div>
+
+    <div id="au2" class="cpanel">
+      <div class="ch">Aurora Serverless v2 — database capacity that scales with your application</div>
+      <div class="csub">ACUs, scale-up speed, and the workloads where Serverless v2 is economically compelling</div>
+      <div class="cb">
+        <p>Aurora Serverless v2 automatically scales the compute capacity of an Aurora instance between a minimum and maximum number of Aurora Capacity Units (ACUs). One ACU corresponds to approximately 2GB of memory and proportional CPU. The cluster can scale from 0.5 ACU (1GB memory, minimal CPU) to 128 ACUs (256GB memory, 128 vCPUs). Scaling happens in 0.5 ACU increments, takes effect in seconds, and is transparent to the application — connections are maintained during scaling.</p>
+        <p><strong>How scaling works:</strong> Aurora Serverless v2 monitors CPU utilisation, database connections, and query concurrency. When any of these indicators exceed thresholds, it scales up in fractions of an ACU — it doesn't double capacity at once like EC2 Auto Scaling. A database under gradually increasing load smoothly tracks up from 1 ACU to 8 ACUs to 32 ACUs. Under gradually decreasing load, it scales back down (more slowly than scale-up, to avoid oscillation). You set minimum ACUs (the floor — pay for this even when idle) and maximum ACUs (the ceiling).</p>
+        <div class="mechbox"><strong>The ACU economics for variable workloads:</strong> GetWork has highly variable traffic — quiet overnight (no job seekers browsing), busy weekday mornings (workers looking for daily labour). A provisioned db.r6g.xlarge (8 vCPUs, 32GB, ~$0.48/hr) runs 24/7 whether used or not. Aurora Serverless v2 configured with min=0.5 ACU, max=8 ACU: during the quiet 12-hour overnight window, the database runs at 0.5 ACU ($0.12/hr). During peak 4 hours, it scales to 6 ACU ($1.44/hr). Average cost: ~$0.50/hr. Same as provisioned but scaled to actual usage. For intermittently used databases (dev/test, batch processing, reporting), Serverless v2 with min=0.5 ACU can reduce database costs by 60-80%.</div>
+        <p><strong>Aurora Serverless v2 limitations:</strong> Cannot scale to zero ACUs (unlike v1 — v2 always has minimum 0.5 ACU running, minimum ~$43/month). Cross-region Global Database support was added but some advanced features require provisioned clusters. Not available for all regions — check Aurora Serverless v2 availability for your target regions. The performance of Serverless v2 during rapid scale-up is excellent (seconds), but there's a brief latency spike for the first query that triggers scaling — not suitable for applications requiring sub-10ms cold start.</p>
+        <div class="prodbox"><strong>The recommended Aurora Serverless v2 configuration for GetWork:</strong> min_capacity=0.5 (minimum cost overnight), max_capacity=16 (handles peak activity). Enable Multi-AZ for the Serverless v2 cluster (a failover replica in another AZ — Aurora manages this). Use cluster endpoint for writes, reader endpoint for reads. Total cost at current GetWork scale: ~$0.06/hr during quiet periods, ~$2/hr during peak, average ~$0.40/hr — compared to $0.48/hr for a provisioned instance that doesn't scale with your traffic.</div>
+      </div>
+    </div>
+
+    <div id="au3" class="cpanel">
+      <div class="ch">Aurora Global Database — active-active multi-region writes</div>
+      <div class="csub">The only RDS feature that supports sub-second cross-region replication for read and write promotion</div>
+      <div class="cb">
+        <p>Aurora Global Database replicates data across multiple AWS regions with sub-second latency using Aurora's storage-level replication — not engine-level binlog replication. A global database has one primary region (handles writes) and up to five secondary regions (read traffic locally). Each region has its own Aurora cluster.</p>
+        <p><strong>How sub-second cross-region replication works:</strong> Aurora Global Database replicates at the storage layer — redo log records are replicated from the primary region's storage nodes to secondary region storage nodes. This happens below the database engine layer. The database engine in the secondary region applies these redo records to its own storage nodes. Because only redo log records (not full pages) are transmitted, the bandwidth and latency requirements are much lower than traditional binlog replication. Typical replication lag: under 1 second, usually 50-200ms.</div>
+        <div class="mechbox"><strong>Planned failover (managed failover) in Aurora Global Database:</strong> For planned events (region maintenance, DR drill), you can perform a managed failover that promotes a secondary region to become the new primary. The process: Aurora ensures the secondary is fully caught up (zero lag), then promotes it to primary. The old primary becomes a secondary. This takes under 1 minute and can be done with no data loss. For unplanned failover (region outage), you perform a manual detach-and-promote — slightly longer and potentially with seconds of lag.</div>
+        <div class="prodbox"><strong>Aurora Global Database for JP Morgan fintech use case:</strong> A payment processing system at JP Morgan needs: primary database in ap-south-1 (Mumbai) for India-based transactions, secondary in ap-southeast-1 (Singapore) for Southeast Asian operations, secondary in ap-east-1 (Hong Kong) for APAC trading. All three regions can read locally. Write transactions (payment authorisation, trade execution) go to Mumbai. If Mumbai has an outage, Singapore is promoted to primary in under 1 minute with sub-second data loss risk. This architecture satisfies both low-latency regional reads and global business continuity requirements — and was not achievable with standard RDS cross-region replicas (which have seconds to minutes of lag and no automatic failover).</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('connections',document.querySelectorAll('.ntab')[4])">Connection pooling — the layer between your app and RDS →</button>
+  </div>
+
+  <!-- CONNECTION POOLING -->
+  <div id="p-connections" class="panel">
+    <div class="lede"><strong>Database connections are expensive — each MySQL or PostgreSQL connection consumes server-side memory, a thread, and a file descriptor. Your Spring Boot application's connection pool configuration is one of the most impactful performance and reliability settings you'll make. Getting it wrong causes either resource exhaustion (too many connections) or request queuing (too few connections). Getting it right requires understanding both HikariCP internals and RDS connection limits.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('cp',0,this)">1 · HikariCP internals</button>
+      <button class="cbtn" onclick="showC('cp',1,this)">2 · Sizing the connection pool</button>
+      <button class="cbtn" onclick="showC('cp',2,this)">3 · RDS Proxy</button>
+      <button class="cbtn" onclick="showC('cp',3,this)">4 · IAM database authentication</button>
+    </div>
+
+    <div id="cp0" class="cpanel active">
+      <div class="ch">HikariCP internals — the fastest JDBC connection pool and why</div>
+      <div class="csub">What HikariCP does that makes it the Spring Boot default and what you must understand to configure it correctly</div>
+      <div class="cb">
+        <p>HikariCP (the "Hikari" is Japanese for "light") is the default connection pool for Spring Boot since version 2.0. It replaced Tomcat DBCP and C3P0 as the preferred pool due to dramatically lower overhead per connection operation and better handling of connection failure scenarios.</p>
+        <p><strong>What HikariCP manages:</strong> HikariCP maintains a pool of JDBC connections to the database. When your Spring Boot code calls <span class="mono">@Repository</span> methods or executes JDBC templates, HikariCP provides a connection from the pool, your code uses it, and the connection is returned to the pool when the transaction completes. Creating a new JDBC connection (TCP handshake + TLS handshake + MySQL/PostgreSQL authentication) takes 20-50ms. Borrowing a connection from the pool takes microseconds. HikariCP also manages: connection validation (testing that a connection is still alive before lending it out), connection timeout (waiting for a connection when the pool is exhausted), idle connection cleanup, maximum lifetime enforcement, and failed connection detection.</p>
+        <div class="mechbox"><strong>How HikariCP detects a dead connection without overhead:</strong> HikariCP uses an innovative approach: it piggybacks connection validation onto the connection borrow operation using a passive check. When a connection is borrowed from the pool, HikariCP checks if it has been idle for more than 500ms. If so, it issues a lightweight validation query (<span class="mono">SELECT 1</span> or a ping packet). If the connection is dead (the database failover killed it), HikariCP immediately discards it, marks one slot as needing replacement, and tries another connection. This validation only happens on connections idle longer than 500ms — connections in active use are not tested (they'd show their own errors immediately if broken).</div>
+        <p><strong>The connection pool starvation pattern:</strong> Your API has an endpoint that calls 5 database queries sequentially in a single transaction. Each query takes 10ms. The transaction holds a connection for 50ms total. With a pool of 10 connections and 200 concurrent requests: the pool is immediately exhausted. Requests queue waiting for a connection. Wait times add up. Users see high latency. Adding more pool connections would temporarily help, but the real fix is optimising the query patterns to reduce transaction duration, or using read replicas for read-only queries to reduce pressure on the write pool.</p>
+        <div class="failbox"><strong>The @Transactional annotation that spans external API calls — the hidden connection hog:</strong> A developer marks a service method @Transactional that: calls a database query, calls an external API (takes 2 seconds), updates the database based on the API response. A database connection is held for the entire 2+ second duration — including the external API call where the connection is idle. With 10 pool connections and moderate load, the pool exhausts and other requests queue. Fix: structure the method to open the transaction only around the database operations, not around external API calls. Or use the REQUIRES_NEW propagation for the database operations to use short-lived independent transactions.</div>
+      </div>
+    </div>
+
+    <div id="cp1" class="cpanel">
+      <div class="ch">Sizing your connection pool — the calculation that most engineers skip</div>
+      <div class="csub">The formula, the constraints, and what to monitor to validate your sizing</div>
+      <div class="cb">
+        <p>The correct pool size is not "as many as possible" — that is a common and damaging misconception. Postgres's documentation includes a seminal observation: too many connections reduce throughput due to context switching overhead. There is an optimal connection count above which adding more connections hurts performance.</p>
+        <p><strong>The practical formula for sizing HikariCP pool per application instance:</strong></p>
+        <p>Start with: <span class="mono">pool_size = number_of_cores × 2 + 1</span> (the "rule of thumb" from HikariCP's own documentation). For a t3.small (2 vCPUs): pool_size = 5. For an m5.xlarge (4 vCPUs): pool_size = 9. Then validate against your actual workload.</p>
+        <p><strong>The constraint from RDS max_connections:</strong> RDS MySQL db.t3.micro allows ~150 connections. With 5 Spring Boot instances each with a pool of 10: 50 application connections + monitoring tools + admin connections = well under 150. Fine. With 20 Spring Boot instances each with a pool of 20: 400 application connections — exceeding the RDS limit. The database rejects new connections with "Too many connections" error. Your application sees connection acquisition failures. Solution: either reduce pool size per instance, reduce number of instances, or increase the RDS instance class to get more max_connections, or use RDS Proxy (which multiplexes connections, reducing the actual connections to RDS).</p>
+        <div class="code-block"><code><span class="c"># Connection pool sizing calculation</span>
+<span class="c"># Variables:</span>
+MAX_RDS_CONNECTIONS=300           <span class="c"># From max_connections parameter group</span>
+MONITORING_ADMIN_CONNECTIONS=30   <span class="c"># CloudWatch agent, DBA tools, migration scripts</span>
+AVAILABLE_APP_CONNECTIONS=$((MAX_RDS_CONNECTIONS - MONITORING_ADMIN_CONNECTIONS))  <span class="c"># = 270</span>
+
+EC2_INSTANCE_COUNT=5              <span class="c"># Current ASG desired capacity</span>
+ASG_MAX_INSTANCES=10              <span class="c"># Plan for max ASG capacity</span>
+
+<span class="c"># Pool size must work when ASG is at maximum capacity</span>
+MAX_POOL_PER_INSTANCE=$((AVAILABLE_APP_CONNECTIONS / ASG_MAX_INSTANCES))  <span class="c"># = 27</span>
+
+<span class="c"># Conservative: set pool to 80% of maximum to leave buffer</span>
+RECOMMENDED_POOL_SIZE=$((MAX_POOL_PER_INSTANCE * 80 / 100))  <span class="c"># = 21</span>
+
+echo "Set spring.datasource.hikari.maximum-pool-size=${RECOMMENDED_POOL_SIZE}"
+<span class="c"># Result: 21 connections per instance, 210 total at max ASG scale</span>
+<span class="c"># Leaves 90 connections for monitoring, admin, failover headroom</span></code></div>
+        <div class="prodbox"><strong>CloudWatch metrics to validate your pool sizing:</strong> Enable HikariCP metrics in Spring Boot via Micrometer. Key metrics: <span class="mono">hikaricp.connections.active</span> (connections in use), <span class="mono">hikaricp.connections.idle</span> (waiting in pool), <span class="mono">hikaricp.connections.pending</span> (requests waiting for a connection — this > 0 means your pool is too small), <span class="mono">hikaricp.connections.timeout</span> (requests that waited longer than connection-timeout — this > 0 means serious pool exhaustion). Set CloudWatch alarms on hikaricp.connections.pending > 0 for more than 1 minute. This is the first signal that you need to either increase pool size or reduce connection hold duration.</div>
+      </div>
+    </div>
+
+    <div id="cp2" class="cpanel">
+      <div class="ch">RDS Proxy — the managed connection multiplexer</div>
+      <div class="csub">When to use it, how it works, and the Lambda + RDS scenario where it's mandatory</div>
+      <div class="cb">
+        <p>RDS Proxy is a managed database proxy that sits between your application and the RDS instance. Your application connects to the Proxy endpoint instead of the RDS endpoint. The Proxy maintains a pool of connections to the actual RDS instance and multiplexes many application connections onto fewer RDS connections.</p>
+        <p><strong>How connection multiplexing works:</strong> Your Spring Boot app has 50 concurrent requests, each holding an HikariCP connection. With direct RDS connection: 50 connections to RDS. With RDS Proxy: your app has 50 connections to the Proxy. The Proxy has 10 connections to RDS. During the 99% of time when a connection is not actively executing a query, the Proxy can use those 10 RDS connections to serve all 50 application connections. When a query actually executes, the Proxy pins one RDS connection to the application connection for the duration. This "multiplexing" allows far fewer RDS connections than application connections.</p>
+        <div class="mechbox"><strong>The Lambda + RDS problem that RDS Proxy solves:</strong> AWS Lambda functions are stateless — each invocation can run on a fresh execution environment. With 1,000 concurrent Lambda invocations each establishing their own RDS connection: 1,000 simultaneous new TCP connections to RDS. MySQL db.r6g.large allows ~1,700 max_connections — you're consuming most of them in one Lambda burst. Lambda execution environments don't persist long enough to benefit from traditional connection pooling (the pool initialises, the function completes, the pool is discarded). RDS Proxy provides a persistent connection pool that Lambda invocations connect to — the Proxy holds 20 RDS connections and serves 1,000 Lambda connections from them. Without RDS Proxy, Lambda + RDS is a connection exhaustion problem waiting to happen.</div>
+        <p><strong>RDS Proxy overhead and cost:</strong> RDS Proxy adds latency (~1-2ms per query for the proxy hop). This is negligible for most workloads but measurable for latency-critical applications. Cost: $0.015/vCPU-hour for the proxied database instance size (roughly 10-20% of the RDS instance cost). For most applications, RDS Proxy's connection management benefits outweigh the overhead and cost. For extreme latency-sensitive applications (trading systems), the 1-2ms overhead may not be acceptable.</p>
+        <div class="failbox"><strong>RDS Proxy and prepared statements — a compatibility trap:</strong> Some MySQL prepared statement usage patterns are not supported in multiplexing mode — the Proxy must "pin" the connection (use one dedicated RDS connection for the duration of the session rather than multiplexing). Pinning occurs when: server-side prepared statements are used, SET statements that change session state, or multi-statement transactions with specific patterns. When pinning occurs, the proxy behaves like a direct connection (no multiplexing benefit). Check your application's prepared statement usage before expecting full multiplexing efficiency from RDS Proxy.</div>
+      </div>
+    </div>
+
+    <div id="cp3" class="cpanel">
+      <div class="ch">IAM database authentication — eliminating static database passwords</div>
+      <div class="csub">How IAM tokens replace username/password for RDS connections — and the operational implications</div>
+      <div class="cb">
+        <p>IAM database authentication allows your application to authenticate to RDS using an IAM authentication token instead of a username and password. The token is generated by the AWS SDK using the instance's IAM credentials, is valid for 15 minutes, and is sent as the MySQL password field. The RDS authentication plugin validates the token against IAM rather than checking a stored password.</p>
+        <p><strong>Why this matters for security:</strong> Static database passwords in Secrets Manager still require rotating the secret and updating connections. With IAM authentication, there is no static password — only temporary 15-minute tokens. A leaked token is valid for at most 15 minutes. IAM policies control which IAM roles can authenticate to which databases as which users — a central permission model consistent with everything else in AWS. Revoking database access for a compromised EC2 role is as simple as detaching the IAM policy — no password rotation required.</p>
+        <div class="code-block"><code><span class="c">// Spring Boot IAM database authentication configuration</span>
+<span class="cmd-g">@Component</span>
+<span class="k">public class</span> IamRdsTokenRefresher {
+
+    <span class="k">private final</span> RdsUtilities rdsUtilities = RdsUtilities.builder()
+        .region(Region.AP_SOUTH_1).build();
+
+    <span class="c">// Generate a new auth token every 10 minutes (valid for 15 min)</span>
+    <span class="cmd-g">@Scheduled</span>(fixedRate = 600_000)
+    <span class="k">public</span> String generateAuthToken() {
+        GenerateAuthenticationTokenRequest request =
+            GenerateAuthenticationTokenRequest.builder()
+                .hostname(<span class="s">"your-rds-endpoint.region.rds.amazonaws.com"</span>)
+                .port(3306)
+                .username(<span class="s">"app_iam_user"</span>)  <span class="c">// MySQL user created with AWSAuthenticationPlugin</span>
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .build();
+        <span class="k">return</span> rdsUtilities.generateAuthenticationToken(request);
+    }
+}
+
+<span class="c">// HikariCP DataSource that refreshes the IAM token</span>
+<span class="cmd-g">@Bean</span>
+<span class="k">public</span> DataSource iamDataSource(IamRdsTokenRefresher tokenRefresher) {
+    HikariConfig config = <span class="k">new</span> HikariConfig();
+    config.setJdbcUrl(<span class="s">"jdbc:mysql://endpoint:3306/db?useSSL=true"</span>);
+    config.setUsername(<span class="s">"app_iam_user"</span>);
+    <span class="c">// Password is refreshed via ScheduledDataSourceWrapper or custom PasswordProvider</span>
+    config.addDataSourceProperty(<span class="s">"password"</span>, tokenRefresher.generateAuthToken());
+    config.setMaximumPoolSize(10);
+    config.setMaxLifetime(550_000);  <span class="c">// Recycle connections every 9 min (before token expires)</span>
+    <span class="k">return new</span> HikariDataSource(config);
+}</code></div>
+        <div class="warnbox"><strong>The IAM token expiry complexity:</strong> IAM tokens expire after 15 minutes. Your JDBC connection was authenticated when it was established. If a connection in the pool is more than 15 minutes old and MySQL checks the token again (which it does in some circumstances), the connection fails. Solution: set max-lifetime to 10 minutes (600,000ms) in HikariCP — this forces connection recycling before the 15-minute token expiry, and the new connection authenticates with a fresh token. Combined with scheduled token refresh, this ensures the password used for new connections is always fresh. This complexity is why most teams use Secrets Manager rotation rather than IAM authentication — simpler to implement correctly, though less elegant security-wise.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('operations',document.querySelectorAll('.ntab')[5])">Operations, backup, and monitoring →</button>
+  </div>
+
+  <!-- OPERATIONS -->
+  <div id="p-operations" class="panel">
+    <div class="lede"><strong>Backup, snapshot, point-in-time recovery, and monitoring — these are the operational fundamentals that determine whether a database incident becomes a brief disruption or a catastrophic data loss event. These are the topics your SRE team cares about and what senior engineers are expected to have opinions on.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('op',0,this)">1 · Automated backups & snapshots</button>
+      <button class="cbtn" onclick="showC('op',1,this)">2 · Point-in-time recovery</button>
+      <button class="cbtn" onclick="showC('op',2,this)">3 · RDS monitoring</button>
+      <button class="cbtn" onclick="showC('op',3,this)">4 · Performance Insights</button>
+    </div>
+
+    <div id="op0" class="cpanel active">
+      <div class="ch">Automated backups and manual snapshots — what they are and how they differ</div>
+      <div class="csub">The backup mechanics that enable point-in-time recovery and the retention policy that determines your recovery window</div>
+      <div class="cb">
+        <p>RDS provides two backup mechanisms: automated backups (managed by RDS, continuous) and manual snapshots (triggered by you or via automation, point-in-time). Understanding what each creates and how they're stored is necessary for designing a coherent recovery strategy.</p>
+        <p><strong>Automated backups:</strong> RDS automatically takes a daily full backup during your configured backup window (default: 30-minute window, AWS picks a low-IO time). Between daily backups, RDS continuously captures transaction logs (binary logs for MySQL, WAL for PostgreSQL). Together, the daily backup + transaction logs enable point-in-time recovery to any second within the backup retention period (1-35 days, default 7 days). Automated backups are stored in S3 (AWS-managed, not visible in your S3 console). When an RDS instance is deleted, automated backups are also deleted — unless you take a final snapshot.</p>
+        <p><strong>Manual snapshots:</strong> You explicitly create a snapshot at any time. Snapshots are stored in S3 (also AWS-managed but visible in the RDS console). Snapshots persist until you delete them — they are not affected by instance deletion. You pay $0.095/GB-month for snapshot storage (the incremental storage above your provisioned storage — first snapshot is the full backup, subsequent snapshots are incremental). Snapshots can be shared with other AWS accounts and copied to other regions.</p>
+        <div class="mechbox"><strong>The retention period and its recovery implications:</strong> With 7-day retention, you can recover the database to any second in the past 7 days. Someone deleted all records from a table at 3:47 PM on Tuesday? Restore to a new instance at 3:46 PM Tuesday — 1 minute before the deletion. With 1-day retention (the minimum, chosen to save backup storage costs), you can only recover to within the last 24 hours. For any production database: 7-day retention is the minimum. 14 days provides a comfortable window for detecting subtle data corruption that shows up days after the corruption event. 35 days is appropriate for regulatory environments that require longer audit trails. Increasing retention does not cause any downtime — it takes effect immediately.</div>
+        <div class="failbox"><strong>The deleted RDS instance with no snapshot — the most avoidable data loss:</strong> An engineer terminates an RDS instance (misreading "dev-database" as the development database when it was actually a staging instance with real user data). The default AWS console behavior asks "Create final snapshot?" — the engineer unchecks it to "save time." The automated backups are deleted with the instance. All data is gone. Recovery is impossible. AWS policy: always enable "Create final snapshot" on any instance deletion. Never disable this. In Terraform, set <span class="mono">final_snapshot_identifier</span> or <span class="mono">skip_final_snapshot = false</span>. In the console, the checkbox defaults to create — never uncheck it for production instances.</div>
+      </div>
+    </div>
+
+    <div id="op1" class="cpanel">
+      <div class="ch">Point-in-time recovery — the mechanics and the recovery time</div>
+      <div class="csub">How PITR works, how long it takes, and the operational procedure engineers must know before they need it</div>
+      <div class="cb">
+        <p>Point-in-time recovery (PITR) restores a database to a specific second within the backup retention period. RDS reconstructs the state of the database by: starting from the last automated backup before the target time, then replaying the transaction logs from that backup to the target second. This creates a new RDS instance — your original instance is not affected. PITR always creates a new instance, never overwrites the source.</p>
+        <p><strong>Recovery time for PITR:</strong> Depends on: how long ago the target time is (how much transaction log must be replayed), the database size, and the transaction log volume. Typical PITR time: 30 minutes to several hours. A 500GB database with 7 days of retention being restored to 6 days ago: could take 4-6 hours of log replay. A 20GB database restored to 2 hours ago: may take 30-45 minutes. This is why your RPO (Recovery Point Objective — how much data can you lose) and RTO (Recovery Time Objective — how long can recovery take) must be defined before an incident, not during one.</p>
+        <div class="mechbox"><strong>The PITR procedure in practice:</strong> A developer runs the wrong DELETE statement at 2:47 PM, deleting all active jobs. You discover this at 3:15 PM. RTO requirement: restore within 2 hours. Procedure: initiate PITR to 2:46 PM (one minute before the incident) to a new instance named "getwork-db-recovery-2024-03-15-1446". While recovery is running (~45 minutes), investigate and document the incident. When the recovery instance is ready, export the jobs table from the recovery instance and import into the production database — not full cutover to the recovery instance. This selective data restoration is faster and safer than a full database cutover.</div>
+        <div class="failbox"><strong>The PITR that takes 8 hours when your RTO is 2 hours:</strong> A team has a 1TB database with 35-day retention. An incident requires PITR. The recovery completes in 8 hours — well beyond their 2-hour RTO. Root cause: they never tested PITR performance. Fix: test your PITR regularly. Know how long it takes before you need it. If PITR is too slow for your RTO, consider: reducing database size (archive old data to S3), reducing retention period, or supplementing with more frequent manual snapshots (shorter replay window = faster recovery for recent incidents).</div>
+      </div>
+    </div>
+
+    <div id="op2" class="cpanel">
+      <div class="ch">RDS monitoring — the CloudWatch metrics that actually matter</div>
+      <div class="csub">The 8 metrics to alarm on and what each tells you about your database's health</div>
+      <div class="cb">
+        <p>CloudWatch provides dozens of RDS metrics. Most are noise. These are the metrics that tell you something actionable about your database's state:</p>
+        <div class="code-block"><code><span class="c"># The 8 RDS CloudWatch metrics to alarm on</span>
+
+<span class="c">1. CPUUtilization</span>
+<span class="c">   Alarm: > 80% for 10 minutes</span>
+<span class="c">   Means: Heavy query processing, missing indexes, or instance undersized</span>
+
+<span class="c">2. DatabaseConnections</span>
+<span class="c">   Alarm: > 80% of max_connections for 5 minutes</span>
+<span class="c">   Means: Connection pool exhaustion or connection leak from crashed app instances</span>
+
+<span class="c">3. FreeableMemory</span>
+<span class="c">   Alarm: < 200MB for 10 minutes</span>
+<span class="c">   Means: Buffer pool is too large or memory leak. Risk of OOM kill on the DB process.</span>
+
+<span class="c">4. FreeStorageSpace</span>
+<span class="c">   Alarm: < 20% of allocated storage</span>
+<span class="c">   Means: Database filling up. Storage autoscaling may trigger but check the max.</span>
+
+<span class="c">5. ReadLatency / WriteLatency</span>
+<span class="c">   Alarm: ReadLatency > 20ms OR WriteLatency > 20ms for 5 minutes</span>
+<span class="c">   Means: I/O bottleneck (IOPS exhausted), storage performance degradation.</span>
+
+<span class="c">6. ReplicaLag (on Read Replicas)</span>
+<span class="c">   Alarm: > 60 seconds for 5 minutes</span>
+<span class="c">   Means: Replica can't keep up with primary write throughput.</span>
+
+<span class="c">7. DiskQueueDepth</span>
+<span class="c">   Alarm: > 10 for 5 minutes</span>
+<span class="c">   Means: More I/O requests queued than the storage can serve. IOPS exhausted.</span>
+
+<span class="c">8. BurstBalance (gp2 only)</span>
+<span class="c">   Alarm: < 20% for 10 minutes</span>
+<span class="c">   Means: gp2 IOPS burst credits running out. Migrate to gp3 immediately.</span></code></div>
+        <div class="prodbox"><strong>Enhanced Monitoring — the OS-level metrics that CloudWatch standard doesn't provide:</strong> Standard CloudWatch RDS metrics are measured from outside the DB instance (hypervisor level). Enhanced Monitoring is an agent running inside the RDS instance that provides 50+ OS-level metrics at up to 1-second granularity: per-process CPU usage (which process is consuming CPU — MySQL InnoDB, OS threads, etc.), disk I/O per volume, swap usage, network I/O per interface, OS-level memory breakdown. Enable Enhanced Monitoring (granularity: 15 seconds is usually sufficient) for any production RDS instance where you need to diagnose intermittent performance issues. Cost: negligible (CloudWatch custom metric charges for the detailed metrics).</div>
+      </div>
+    </div>
+
+    <div id="op3" class="cpanel">
+      <div class="ch">Performance Insights — database query-level performance visibility</div>
+      <div class="csub">The tool that identifies exactly which queries are causing database load — without any application code changes</div>
+      <div class="cb">
+        <p>RDS Performance Insights shows you which SQL queries are consuming the most database resources (DB Load) over time. Unlike CloudWatch metrics (which tell you that CPU is high but not why), Performance Insights identifies the specific query that is causing the load, how many times it's been called, average execution time, and what the database was waiting for (CPU, I/O, lock waits).</p>
+        <p><strong>DB Load:</strong> Performance Insights measures "DB Load" — the average number of active sessions waiting for work. A DB Load of 4 means an average of 4 sessions were active at any given moment. If DB Load consistently exceeds your instance's vCPU count (e.g., DB Load of 8 on a 4-vCPU instance), your database is overloaded — requests are queuing. The Performance Insights dashboard shows DB Load broken down by wait state (CPU, I/O, lock, network) and by top queries — giving you both "what's the database waiting on" and "which query is responsible."</p>
+        <div class="prodbox"><strong>Using Performance Insights to find and fix a slow query:</strong> Alert fires: RDS CPU > 80% for 30 minutes. Open Performance Insights. The top SQL query by DB Load is: <span class="mono">SELECT * FROM jobs WHERE city = ? AND status = ? ORDER BY posted_at DESC</span>. It appears 50,000 times per hour with average 800ms per execution. 800ms × 50,000 = 40,000 seconds of CPU per hour from one query. Open the query plan: full table scan because the index on (city, status) was never created. Action: <span class="mono">CREATE INDEX CONCURRENTLY idx_jobs_city_status ON jobs(city, status, posted_at DESC)</span>. After index creation, same query runs in 5ms. CPU drops from 80% to 15%. Without Performance Insights, you'd be looking at raw slow query logs trying to find the offender.</div>
+        <div class="mechbox"><strong>Performance Insights free tier and retention:</strong> Performance Insights has a free tier for 7 days of performance data retention for any RDS instance. Paid tier: up to 2 years of retention for deeper trend analysis. For most production scenarios, 7 days is sufficient to diagnose current issues. Enable it on every production RDS instance — the free tier has zero cost and the diagnostic value during a performance incident is immense. It's the single highest-value monitoring feature for RDS relative to its cost.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[6])">Interview prep →</button>
+  </div>
+
+  <!-- INTERVIEW PREP -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>RDS interview questions test whether you understand database availability as a system design problem — not just service configuration. The questions below require connecting failover mechanics to application connection handling, storage choices to performance characteristics, and Aurora's architecture to its operational advantages.</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">Your Spring Boot application loses all database connectivity for 90 seconds during an RDS Multi-AZ failover. How do you design the application to handle this transparently?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is a system design question about resilience. The 90 seconds of connection loss is unavoidable during failover — the goal is to make the application recover automatically without user-visible errors for the vast majority of requests.</p>
+          <p><strong>Connection pool configuration (first line of defence):</strong> HikariCP with keepalive-time=60000 — tests idle connections every 60 seconds, removes dead ones proactively. max-lifetime=270000 — forces connection recycling every 4.5 minutes, preventing stale connections from surviving across failovers. initialization-fail-timeout=-1 — allows the application to start even if the database is temporarily unreachable, prevents cascading failure where app instances refuse to start after an ASG replacement during a failover. connection-timeout=30000 — gives HikariCP 30 seconds to acquire a connection before failing a request, accommodating the ~30-60 second DNS propagation window after failover.</p>
+          <p><strong>JVM DNS TTL (critical but often forgotten):</strong> Add -Dnetworkaddress.cache.ttl=5 to JVM startup flags. Default JVM DNS caching is 30 seconds in some JDKs. After a failover, the RDS DNS record is updated within seconds. If the JVM caches DNS for 30 seconds, connection retry attempts still go to the old (dead) IP for 30 seconds after failover. With 5-second TTL, the JVM re-resolves to the new primary IP quickly.</p>
+          <p><strong>Application-level retry for transient failures:</strong> Use Spring Retry or Resilience4j @Retry on database operations. A typical policy: retry 3 times with 2-second wait between attempts, only on specific exception types (SQLTransientConnectionException, CommunicationsException — the MySQL exceptions thrown during connection failure). This ensures that requests in flight during the ~30-second reconnection window succeed on retry rather than immediately returning errors to users.</p>
+          <p><strong>Circuit breaker for sustained outages:</strong> Resilience4j @CircuitBreaker opens after a threshold of consecutive failures. If the failover takes longer than expected (database issues beyond the typical 90 seconds), the circuit breaker opens — failing fast rather than queuing requests that will time out. This prevents thread pool exhaustion during extended database outages. The circuit transitions to half-open after a configured wait time, probing with a single request to check if the database is back.</p>
+          <p><strong>User-facing impact management:</strong> For the 30-60 second window between failover detection and connection recovery, some requests will fail. The user experience depends on your retry strategy at the API level. Idempotent GET requests: respond from cache or return a degraded response. Non-idempotent POST/PUT requests: return 503 with Retry-After header, allowing the client (React Native app, frontend) to retry automatically. Never silently lose a write — return an explicit retriable error.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It covers all four layers: connection pool configuration, JVM DNS, application-level retry, and circuit breaker. The specific configuration values show operational experience. The user-facing impact management section demonstrates you think about the complete system, not just the infrastructure.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">Explain the difference between RDS Multi-AZ and Read Replicas. When would you use both together?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Multi-AZ and Read Replicas solve completely different problems and use different replication mechanisms. Conflating them is a common architectural mistake.</p>
+          <p>Multi-AZ maintains a synchronous standby in a different AZ. Every write is committed on the standby before the primary acknowledges it to the application — guaranteed zero data loss. The standby serves no traffic. When the primary fails (hardware failure, AZ outage), the RDS control plane promotes the standby to primary automatically, updates the DNS record, and connectivity is restored in 20-120 seconds. Multi-AZ is purely an availability mechanism — it doesn't change the database's read or write capacity.</p>
+          <p>Read Replicas use asynchronous replication — the primary acknowledges writes before the replica applies them. Replicas may lag by milliseconds to minutes. Replicas serve read traffic on their own endpoints. If a replica fails, it doesn't affect the primary. Replicas do not provide automatic failover — you must manually promote a replica if you want to use it as a primary, and you must update all application connection strings. Read Replicas are a performance and read-scaling mechanism, not an HA mechanism.</p>
+          <p>You use both together when: you need automatic failover (Multi-AZ) AND your primary is write-saturated or you have read-heavy workloads that you want to offload (Read Replicas). At GetWork: the primary RDS MySQL has Multi-AZ enabled (always-on for production — zero acceptable data loss for job postings and worker registrations). We also have two Read Replicas because our job search queries are read-heavy — 95% reads, 5% writes. The Read Replicas serve all job search and browse traffic. The primary serves writes and read-after-write consistency scenarios. The Multi-AZ standby is in the background, ready to take over automatically if the primary fails.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The replication mechanism difference (synchronous vs asynchronous) is the mechanistic foundation. "Doesn't change capacity" for Multi-AZ and "doesn't provide automatic failover" for Read Replicas are the two points most engineers get wrong. The combined use case with concrete traffic percentages from GetWork makes the abstract distinction concrete.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">Why is Aurora fundamentally different from RDS MySQL? When would you choose Aurora Serverless v2?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Aurora is a different architecture, not an upgrade of MySQL. The fundamental difference is storage. RDS MySQL writes to EBS — a single-node block storage volume. Aurora writes to a distributed storage system: 6 storage nodes across 3 AZs, with quorum writes (4-of-6 acknowledgements required). Aurora writes only redo log records to this distributed storage — not full data pages. The storage nodes reconstruct pages from the redo log chain lazily.</p>
+          <p>This architecture explains Aurora's performance advantages. Writing a small redo log record to 4 distributed nodes (with the network cost spread across 4 parallel writes) is faster than writing a 16KB data page to a single EBS volume across an AZ boundary (for Multi-AZ MySQL). Hence Aurora's 5x write throughput advantage on equivalent instance classes.</p>
+          <p>Aurora's storage also auto-scales in 10GB increments with no upper pre-provisioned limit — you pay per GB used, not per GB allocated. RDS MySQL requires pre-provisioned storage, and expanding it requires modification. Aurora storage capacity planning is effectively eliminated.</p>
+          <p>Aurora Serverless v2 is appropriate when compute requirements are unpredictable or highly variable. It scales in 0.5 ACU increments in seconds — much finer granularity than EC2 Auto Scaling. Specifically I'd choose it for: development and staging databases where utilisation is intermittent; applications with clear daily traffic patterns (0.5 ACU overnight, 8+ ACU during peak); event-driven architectures where Lambda triggers bursty database load; new applications where optimal instance sizing is unknown. I'd avoid it for: applications with strict latency requirements below 5ms (the scale-up latency spike on first query), workloads with very steady, high-throughput (provisioned instances may be cheaper), or any compliance context that requires a documented fixed instance class.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The redo log vs full page write comparison is the mechanistic explanation of why Aurora is faster — not "it's just better." The storage auto-scaling point addresses the operational difference. The Serverless v2 section gives specific use cases rather than vague "unpredictable workloads."</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">How would you size a HikariCP connection pool for a Spring Boot application with 10 EC2 instances connecting to an RDS MySQL db.r6g.large?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>db.r6g.large has 2 vCPUs and 16GB RAM. The default MySQL max_connections formula is approximately (available_RAM / 12.5MB). With 16GB RAM and some reserved for OS and MySQL overhead, effective available RAM for connections is about 12GB: 12,288MB / 12.5MB per connection ≈ 983 connections. In practice, AWS configures db.r6g.large with around 1,200 max_connections by default. I'd set my custom parameter group to 600 (conservative — gives ample headroom).</p>
+          <p>Pool size per instance calculation: 600 total connections - 50 (monitoring, admin, migration tools) = 550 available application connections. With ASG max_size=10: 550 / 10 = 55 connections per instance maximum. I'd set maximum-pool-size to 40 (73% of maximum) — leaving 150 connection headroom at peak ASG capacity for failover scenarios, admin access, and other unexpected consumers.</p>
+          <p>Validating the pool size per instance: db.r6g.large has 2 vCPUs. HikariCP's guidance: pool_size = (cores × 2) + 1 = 5. This seems very low — 5 connections for 40 concurrent requests? But the CPU-based formula assumes CPU-bound queries. For a typical Spring Boot API with 20ms database queries (mostly waiting on disk or network): with 40 connections and 20ms query time, throughput = 40 / 0.02 = 2,000 queries/second per instance. That's substantial. The 2vCPU guidance is for CPU-bound workloads. For I/O-bound, more connections improve throughput up to a point — 40 is reasonable.</p>
+          <p>Critical additional settings: keepalive-time=60000, max-lifetime=270000 (for Multi-AZ resilience), connection-test-query=SELECT 1, idle-timeout=600000. And in the JVM startup: -Dnetworkaddress.cache.ttl=5 for fast DNS re-resolution after failover.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The calculation from RDS max_connections to per-instance pool size is the systematic approach — not a rule of thumb. The HikariCP 2×cores formula is mentioned and correctly qualified (only for CPU-bound). The additional resilience settings show you think about the pool configuration holistically, not just the pool size number.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[7])">Start the lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab creates the complete database tier: an RDS MySQL instance with Multi-AZ, proper security group configuration (only the EC2 app tier can reach it), storage autoscaling, parameter group configuration, and a verified connection from the app tier. This is the production database setup that Day 10 will connect the Spring Boot app to.</strong></div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create a custom parameter group with production settings</div>
+          <div class="sb">Create a custom MySQL 8.0 parameter group. Configure the critical parameters before launching the instance — you cannot use the default parameter group for a production instance.</div>
+          <code class="cmd">aws rds create-db-parameter-group \
+  --db-parameter-group-name getwork-mysql8-params \
+  --db-parameter-group-family mysql8.0 \
+  --description "GetWork production MySQL 8.0 parameters" \
+  --region ap-south-1
+
+# Set critical parameters
+aws rds modify-db-parameter-group \
+  --db-parameter-group-name getwork-mysql8-params \
+  --parameters \
+    "ParameterName=slow_query_log,ParameterValue=1,ApplyMethod=immediate" \
+    "ParameterName=long_query_time,ParameterValue=1,ApplyMethod=immediate" \
+    "ParameterName=log_queries_not_using_indexes,ParameterValue=1,ApplyMethod=immediate" \
+    "ParameterName=wait_timeout,ParameterValue=300,ApplyMethod=immediate" \
+    "ParameterName=interactive_timeout,ParameterValue=300,ApplyMethod=immediate" \
+    "ParameterName=innodb_buffer_pool_size,ParameterValue={DBInstanceClassMemory*3/4},ApplyMethod=pending-reboot" \
+  --region ap-south-1
+
+echo "Parameter group created and configured"
+aws rds describe-db-parameters \
+  --db-parameter-group-name getwork-mysql8-params \
+  --query 'Parameters[?ParameterName==`slow_query_log` || ParameterName==`wait_timeout`].{Name:ParameterName,Value:ParameterValue}' \
+  --output table --region ap-south-1</code>
+          <div class="snote">innodb_buffer_pool_size uses ApplyMethod=pending-reboot because it's a static parameter. The other parameters are dynamic and take effect immediately. The {DBInstanceClassMemory*3/4} formula scales automatically if you resize the instance class later.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create an RDS subnet group covering both private subnets</div>
+          <div class="sb">RDS instances must be in a DB subnet group — a collection of subnets in different AZs. For Multi-AZ to work, the subnet group must span at least 2 AZs. Use your Day 4 private subnets.</div>
+          <code class="cmd">PRIV_SUBNET_1A=subnet-your-private-1a
+PRIV_SUBNET_1B=subnet-your-private-1b
+VPC_ID=vpc-your-vpc-id
+
+aws rds create-db-subnet-group \
+  --db-subnet-group-name getwork-db-subnet-group \
+  --db-subnet-group-description "GetWork RDS subnet group - private subnets" \
+  --subnet-ids $PRIV_SUBNET_1A $PRIV_SUBNET_1B \
+  --region ap-south-1
+
+# The DB security group was created in Day 4 lab
+# Verify it allows inbound 3306 from app-sg
+DB_SG=sg-your-db-sg  # From Day 4
+aws ec2 describe-security-groups --group-ids $DB_SG \
+  --query 'SecurityGroups[0].IpPermissions' \
+  --output json --region ap-south-1</code>
+          <div class="snote">The DB security group should show inbound port 3306 from the app security group ID (not from a CIDR range). This is the Security Group chaining pattern from Day 4 — only EC2 instances with the app-sg attached can reach the database.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create the RDS MySQL instance with Multi-AZ, storage autoscaling, and encryption</div>
+          <div class="sb">Launch an RDS MySQL 8.0 instance with all production security settings. This will take 5-10 minutes to provision. Note: this creates real AWS resources that cost money — stop the instance after the lab or use the Free Tier eligible db.t3.micro.</div>
+          <code class="cmd">DB_SG=sg-your-db-sg
+
+# Generate a strong password and store it
+DB_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=')
+echo "DB Password (save this): $DB_PASSWORD"
+
+# Create the RDS instance
+aws rds create-db-instance \
+  --db-instance-identifier getwork-db \
+  --db-instance-class db.t3.micro \
+  --engine mysql \
+  --engine-version "8.0" \
+  --master-username admin \
+  --master-user-password "$DB_PASSWORD" \
+  --db-name getwork \
+  --db-subnet-group-name getwork-db-subnet-group \
+  --vpc-security-group-ids $DB_SG \
+  --db-parameter-group-name getwork-mysql8-params \
+  --backup-retention-period 7 \
+  --preferred-backup-window "20:00-20:30" \
+  --preferred-maintenance-window "sun:21:00-sun:22:00" \
+  --multi-az \
+  --storage-type gp3 \
+  --allocated-storage 20 \
+  --max-allocated-storage 100 \
+  --storage-encrypted \
+  --deletion-protection \
+  --enable-performance-insights \
+  --performance-insights-retention-period 7 \
+  --monitoring-interval 60 \
+  --auto-minor-version-upgrade false \
+  --region ap-south-1
+
+echo "RDS creation initiated — takes 5-10 minutes..."
+aws rds wait db-instance-available \
+  --db-instance-identifier getwork-db \
+  --region ap-south-1
+echo "RDS instance available!"
+
+# Get the endpoint
+aws rds describe-db-instances \
+  --db-instance-identifier getwork-db \
+  --query 'DBInstances[0].{Endpoint:Endpoint.Address,Port:Endpoint.Port,Status:DBInstanceStatus,MultiAZ:MultiAZ}' \
+  --output json --region ap-south-1</code>
+          <div class="snote">Key flags: --deletion-protection prevents accidental deletion. --multi-az creates the standby. --max-allocated-storage=100 enables storage autoscaling up to 100GB. --enable-performance-insights enables free 7-day query analytics. --auto-minor-version-upgrade false gives you control over patch timing. Cost: db.t3.micro Multi-AZ ≈ $0.034/hr in ap-south-1 (~$24/month). Stop it after lab to save money.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Store the database credentials in Secrets Manager</div>
+          <div class="sb">Never put database credentials in application.properties. Store them in Secrets Manager. Your Spring Boot app will fetch them at startup using the IAM role.</div>
+          <code class="cmd">DB_ENDPOINT=$(aws rds describe-db-instances \
+  --db-instance-identifier getwork-db \
+  --query 'DBInstances[0].Endpoint.Address' \
+  --output text --region ap-south-1)
+
+# Store credentials in Secrets Manager
+aws secretsmanager create-secret \
+  --name /getwork/prod/database \
+  --description "GetWork production database credentials" \
+  --secret-string "{
+    \"engine\": \"mysql\",
+    \"host\": \"$DB_ENDPOINT\",
+    \"username\": \"admin\",
+    \"password\": \"$DB_PASSWORD\",
+    \"dbname\": \"getwork\",
+    \"port\": \"3306\"
+  }" \
+  --region ap-south-1
+
+echo "Secret stored: /getwork/prod/database"
+
+# Verify the secret was stored correctly
+aws secretsmanager get-secret-value \
+  --secret-id /getwork/prod/database \
+  --query 'SecretString' \
+  --output text --region ap-south-1 | python3 -m json.tool</code>
+          <div class="snote">Your Spring Boot app needs the IAM role permission: secretsmanager:GetSecretValue on arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:/getwork/prod/database*. Add this to the instance role's policy. The app fetches this secret at startup using the AWS SDK — no credentials in application.properties.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Connect to the RDS instance from your EC2 app server and verify</div>
+          <div class="sb">SSH into your Day 7 EC2 instance (start it from stopped state), install the MySQL client, and connect to the RDS endpoint. This verifies: Security Group rules are correct, the RDS instance is accessible from the app tier, and credentials work.</div>
+          <code class="cmd"># Start your Day 7 EC2 instance
+aws ec2 start-instances --instance-ids YOUR_EC2_ID --region ap-south-1
+aws ec2 wait instance-running --instance-ids YOUR_EC2_ID --region ap-south-1
+
+EC2_IP=$(aws ec2 describe-instances \
+  --instance-ids YOUR_EC2_ID \
+  --query 'Reservations[0].Instances[0].PublicIpAddress' \
+  --output text --region ap-south-1)
+
+ssh -i ~/Downloads/day2-key.pem ec2-user@$EC2_IP
+
+# On the EC2 instance:
+sudo dnf install -y mysql  # Install MySQL client
+DB_ENDPOINT="your-rds-endpoint.ap-south-1.rds.amazonaws.com"
+
+# Connect to RDS
+mysql -h $DB_ENDPOINT -u admin -p getwork
+# Enter the password when prompted
+
+# Once connected, run these verification queries:
+# SHOW DATABASES;
+# USE getwork;
+# CREATE TABLE test (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), created_at TIMESTAMP DEFAULT NOW());
+# INSERT INTO test (name) VALUES ('Day 9 test'), ('RDS working');
+# SELECT * FROM test;
+# DROP TABLE test;
+# EXIT;
+
+# Verify the connection refuses from non-app-sg instances by testing connectivity
+# from a machine without app-sg -- should time out (not reach the port)</code>
+          <div class="snote">If connection is refused (not timeout), the Security Group is blocking it — verify the DB security group allows port 3306 from the app EC2's security group ID. If timeout, it's a routing issue — verify the EC2 is in the same VPC and the subnets can route to each other (they're in the same VPC, so local routing handles this).</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Observe Multi-AZ failover — trigger it manually and time the recovery</div>
+          <div class="sb">Trigger a manual failover to observe the Multi-AZ mechanism. While the failover is happening, run a loop that queries the database every second and observe when connectivity is lost and when it resumes.</div>
+          <code class="cmd"># On the EC2 instance, run this monitoring loop before triggering failover:
+while true; do
+  RESULT=$(mysql -h $DB_ENDPOINT -u admin -p$DB_PASSWORD getwork \
+    -e "SELECT NOW(), @@hostname" 2>&1)
+  echo "$(date +%H:%M:%S) | $RESULT"
+  sleep 1
+done &
+
+# Now trigger the failover from your local machine
+aws rds reboot-db-instance \
+  --db-instance-identifier getwork-db \
+  --force-failover \
+  --region ap-south-1
+
+echo "Failover triggered — watch the monitoring loop for connectivity loss and recovery"
+echo "Note the time when connection fails and when it resumes"
+echo "Observe: the @@hostname changes after failover (new primary instance)"</code>
+          <div class="snote">The monitoring loop will show connection errors for 20-120 seconds. Note the @@hostname before and after — it changes to the former standby's hostname, confirming the failover occurred. Total observed downtime is what your application must be designed to handle gracefully (from Day 8's connection resilience patterns).</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s7" onclick="done('s7')">7</div></div>
+        <div class="ls-r">
+          <div class="st">Stop the RDS instance to save costs (do NOT delete — Day 10 needs it)</div>
+          <div class="sb">Stop the RDS instance to halt compute charges. The data persists. Day 10 will start it again for the full stack deployment. Note: stopped RDS instances automatically restart after 7 days.</div>
+          <code class="cmd"># Stop the RDS instance (preserves all data, stops compute charges)
+aws rds stop-db-instance \
+  --db-instance-identifier getwork-db \
+  --region ap-south-1
+
+aws rds wait db-instance-stopped \
+  --db-instance-identifier getwork-db \
+  --region ap-south-1
+
+echo "RDS instance stopped — data preserved, compute billing paused"
+echo "NOTE: AWS automatically restarts stopped RDS instances after 7 days"
+echo "Cost while stopped: EBS storage only (~$0.00096/hr for 20GB)"
+
+# Also stop your EC2 instance
+aws ec2 stop-instances --instance-ids YOUR_EC2_ID --region ap-south-1</code>
+          <div class="snote">Unlike EC2 where you might terminate, NEVER delete the RDS instance without a final snapshot. The stopped state is the correct cost-saving mechanism — data is fully preserved. Day 10 starts this instance and connects the Spring Boot app to it as the final end-to-end deployment.</div>
+          <button class="mbtn" onclick="done('s7')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[8])">Day 9 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:10px">Day 9 — RDS mechanics understood at depth</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">RDS three layers</div><div class="cs-d">Control plane (AWS-managed) + Database engine (EC2 under the hood, no SSH) + EBS storage. Each layer has independent failure modes and performance characteristics.</div></div>
+      <div class="cs-item"><div class="cs-t">db.t3 credit exhaustion</div><div class="cs-d">db.t3 has burst credits like EC2 t3. Sustained high CPU exhausts credits → latency spikes with no errors. Never use db.t3 for production with sustained load. Use db.m5 or db.r6g.</div></div>
+      <div class="cs-item"><div class="cs-t">Storage autoscaling</div><div class="cs-d">Enable on every RDS instance. Triggers at 10% free space. Scales 10% increments. Set max at 3-5x expected size. Storage can only increase, never decrease.</div></div>
+      <div class="cs-item"><div class="cs-t">Parameter group</div><div class="cs-d">Create custom parameter group before launching any production instance. Default cannot be modified. Static params require reboot. Dynamic params apply immediately.</div></div>
+      <div class="cs-item"><div class="cs-t">Multi-AZ mechanics</div><div class="cs-d">Synchronous block-level replication. Zero data loss. Standby serves no traffic. Failover: 20-120 seconds. DNS update propagation is the main delay. No automatic read scaling.</div></div>
+      <div class="cs-item"><div class="cs-t">JVM DNS TTL for failover</div><div class="cs-d">Add -Dnetworkaddress.cache.ttl=5 to JVM flags. Default JVM DNS cache can be 30s or infinite — prevents reconnection after failover. Critical for RDS Multi-AZ resilience.</div></div>
+      <div class="cs-item"><div class="cs-t">Multi-AZ vs Read Replicas</div><div class="cs-d">Multi-AZ: synchronous, zero data loss, no read traffic, automatic failover, same region. Replicas: async, lag possible, serves reads, manual failover, can be cross-region.</div></div>
+      <div class="cs-item"><div class="cs-t">HikariCP resilience</div><div class="cs-d">keepalive-time=60000 (proactive dead connection removal). max-lifetime=270000 (force recycle before MySQL wait_timeout). initialization-fail-timeout=-1 (start without DB).</div></div>
+      <div class="cs-item"><div class="cs-t">Aurora storage</div><div class="cs-d">6 copies across 3 AZs. Quorum write (4/6). Writes redo logs, not full pages. 5x write throughput vs MySQL on EBS. Auto-scaling storage (10GB increments, no pre-provisioning).</div></div>
+      <div class="cs-item"><div class="cs-t">Aurora endpoints</div><div class="cs-d">Cluster endpoint → writer instance (writes + transactions). Reader endpoint → load-balanced across replicas (read-only queries). Never use cluster endpoint for reads — bypasses replica fleet.</div></div>
+      <div class="cs-item"><div class="cs-t">Aurora Serverless v2</div><div class="cs-d">Scales 0.5 to 128 ACU in seconds. Minimum ~$43/month (0.5 ACU always running). Best for variable/intermittent workloads. Not for sub-10ms cold start requirements.</div></div>
+      <div class="cs-item"><div class="cs-t">RDS Proxy</div><div class="cs-d">Multiplexes many app connections onto fewer RDS connections. Essential for Lambda + RDS. Adds ~1-2ms latency. Prepared statements may cause "pinning" (no multiplexing benefit).</div></div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Non-negotiable rules for every production RDS instance</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      1. Always create a custom parameter group before launching a production instance — default cannot be modified.<br>
+      2. Enable storage autoscaling with max at 3-5x expected data size — prevent disk-full outages.<br>
+      3. Enable deletion protection — never lose a database due to accidental deletion.<br>
+      4. Enable Multi-AZ for any database where data loss is unacceptable.<br>
+      5. Enable Performance Insights (free 7-day tier) on every production instance.<br>
+      6. Store credentials in Secrets Manager — never in application.properties or environment variables.<br>
+      7. Set -Dnetworkaddress.cache.ttl=5 in JVM flags — required for Multi-AZ failover recovery.<br>
+      8. Configure HikariCP: keepalive-time=60000, max-lifetime=270000, initialization-fail-timeout=-1.<br>
+      9. Enable backup retention of at least 7 days. Test PITR before you need it — know your RTO.<br>
+      10. Never use the default MySQL wait_timeout (28800s) — set to 300s to clean up ghost connections from crashed apps.
+    </div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

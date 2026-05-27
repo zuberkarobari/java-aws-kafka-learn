@@ -3,7 +3,25 @@
  * Handles: filename parsing, localStorage, URL params, progress calculation
  */
 
-import { TOPIC_ORDER, TOPIC_META } from './topics.config.js';
+import { TOPIC_ORDER, TOPIC_META, PATHWAYS } from './topics.config.js';
+
+// ─── Path & Navigation Prefixes ──────────────────────────────────────────────
+
+/**
+ * Calculate dynamic relative prefix based on depth of the current page
+ * E.g., on `/topics/collections.html` -> returns `../`
+ * On `/topics/aws/aws_day1_full_session.html` -> returns `../../`
+ * On homepage `/index.html` -> returns ``
+ * @returns {string}
+ */
+export const getPathPrefix = () => {
+  const path = window.location.pathname;
+  const topicsIndex = path.indexOf('/topics/');
+  if (topicsIndex === -1) return '';
+  const subPath = path.substring(topicsIndex + 8); // e.g., 'aws/aws_day1.html' or 'collections.html'
+  const slashCount = (subPath.match(/\//g) || []).length;
+  return '../'.repeat(slashCount + 1);
+};
 
 // ─── Filename Utilities ─────────────────────────────────────────────────────
 
@@ -13,11 +31,13 @@ import { TOPIC_ORDER, TOPIC_META } from './topics.config.js';
  * @param {string} id
  * @returns {string}
  */
-export const fileToTitle = (id) =>
-  id
+export const fileToTitle = (id) => {
+  const baseId = id.replace(/^.*\//, ''); // Strip folders if nested
+  return baseId
     .split('-')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+};
 
 /**
  * Strip .html extension and directory prefix from a path
@@ -30,11 +50,12 @@ export const fileToId = (filename) =>
 
 /**
  * Get the current topic id from the URL pathname
+ * Works dynamically even for deep subdirectories
  * @returns {string}
  */
 export const getCurrentTopicId = () => {
   const path = window.location.pathname;
-  const match = path.match(/\/topics\/([^/]+?)(?:\.html)?$/);
+  const match = path.match(/\/topics\/(.+?)(?:\.html)?$/);
   return match ? match[1] : '';
 };
 
@@ -56,8 +77,21 @@ export const getTopics = () =>
       category: meta.category || 'Fundamentals',
       icon: meta.icon || '📄',
       description: meta.description || '',
+      ...meta
     };
   });
+
+/**
+ * Get all topics filtered by a specific learning pathway
+ * @param {string} pathwayId 
+ * @returns {Array}
+ */
+export const getTopicsByPathway = (pathwayId) => {
+  const topics = getTopics();
+  const pathway = PATHWAYS[pathwayId];
+  if (!pathway) return topics;
+  return topics.filter(t => pathway.categories.includes(t.category));
+};
 
 /**
  * Get unique categories in the order they first appear in TOPIC_ORDER
@@ -69,11 +103,35 @@ export const getCategories = () => {
 };
 
 /**
+ * Get categories filtered by active pathway
+ * @param {string} pathwayId 
+ * @returns {string[]}
+ */
+export const getCategoriesByPathway = (pathwayId) => {
+  const topics = getTopicsByPathway(pathwayId);
+  return [...new Set(topics.map((t) => t.category))];
+};
+
+/**
  * Get topics grouped by category
  * @returns {Object.<string, Array>}
  */
 export const getTopicsByCategory = () => {
   const topics = getTopics();
+  return topics.reduce((acc, topic) => {
+    if (!acc[topic.category]) acc[topic.category] = [];
+    acc[topic.category].push(topic);
+    return acc;
+  }, {});
+};
+
+/**
+ * Get topics in active pathway grouped by category
+ * @param {string} pathwayId 
+ * @returns {Object.<string, Array>}
+ */
+export const getTopicsByCategoryAndPathway = (pathwayId) => {
+  const topics = getTopicsByPathway(pathwayId);
   return topics.reduce((acc, topic) => {
     if (!acc[topic.category]) acc[topic.category] = [];
     acc[topic.category].push(topic);
@@ -114,6 +172,7 @@ export const setSearchParam = (key, value) => {
 const STORAGE_KEYS = {
   VISITED: 'java-learn-visited',
   THEME: 'java-learn-theme',
+  ACTIVE_PATHWAY: 'java-learn-active-pathway',
 };
 
 /**
@@ -138,6 +197,7 @@ export const markVisited = (id) => {
   visited.add(id);
   try {
     localStorage.setItem(STORAGE_KEYS.VISITED, JSON.stringify([...visited]));
+    addStreakDate(); // Automatically log study day!
   } catch {
     // storage unavailable — silently fail
   }
@@ -157,19 +217,217 @@ export const getSavedTheme = () =>
 export const saveTheme = (theme) =>
   localStorage.setItem(STORAGE_KEYS.THEME, theme);
 
+/**
+ * Get saved active learning pathway
+ * Defaults to 'dashboard'
+ * @returns {string}
+ */
+export const getActivePathway = () =>
+  localStorage.getItem(STORAGE_KEYS.ACTIVE_PATHWAY) || 'dashboard';
+
+/**
+ * Save active learning pathway
+ * @param {string} pathwayId 
+ */
+export const setActivePathway = (pathwayId) =>
+  localStorage.setItem(STORAGE_KEYS.ACTIVE_PATHWAY, pathwayId);
+
 // ─── Progress Calculation ────────────────────────────────────────────────────
 
 /**
- * Calculate learning progress
+ * Calculate learning progress filtered by the active pathway
+ * @param {string} [pathwayId]
  * @returns {{ visited: number, total: number, percent: number }}
  */
-export const calcProgress = () => {
-  const topics = getTopics();
+export const calcProgress = (pathwayId) => {
+  const activePathway = pathwayId || getActivePathway();
+  if (activePathway === 'dashboard') {
+    return getGlobalProgress();
+  }
+  const pathwayTopics = getTopicsByPathway(activePathway);
   const visited = getVisited();
-  const visitedCount = topics.filter((t) => visited.has(t.id)).length;
+  const visitedCount = pathwayTopics.filter((t) => visited.has(t.id)).length;
+  return {
+    visited: visitedCount,
+    total: pathwayTopics.length,
+    percent: pathwayTopics.length > 0 ? Math.round((visitedCount / pathwayTopics.length) * 100) : 0,
+  };
+};
+
+/**
+ * Calculate overall learning progress across all pathways combined
+ * @returns {{ visited: number, total: number, percent: number }}
+ */
+export const getGlobalProgress = () => {
+  const topics = getTopics().filter(t => !t.isLocked);
+  const visited = getVisited();
+  const visitedCount = topics.filter(t => visited.has(t.id)).length;
   return {
     visited: visitedCount,
     total: topics.length,
     percent: topics.length > 0 ? Math.round((visitedCount / topics.length) * 100) : 0,
   };
+};
+
+// ─── Study Streak Tracker ────────────────────────────────────────────────────
+
+export const getStreakHistory = () => {
+  try {
+    const raw = localStorage.getItem('java-learn-streak-dates');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addStreakDate = () => {
+  const dates = getStreakHistory();
+  const local = new Date();
+  const offset = local.getTimezoneOffset();
+  const localDate = new Date(local.getTime() - offset * 60 * 1000);
+  const today = localDate.toISOString().split('T')[0];
+
+  if (!dates.includes(today)) {
+    dates.push(today);
+    try {
+      localStorage.setItem('java-learn-streak-dates', JSON.stringify(dates));
+    } catch {}
+  }
+};
+
+export const calcStreakDays = () => {
+  const dates = getStreakHistory();
+  if (dates.length === 0) return 0;
+  
+  // Sort ascending
+  const sorted = [...new Set(dates)].sort();
+  
+  const local = new Date();
+  const offset = local.getTimezoneOffset();
+  const localDate = new Date(local.getTime() - offset * 60 * 1000);
+  const todayStr = localDate.toISOString().split('T')[0];
+  
+  const yesterday = new Date(local.getTime() - offset * 60 * 1000 - 24 * 60 * 60 * 1000);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  // If last studied date isn't today or yesterday, streak is reset to 0
+  const lastStudy = sorted[sorted.length - 1];
+  if (lastStudy !== todayStr && lastStudy !== yesterdayStr) {
+    return 0;
+  }
+  
+  let streak = 1;
+  let currentRef = new Date(lastStudy);
+  
+  for (let i = sorted.length - 2; i >= 0; i--) {
+    const prevDate = new Date(sorted[i]);
+    const diffTime = Math.abs(currentRef - prevDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) {
+      streak++;
+      currentRef = prevDate;
+    } else if (diffDays > 1) {
+      break;
+    }
+  }
+  return streak;
+};
+
+// ─── Study Recommendation Engine ──────────────────────────────────────────────
+
+export const getRecommendation = () => {
+  const topics = getTopics().filter(t => !t.isLocked);
+  const visited = getVisited();
+  // Find first unvisited topic
+  const recommended = topics.find(t => !visited.has(t.id));
+  return recommended || null;
+};
+
+// ─── Study Planner (TODO Tasks) API ───────────────────────────────────────────
+
+export const getPlannerTasks = () => {
+  try {
+    const raw = localStorage.getItem('java-learn-planner-tasks');
+    if (!raw) {
+      // Setup some premium initial setup tasks!
+      const initial = [
+        { id: 1, text: '👋 Welcome! Complete Java basics first.', done: false },
+        { id: 2, text: '☁️ Review AWS Day 2 userdata mechanics.', done: false },
+        { id: 3, text: '🐿️ Check Spring Kafka producer patterns.', done: false }
+      ];
+      localStorage.setItem('java-learn-planner-tasks', JSON.stringify(initial));
+      return initial;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+};
+
+export const savePlannerTasks = (tasks) => {
+  try {
+    localStorage.setItem('java-learn-planner-tasks', JSON.stringify(tasks));
+  } catch {}
+};
+
+export const addPlannerTask = (text) => {
+  const tasks = getPlannerTasks();
+  const newTask = {
+    id: Date.now(),
+    text: text.trim(),
+    done: false
+  };
+  tasks.push(newTask);
+  savePlannerTasks(tasks);
+  return newTask;
+};
+
+export const togglePlannerTask = (taskId) => {
+  const tasks = getPlannerTasks();
+  const task = tasks.find(t => t.id === taskId);
+  if (task) {
+    task.done = !task.done;
+    savePlannerTasks(tasks);
+  }
+};
+
+export const deletePlannerTask = (taskId) => {
+  const tasks = getPlannerTasks();
+  const filtered = tasks.filter(t => t.id !== taskId);
+  savePlannerTasks(filtered);
+};
+
+// ─── Study Plan Checklist State API ──────────────────────────────────────────
+
+export const getConfidenceRatings = () => {
+  try {
+    const raw = localStorage.getItem('java-learn-checklist-confidence');
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const saveConfidenceRating = (dayId, rating) => {
+  const ratings = getConfidenceRatings();
+  ratings[dayId] = rating;
+  try {
+    localStorage.setItem('java-learn-checklist-confidence', JSON.stringify(ratings));
+  } catch {}
+};
+
+export const getCheckedItems = () => {
+  try {
+    const raw = localStorage.getItem('java-learn-checklist-items');
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    return new Set();
+  }
+};
+
+export const saveCheckedItems = (checkedSet) => {
+  try {
+    localStorage.setItem('java-learn-checklist-items', JSON.stringify([...checkedSet]));
+  } catch {}
 };

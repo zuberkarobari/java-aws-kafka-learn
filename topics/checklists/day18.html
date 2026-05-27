@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 18  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 18  ·  STUDY CHECKLIST — REST API Design and HTTP Fundamentals</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 18 Checklist</div>
+    <h1 style="margin-top: 0;">REST API Design and HTTP Fundamentals</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 18 · STUDY CHECKLIST</h3>
+    <h3>REST API Design and HTTP Fundamentals</h3>
+    <h3>HTTP Semantics</h3>
+    <p>Methods, status codes, idempotency, safety</p>
+    <h3>REST Design</h3>
+    <p>Resources, URIs, versioning, pagination</p>
+    <h3>Error Handling</h3>
+    <p>Problem Details RFC 7807, field errors, codes</p>
+    <p>HATEOAS, OpenAPI, rate limiting, caching headers</p>
+    <p>Note:</p>
+    <p>Most developers have built REST APIs. Senior interviews test whether you have thought carefully about the contract — not just which annotations to use. Interviewers want to know: why did you pick that status code, how does your versioning strategy affect clients, what happens to a client that calls your DELETE endpoint twice. These are the questions that reveal whether you designed an API or just made it work.</p>
+    <h3>Day 18 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">HTTP methods: GET, POST, PUT, PATCH, DELETE — safety and idempotency for each</span></li>
+      <li><span class="checkbox-label">Idempotency: definition, which methods are idempotent, how to make POST idempotent</span></li>
+      <li><span class="checkbox-label">Status codes: know the right code for 20+ scenarios — not just 200/400/500</span></li>
+      <li><span class="checkbox-label">REST constraints: uniform interface, stateless, client-server, cacheable, layered system, code on demand</span></li>
+      <li><span class="checkbox-label">Resource naming: nouns not verbs, plural resources, nested vs flat resource design</span></li>
+      <li><span class="checkbox-label">API versioning: URI path, header, query param — pros and cons of each</span></li>
+      <li><span class="checkbox-label">Filtering, sorting, field selection — query parameter conventions</span></li>
+      <li><span class="checkbox-label">Error response format: RFC 7807 Problem Details, field-level validation errors</span></li>
+      <li><span class="checkbox-label">HTTP caching: Cache-Control, ETag, If-None-Match, conditional requests</span></li>
+      <li><span class="checkbox-label">HATEOAS: what it is, when it is worth the complexity</span></li>
+      <li><span class="checkbox-label">OpenAPI/Swagger: what goes in a good API spec, contract-first vs code-first</span></li>
+      <li><span class="checkbox-label">Rate limiting headers: X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — HTTP Methods, Safety and Idempotency</h2>
+    <h3>The Two Properties That Drive Method Choice</h3>
+    <p>Safe:</p>
+    <p>A method is safe if it does not modify server state. Safe methods can be cached, prefetched, and retried freely. GET, HEAD, and OPTIONS are safe. POST, PUT, PATCH, DELETE are not.</p>
+    <p>Idempotent:</p>
+    <p>A method is idempotent if calling it multiple times produces the same server state as calling it once. It does not mean the response is the same — a second DELETE on the same resource might return 404, but the state (resource does not exist) is the same. GET, HEAD, PUT, and DELETE are idempotent. POST and PATCH are not idempotent by default.</p>
+    <h3>Method</h3>
+    <h3>Safe? | Idempotent? | Use for | Common mistake</h3>
+    <h3>GET</h3>
+    <p>Yes | Yes | Read a resource or collection | Using GET for state-changing operations (URL links, webhooks)</p>
+    <h3>POST</h3>
+    <p>No | No | Create a resource, trigger an action | Using it when PUT is correct; not handling duplicate submissions</p>
+    <h3>PUT</h3>
+    <p>No | Yes | Full replace of a resource | Partial update — use PATCH instead; forgetting to send all fields</p>
+    <h3>PATCH</h3>
+    <p>No | No (by default) | Partial update of a resource | Treating it as idempotent when it is not (e.g., increment operations)</p>
+    <h3>DELETE</h3>
+    <p>No | Yes | Remove a resource | Returning 404 on second call and confusing clients — second DELETE should still return 200 or 204</p>
+    <h3>HEAD</h3>
+    <p>Yes | Yes | Get headers of a GET response without body | Rarely implemented — useful for checking resource existence cheaply</p>
+    <h3>OPTIONS</h3>
+    <p>Yes | Yes | Discover allowed methods, CORS preflight | Not implementing it — required for CORS</p>
+    <h3>Making POST Idempotent with Idempotency Keys</h3>
+    <p>Why this matters:</p>
+    <p>Creating a payment is a POST. Networks fail. Clients retry. Without an idempotency key, a retry creates a second payment. With one, the server detects the duplicate and returns the original result. Stripe, PayPal, and most financial APIs use this pattern.</p>
+    <pre><code class="language-java">// Client sends Idempotency-Key header on every POST that creates a resource
+POST /api/payments
+Idempotency-Key: a8098c1a-f86e-11da-bd1a-00112444be1e
+Content-Type: application/json
+{ "amount": 500.00, "currency": "INR", "accountId": "ACC-001" }
+// Server implementation
+@RestController
+@RequestMapping("/api/payments")
+public class PaymentController {
+    private final PaymentService     service;
+    private final IdempotencyStore   store;   // backed by Redis with TTL
+    @PostMapping
+    public ResponseEntity&lt;PaymentResult&gt; createPayment(
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestBody @Valid PaymentRequest request) {
+        // Check if we have already processed this key
+        Optional&lt;PaymentResult&gt; cached = store.get(idempotencyKey);
+        if (cached.isPresent()) {
+            // Return the original result — do NOT process again
+            return ResponseEntity.status(HttpStatus.CREATED).body(cached.get());
+        }
+        // Process and store atomically
+        PaymentResult result = service.process(request);
+        store.put(idempotencyKey, result, Duration.ofHours(24));
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .header("Idempotency-Key", idempotencyKey)
+            .body(result);
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is the difference between safe and idempotent? Why does it matter when designing an API? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Safe means the method does not change server state — GET, HEAD, OPTIONS. Clients, proxies, and browsers can cache or prefetch safe methods freely. Idempotent means you can call it multiple times and end up in the same state — GET, PUT, DELETE. The practical value: idempotent methods are safe to retry automatically on network failures without side effects. When I designed our payment webhook endpoints at Deloitte, we made sure DELETE was truly idempotent — the second call on an already-deleted resource returns 200 with the last known state, not 404. A client that gets a network timeout on a DELETE does not know if the request succeeded, so it retries. If the retry gets a 404, the client may treat it as an error and raise an alert for something that already worked correctly. Idempotency at the API level is a contract with your clients.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — Status Codes That Matter</h2>
+    <h3>The Codes Interviewers Ask About</h3>
+    <h3>Code</h3>
+    <h3>Name | Use it when</h3>
+    <h3>200 OK</h3>
+    <p>Success | GET, PUT, PATCH succeeded with a response body</p>
+    <h3>201 Created</h3>
+    <p>Created | POST created a new resource; include Location header pointing to it</p>
+    <h3>202 Accepted</h3>
+    <p>Accepted | Request received, processing happens asynchronously; return a job/task ID</p>
+    <h3>204 No Content</h3>
+    <p>No Content | DELETE or PUT succeeded with no body to return</p>
+    <h3>206 Partial Content</h3>
+    <p>Partial Content | Range request (file download resumed)</p>
+    <h3>301 Moved Permanently</h3>
+    <p>Redirect | Resource URL has permanently changed; update your bookmarks</p>
+    <h3>304 Not Modified</h3>
+    <p>Not Modified | Client sent If-None-Match / If-Modified-Since; cached copy is still valid</p>
+    <h3>400 Bad Request</h3>
+    <p>Bad Request | Request is malformed, missing fields, or fails validation — client's fault</p>
+    <h3>401 Unauthorized</h3>
+    <p>Unauthorized | No credentials or invalid credentials — 'who are you?'</p>
+    <h3>403 Forbidden</h3>
+    <p>Forbidden | Valid credentials but insufficient permissions — 'I know who you are, still no'</p>
+    <h3>404 Not Found</h3>
+    <p>Not Found | Resource does not exist — also used to hide existence of private resources</p>
+    <h3>405 Method Not Allowed</h3>
+    <p>Method Not Allowed | PUT /payments is not supported; include Allow header listing valid methods</p>
+    <h3>409 Conflict</h3>
+    <p>Conflict | State conflict — duplicate key, version mismatch (optimistic locking), business rule violation</p>
+    <h3>410 Gone</h3>
+    <p>Gone | Resource existed but was permanently deleted — stronger than 404</p>
+    <h3>422 Unprocessable Entity</h3>
+    <p>Unprocessable | Request is well-formed but semantically invalid (amount is negative)</p>
+    <h3>429 Too Many Requests</h3>
+    <p>Rate Limited | Include Retry-After header with seconds to wait</p>
+    <h3>500 Internal Server Error</h3>
+    <p>Server Error | Unexpected server failure — never expose stack traces</p>
+    <h3>502 Bad Gateway</h3>
+    <p>Bad Gateway | Upstream service returned invalid response (your service is the gateway)</p>
+    <h3>503 Service Unavailable</h3>
+    <p>Unavailable | Server is up but temporarily unable to handle the request; include Retry-After</p>
+    <h3>504 Gateway Timeout</h3>
+    <p>Gateway Timeout | Upstream service timed out — your service is the gateway</p>
+    <h3>400 vs 422 vs 409 — The Common Confusion</h3>
+    <h3>Code</h3>
+    <h3>Situation | Example</h3>
+    <h3>400 Bad Request</h3>
+    <p>Structure or syntax is wrong — the server could not even parse the intent | Missing required JSON field, malformed date string, invalid JSON</p>
+    <h3>422 Unprocessable Entity</h3>
+    <p>Structure is fine but business rules fail — server understood but cannot act | amount is -500, transfer to your own account, currency not supported</p>
+    <h3>409 Conflict</h3>
+    <p>Request is valid but conflicts with current server state | Creating a user with an email that already exists, version mismatch on update</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> When do you return 401 vs 403, and what is the practical difference? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">401 means authentication failed — the request had no credentials, or the token was expired, or the signature was wrong. The client should authenticate and try again. 403 means the client is authenticated — we know who they are — but they do not have permission to do what they asked. The client should not retry with the same credentials. The mistake I see often is returning 403 for everything auth-related because it feels safer. The problem is you lose the signal. A client getting 401 knows to refresh the token. A client getting 403 knows there is a permission issue and should escalate rather than loop. There is also a privacy nuance: some APIs return 404 instead of 403 for private resources to not reveal they exist. I have done this for admin endpoints — an unauthenticated request to /api/admin/users gets 404, not 403, so the endpoint structure is not exposed to API scanners.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Resource Design and URI Conventions</h2>
+    <h3>URI Design Rules</h3>
+    <h3>Rule</h3>
+    <h3>Good example | Bad example | Why</h3>
+    <h3>Nouns not verbs</h3>
+    <p>/api/payments | /api/createPayment | The HTTP method IS the verb</p>
+    <h3>Plural collections</h3>
+    <p>/api/payments/TXN-123 | /api/payment/TXN-123 | Consistent — /payments is a collection, /payments/{id} is an item</p>
+    <h3>Lowercase + hyphens</h3>
+    <p>/api/payment-methods | /api/paymentMethods | Case-insensitive by RFC; hyphens are more readable than underscores</p>
+    <h3>Hierarchy for relationships</h3>
+    <p>/api/accounts/{id}/payments | /api/account-payments?accountId=x | Sub-resources read naturally</p>
+    <h3>No trailing slash</h3>
+    <p>/api/payments | /api/payments/ | Two URIs should not refer to the same resource</p>
+    <h3>No file extensions</h3>
+    <p>/api/payments/TXN-123 | /api/payments/TXN-123.json | Use Content-Type and Accept headers instead</p>
+    <p>Nested vs flat resource design:</p>
+    <p>POST /api/accounts/{accountId}/payments is clean for creation where the parent context is important. But deeply nested routes like /api/accounts/{accountId}/payments/{paymentId}/refunds/{refundId} become hard to work with. A practical rule: nest at most one level. For deep associations, use a top-level resource with a filter: GET /api/refunds?paymentId=TXN-123 is cleaner than /api/accounts/ACC-001/payments/TXN-123/refunds.</p>
+    <h3>Versioning Strategies</h3>
+    <h3>Strategy</h3>
+    <h3>How it looks | Pros | Cons | Best for</h3>
+    <h3>URI path versioning</h3>
+    <h3>Request header</h3>
+    <p>Accept: application/vnd.myapi.v2+json | Clean URIs; versioning is a negotiation detail | Invisible in browser, harder to test, harder to route in API Gateway | Mature APIs with sophisticated clients</p>
+    <h3>Query parameter</h3>
+    <p>/api/payments?version=2 | Easy to test in browser | Caching issues (version is a cache dimension); mixes metadata with resource params | Internal or developer-facing APIs</p>
+    <h3>Subdomain</h3>
+    <pre><code class="language-java">// URI versioning — the pragmatic choice for most teams
+@RestController
+@RequestMapping("/api/v1/payments")
+public class PaymentControllerV1 { }
+@RestController
+@RequestMapping("/api/v2/payments")
+public class PaymentControllerV2 {
+    // V2 adds pagination, different response shape
+}
+// Header versioning — cleaner URIs but less obvious
+@GetMapping("/api/payments/{id}")
+public ResponseEntity&lt;?&gt; getPayment(
+        @PathVariable String id,
+        @RequestHeader(value="API-Version", defaultValue="1") int version) {
+    if (version &gt;= 2) {
+        return ResponseEntity.ok(paymentService.getV2(id));
+    }
+    return ResponseEntity.ok(paymentService.getV1(id));
+}
+// Content negotiation versioning (most RESTful)
+// Accept: application/vnd.payments.v2+json
+@GetMapping(value="/api/payments/{id}",
+            produces="application/vnd.payments.v2+json")
+public PaymentResponseV2 getPaymentV2(@PathVariable String id) {
+    return paymentService.getV2(id);
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> How do you approach API versioning and what strategy did you use in your projects? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I have used URI path versioning in practice and would choose it again for most teams. The reason is operability — /api/v1/payments is visible in logs, easy to route in Spring Cloud Gateway with a simple path predicate, easy to test in a browser or curl, and immediately obvious to any developer reading the code. The argument against it — that it violates REST because version is not a resource property — is theoretically correct but practically less important than being easy to operate. I keep backward compatibility for at least one version. When we needed to change the payment response structure at Deloitte, we added /v2/payments with the new shape and kept /v1 working for existing consumers with a deprecation header. I remove old versions on a published schedule. The thing I avoid is flag-day breaking changes where all consumers have to migrate at once.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — Pagination, Filtering and Sorting</h2>
+    <h3>Pagination Patterns</h3>
+    <h3>Pattern</h3>
+    <h3>How it works | Strengths | Weaknesses | Use when</h3>
+    <h3>Offset / Limit</h3>
+    <p>GET /payments?offset=40&limit=20 | Simple, random access to any page | Expensive on large tables (OFFSET scans rows); page drift when new items inserted | Small to medium datasets, admin UIs that need page numbers</p>
+    <h3>Page / Size</h3>
+    <p>GET /payments?page=3&size=20 | Familiar to users; easy to build page controls | Same issues as offset — OFFSET = page * size under the hood | Admin UIs, reports</p>
+    <h3>Cursor-based</h3>
+    <p>GET /payments?after=cursor_xyz&limit=20 | Stable: new inserts do not shift pages; O(log n) with index | No random page access; cursor must be opaque to clients | Feeds, timelines, large datasets, infinite scroll</p>
+    <h3>Keyset</h3>
+    <p>GET /payments?after_id=TXN-500&after_date=2024-01 | Same stability as cursor; human-readable | Requires compound index on sort fields; tricky with ties | APIs with natural sort keys like date+id</p>
+    <pre><code class="language-java">// Offset pagination response — include total so client can build page controls
+{
+  "data": [...],
+  "pagination": {
+    "total": 1250,
+    "page": 3,
+    "size": 20,
+    "totalPages": 63
+  }
+}
+// Cursor pagination response — next/prev cursors are opaque base64 tokens
+{
+  "data": [...],
+  "pagination": {
+    "nextCursor": "eyJpZCI6IlROWC01MDAiLCJkYXRlIjoiMjAyNC0wMSJ9",
+    "prevCursor": "eyJpZCI6IlROWC00ODAiLCJkYXRlIjoiMjAyNC0wMSJ9",
+    "hasNext": true,
+    "hasPrev": true
+  }
+}
+// Spring Data cursor pagination with keyset
+@GetMapping
+public PagedResponse&lt;PaymentResponse&gt; list(
+        @RequestParam(defaultValue = "20") @Max(100) int limit,
+        @RequestParam(required = false) String after) {
+    Cursor cursor = after != null ? Cursor.decode(after) : Cursor.start();
+    List&lt;Payment&gt; page = repository.findAfterCursor(cursor, limit + 1);
+    boolean hasNext = page.size() &gt; limit;
+    List&lt;Payment&gt; data = hasNext ? page.subList(0, limit) : page;
+    String nextCursor = hasNext ? Cursor.encode(data.get(data.size()-1)) : null;
+    return PagedResponse.of(data.stream().map(mapper::toResponse).toList(),
+                            nextCursor, hasNext);
+}
+// Filtering and sorting — query parameter conventions
+GET /api/payments?status=COMPLETED&amp;currency=INR&amp;createdAfter=2024-01-01
+GET /api/payments?sort=createdAt,desc&amp;sort=amount,asc   // multi-field sort
+GET /api/payments?fields=id,amount,status               // sparse fieldset</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is cursor-based pagination and when would you use it over offset? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Cursor-based pagination uses an opaque token derived from the last item on the page to fetch the next set. Instead of OFFSET 100 LIMIT 20, which the database handles by scanning and discarding 100 rows, you do WHERE id > last_seen_id LIMIT 20, which hits the index directly. Two practical advantages over offset. First, it is stable — if 5 new payments are inserted while a user is on page 3, offset pagination would show the same records again on the next page load. Cursor pagination is not affected because it anchors to a specific record. Second, it performs better on large tables — deep offsets in PostgreSQL are slow because the database still scans all the rows it is skipping. The trade-off is you cannot jump to an arbitrary page, which means you cannot build page number controls. For a customer-facing transaction feed, I use cursor pagination. For an admin dashboard where someone needs to jump to page 47 of results, offset is fine.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — API Error Response Design</h2>
+    <h3>RFC 7807 Problem Details — The Standard</h3>
+    <p>Why a standard format matters:</p>
+    <p>Without a consistent error format, every endpoint in your API returns errors differently. Clients have to handle each one specially. RFC 7807 Problem Details defines a standard JSON structure for HTTP error responses. Spring Boot 3 implements it natively via ProblemDetail.</p>
+    <pre><code class="language-java">// RFC 7807 Problem Details structure
+{
+  "type":     "https://api.example.com/errors/insufficient-funds",  // URI identifying error type
+  "title":    "Insufficient Funds",                                  // human-readable summary
+  "status":   422,                                                    // HTTP status code
+  "detail":   "Account ACC-001 has balance INR 300 but transfer requires INR 500.",
+  "instance": "/api/payments/TXN-123",                              // URI of the specific occurrence
+  "traceId":  "4bf92f3577b34da6",                                   // extension field — correlates logs
+  "timestamp": "2024-01-15T10:30:00Z"                               // extension field
+}
+// Validation error — field-level details as an extension
+{
+  "type":    "https://api.example.com/errors/validation-failed",
+  "title":   "Request Validation Failed",
+  "status":  400,
+  "detail":  "3 fields failed validation.",
+  "errors": [
+    { "field": "amount",     "code": "MUST_BE_POSITIVE",  "message": "Amount must be greater than 0" },
+    { "field": "currency",   "code": "INVALID_CURRENCY",  "message": "INR, USD, EUR are supported" },
+    { "field": "accountId",  "code": "NOT_BLANK",         "message": "Account ID is required" }
+  ]
+}
+// Spring Boot 3 implementation — ProblemDetail
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+            HttpStatus.BAD_REQUEST, "Request validation failed");
+        problem.setType(URI.create("https://api.example.com/errors/validation-failed"));
+        problem.setTitle("Request Validation Failed");
+        List&lt;FieldError&gt; errors = ex.getBindingResult().getFieldErrors()
+            .stream()
+            .map(fe -&gt; new FieldError(
+                fe.getField(),
+                fe.getCode(),
+                fe.getDefaultMessage()))
+            .toList();
+        problem.setProperty("errors", errors);
+        problem.setProperty("traceId", MDC.get("traceId"));
+        return problem;
+    }
+    @ExceptionHandler(InsufficientFundsException.class)
+    public ProblemDetail handleInsufficientFunds(InsufficientFundsException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+            HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problem.setType(URI.create("https://api.example.com/errors/insufficient-funds"));
+        problem.setTitle("Insufficient Funds");
+        problem.setProperty("accountId", ex.getAccountId());
+        problem.setProperty("traceId", MDC.get("traceId"));
+        return problem;
+    }
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleUnexpected(Exception ex, HttpServletRequest req) {
+        // Never expose the exception message or stack trace externally
+        log.error("Unexpected error on {}: {}", req.getRequestURI(), ex.getMessage(), ex);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            "An unexpected error occurred. Please contact support.");
+        problem.setProperty("traceId", MDC.get("traceId"));
+        return problem;
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How do you design a consistent error response format for a REST API? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I use RFC 7807 Problem Details, which Spring Boot 3 supports natively with ProblemDetail. The format gives you type (a URI identifying the error category), title (human summary), status (HTTP code), detail (specific message for this occurrence), and instance (the request URI). I extend it with two fields that are non-negotiable in production: traceId from MDC so support can correlate the error to the exact log chain, and for validation errors, a list of field-level errors with the field name, a machine-readable code, and a human message. The machine-readable code matters because clients can display localised messages based on the code rather than parsing the English message string. One rule I always enforce: the generic 500 handler never exposes the exception message or stack trace in the response body. The detail field says 'an unexpected error occurred' and nothing more. All the real information goes to the server logs keyed by traceId.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — HTTP Caching Headers</h2>
+    <h3>The Headers That Control Caching</h3>
+    <h3>Header</h3>
+    <h3>Direction | Purpose | Example</h3>
+    <h3>Cache-Control</h3>
+    <p>Response | Primary cache control directive | Cache-Control: max-age=3600, public</p>
+    <h3>ETag</h3>
+    <p>Response | A fingerprint of the response body (hash or version) | ETag: "v3-a8f2c1"</p>
+    <h3>Last-Modified</h3>
+    <p>Response | When the resource was last changed | Last-Modified: Mon, 15 Jan 2024 10:00:00 GMT</p>
+    <h3>If-None-Match</h3>
+    <p>Request | Send the cached ETag back; server returns 304 if unchanged | If-None-Match: "v3-a8f2c1"</p>
+    <h3>If-Modified-Since</h3>
+    <p>Request | Send the cached date; server returns 304 if unchanged | If-Modified-Since: Mon, 15 Jan 2024 10:00:00 GMT</p>
+    <h3>Vary</h3>
+    <p>Response | Tell caches which request headers affect the response | Vary: Accept-Encoding, Authorization</p>
+    <h3>Expires</h3>
+    <p>Response | Legacy alternative to Cache-Control max-age | Expires: Tue, 16 Jan 2024 10:00:00 GMT</p>
+    <pre><code class="language-java">// Cache-Control directives
+Cache-Control: public, max-age=3600         // cacheable by anyone for 1 hour
+Cache-Control: private, max-age=300         // only the browser caches (not CDN) — user-specific data
+Cache-Control: no-cache                     // must revalidate before using cached copy (ETag)
+Cache-Control: no-store                     // never cache — sensitive data, financial transactions
+Cache-Control: immutable, max-age=31536000  // versioned static assets — never revalidate
+// ETag conditional request flow
+// 1. First request
+GET /api/payments/TXN-123
+→ 200 OK  ETag: "v1-abc"  Cache-Control: no-cache
+// 2. Client caches response and ETag. Next request sends it back.
+GET /api/payments/TXN-123
+If-None-Match: "v1-abc"
+→ 304 Not Modified  (no body — client uses cached copy)
+// 3. Resource has changed — server returns new body and new ETag
+GET /api/payments/TXN-123
+If-None-Match: "v1-abc"
+→ 200 OK  ETag: "v2-def"  (full body returned)
+// Spring Boot implementation
+@GetMapping("/api/payments/{id}")
+public ResponseEntity&lt;PaymentResponse&gt; getPayment(
+        @PathVariable String id,
+        @RequestHeader(value="If-None-Match", required=false) String ifNoneMatch) {
+    Payment payment = service.findById(id);
+    String  etag    = "\"v" + payment.getVersion() + "-" + payment.getId() + "\"";
+    if (etag.equals(ifNoneMatch)) {
+        return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
+            .eTag(etag).build();
+    }
+    return ResponseEntity.ok()
+        .eTag(etag)
+        .cacheControl(CacheControl.noCache().mustRevalidate())
+        .body(mapper.toResponse(payment));
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What is an ETag and how does it reduce bandwidth in a REST API? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">An ETag is a fingerprint of a response — typically a hash of the content or a version number. The server includes it in the response. The client stores it alongside the cached response. On the next request for the same resource, the client sends the ETag back in an If-None-Match header. If the resource has not changed, the server returns 304 Not Modified with no body — the client uses its cached copy. The bandwidth saving is the full response body, which matters for large payloads or high-frequency polling. At Deloitte, we used ETags on CloudWatch log group listings that clients polled every 30 seconds. The list rarely changed, so most requests got a 304 and we dramatically reduced both bandwidth and DB query load. The implementation is straightforward: hash the response body or use the database version field. I prefer using the database version because it is O(1) to compute and does not require serialising the response twice.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 7 — HATEOAS, OpenAPI and Rate Limiting</h2>
+    <h3>HATEOAS — Honest Assessment</h3>
+    <p>What HATEOAS is:</p>
+    <p>Hypermedia As The Engine Of Application State. Responses include links to valid next actions so clients do not need to hard-code URLs or know which operations are valid in the current state. A PENDING payment response includes a 'cancel' link but no 'refund' link. A COMPLETED payment response includes a 'refund' link but no 'cancel' link.</p>
+    <p>When it is worth it and when it is not:</p>
+    <pre><code class="language-java">// HATEOAS response with Spring HATEOAS
+// GET /api/payments/TXN-123  →  payment in PENDING state
+{
+  "id": "TXN-123",
+  "amount": 500.00,
+  "status": "PENDING",
+  "_links": {
+    "self":   { "href": "/api/payments/TXN-123" },
+    "cancel": { "href": "/api/payments/TXN-123/cancel", "method": "POST" },
+    "account": { "href": "/api/accounts/ACC-001" }
+  }
+}
+// GET /api/payments/TXN-123  →  same payment now COMPLETED
+{
+  "id": "TXN-123",
+  "status": "COMPLETED",
+  "_links": {
+    "self":   { "href": "/api/payments/TXN-123" },
+    "refund": { "href": "/api/payments/TXN-123/refund", "method": "POST" }
+    // 'cancel' link is gone — not valid in COMPLETED state
+  }
+}</code></pre>
+    <h3>Rate Limiting Headers</h3>
+    <pre><code class="language-java">// Standard rate limiting headers in responses
+X-RateLimit-Limit: 100          // max requests allowed in the window
+X-RateLimit-Remaining: 42       // requests remaining in the current window
+X-RateLimit-Reset: 1705315200   // Unix timestamp when the window resets
+// When rate limit is exceeded — 429 Too Many Requests
+HTTP/1.1 429 Too Many Requests
+Retry-After: 30                 // seconds to wait before retrying
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+// Spring Boot — adding rate limit headers to responses
+@Component
+public class RateLimitFilter extends OncePerRequestFilter {
+    private final RateLimiterService rateLimiter;
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain chain) throws IOException, ServletException {
+        String apiKey = request.getHeader("X-API-Key");
+        RateLimitResult result = rateLimiter.check(apiKey);
+        response.setHeader("X-RateLimit-Limit",     String.valueOf(result.getLimit()));
+        response.setHeader("X-RateLimit-Remaining", String.valueOf(result.getRemaining()));
+        response.setHeader("X-RateLimit-Reset",     String.valueOf(result.getResetAt().getEpochSecond()));
+        if (!result.isAllowed()) {
+            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+            response.setHeader("Retry-After", String.valueOf(result.getRetryAfterSeconds()));
+            response.getWriter().write("{\"status\":429,\"detail\":\"Rate limit exceeded\"}");
+            return;
+        }
+        chain.doFilter(request, response);
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What makes a good OpenAPI specification and what is the difference between contract-first and code-first? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Contract-first means you write the OpenAPI YAML before writing any code. The spec becomes the agreement between the team building the API and the team consuming it. Both sides can generate stubs and mocks from it and work in parallel. Code-first means you write the code and generate the spec from annotations — Spring's springdoc-openapi does this. The pragmatic difference: contract-first forces you to think about the API design before implementation details constrain you. Code-first is faster to start but the spec often reflects internal implementation choices rather than what the client actually needs. A good spec includes: clear descriptions on every operation and parameter, example request and response bodies, all possible error response schemas (not just 200), authentication requirements, and rate limit information. The thing most specs get wrong is only documenting the happy path. Clients need to know what 422 and 409 look like as much as they need to know what 200 looks like.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory. After each exercise, name one real client integration problem this design decision prevents.</p>
+    <h3>Exercise 1 — Idempotent POST with Idempotency Key</h3>
+    <p>Task:</p>
+    <p>Implement POST /api/payments with an Idempotency-Key header.</p>
+    <p>Store processed results in Redis with a 24-hour TTL keyed on the idempotency key.</p>
+    <p>On duplicate key: return the original response with the same status code — do NOT process again.</p>
+    <p>On missing header: return 400 with a clear error message explaining the requirement.</p>
+    <p>Write a test that calls the endpoint twice with the same key and verifies the service was called only once.</p>
+    <h3>Exercise 2 — Status Codes: Get Them Right</h3>
+    <p>Task:</p>
+    <p>Write a @RestControllerAdvice that maps these exceptions to the correct HTTP status and Problem Details body:</p>
+    <p>ResourceNotFoundException → 404, AccountAlreadyExistsException → 409, InsufficientFundsException → 422.</p>
+    <p>PaymentGatewayException → 503 with Retry-After: 30 header.</p>
+    <p>MethodArgumentNotValidException → 400 with per-field error list.</p>
+    <p>Generic Exception → 500 with traceId in body but NO exception message or stack trace.</p>
+    <p>Include traceId from MDC in every error response.</p>
+    <h3>Exercise 3 — Cursor Pagination</h3>
+    <p>Task:</p>
+    <p>Implement GET /api/payments?limit=20&after={cursor} with cursor-based pagination.</p>
+    <p>The cursor encodes the last seen id and createdAt timestamp, base64 encoded.</p>
+    <p>Repository query uses WHERE (created_at, id) < (cursor_date, cursor_id) ORDER BY created_at DESC, id DESC.</p>
+    <p>Response body includes data, nextCursor, prevCursor, hasNext, hasPrev.</p>
+    <p>Show why OFFSET 1000 LIMIT 20 would be slower than this approach on a table with 1 million rows.</p>
+    <h3>Exercise 4 — HTTP Caching with ETag</h3>
+    <p>Task:</p>
+    <p>Implement GET /api/accounts/{id} with ETag support.</p>
+    <p>ETag is derived from the account version field in the database.</p>
+    <p>On match (If-None-Match equals current ETag): return 304 Not Modified with no body.</p>
+    <p>On mismatch: return 200 with full body, new ETag, and Cache-Control: no-cache.</p>
+    <p>Write a test that verifies the second identical call returns 304 and does not hit the repository.</p>
+    <h3>Exercise 5 — RFC 7807 Error Responses</h3>
+    <p>Task:</p>
+    <p>Implement a full GlobalExceptionHandler using Spring Boot 3 ProblemDetail.</p>
+    <p>Validation errors: include field, code (machine-readable), and message in an errors array.</p>
+    <p>Business exceptions: include a type URI specific to the error category.</p>
+    <p>All responses: include traceId from MDC and timestamp.</p>
+    <p>Write a @WebMvcTest that asserts the exact JSON structure of a validation error response — field name, code, and message all present.</p>
+    <h3>Exercise 6 — API Versioning</h3>
+    <p>Task:</p>
+    <p>Implement GET /api/v1/payments/{id} and GET /api/v2/payments/{id} returning different response shapes.</p>
+    <p>V1: id, amount, status, createdAt.</p>
+    <p>V2: all V1 fields plus accountSummary (nested object with accountId, ownerName, balance).</p>
+    <p>Add a Deprecation header to V1 responses: Deprecation: true and Sunset: Sat, 31 Dec 2025 00:00:00 GMT.</p>
+    <p>Show how to configure Spring Cloud Gateway to route /v1/* and /v2/* to the same service.</p>
+    <h3>Exercise 7 — BOSS: Full Payment API Contract</h3>
+    <p>Design the full REST API contract for a payment processing service:</p>
+    <p>Endpoints: POST /payments (create, idempotent), GET /payments/{id}, GET /payments (list with cursor pagination), POST /payments/{id}/cancel, POST /payments/{id}/refund. For each endpoint: correct HTTP method, URI, request body, response body shape, success status code, all error status codes with Problem Details examples, caching headers where appropriate, and idempotency behaviour. Write the OpenAPI YAML for all five endpoints including all response schemas — 200, 201, 400, 401, 403, 404, 409, 422, 429, 503. This is a complete API design exercise, not just a coding exercise.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. These answers are written to sound like a senior engineer talking — direct, grounded in real experience, with the trade-off included.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What makes a REST API truly RESTful? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Honestly, most APIs that call themselves RESTful are not — they are HTTP APIs with JSON. True REST has six constraints: uniform interface (consistent resource-based URIs, standard HTTP verbs), stateless (server holds no session state between requests), client-server separation, cacheable responses, layered system (client does not need to know about load balancers, gateways), and optionally code on demand (return executable code). In practice, the constraints that matter most are statelessness — sessions in the server break horizontal scaling — and the uniform interface, which means using HTTP methods for what they were designed for and not building RPC over POST. I would not describe most of what I have built as fully RESTful. I would describe it as pragmatic HTTP API design that follows REST conventions where they give clear value.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> Why is idempotency important for payment APIs specifically? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Payments involve money, which means the failure modes matter more than in most systems. When a client sends a POST to create a payment and the network fails before the response arrives, the client does not know if the payment was created. If it retries without an idempotency mechanism, you get a duplicate charge. With an idempotency key — a UUID the client generates and sends with the request — the server stores the result for 24 hours keyed on that UUID. If the same key comes in again, the server returns the original result without processing again. The client gets the correct answer and no duplicate charge. Stripe, PayPal, and Razorpay all mandate idempotency keys for payment creation. In my own payment service I implemented this with a Redis store. The important detail: you store the full response, not just a boolean. The client on retry gets the exact same response they would have gotten on the first successful call.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How do you decide which HTTP status code to return? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I work through a mental decision tree. First: was the request syntactically malformed — missing fields, wrong types, unparseable JSON? That is 400. Was it well-formed but semantically invalid — negative amount, unsupported currency, account does not exist? That is 422. Did the request conflict with current state — duplicate record, optimistic lock mismatch, concurrent modification? That is 409. Did the user lack permission? 401 for unauthenticated, 403 for authenticated but unauthorised. Did it succeed with a created resource? 201 with Location header. Did it succeed with no body to return? 204. Did an upstream dependency fail? 502 if it returned garbage, 504 if it timed out. Is my own service temporarily overloaded? 503 with a Retry-After. The most common mistakes I see are using 400 for everything bad (losing the semantic distinction), using 200 for errors with an error flag in the body (breaks HTTP semantics and client error handling), and returning 500 for validation errors (scares clients into thinking the server crashed).</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What is the difference between PUT and PATCH? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">PUT is a full replacement — you send the complete resource and the server stores exactly that. If you omit a field in a PUT, that field is cleared. PATCH is a partial update — you send only the fields you want to change. The practical difference matters for clients. With PUT, the client must first GET the resource, modify the field they care about, then PUT the full object. With PATCH, they send only the changed field. PUT is idempotent by definition — sending the same full resource twice leaves the same state. PATCH is not inherently idempotent: a PATCH that says increment amount by 100 applied twice gives a different result than once. A PATCH that sets amount to 500 is idempotent. The JSON Patch RFC 6902 and JSON Merge Patch RFC 7396 define standard formats for PATCH operations. In practice most teams use JSON Merge Patch — send the fields you want to update, null to clear a field — because it is simpler.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is the Accept header and when does it matter? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The Accept header tells the server what content types the client can handle. The server responds with the best matching format and puts the actual format in Content-Type. If the server cannot satisfy the Accept header, it returns 406 Not Acceptable. In practice, most APIs only serve application/json and most clients send Accept: */* (accept anything), so content negotiation rarely comes up. Where it does matter: versioning via content type — Accept: application/vnd.payments.v2+json routes to the V2 handler. Serving multiple formats — some APIs serve both JSON and XML based on Accept. Rate limit responses that need to be machine-readable — always return application/json even when the request Accept was something else, because 429 errors need to be parseable. I always set Content-Type: application/json explicitly on all responses rather than relying on framework defaults, because it removes any ambiguity.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> How do you paginate a resource collection and what are the trade-offs? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I usually start with offset pagination because it is simple and supports random page access — useful for admin UIs with page number controls. When the dataset grows large (say, over 100k records) or the data changes frequently, I switch to cursor pagination. With offset, OFFSET 10000 LIMIT 20 makes the database scan and discard 10,000 rows to give you 20. With cursor pagination, WHERE id > last_seen_id LIMIT 20 uses the index directly. Cursor is also stable — new inserts do not cause the same record to appear on two pages. The downside of cursor: no random page access, and you need a monotonic sort key to derive the cursor from. For the response format, I always include whether there is a next page and the cursor for it — I do not make clients guess based on page size.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What does CORS do and when do you need it? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">CORS — Cross-Origin Resource Sharing — is a browser security mechanism. Browsers block JavaScript from making requests to a different origin (different protocol, domain, or port) unless the server explicitly allows it. When a browser makes a cross-origin request, it either sends a preflight OPTIONS request asking what is allowed, or for simple requests it sends the actual request and checks the response headers. The server must return Access-Control-Allow-Origin with the allowed origin (or *), and for credentials-based requests, the exact origin, never *. Where it matters for backend developers: when you are building an API that a web frontend at a different domain calls. You configure CORS in Spring with @CrossOrigin or a global CorsConfigurationSource bean. The mistake I see is setting Access-Control-Allow-Origin: * when the requests use cookies or Authorization headers — that combination is rejected by the browser. You must use the exact origin and set Access-Control-Allow-Credentials: true.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> When should a DELETE return 200 vs 204, and should the second DELETE return 404? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">204 No Content is the most common choice for DELETE — the operation succeeded and there is nothing to return. 200 OK with a response body is appropriate when you want to return the final state of the deleted resource, which some clients find useful for confirmation or audit trail. On the second DELETE — the idempotency question: technically it should return 200 or 204 because the end state is the same (resource does not exist), and the operation was successful from the client's perspective. The argument for 404 on the second call is that the resource genuinely does not exist. In practice, I return 200 with the last known state on the second DELETE if I store it, or 204 if the record is hard-deleted. I avoid 404 on the second call because clients handling DELETE failures will retry, get a 404, and may treat it as an error when the original DELETE succeeded. Idempotency should mean the client gets the same success signal every time.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> How do you handle long-running operations in a REST API? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The pattern I use is the job resource pattern. The client sends a POST to initiate the operation and gets back 202 Accepted immediately with a job ID and a Location header pointing to /api/jobs/{jobId}. The operation runs asynchronously. The client polls GET /api/jobs/{jobId} to check progress — the job resource returns status: PENDING, IN_PROGRESS, COMPLETED, or FAILED. When COMPLETED, it includes the result or a link to the result. I add Cache-Control: no-cache on the job resource so clients do not cache stale status. The polling interval should be communicated — I include a Retry-After header on 200 responses from the job endpoint suggesting when to poll next. A more sophisticated alternative is webhooks — the client registers a callback URL and you POST the result to it when done. Webhooks are push and more efficient, but they require the client to have a reachable endpoint, which is not always the case.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What is the Location header and when should you use it? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Location tells the client where a newly created resource can be found. After a 201 Created response to POST /api/payments, the Location header should be /api/payments/TXN-123. This lets clients bookmark or access the created resource without parsing the response body. It is also used in 301 and 302 redirects — Location points to the new URL. The practical value: if a client posts a payment and the response body is lost in a network failure, the client can still retrieve the created resource using the Location header it may have captured from the response headers. I always include Location on 201 responses — it is part of the HTTP spec for created resources and clients that follow it correctly benefit from it.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> How do you document an API and what makes documentation actually useful? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I use OpenAPI with springdoc-openapi for automatic spec generation from code, plus manual enrichment for things the annotations do not capture — error response schemas, business rule explanations, example values. Useful documentation has four things that most generated docs lack. First, real examples for both request and response — not just the schema, but an actual filled-in example that a developer can copy and run. Second, all error responses documented, not just the 200 — what does a 422 look like, what fields are in the errors array. Third, business context — what does it mean for a payment to be in PENDING state, what transitions are allowed. Fourth, authentication documented clearly — what the token looks like, where to get one, how long it lives. The thing that makes documentation useless is generating it and then never updating it. Contract-first development — write the spec, generate the server stub — keeps the spec and the implementation in sync.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What is the difference between 400 and 422? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">400 Bad Request is for when the request is structurally malformed — the server could not understand what was being asked. Missing required JSON fields, wrong data type for a field, unparseable date string. 422 Unprocessable Entity is for when the request is perfectly well-formed — the server understood it completely — but it violates business rules. A payment request with amount: -500 is 422, not 400. The JSON is valid, the field is present, the type is correct, but the value makes no business sense. A transfer to your own account is 422. An unsupported currency code is 422. The distinction matters for clients: a 400 means fix your request format; a 422 means your request format is fine but the business logic rejected it, and the error message explains why.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> How do you rate limit an API and communicate it to clients? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Rate limiting happens at the API Gateway layer first — Spring Cloud Gateway's RequestRateLimiter filter with a Redis token bucket, keyed by API key or user ID. When the limit is exceeded, the gateway returns 429 Too Many Requests. Every response — not just 429s — should include the rate limit headers: X-RateLimit-Limit (the window limit), X-RateLimit-Remaining (how many left), and X-RateLimit-Reset (when the window resets as a Unix timestamp). On a 429, add Retry-After in seconds. This gives clients the information they need to implement exponential backoff without guessing. Clients that behave well — respect Retry-After — are rate-limited but functional. Clients that ignore it and hammer the API get blacklisted. I also differentiate rate limits by tier: free tier gets 100 requests/minute, paid tier gets 1,000. This is easier to implement if your rate limiter is keyed on a combined (apiKey, tier) rather than just IP.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q21:</span> What is HATEOAS and would you actually use it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">HATEOAS means including hypermedia links in API responses so clients can navigate the API without hard-coding URLs. A payment in PENDING state includes a cancel link but not a refund link. A COMPLETED payment includes a refund link. Clients follow links rather than constructing URLs. The theory is sound — it decouples clients from URL structure and makes state transitions explicit. In practice, I have not used it in production and would not recommend it by default. Most API clients ignore the links and hard-code URLs regardless. The response model becomes significantly more complex. State-based link inclusion requires careful testing. And the primary benefit — URL decoupling — is better solved by stable versioned URIs. Where I would consider it: a very public API consumed by hundreds of integrators over a long lifetime, where you genuinely want clients to be resilient to URL changes. For internal APIs or developer-facing APIs with a normal lifecycle, it adds complexity without payoff.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 18 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you state the difference between safe and idempotent without looking?</span></li>
+      <li><span class="checkbox-label">Can you map 10 real scenarios to the correct HTTP status code?</span></li>
+      <li><span class="checkbox-label">Can you explain cursor pagination and when it beats offset?</span></li>
+      <li><span class="checkbox-label">Can you write a Problem Details error response from memory?</span></li>
+      <li><span class="checkbox-label">Can you explain ETags and when they give 304 vs 200?</span></li>
+      <li><span class="checkbox-label">Can you articulate a clear position on versioning strategy?</span></li>
+      <li><span class="checkbox-label">All 7 exercises — Boss OpenAPI spec completed?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>HTTP method safety and idempotency</h3>
+    <p>/5 |</p>
+    <h3>Status code selection across 20 scenarios</h3>
+    <p>/5 |</p>
+    <h3>Idempotency key pattern for POST</h3>
+    <p>/5 |</p>
+    <h3>URI design and resource naming rules</h3>
+    <p>/5 |</p>
+    <h3>Versioning strategies: trade-offs of each</h3>
+    <p>/5 |</p>
+    <h3>Cursor vs offset pagination</h3>
+    <p>/5 |</p>
+    <h3>RFC 7807 Problem Details format</h3>
+    <p>/5 |</p>
+    <h3>ETag and Cache-Control headers</h3>
+    <p>/5 |</p>
+    <h3>Rate limiting headers and 429 response</h3>
+    <p>/5 |</p>
+    <p>Day 18 complete:</p>
+    <p>REST API design questions come up in most senior backend interviews, often in the form of 'design the API for X'. The candidates who do well are the ones who think out loud about status codes, idempotency, and versioning — not just which endpoints to create. Those details signal that you have thought about the client's experience, not just the implementation.</p>
+    <h3>Preview: Day 19 — Security: JWT, OAuth2, Spring Security</h3>
+    <p>How JWT works internally, OAuth2 flows (authorization code, client credentials), Spring Security filter chain, method-level security, RBAC vs ABAC, common API security vulnerabilities (OWASP), and securing microservices service-to-service communication.</p>
+    <p>Day 18 of 60 · REST API Design · Prepared for Md Zuber</p>
+    <p>"A REST API is a contract. Every status code, every header, every field name is a promise to the clients who depend on it."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Java 8 — Features + Coding Questions</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0e1a;
+  --surface:#0f1526;
+  --card:#131a2e;
+  --card2:#161d30;
+  --border:#1e2d47;
+  --accent:#f97316;
+  --accent2:#38bdf8;
+  --accent3:#4ade80;
+  --accent4:#a78bfa;
+  --text:#dde6f7;
+  --muted:#6b809e;
+  --code-bg:#0d1424;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;line-height:1.7}
+
+/* ─── HEADER ─── */
+.header{background:linear-gradient(135deg,#0f1829 0%,#0a1120 60%,#07111e 100%);border-bottom:2px solid var(--border);padding:44px 44px 32px;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;top:-60px;right:-80px;width:420px;height:420px;background:radial-gradient(circle,rgba(249,115,22,0.08) 0%,transparent 65%);pointer-events:none}
+.header::after{content:'';position:absolute;bottom:-100px;left:200px;width:300px;height:300px;background:radial-gradient(circle,rgba(56,189,248,0.05) 0%,transparent 65%);pointer-events:none}
+.header-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+.header h1{font-size:44px;font-weight:700;line-height:1.1;letter-spacing:-1.5px;margin-bottom:6px}
+.header h1 .j8{color:var(--accent)}
+.header-desc{color:var(--muted);font-size:14px;margin-bottom:22px;max-width:620px}
+.header-chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.25);color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 12px;border-radius:3px;text-transform:uppercase}
+.chip.blue{background:rgba(56,189,248,0.08);border-color:rgba(56,189,248,0.2);color:var(--accent2)}
+.chip.green{background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.2);color:var(--accent3)}
+
+/* ─── NAV ─── */
+.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 44px;display:flex;gap:0;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--header-h,64px);z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;letter-spacing:.4px;padding:13px 16px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.nav-btn:hover,.nav-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ─── MAIN ─── */
+.main{max-width:1020px;margin:0 auto;padding:36px 28px}
+
+/* ─── SEARCH + PROGRESS ─── */
+.toolbar{display:flex;gap:14px;align-items:center;margin-bottom:28px}
+.search-box{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:11px 18px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.search-box:focus{border-color:var(--accent)}
+.search-box::placeholder{color:var(--muted)}
+.prog-wrap{display:flex;align-items:center;gap:10px;min-width:200px}
+.prog-track{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .4s}
+.prog-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ─── SECTION HEADER ─── */
+.sec-hdr{display:flex;align-items:center;gap:12px;margin:40px 0 18px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.sec-hdr.hidden{display:none}
+.sec-tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2.5px;color:var(--accent);background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);padding:4px 10px;border-radius:3px;text-transform:uppercase}
+.sec-title{font-size:18px;font-weight:700;color:var(--text)}
+.sec-count{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+
+/* ─── CARD ─── */
+.qa-card{background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.qa-card:hover{border-color:rgba(249,115,22,0.25);box-shadow:0 0 0 1px rgba(249,115,22,0.06)}
+.qa-card.hidden{display:none}
+.qa-card.open{border-color:rgba(249,115,22,0.35)}
+
+.qa-q{display:flex;align-items:flex-start;gap:14px;padding:16px 20px;cursor:pointer;user-select:none}
+.q-n{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--accent);min-width:30px;margin-top:2px}
+.q-body{flex:1}
+.q-text{font-weight:600;font-size:14.5px;line-height:1.5;color:var(--text)}
+.q-badges{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.badge{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:2px;text-transform:uppercase}
+.b-orange{background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.2);color:var(--accent)}
+.b-blue{background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.18);color:var(--accent2)}
+.b-green{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.18);color:var(--accent3)}
+.b-purple{background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.18);color:var(--accent4)}
+.q-arr{color:var(--muted);font-size:16px;transition:transform .25s;min-width:18px;margin-top:3px}
+.qa-card.open .q-arr{transform:rotate(180deg);color:var(--accent)}
+.qa-card.open .qa-q{border-bottom:1px solid var(--border)}
+
+.qa-ans{display:none;padding:22px 20px 24px 64px}
+.qa-card.open .qa-ans{display:block}
+
+/* ─── INTRO LINE ─── */
+.ans-intro{font-size:13px;color:var(--muted);font-style:italic;padding:8px 14px;border-left:2px solid var(--accent);margin-bottom:18px;background:rgba(249,115,22,0.04);border-radius:0 4px 4px 0}
+
+/* ─── BULLET LIST ─── */
+.blist{list-style:none;display:flex;flex-direction:column;gap:12px}
+.blist li{display:flex;gap:12px;align-items:flex-start}
+.bicon{width:22px;height:22px;min-width:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;margin-top:3px}
+.ic1{background:rgba(249,115,22,0.15);color:var(--accent)}
+.ic2{background:rgba(56,189,248,0.12);color:var(--accent2)}
+.ic3{background:rgba(74,222,128,0.12);color:var(--accent3)}
+.ic4{background:rgba(167,139,250,0.12);color:var(--accent4)}
+.ic5{background:rgba(251,191,36,0.12);color:#fbbf24}
+.ic6{background:rgba(239,68,68,0.12);color:#f87171}
+.bcontent{flex:1;font-size:14px;line-height:1.75;color:var(--text)}
+.bcontent strong{color:var(--accent2);font-weight:600}
+.bcontent .kw{color:var(--accent);font-weight:500}
+.bcontent .note{color:var(--accent3);font-weight:500}
+
+/* ─── CODE BLOCK ─── */
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin:10px 0;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.65}
+.c-kw{color:#c792ea}
+.c-type{color:#82aaff}
+.c-str{color:#c3e88d}
+.c-cmt{color:#546e7a;font-style:italic}
+.c-num{color:#f78c6c}
+.c-method{color:#82aaff}
+.c-ann{color:#ffcb6b}
+.c-lambda{color:var(--accent)}
+.c-op{color:#89ddff}
+
+/* ─── OUTPUT BOX ─── */
+.output{background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.2);border-radius:4px;padding:10px 14px;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent3)}
+.output::before{content:'▸ Output: ';color:var(--muted);font-size:10px}
+
+.tip-box{background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.2);border-radius:5px;padding:12px 16px;margin-top:14px;font-size:13px;color:var(--accent2)}
+.tip-box::before{content:'💡 Interview Tip: ';font-weight:600}
+
+/* ─── FOOTER ─── */
+.footer{border-top:1px solid var(--border);text-align:center;padding:24px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px}
+
+@media(max-width:600px){
+  .header{padding:28px 18px 22px}
+  .header h1{font-size:30px}
+  .main{padding:20px 14px}
+  .qa-ans{padding:18px 14px}
+  .toolbar{flex-direction:column}
+}
+</style>
+
+  <link rel="stylesheet" href="../../../css/styles.css" />
+  <link rel="stylesheet" href="../../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="header">
+  <div class="header-eyebrow">Interview Preparation — Java</div>
+  <h1><span class="j8">Java 8</span> Features &amp; Coding Questions</h1>
+  <div class="header-desc">50 deep-dive Q&amp;As covering every Java 8 feature with production-ready coding examples, real outputs, and interviewer-proof explanations.</div>
+  <div class="header-chips">
+    <span class="chip">Lambda Expressions</span>
+    <span class="chip">Stream API</span>
+    <span class="chip blue">Functional Interfaces</span>
+    <span class="chip blue">Optional</span>
+    <span class="chip green">Coding Problems</span>
+    <span class="chip green">Collectors</span>
+    <span class="chip">Date/Time API</span>
+    <span class="chip blue">CompletableFuture</span>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="filterCat('all',this)">All 50</button>
+  <button class="nav-btn" onclick="filterCat('lambda',this)">Lambda &amp; FI</button>
+  <button class="nav-btn" onclick="filterCat('streams',this)">Stream API</button>
+  <button class="nav-btn" onclick="filterCat('collectors',this)">Collectors</button>
+  <button class="nav-btn" onclick="filterCat('optional',this)">Optional</button>
+  <button class="nav-btn" onclick="filterCat('datetime',this)">Date/Time</button>
+  <button class="nav-btn" onclick="filterCat('misc',this)">Default/CompletableFuture</button>
+  <button class="nav-btn" onclick="filterCat('coding',this)">Coding Problems</button>
+</nav>
+
+<div class="main">
+  <div class="toolbar">
+    <input class="search-box" type="text" placeholder="🔍  Search questions or Java keywords..." oninput="searchQA(this.value)"/>
+    <div class="prog-wrap">
+      <div class="prog-track"><div class="prog-fill" id="pFill" style="width:0%"></div></div>
+      <span class="prog-label" id="pLabel">0 / 50</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  SECTION 1 — LAMBDA & FUNCTIONAL INTERFACES -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="sec-hdr" data-cat="lambda">
+    <span class="sec-tag">Section 01</span>
+    <span class="sec-title">Lambda Expressions &amp; Functional Interfaces</span>
+    <span class="sec-count">Q1–Q9</span>
+  </div>
+
+  <!-- Q1 -->
+  <div class="qa-card" data-cat="lambda">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">01</span>
+      <div class="q-body">
+        <div class="q-text">What is a Lambda Expression in Java 8? Why was it introduced?</div>
+        <div class="q-badges"><span class="badge b-orange">Core Concept</span><span class="badge b-blue">Must Know</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">This is the starting question of every Java 8 interview. Explain the WHY, not just the syntax.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Definition:</strong> A Lambda expression is an <kw class="kw">anonymous function</kw> — a block of code with parameters, a body, and no name. It implements a functional interface (an interface with exactly one abstract method) inline, without needing a concrete class or anonymous inner class. Syntax: <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c3e88d">(parameters) -> expression</code> or <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c3e88d">(parameters) -> { statements }</code>.</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Why Introduced:</strong> Before Java 8, to pass behaviour as an argument, you had to create an anonymous inner class — verbose and hard to read. Java 8 lambdas enable <kw class="kw">functional programming</kw> style: treat functions as first-class citizens, pass behaviour to methods, write concise and expressive code. The primary driver was the Collections API — enabling parallel, pipeline-style processing of data via the Stream API.</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Before vs After:</strong>
+<pre><span class="c-cmt">// Before Java 8 — Anonymous Inner Class</span>
+<span class="c-type">Runnable</span> r = <span class="c-kw">new</span> <span class="c-type">Runnable</span>() {
+    <span class="c-kw">public void</span> run() { <span class="c-type">System</span>.out.println(<span class="c-str">"Hello"</span>); }
+};
+
+<span class="c-cmt">// Java 8 — Lambda</span>
+<span class="c-type">Runnable</span> r = <span class="c-lambda">() -></span> <span class="c-type">System</span>.out.println(<span class="c-str">"Hello"</span>);</pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Lambda Syntax Rules:</strong> (1) If only one parameter, parentheses are optional: <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c3e88d">x -> x * 2</code>. (2) If body is a single expression, braces and return keyword are optional: <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c3e88d">(a, b) -> a + b</code>. (3) If body has multiple statements, braces and return are required: <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c3e88d">(a, b) -> { int sum = a+b; return sum; }</code>.</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Variable Capture:</strong> Lambdas can capture variables from the enclosing scope but those variables must be <kw class="kw">effectively final</kw> (assigned exactly once and never modified after). This is because lambdas may run in a different thread and mutable shared state would cause race conditions. If you try to modify a captured variable inside a lambda, the compiler gives: <em>"local variables referenced from a lambda must be final or effectively final"</em>.</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Under the Hood — invokedynamic:</strong> Java 8 compiles lambdas using the <kw class="kw">invokedynamic</kw> bytecode instruction (not as anonymous inner classes). At runtime, the JVM dynamically links the lambda to the functional interface. This is more efficient than creating new Class objects for each lambda — the JVM can apply runtime optimizations like inlining and escape analysis that it can't apply to inner class instances.</div></li>
+      </ul>
+      <div class="tip-box">If asked "what is the difference between lambda and anonymous inner class?" — key point: lambda is NOT syntactic sugar for anonymous inner class. Lambdas use invokedynamic; anonymous classes always create a new .class file. Also, <code>this</code> inside a lambda refers to the enclosing class; <code>this</code> inside an anonymous inner class refers to the inner class itself.</div>
+    </div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="qa-card" data-cat="lambda">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">02</span>
+      <div class="q-body">
+        <div class="q-text">What are Functional Interfaces? Explain Predicate, Function, Consumer, Supplier, and BiFunction.</div>
+        <div class="q-badges"><span class="badge b-orange">Functional Interfaces</span><span class="badge b-blue">Must Know</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Know each built-in FI by its signature: what goes IN and what comes OUT. That's how you remember them.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Functional Interface Definition:</strong> An interface with <kw class="kw">exactly one abstract method</kw>, annotated with <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#ffcb6b">@FunctionalInterface</code> (optional but recommended — makes the compiler enforce the single-abstract-method contract). It can have any number of default or static methods. Examples: <code>Runnable</code>, <code>Comparator</code>, and all interfaces in <code>java.util.function</code> package.</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Predicate&lt;T&gt; — T → boolean:</strong> Tests a condition. Use for filtering.
+<pre><span class="c-type">Predicate</span>&lt;<span class="c-type">Integer</span>&gt; isEven = n <span class="c-lambda">-></span> n % <span class="c-num">2</span> == <span class="c-num">0</span>;
+isEven.test(<span class="c-num">4</span>); <span class="c-cmt">// true</span>
+
+<span class="c-cmt">// Combine predicates</span>
+<span class="c-type">Predicate</span>&lt;<span class="c-type">Integer</span>&gt; isEvenAndPositive = isEven.and(n <span class="c-lambda">-></span> n > <span class="c-num">0</span>);
+<span class="c-type">Predicate</span>&lt;<span class="c-type">Integer</span>&gt; isEvenOrNegative = isEven.or(n <span class="c-lambda">-></span> n < <span class="c-num">0</span>);
+<span class="c-type">Predicate</span>&lt;<span class="c-type">Integer</span>&gt; isOdd = isEven.negate();</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Function&lt;T, R&gt; — T → R:</strong> Transforms input to output. Use for mapping.
+<pre><span class="c-type">Function</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>&gt; strLength = s <span class="c-lambda">-></span> s.length();
+strLength.apply(<span class="c-str">"Hello"</span>); <span class="c-cmt">// 5</span>
+
+<span class="c-cmt">// Compose: andThen (first this, then that) / compose (first that, then this)</span>
+<span class="c-type">Function</span>&lt;<span class="c-type">Integer</span>, <span class="c-type">Integer</span>&gt; doubleIt = x <span class="c-lambda">-></span> x * <span class="c-num">2</span>;
+<span class="c-type">Function</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>&gt; lengthThenDouble = strLength.andThen(doubleIt);
+lengthThenDouble.apply(<span class="c-str">"Hello"</span>); <span class="c-cmt">// 10</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Consumer&lt;T&gt; — T → void:</strong> Accepts input, performs side effect, returns nothing. Use for forEach.
+<pre><span class="c-type">Consumer</span>&lt;<span class="c-type">String</span>&gt; printer = s <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(s);
+printer.accept(<span class="c-str">"Java 8"</span>); <span class="c-cmt">// prints: Java 8</span>
+
+<span class="c-cmt">// andThen: chain consumers</span>
+<span class="c-type">Consumer</span>&lt;<span class="c-type">String</span>&gt; upperPrinter = s <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(s.toUpperCase());
+printer.andThen(upperPrinter).accept(<span class="c-str">"java"</span>); <span class="c-cmt">// java \n JAVA</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Supplier&lt;T&gt; — () → T:</strong> Takes no input, returns a value. Use for lazy initialization, factory methods.
+<pre><span class="c-type">Supplier</span>&lt;<span class="c-type">String</span>&gt; greeting = <span class="c-lambda">() -></span> <span class="c-str">"Hello, World!"</span>;
+greeting.get(); <span class="c-cmt">// "Hello, World!"</span>
+
+<span class="c-cmt">// Common use: Optional.orElseGet(supplier) — only evaluated if empty</span>
+<span class="c-type">Optional</span>&lt;<span class="c-type">String</span>&gt; opt = <span class="c-type">Optional</span>.empty();
+opt.orElseGet(<span class="c-lambda">() -></span> fetchFromDB()); <span class="c-cmt">// fetchFromDB only called if empty</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>BiFunction&lt;T, U, R&gt; — (T, U) → R:</strong> Two inputs, one output. Also: <code>BiConsumer&lt;T,U&gt;</code> (two inputs, void), <code>BiPredicate&lt;T,U&gt;</code> (two inputs, boolean), <code>UnaryOperator&lt;T&gt;</code> (extends Function, T→T same type), <code>BinaryOperator&lt;T&gt;</code> (extends BiFunction, (T,T)→T).
+<pre><span class="c-type">BiFunction</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>, <span class="c-type">String</span>&gt; repeat =
+    (s, n) <span class="c-lambda">-></span> s.repeat(n);
+repeat.apply(<span class="c-str">"ab"</span>, <span class="c-num">3</span>); <span class="c-cmt">// "ababab"</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="qa-card" data-cat="lambda">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">03</span>
+      <div class="q-body">
+        <div class="q-text">What are Method References? Explain all 4 types with examples.</div>
+        <div class="q-badges"><span class="badge b-orange">Method References</span><span class="badge b-green">Frequently Asked</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Method references are shorthand for lambdas that call exactly one method. Know all 4 types — interviewers love listing them.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>What is a Method Reference:</strong> A compact syntax <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#c3e88d">ClassName::methodName</code> that creates a lambda equivalent for any method that matches the functional interface's signature. It's a special kind of lambda — instead of a body, it points to an existing method. There are 4 types: static method reference, instance method reference (on a specific object), instance method reference (on arbitrary object of a type), and constructor reference.</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Type 1 — Static Method Reference:</strong> <code>ClassName::staticMethod</code>
+<pre><span class="c-cmt">// Lambda equivalent: x -> Integer.parseInt(x)</span>
+<span class="c-type">Function</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>&gt; parser = <span class="c-type">Integer</span>::parseInt;
+parser.apply(<span class="c-str">"42"</span>); <span class="c-cmt">// 42</span>
+
+<span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; nums = <span class="c-type">Arrays</span>.asList(<span class="c-str">"3"</span>,<span class="c-str">"1"</span>,<span class="c-str">"2"</span>);
+nums.stream().map(<span class="c-type">Integer</span>::parseInt).sorted().forEach(<span class="c-type">System</span>.out::println);</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Type 2 — Instance Method on Specific Object:</strong> <code>instance::method</code>
+<pre><span class="c-type">String</span> prefix = <span class="c-str">"Hello, "</span>;
+<span class="c-type">Function</span>&lt;<span class="c-type">String</span>, <span class="c-type">String</span>&gt; greeter = prefix::concat;
+greeter.apply(<span class="c-str">"Zuber"</span>); <span class="c-cmt">// "Hello, Zuber"</span>
+
+<span class="c-cmt">// Most common: System.out::println</span>
+<span class="c-type">List</span>.of(<span class="c-str">"a"</span>,<span class="c-str">"b"</span>,<span class="c-str">"c"</span>).forEach(<span class="c-type">System</span>.out::println);</pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Type 3 — Instance Method on Arbitrary Object of Type:</strong> <code>ClassName::instanceMethod</code>
+<pre><span class="c-cmt">// Lambda: s -> s.toUpperCase()</span>
+<span class="c-type">Function</span>&lt;<span class="c-type">String</span>, <span class="c-type">String</span>&gt; upper = <span class="c-type">String</span>::toUpperCase;
+upper.apply(<span class="c-str">"hello"</span>); <span class="c-cmt">// "HELLO"</span>
+
+<span class="c-cmt">// Lambda: (s1, s2) -> s1.compareTo(s2)</span>
+<span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; names = <span class="c-type">Arrays</span>.asList(<span class="c-str">"Zuber"</span>,<span class="c-str">"Amreen"</span>,<span class="c-str">"Ali"</span>);
+names.sort(<span class="c-type">String</span>::compareTo);</pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Type 4 — Constructor Reference:</strong> <code>ClassName::new</code>
+<pre><span class="c-cmt">// Supplier&lt;T&gt; creates objects with no-arg constructor</span>
+<span class="c-type">Supplier</span>&lt;<span class="c-type">ArrayList</span>&gt; listFactory = <span class="c-type">ArrayList</span>::new;
+<span class="c-type">ArrayList</span> list = listFactory.get(); <span class="c-cmt">// new empty ArrayList</span>
+
+<span class="c-cmt">// Function&lt;String, Employee&gt; creates objects with one arg</span>
+<span class="c-type">Function</span>&lt;<span class="c-type">String</span>, <span class="c-type">Employee</span>&gt; empFactory = <span class="c-type">Employee</span>::new;
+<span class="c-type">Employee</span> e = empFactory.apply(<span class="c-str">"Zuber"</span>); <span class="c-cmt">// new Employee("Zuber")</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>When to Use:</strong> Use method references when a lambda does nothing but delegate to an existing method without transformation. <note class="note">Rule of thumb:</note> If your lambda is <code>x -> someMethod(x)</code>, replace with <code>SomeClass::someMethod</code>. If the lambda has additional logic beyond the method call, keep it as a lambda. Method references make code more readable but only when the reader can recognize the referenced method at a glance.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="qa-card" data-cat="lambda">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">04</span>
+      <div class="q-body">
+        <div class="q-text">What are Default and Static methods in interfaces? Why were they added?</div>
+        <div class="q-badges"><span class="badge b-orange">Interface Changes</span><span class="badge b-purple">Design</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">This was added specifically to allow backward-compatible evolution of the Collections API without breaking existing implementations.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>The Problem They Solve:</strong> Java 8 needed to add <code>stream()</code>, <code>forEach()</code>, <code>removeIf()</code> to the <code>Collection</code> interface. But if you add abstract methods to an interface, all existing implementations break (millions of classes). <kw class="kw">Default methods</kw> allow adding new methods with a default implementation to existing interfaces without breaking any implementing class. This is the "interface evolution" problem solved.</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Default Method Syntax:</strong>
+<pre><span class="c-kw">interface</span> <span class="c-type">Greeter</span> {
+    <span class="c-kw">void</span> greet(<span class="c-type">String</span> name); <span class="c-cmt">// abstract</span>
+
+    <span class="c-kw">default void</span> greetLoudly(<span class="c-type">String</span> name) { <span class="c-cmt">// default</span>
+        greet(name.toUpperCase());
+    }
+
+    <span class="c-kw">static</span> <span class="c-type">Greeter</span> formal() { <span class="c-cmt">// static factory method</span>
+        <span class="c-kw">return</span> name <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(<span class="c-str">"Good day, "</span> + name);
+    }
+}</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Diamond Problem Resolution:</strong> If a class implements two interfaces that both have a default method with the same signature, it must override the method to resolve ambiguity:
+<pre><span class="c-kw">interface</span> <span class="c-type">A</span> { <span class="c-kw">default void</span> hello() { <span class="c-type">System</span>.out.println(<span class="c-str">"A"</span>); } }
+<span class="c-kw">interface</span> <span class="c-type">B</span> { <span class="c-kw">default void</span> hello() { <span class="c-type">System</span>.out.println(<span class="c-str">"B"</span>); } }
+
+<span class="c-kw">class</span> <span class="c-type">C</span> <span class="c-kw">implements</span> <span class="c-type">A</span>, <span class="c-type">B</span> {
+    <span class="c-kw">public void</span> hello() { <span class="c-type">A</span>.super.hello(); } <span class="c-cmt">// must override, can choose</span>
+}</pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Static Methods in Interfaces:</strong> Static methods in interfaces belong to the interface, not to implementing classes or their instances. They cannot be overridden by implementing classes. Used for factory methods and utility methods tightly coupled to the interface contract. Example: <code>Comparator.comparing()</code>, <code>Predicate.not()</code>.</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Default Methods vs Abstract Classes:</strong> Key distinctions — (1) A class can implement multiple interfaces (with default methods) but can only extend one abstract class. (2) Abstract classes can have instance state (fields); interfaces cannot. (3) Abstract classes can have constructors; interfaces cannot. (4) Default methods are meant for interface evolution, not as a replacement for abstract classes when shared state is needed.</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Real Example from JDK:</strong> <code>Collection.stream()</code>, <code>Collection.forEach(Consumer)</code>, <code>List.sort(Comparator)</code>, <code>Map.getOrDefault()</code>, <code>Map.forEach(BiConsumer)</code>, <code>Map.putIfAbsent()</code>, <code>Iterable.forEach()</code> — these are all default methods added to existing JDK interfaces in Java 8. Without default methods, every ArrayList, LinkedList, HashMap etc. would have needed to be updated separately.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="qa-card" data-cat="lambda">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">05</span>
+      <div class="q-body">
+        <div class="q-text">Explain Comparator enhancements in Java 8 — comparing(), thenComparing(), reversed().</div>
+        <div class="q-badges"><span class="badge b-orange">Comparator</span><span class="badge b-green">Coding</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Comparator chaining is used in almost every sorting coding question. Know these methods cold.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Comparator.comparing() — Static Factory:</strong>
+<pre><span class="c-cmt">// Sort employees by name</span>
+<span class="c-type">List</span>&lt;<span class="c-type">Employee</span>&gt; emps = getEmployees();
+emps.sort(<span class="c-type">Comparator</span>.comparing(<span class="c-type">Employee</span>::getName));
+
+<span class="c-cmt">// Sort by salary descending</span>
+emps.sort(<span class="c-type">Comparator</span>.comparing(<span class="c-type">Employee</span>::getSalary).reversed());</pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>thenComparing() — Multi-Field Sort:</strong>
+<pre><span class="c-cmt">// Sort by department, then by salary desc within department</span>
+emps.sort(
+    <span class="c-type">Comparator</span>.comparing(<span class="c-type">Employee</span>::getDepartment)
+              .thenComparing(<span class="c-type">Comparator</span>.comparing(<span class="c-type">Employee</span>::getSalary).reversed())
+);</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>comparingInt / comparingDouble / comparingLong:</strong> Avoids boxing overhead for primitive key extractors.
+<pre><span class="c-cmt">// Prefer comparingInt over comparing for int fields</span>
+emps.sort(<span class="c-type">Comparator</span>.comparingInt(<span class="c-type">Employee</span>::getAge));
+
+<span class="c-cmt">// Natural order and reverse order constants</span>
+<span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; names = <span class="c-type">Arrays</span>.asList(<span class="c-str">"Zuber"</span>,<span class="c-str">"Ali"</span>,<span class="c-str">"Amreen"</span>);
+names.sort(<span class="c-type">Comparator</span>.naturalOrder());
+names.sort(<span class="c-type">Comparator</span>.reverseOrder());</pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>nullsFirst / nullsLast:</strong>
+<pre><span class="c-cmt">// Handle nulls gracefully — put them first</span>
+emps.sort(<span class="c-type">Comparator</span>.comparing(<span class="c-type">Employee</span>::getName,
+          <span class="c-type">Comparator</span>.nullsFirst(<span class="c-type">Comparator</span>.naturalOrder())));</pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Stream.sorted() with Comparator:</strong>
+<pre><span class="c-cmt">// Top 3 highest paid employees</span>
+emps.stream()
+    .sorted(<span class="c-type">Comparator</span>.comparingDouble(<span class="c-type">Employee</span>::getSalary).reversed())
+    .limit(<span class="c-num">3</span>)
+    .collect(<span class="c-type">Collectors</span>.toList());</pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Custom Key Extractor with Lambda:</strong>
+<pre><span class="c-cmt">// Sort strings by their length, then alphabetically</span>
+<span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; words = <span class="c-type">Arrays</span>.asList(<span class="c-str">"banana"</span>, <span class="c-str">"apple"</span>, <span class="c-str">"kiwi"</span>, <span class="c-str">"fig"</span>);
+words.sort(<span class="c-type">Comparator</span>.comparingInt(<span class="c-type">String</span>::length)
+                    .thenComparing(<span class="c-type">Comparator</span>.naturalOrder()));
+<span class="c-cmt">// [fig, kiwi, apple, banana]</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  SECTION 2 — STREAM API                  -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="sec-hdr" data-cat="streams">
+    <span class="sec-tag">Section 02</span>
+    <span class="sec-title">Stream API — Internals &amp; Operations</span>
+    <span class="sec-count">Q6–Q14</span>
+  </div>
+
+  <!-- Q6 -->
+  <div class="qa-card" data-cat="streams">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">06</span>
+      <div class="q-body">
+        <div class="q-text">What is the Stream API? Explain lazy evaluation, intermediate vs terminal operations.</div>
+        <div class="q-badges"><span class="badge b-orange">Stream Core</span><span class="badge b-blue">Must Know</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Lazy evaluation is the most important concept in Stream internals — it's what makes streams efficient and the most common interview trick question.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>What is a Stream:</strong> A Stream is a <kw class="kw">sequence of elements</kw> supporting sequential and parallel aggregate operations. It is NOT a data structure — it doesn't store data. It's a pipeline that processes data from a source (Collection, array, I/O channel) through a chain of operations. Streams are single-use — once a terminal operation is called, the stream is consumed and cannot be reused.</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Lazy Evaluation — The Critical Concept:</strong> Intermediate operations (filter, map, etc.) are <kw class="kw">lazy</kw> — they don't execute until a terminal operation is called. The pipeline is built first, then executed optimally when the terminal operation triggers it.
+<pre><span class="c-type">Stream</span>&lt;<span class="c-type">String</span>&gt; stream = <span class="c-type">List</span>.of(<span class="c-str">"a"</span>,<span class="c-str">"bb"</span>,<span class="c-str">"ccc"</span>)
+    .stream()
+    .filter(s <span class="c-lambda">-></span> { <span class="c-type">System</span>.out.println(<span class="c-str">"filter: "</span>+s); <span class="c-kw">return</span> s.length() > <span class="c-num">1</span>; })
+    .map(s <span class="c-lambda">-></span> { <span class="c-type">System</span>.out.println(<span class="c-str">"map: "</span>+s); <span class="c-kw">return</span> s.toUpperCase(); });
+<span class="c-cmt">// Nothing printed yet! No terminal operation called.</span>
+stream.findFirst(); <span class="c-cmt">// NOW it executes — and only for "bb", stops early!</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Intermediate Operations (lazy, return Stream):</strong> <code>filter(Predicate)</code>, <code>map(Function)</code>, <code>flatMap(Function)</code>, <code>distinct()</code>, <code>sorted()</code>, <code>sorted(Comparator)</code>, <code>peek(Consumer)</code>, <code>limit(n)</code>, <code>skip(n)</code>, <code>mapToInt/Long/Double()</code>. These are lazy — they build the pipeline but do not execute.</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Terminal Operations (eager, trigger execution):</strong> <code>collect(Collector)</code>, <code>forEach(Consumer)</code>, <code>reduce(BinaryOperator)</code>, <code>count()</code>, <code>findFirst()</code>, <code>findAny()</code>, <code>anyMatch()</code>, <code>allMatch()</code>, <code>noneMatch()</code>, <code>min(Comparator)</code>, <code>max(Comparator)</code>, <code>toArray()</code>. These are eager — they execute the entire pipeline and return a result.</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Short-Circuit Operations:</strong> Some operations don't need to process the entire stream — they stop early. <code>findFirst()</code>, <code>findAny()</code>, <code>anyMatch()</code>, <code>allMatch()</code>, <code>noneMatch()</code>, <code>limit(n)</code>. This makes combinations like <code>filter().findFirst()</code> very efficient — the filter and findFirst together process only until the first match is found.</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Stream Creation Methods:</strong>
+<pre><span class="c-type">List</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>).stream()                          <span class="c-cmt">// from Collection</span>
+<span class="c-type">Arrays</span>.stream(<span class="c-kw">new int</span>[]{<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>})                <span class="c-cmt">// from array</span>
+<span class="c-type">Stream</span>.of(<span class="c-str">"a"</span>, <span class="c-str">"b"</span>, <span class="c-str">"c"</span>)                        <span class="c-cmt">// from varargs</span>
+<span class="c-type">Stream</span>.iterate(<span class="c-num">0</span>, n <span class="c-lambda">-></span> n + <span class="c-num">1</span>)                  <span class="c-cmt">// infinite ordered stream</span>
+<span class="c-type">Stream</span>.generate(<span class="c-type">Math</span>::random)                   <span class="c-cmt">// infinite unordered stream</span>
+<span class="c-type">IntStream</span>.range(<span class="c-num">1</span>, <span class="c-num">11</span>)                          <span class="c-cmt">// primitive stream 1..10</span>
+<span class="c-type">IntStream</span>.rangeClosed(<span class="c-num">1</span>, <span class="c-num">10</span>)                   <span class="c-cmt">// same as above</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q7 -->
+  <div class="qa-card" data-cat="streams">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">07</span>
+      <div class="q-body">
+        <div class="q-text">Explain map() vs flatMap() with examples. When do you use flatMap?</div>
+        <div class="q-badges"><span class="badge b-orange">Stream Ops</span><span class="badge b-blue">Frequently Asked</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">flatMap is asked in almost every interview. The one-liner: map wraps, flatMap flattens.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>map() — One-to-One Transformation:</strong> <code>map(Function&lt;T, R&gt;)</code> transforms each element to exactly one output. The result is a <code>Stream&lt;R&gt;</code>.
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; words = <span class="c-type">List</span>.of(<span class="c-str">"hello"</span>, <span class="c-str">"world"</span>);
+words.stream()
+     .map(<span class="c-type">String</span>::toUpperCase)
+     .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [HELLO, WORLD]</span></pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>The Problem flatMap Solves — Nested Streams:</strong> If the mapping function returns a Stream (or collection), <code>map()</code> produces a <code>Stream&lt;Stream&lt;T&gt;&gt;</code> — nested. <code>flatMap()</code> maps and then flattens one level, producing a <code>Stream&lt;T&gt;</code>.
+<pre><span class="c-type">List</span>&lt;<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt;&gt; nested = <span class="c-type">List</span>.of(
+    <span class="c-type">List</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>), <span class="c-type">List</span>.of(<span class="c-num">4</span>,<span class="c-num">5</span>), <span class="c-type">List</span>.of(<span class="c-num">6</span>)
+);
+
+<span class="c-cmt">// map gives Stream&lt;Stream&lt;Integer&gt;&gt; — WRONG</span>
+nested.stream().map(<span class="c-type">List</span>::stream); <span class="c-cmt">// Stream&lt;Stream&gt; — NOT what we want</span>
+
+<span class="c-cmt">// flatMap flattens — gives Stream&lt;Integer&gt;</span>
+nested.stream()
+      .flatMap(<span class="c-type">List</span>::stream)
+      .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [1, 2, 3, 4, 5, 6]</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Classic Example — Split Sentences into Words:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; sentences = <span class="c-type">List</span>.of(<span class="c-str">"Hello World"</span>, <span class="c-str">"Java Eight"</span>);
+sentences.stream()
+         .flatMap(s <span class="c-lambda">-></span> <span class="c-type">Arrays</span>.stream(s.split(<span class="c-str">" "</span>)))
+         .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [Hello, World, Java, Eight]</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>flatMap with Optional:</strong> A common pattern is to flatMap over <code>Optional</code> to chain optional-producing operations without nested Optionals:
+<pre><span class="c-type">Optional</span>&lt;<span class="c-type">String</span>&gt; opt = <span class="c-type">Optional</span>.of(<span class="c-str">"hello"</span>);
+<span class="c-type">Optional</span>&lt;<span class="c-type">String</span>&gt; result = opt.flatMap(s <span class="c-lambda">-></span> findUpperCase(s));
+<span class="c-cmt">// vs opt.map(...) which gives Optional&lt;Optional&lt;String&gt;&gt;</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Get All Characters from List of Strings:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; names = <span class="c-type">List</span>.of(<span class="c-str">"Zuber"</span>, <span class="c-str">"Ali"</span>);
+names.stream()
+     .flatMap(name <span class="c-lambda">-></span> name.chars()
+                          .mapToObj(c <span class="c-lambda">-></span> (<span class="c-type">char</span>) c)
+                          .map(<span class="c-type">String</span>::valueOf))
+     .distinct()
+     .sorted()
+     .collect(<span class="c-type">Collectors</span>.joining(<span class="c-str">", "</span>));
+<span class="c-cmt">// A, Z, a, b, e, i, l, r, u</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>mapToInt, mapToLong, mapToDouble:</strong> For primitive streams (no boxing overhead):
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; words2 = <span class="c-type">List</span>.of(<span class="c-str">"apple"</span>, <span class="c-str">"banana"</span>, <span class="c-str">"kiwi"</span>);
+<span class="c-kw">int</span> totalLength = words2.stream()
+                         .mapToInt(<span class="c-type">String</span>::length)
+                         .sum(); <span class="c-cmt">// 15</span>
+
+<span class="c-kw">double</span> avgLength = words2.stream()
+                          .mapToInt(<span class="c-type">String</span>::length)
+                          .average()
+                          .orElse(<span class="c-num">0.0</span>); <span class="c-cmt">// 5.0</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q8 -->
+  <div class="qa-card" data-cat="streams">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">08</span>
+      <div class="q-body">
+        <div class="q-text">Explain reduce() operation — how does it work and when do you use it?</div>
+        <div class="q-badges"><span class="badge b-orange">Stream Ops</span><span class="badge b-green">Tricky</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">reduce() is the most powerful terminal operation — many other operations (sum, count, min, max) are specialized reduces.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>What reduce() Does:</strong> <code>reduce()</code> combines all stream elements into a single result by repeatedly applying a <kw class="kw">BinaryOperator</kw>. It takes two forms: with an identity value (always returns T) and without (returns <code>Optional&lt;T&gt;</code> because the stream may be empty).
+<pre><span class="c-cmt">// With identity — returns T (safe, handles empty stream)</span>
+<span class="c-kw">int</span> sum = <span class="c-type">IntStream</span>.rangeClosed(<span class="c-num">1</span>, <span class="c-num">10</span>)
+                   .reduce(<span class="c-num">0</span>, <span class="c-type">Integer</span>::sum); <span class="c-cmt">// 55</span>
+
+<span class="c-cmt">// Without identity — returns Optional&lt;T&gt;</span>
+<span class="c-type">Optional</span>&lt;<span class="c-type">Integer</span>&gt; product = <span class="c-type">Stream</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">4</span>,<span class="c-num">5</span>)
+    .reduce((a, b) <span class="c-lambda">-></span> a * b); <span class="c-cmt">// Optional[120]</span></pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Custom Reductions:</strong>
+<pre><span class="c-cmt">// Concatenate all strings with comma</span>
+<span class="c-type">String</span> joined = <span class="c-type">Stream</span>.of(<span class="c-str">"a"</span>,<span class="c-str">"b"</span>,<span class="c-str">"c"</span>)
+    .reduce(<span class="c-str">""</span>, (a, b) <span class="c-lambda">-></span> a.isEmpty() ? b : a + <span class="c-str">","</span> + b);
+<span class="c-cmt">// "a,b,c"  (use Collectors.joining for this in practice)</span>
+
+<span class="c-cmt">// Find max manually using reduce</span>
+<span class="c-type">Optional</span>&lt;<span class="c-type">Integer</span>&gt; max = <span class="c-type">Stream</span>.of(<span class="c-num">3</span>,<span class="c-num">1</span>,<span class="c-num">4</span>,<span class="c-num">1</span>,<span class="c-num">5</span>,<span class="c-num">9</span>)
+    .reduce(<span class="c-type">Integer</span>::max); <span class="c-cmt">// Optional[9]</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Three-Argument reduce for Parallel Streams:</strong> <code>reduce(identity, accumulator, combiner)</code> — the combiner merges partial results from parallel sub-streams.
+<pre><span class="c-cmt">// Sum of string lengths in parallel</span>
+<span class="c-kw">int</span> total = <span class="c-type">Stream</span>.of(<span class="c-str">"Java"</span>,<span class="c-str">"Eight"</span>,<span class="c-str">"Rocks"</span>)
+    .parallel()
+    .reduce(<span class="c-num">0</span>,
+        (sum, s) <span class="c-lambda">-></span> sum + s.length(),  <span class="c-cmt">// accumulator</span>
+        <span class="c-type">Integer</span>::sum);               <span class="c-cmt">// combiner</span>
+<span class="c-cmt">// 14</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>reduce vs collect:</strong> <code>reduce()</code> is for immutable reduction — it combines values into a new value each step. <code>collect()</code> is for mutable reduction — it accumulates into a mutable container (List, Map, StringBuilder). For building collections, always use <code>collect()</code>, not <code>reduce()</code>. Reducing into a list with <code>reduce</code> creates a new list on every step — O(n²) time and memory.</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Factorial using reduce:</strong>
+<pre><span class="c-kw">long</span> factorial(<span class="c-kw">int</span> n) {
+    <span class="c-kw">return</span> <span class="c-type">LongStream</span>.rangeClosed(<span class="c-num">1</span>, n)
+                     .reduce(<span class="c-num">1L</span>, <span class="c-lambda">(a, b) -></span> a * b);
+}
+factorial(<span class="c-num">5</span>); <span class="c-cmt">// 120</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Common Reduce Patterns:</strong>
+<pre><span class="c-cmt">// Sum</span>    .reduce(0, Integer::sum)
+<span class="c-cmt">// Max</span>    .reduce(Integer.MIN_VALUE, Integer::max)
+<span class="c-cmt">// Min</span>    .reduce(Integer.MAX_VALUE, Integer::min)
+<span class="c-cmt">// Count</strong> .reduce(0, (acc, e) -> acc + 1, Integer::sum)
+<span class="c-cmt">// Any string concatenation</span>
+<span class="c-cmt">// .reduce("", String::concat)  ← works but use Collectors.joining instead</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q9 -->
+  <div class="qa-card" data-cat="streams">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">09</span>
+      <div class="q-body">
+        <div class="q-text">What is the difference between findFirst() and findAny()? When would you use each?</div>
+        <div class="q-badges"><span class="badge b-orange">Stream Ops</span><span class="badge b-purple">Parallel</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">This is a short but tricky question about sequential vs parallel stream behavior. Know the parallel angle.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>findFirst() — Ordered, Deterministic:</strong> Returns the first element of the stream in encounter order as an <code>Optional&lt;T&gt;</code>. In a sequential stream this is simply the first element. In a <strong>parallel stream</strong>, even though elements are processed in parallel, <code>findFirst()</code> still guarantees returning the <kw class="kw">first element in encounter order</kw> — this requires coordination between parallel threads, which adds overhead.
+<pre><span class="c-type">Optional</span>&lt;<span class="c-type">Integer</span>&gt; first = <span class="c-type">Stream</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">4</span>,<span class="c-num">5</span>)
+    .filter(n <span class="c-lambda">-></span> n % <span class="c-num">2</span> == <span class="c-num">0</span>)
+    .findFirst(); <span class="c-cmt">// always Optional[2]</span></pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>findAny() — Nondeterministic, Faster in Parallel:</strong> Returns <em>any</em> element that matches. In a <strong>sequential stream</strong> it typically returns the first element (same as findFirst). In a <strong>parallel stream</strong>, whichever thread finds a match first returns it — no coordination needed. This is <kw class="kw">faster in parallel</kw> at the cost of predictability.
+<pre><span class="c-type">Optional</span>&lt;<span class="c-type">Integer</span>&gt; any = <span class="c-type">Stream</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">4</span>,<span class="c-num">5</span>)
+    .parallel()
+    .filter(n <span class="c-lambda">-></span> n % <span class="c-num">2</span> == <span class="c-num">0</span>)
+    .findAny(); <span class="c-cmt">// Could be Optional[2], [4] — not guaranteed</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>When to Use Which:</strong> Use <code>findFirst()</code> when order matters and you need a deterministic result — e.g., finding the oldest record, the first transaction in a batch, the first error in a validation chain. Use <code>findAny()</code> when you just need "any" match and are processing in parallel for performance — e.g., checking if any record satisfies a condition in a large dataset.</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>anyMatch vs findAny:</strong> <code>anyMatch(Predicate)</code> returns a <code>boolean</code> — just tells you if any element matches. <code>findAny()</code> returns <code>Optional&lt;T&gt;</code> — gives you the actual matching element. Use <code>anyMatch</code> for existence checks; use <code>findAny</code> when you need the element itself.</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>allMatch, noneMatch:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; nums = <span class="c-type">List</span>.of(<span class="c-num">2</span>,<span class="c-num">4</span>,<span class="c-num">6</span>,<span class="c-num">8</span>);
+nums.stream().allMatch(n <span class="c-lambda">-></span> n % <span class="c-num">2</span> == <span class="c-num">0</span>); <span class="c-cmt">// true — all even</span>
+nums.stream().noneMatch(n <span class="c-lambda">-></span> n % <span class="c-num">2</span> != <span class="c-num">0</span>); <span class="c-cmt">// true — none odd</span>
+nums.stream().anyMatch(n <span class="c-lambda">-></span> n > <span class="c-num">6</span>);       <span class="c-cmt">// true — 8 exists</span>
+<span class="c-cmt">// All three are short-circuit operations</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Handling Empty Optional:</strong>
+<pre><span class="c-type">Optional</span>&lt;<span class="c-type">Integer</span>&gt; result = stream.filter(pred).findFirst();
+
+result.isPresent();                  <span class="c-cmt">// check if value exists</span>
+result.get();                        <span class="c-cmt">// get value (throws if empty!)</span>
+result.orElse(<span class="c-num">-1</span>);                  <span class="c-cmt">// default if empty</span>
+result.orElseGet(<span class="c-lambda">() -></span> computeDefault()); <span class="c-cmt">// lazy default</span>
+result.orElseThrow(<span class="c-lambda">() -></span> <span class="c-kw">new</span> <span class="c-type">RuntimeException</span>()); <span class="c-cmt">// throw if empty</span>
+result.ifPresent(v <span class="c-lambda">-></span> process(v));   <span class="c-cmt">// action only if present</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q10 -->
+  <div class="qa-card" data-cat="streams">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">10</span>
+      <div class="q-body">
+        <div class="q-text">What are parallel streams? When should you use them and what are the risks?</div>
+        <div class="q-badges"><span class="badge b-orange">Parallel Streams</span><span class="badge b-purple">Senior Topic</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Parallel streams are a double-edged sword. Show you know the risks — that's what impresses senior interviewers.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>How Parallel Streams Work:</strong> <code>collection.parallelStream()</code> or <code>stream.parallel()</code> uses the <kw class="kw">ForkJoinPool.commonPool()</kw> to split the source into sub-streams, process them concurrently on multiple threads, and merge results. The number of threads defaults to <code>Runtime.getRuntime().availableProcessors() - 1</code>.
+<pre><span class="c-kw">long</span> sum = <span class="c-type">LongStream</span>.rangeClosed(<span class="c-num">1</span>, <span class="c-num">1_000_000</span>)
+                     .parallel()
+                     .sum(); <span class="c-cmt">// faster on multi-core for large datasets</span></pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>When Parallel Helps:</strong> (1) Large data sets (typically >10K elements), (2) CPU-bound operations per element (heavy computation), (3) Operations that can be split and merged independently (stateless, non-interfering lambdas), (4) The sequential stream is a measured bottleneck. For small collections or simple operations, parallel stream overhead (thread coordination, ForkJoin overhead) makes it <kw class="kw">slower</kw> than sequential.</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Risk 1 — Shared Mutable State:</strong>
+<pre><span class="c-cmt">// WRONG — race condition with parallel stream</span>
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; results = <span class="c-kw">new</span> <span class="c-type">ArrayList</span>&lt;&gt;();
+<span class="c-type">Stream</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>).parallel().forEach(results::add); <span class="c-cmt">// NOT thread-safe!</span>
+
+<span class="c-cmt">// CORRECT — use collect() which is thread-safe</span>
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; safe = <span class="c-type">Stream</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>)
+    .parallel()
+    .collect(<span class="c-type">Collectors</span>.toList()); <span class="c-cmt">// thread-safe</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Risk 2 — Encounter Order:</strong> If the source stream is ordered (List), parallel operations preserve order unless you use <code>unordered()</code>. Operations like <code>forEach</code> may print in any order in parallel. Use <code>forEachOrdered()</code> if order matters (but this serializes the terminal operation, reducing parallelism benefit).</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Risk 3 — Common ForkJoinPool Saturation:</strong> All parallel streams share the JVM's common ForkJoinPool. If one parallel stream runs long blocking operations (I/O, DB calls), it starves other parallel streams in the application. For I/O-bound work, use a custom ForkJoinPool or async APIs (CompletableFuture) instead of parallel streams.</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>When NOT to Use Parallel Streams:</strong> (1) Small collections (&lt;1000 elements), (2) I/O-bound operations — threads block, defeating parallelism, (3) Stateful lambdas that share mutable state, (4) Operations that require strict encounter order, (5) When you need deterministic results from findAny(). <note class="note">Rule:</note> Always measure before switching to parallel — don't assume parallel = faster.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  SECTION 3 — COLLECTORS                  -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="sec-hdr" data-cat="collectors">
+    <span class="sec-tag">Section 03</span>
+    <span class="sec-title">Collectors — groupingBy, partitioningBy, joining, toMap</span>
+    <span class="sec-count">Q11–Q14</span>
+  </div>
+
+  <!-- Q11 -->
+  <div class="qa-card" data-cat="collectors">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">11</span>
+      <div class="q-body">
+        <div class="q-text">Explain Collectors.groupingBy() — all variants with examples.</div>
+        <div class="q-badges"><span class="badge b-orange">Collectors</span><span class="badge b-blue">Most Used</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">groupingBy is the most important Collector. It comes up in almost every practical Java 8 coding round.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Basic groupingBy — Group by field:</strong>
+<pre><span class="c-cmt">// Group employees by department</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">List</span>&lt;<span class="c-type">Employee</span>&gt;&gt; byDept =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.groupingBy(<span class="c-type">Employee</span>::getDepartment));
+<span class="c-cmt">// {IT=[e1,e2], HR=[e3], Finance=[e4,e5]}</span></pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>groupingBy with downstream Collector — Count per group:</strong>
+<pre><span class="c-cmt">// Count employees per department</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Long</span>&gt; countByDept =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.groupingBy(
+                 <span class="c-type">Employee</span>::getDepartment,
+                 <span class="c-type">Collectors</span>.counting()
+             ));
+<span class="c-cmt">// {IT=2, HR=1, Finance=2}</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>groupingBy with averagingDouble — Average per group:</strong>
+<pre><span class="c-cmt">// Average salary per department</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Double</span>&gt; avgSalaryByDept =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.groupingBy(
+                 <span class="c-type">Employee</span>::getDepartment,
+                 <span class="c-type">Collectors</span>.averagingDouble(<span class="c-type">Employee</span>::getSalary)
+             ));</pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>groupingBy with mapping — Transform elements in each group:</strong>
+<pre><span class="c-cmt">// Department → List of names (not Employee objects)</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt;&gt; namesByDept =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.groupingBy(
+                 <span class="c-type">Employee</span>::getDepartment,
+                 <span class="c-type">Collectors</span>.mapping(<span class="c-type">Employee</span>::getName, <span class="c-type">Collectors</span>.toList())
+             ));</pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Multi-level groupingBy — Nested grouping:</strong>
+<pre><span class="c-cmt">// Group by department, then by gender within department</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">List</span>&lt;<span class="c-type">Employee</span>&gt;&gt;&gt; nested =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.groupingBy(
+                 <span class="c-type">Employee</span>::getDepartment,
+                 <span class="c-type">Collectors</span>.groupingBy(<span class="c-type">Employee</span>::getGender)
+             ));</pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>groupingBy with maxBy / minBy:</strong>
+<pre><span class="c-cmt">// Highest paid employee per department</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Optional</span>&lt;<span class="c-type">Employee</span>&gt;&gt; topEarnerByDept =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.groupingBy(
+                 <span class="c-type">Employee</span>::getDepartment,
+                 <span class="c-type">Collectors</span>.maxBy(<span class="c-type">Comparator</span>.comparingDouble(<span class="c-type">Employee</span>::getSalary))
+             ));</pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q12 -->
+  <div class="qa-card" data-cat="collectors">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">12</span>
+      <div class="q-body">
+        <div class="q-text">Explain partitioningBy(), joining(), toMap(), and counting() collectors.</div>
+        <div class="q-badges"><span class="badge b-orange">Collectors</span><span class="badge b-green">Frequently Asked</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Know each collector's return type. partitioningBy always produces Map&lt;Boolean, List&gt; — that's the key difference from groupingBy.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>partitioningBy() — Split into two groups (true/false):</strong>
+<pre><span class="c-cmt">// Partition numbers into even and odd</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">Boolean</span>, <span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt;&gt; evenOdd =
+    <span class="c-type">Stream</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">4</span>,<span class="c-num">5</span>)
+          .collect(<span class="c-type">Collectors</span>.partitioningBy(n <span class="c-lambda">-></span> n % <span class="c-num">2</span> == <span class="c-num">0</span>));
+<span class="c-cmt">// {false=[1,3,5], true=[2,4]}</span>
+
+<span class="c-cmt">// With downstream: count in each partition</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">Boolean</span>, <span class="c-type">Long</span>&gt; count = stream.collect(
+    <span class="c-type">Collectors</span>.partitioningBy(pred, <span class="c-type">Collectors</span>.counting()));</pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Collectors.joining() — String concatenation:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; names = <span class="c-type">List</span>.of(<span class="c-str">"Zuber"</span>, <span class="c-str">"Ali"</span>, <span class="c-str">"Amreen"</span>);
+
+names.stream().collect(<span class="c-type">Collectors</span>.joining());
+<span class="c-cmt">// "ZuberAliAmreen"</span>
+
+names.stream().collect(<span class="c-type">Collectors</span>.joining(<span class="c-str">", "</span>));
+<span class="c-cmt">// "Zuber, Ali, Amreen"</span>
+
+names.stream().collect(<span class="c-type">Collectors</span>.joining(<span class="c-str">", "</span>, <span class="c-str">"["</span>, <span class="c-str">"]"</span>));
+<span class="c-cmt">// "[Zuber, Ali, Amreen]"</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Collectors.toMap() — Convert to Map:</strong>
+<pre><span class="c-cmt">// Name → Salary map</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Double</span>&gt; salaryMap =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.toMap(
+                 <span class="c-type">Employee</span>::getName,    <span class="c-cmt">// key</span>
+                 <span class="c-type">Employee</span>::getSalary   <span class="c-cmt">// value</span>
+             ));
+
+<span class="c-cmt">// Handle duplicate keys with merge function</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Double</span>&gt; withMerge =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.toMap(
+                 <span class="c-type">Employee</span>::getDept,
+                 <span class="c-type">Employee</span>::getSalary,
+                 <span class="c-type">Double</span>::sum <span class="c-cmt">// merge: sum salaries if same dept key</span>
+             ));</pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Collectors.counting() and summarizingInt():</strong>
+<pre><span class="c-kw">long</span> count = stream.collect(<span class="c-type">Collectors</span>.counting());
+
+<span class="c-cmt">// summarizingInt gives count, sum, min, max, avg in one pass</span>
+<span class="c-type">IntSummaryStatistics</span> stats =
+    employees.stream()
+             .collect(<span class="c-type">Collectors</span>.summarizingInt(<span class="c-type">Employee</span>::getAge));
+stats.getCount();    <span class="c-cmt">// total employees</span>
+stats.getSum();      <span class="c-cmt">// sum of ages</span>
+stats.getMin();      <span class="c-cmt">// youngest</span>
+stats.getMax();      <span class="c-cmt">// oldest</span>
+stats.getAverage();  <span class="c-cmt">// average age</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Collectors.toUnmodifiableList() (Java 10+) vs toList():</strong> In Java 10+, <code>toUnmodifiableList()</code> returns an immutable list. In Java 16+, <code>Stream.toList()</code> is available as a shorthand and also returns an unmodifiable list. For Java 8, use <code>Collections.unmodifiableList(stream.collect(toList()))</code>.</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Collectors.collectingAndThen() — Post-processing:</strong>
+<pre><span class="c-cmt">// Collect to list then wrap in unmodifiable list</span>
+<span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; immutable =
+    stream.collect(<span class="c-type">Collectors</span>.collectingAndThen(
+        <span class="c-type">Collectors</span>.toList(),
+        <span class="c-type">Collections</span>::unmodifiableList
+    ));
+
+<span class="c-cmt">// Collect to list then return size</span>
+<span class="c-kw">int</span> size = stream.collect(<span class="c-type">Collectors</span>.collectingAndThen(
+    <span class="c-type">Collectors</span>.toList(), <span class="c-type">List</span>::size));</pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  SECTION 4 — OPTIONAL                    -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="sec-hdr" data-cat="optional">
+    <span class="sec-tag">Section 04</span>
+    <span class="sec-title">Optional — Null Safety Done Right</span>
+    <span class="sec-count">Q13–Q14</span>
+  </div>
+
+  <!-- Q13 -->
+  <div class="qa-card" data-cat="optional">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">13</span>
+      <div class="q-body">
+        <div class="q-text">What is Optional? What problem does it solve and how do you use it correctly?</div>
+        <div class="q-badges"><span class="badge b-orange">Optional</span><span class="badge b-blue">Must Know</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Know what Optional is NOT meant for — that's the key interview differentiator.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>What it Solves:</strong> <code>Optional&lt;T&gt;</code> is a container that may or may not contain a non-null value. It was introduced to reduce <code>NullPointerException</code>s and make the possibility of absence <kw class="kw">explicit in the API</kw>. Instead of returning null and hoping the caller checks, a method returning <code>Optional&lt;T&gt;</code> forces the caller to handle the empty case consciously.</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Creation:</strong>
+<pre><span class="c-type">Optional</span>.of(<span class="c-str">"value"</span>)          <span class="c-cmt">// throws NPE if value is null!</span>
+<span class="c-type">Optional</span>.ofNullable(value)     <span class="c-cmt">// safe — handles null, returns empty Optional</span>
+<span class="c-type">Optional</span>.empty()              <span class="c-cmt">// explicitly empty Optional</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Retrieval — DON'T use get() blindly:</strong>
+<pre><span class="c-cmt">// BAD — get() throws NoSuchElementException if empty</span>
+<span class="c-type">String</span> val = opt.get(); <span class="c-cmt">// same problem as null.toString()</span>
+
+<span class="c-cmt">// GOOD — always handle the empty case</span>
+opt.orElse(<span class="c-str">"default"</span>)           <span class="c-cmt">// default value (always evaluated)</span>
+opt.orElseGet(<span class="c-lambda">() -></span> compute())  <span class="c-cmt">// lazy — only evaluated if empty</span>
+opt.orElseThrow(<span class="c-type">IllegalStateException</span>::new) <span class="c-cmt">// throw custom exception</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Chaining with map() and flatMap():</strong>
+<pre><span class="c-cmt">// Safe chaining without null checks</span>
+<span class="c-type">Optional</span>&lt;<span class="c-type">String</span>&gt; name =
+    <span class="c-type">Optional</span>.ofNullable(user)
+            .map(<span class="c-type">User</span>::getAddress)
+            .map(<span class="c-type">Address</span>::getCity)
+            .map(<span class="c-type">String</span>::toUpperCase);
+<span class="c-cmt">// Returns Optional.empty() at any null step instead of NPE</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>filter() on Optional:</strong>
+<pre><span class="c-type">Optional</span>&lt;<span class="c-type">String</span>&gt; opt = <span class="c-type">Optional</span>.of(<span class="c-str">"HELLO"</span>);
+opt.filter(s <span class="c-lambda">-></span> s.startsWith(<span class="c-str">"H"</span>))
+   .map(<span class="c-type">String</span>::toLowerCase)
+   .ifPresent(<span class="c-type">System</span>.out::println); <span class="c-cmt">// "hello"</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>What Optional is NOT for:</strong> (1) <kw class="kw">Not for method parameters</kw> — don't accept Optional as a parameter; use method overloading. (2) <kw class="kw">Not for fields</kw> — Optional is not Serializable, don't use it in entity fields. (3) <kw class="kw">Not as a collection replacement</kw> — use an empty List/Map instead of Optional&lt;List&gt;. (4) <kw class="kw">Not for primitives</kw> — use <code>OptionalInt</code>, <code>OptionalLong</code>, <code>OptionalDouble</code> to avoid boxing.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q14 -->
+  <div class="qa-card" data-cat="optional">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">14</span>
+      <div class="q-body">
+        <div class="q-text">How does Optional.orElse() differ from Optional.orElseGet()? When does it matter?</div>
+        <div class="q-badges"><span class="badge b-orange">Optional</span><span class="badge b-green">Tricky</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">This is a classic trick question. The answer is about EAGER vs LAZY evaluation — always frame it in terms of performance impact.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>orElse() — Eager Evaluation:</strong> <code>orElse(T other)</code> evaluates its argument <kw class="kw">unconditionally</kw>, whether the Optional is empty or not. If <code>other</code> is an expensive computation or has side effects, it still runs even when the Optional has a value.
+<pre>opt.orElse(expensiveOperation()); <span class="c-cmt">// ALWAYS calls expensiveOperation()</span></pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>orElseGet() — Lazy Evaluation:</strong> <code>orElseGet(Supplier&lt;T&gt;)</code> takes a Supplier which is <kw class="kw">only evaluated if the Optional is empty</kw>. This is the correct choice when the default is expensive to compute, has side effects (DB calls, network requests, object creation).
+<pre>opt.orElseGet(<span class="c-lambda">() -></span> expensiveOperation()); <span class="c-cmt">// only calls if opt is empty</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Demonstration:</strong>
+<pre><span class="c-type">Optional</span>&lt;<span class="c-type">String</span>&gt; opt = <span class="c-type">Optional</span>.of(<span class="c-str">"present"</span>);
+
+<span class="c-cmt">// orElse — always evaluates (prints side effect)</span>
+opt.orElse(createExpensiveDefault()); <span class="c-cmt">// createExpensiveDefault CALLED!</span>
+
+<span class="c-cmt">// orElseGet — lazy, skips supplier</span>
+opt.orElseGet(<span class="c-lambda">() -></span> createExpensiveDefault()); <span class="c-cmt">// NOT called</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Rule of Thumb:</strong> Use <code>orElse()</code> only for simple constant defaults: <code>orElse("unknown")</code>, <code>orElse(0)</code>, <code>orElse(Collections.emptyList())</code>. Use <code>orElseGet()</code> whenever the default involves method calls, object creation, or any computation that has a cost or side effect. In production code, defaulting to <code>orElseGet()</code> is the safer choice — a lambda with a simple return has negligible overhead.</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Java 9+ Additions to Optional:</strong> <code>ifPresentOrElse(Consumer, Runnable)</code> — act on value if present, or run else action. <code>or(Supplier&lt;Optional&gt;)</code> — if empty, return another Optional from supplier (like orElseGet but returns Optional). <code>stream()</code> — converts Optional to a Stream of 0 or 1 elements, useful for flatMapping.
+<pre><span class="c-cmt">// Java 9 — ifPresentOrElse</span>
+opt.ifPresentOrElse(
+    v <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(<span class="c-str">"Value: "</span> + v),
+    <span class="c-lambda">() -></span> <span class="c-type">System</span>.out.println(<span class="c-str">"Empty"</span>)
+);</pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Practical Pattern — findById with Optional:</strong>
+<pre><span class="c-kw">public</span> <span class="c-type">Optional</span>&lt;<span class="c-type">Employee</span>&gt; findById(<span class="c-kw">long</span> id) {
+    <span class="c-kw">return</span> <span class="c-type">Optional</span>.ofNullable(repository.get(id));
+}
+
+<span class="c-cmt">// Caller handles absence explicitly</span>
+<span class="c-type">Employee</span> emp = findById(<span class="c-num">42L</span>)
+    .orElseThrow(<span class="c-lambda">() -></span> <span class="c-kw">new</span> <span class="c-type">EntityNotFoundException</span>(<span class="c-str">"Employee 42 not found"</span>));</pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  SECTION 5 — DATE/TIME API               -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="sec-hdr" data-cat="datetime">
+    <span class="sec-tag">Section 05</span>
+    <span class="sec-title">New Date &amp; Time API (java.time)</span>
+    <span class="sec-count">Q15–Q16</span>
+  </div>
+
+  <!-- Q15 -->
+  <div class="qa-card" data-cat="datetime">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">15</span>
+      <div class="q-body">
+        <div class="q-text">Why was the new Date/Time API introduced? Explain LocalDate, LocalTime, LocalDateTime, ZonedDateTime.</div>
+        <div class="q-badges"><span class="badge b-orange">Date/Time</span><span class="badge b-blue">Must Know</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Start with why the old API was bad — that context impresses interviewers.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Why Old API (Date, Calendar) Was Terrible:</strong> (1) <kw class="kw">Mutable</kw> — java.util.Date is mutable, causing subtle bugs when passed between methods. (2) <kw class="kw">Month indexing</kw> — Calendar.JANUARY = 0, not 1. (3) <kw class="kw">Thread unsafe</kw> — SimpleDateFormat is not thread-safe. (4) <kw class="kw">Poor API design</kw> — Date has deprecated methods, mixing of date and time concerns. Java 8 replaced it with the <code>java.time</code> package (inspired by Joda-Time).</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>LocalDate — Date without time, without timezone:</strong>
+<pre><span class="c-type">LocalDate</span> today = <span class="c-type">LocalDate</span>.now();          <span class="c-cmt">// 2025-04-15</span>
+<span class="c-type">LocalDate</span> dob = <span class="c-type">LocalDate</span>.of(<span class="c-num">1995</span>, <span class="c-type">Month</span>.JUNE, <span class="c-num">15</span>);
+today.plusDays(<span class="c-num">10</span>); today.minusMonths(<span class="c-num">2</span>);
+today.isBefore(dob); today.isAfter(dob);
+today.getDayOfWeek(); today.getDayOfYear();
+today.isLeapYear();
+<span class="c-type">Period</span> age = <span class="c-type">Period</span>.between(dob, today);
+age.getYears(); <span class="c-cmt">// e.g., 29</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>LocalTime — Time without date, without timezone:</strong>
+<pre><span class="c-type">LocalTime</span> now = <span class="c-type">LocalTime</span>.now();           <span class="c-cmt">// 14:30:45.123</span>
+<span class="c-type">LocalTime</span> noon = <span class="c-type">LocalTime</span>.of(<span class="c-num">12</span>, <span class="c-num">0</span>);
+now.getHour(); now.getMinute(); now.getSecond();
+now.plusHours(<span class="c-num">2</span>); now.minusMinutes(<span class="c-num">30</span>);
+<span class="c-type">Duration</span> gap = <span class="c-type">Duration</span>.between(noon, now); <span class="c-cmt">// time-based amount</span>
+gap.toHours(); gap.toMinutes();</pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>LocalDateTime — Date + Time, no timezone:</strong>
+<pre><span class="c-type">LocalDateTime</span> ldt = <span class="c-type">LocalDateTime</span>.now();
+<span class="c-type">LocalDateTime</span> specific = <span class="c-type">LocalDateTime</span>.of(<span class="c-num">2025</span>, <span class="c-num">4</span>, <span class="c-num">15</span>, <span class="c-num">14</span>, <span class="c-num">30</span>);
+ldt.toLocalDate();  <span class="c-cmt">// extract date part</span>
+ldt.toLocalTime();  <span class="c-cmt">// extract time part</span>
+<span class="c-type">LocalDate</span>.now().atTime(<span class="c-type">LocalTime</span>.now()); <span class="c-cmt">// combine date + time</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>ZonedDateTime — DateTime with timezone:</strong>
+<pre><span class="c-type">ZonedDateTime</span> zdt = <span class="c-type">ZonedDateTime</span>.now(); <span class="c-cmt">// system timezone</span>
+<span class="c-type">ZonedDateTime</span> ist = <span class="c-type">ZonedDateTime</span>.now(<span class="c-type">ZoneId</span>.of(<span class="c-str">"Asia/Kolkata"</span>));
+<span class="c-type">ZonedDateTime</span> utc = zdt.withZoneSameInstant(<span class="c-type">ZoneId</span>.of(<span class="c-str">"UTC"</span>));
+<span class="c-cmt">// Convert to Instant (machine time)</span>
+<span class="c-type">Instant</span> instant = zdt.toInstant();
+<span class="c-cmt">// Convert legacy Date to LocalDate</span>
+<span class="c-type">LocalDate</span> ld = <span class="c-kw">new</span> <span class="c-type">Date</span>().toInstant()
+    .atZone(<span class="c-type">ZoneId</span>.systemDefault()).toLocalDate();</pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>DateTimeFormatter — Thread-Safe Formatting:</strong>
+<pre><span class="c-type">DateTimeFormatter</span> fmt = <span class="c-type">DateTimeFormatter</span>.ofPattern(<span class="c-str">"dd-MM-yyyy HH:mm"</span>);
+<span class="c-type">String</span> formatted = <span class="c-type">LocalDateTime</span>.now().format(fmt); <span class="c-cmt">// "15-04-2025 14:30"</span>
+<span class="c-type">LocalDateTime</span> parsed = <span class="c-type">LocalDateTime</span>.parse(<span class="c-str">"15-04-2025 14:30"</span>, fmt);
+<span class="c-cmt">// DateTimeFormatter is IMMUTABLE and THREAD-SAFE</span>
+<span class="c-cmt">// Unlike SimpleDateFormat — safe to use as static final constant</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q16 -->
+  <div class="qa-card" data-cat="datetime">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">16</span>
+      <div class="q-body">
+        <div class="q-text">What is Instant, Period, and Duration? How do you calculate date differences?</div>
+        <div class="q-badges"><span class="badge b-orange">Date/Time</span><span class="badge b-green">Practical</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">Period vs Duration is the key distinction question here — date-based vs time-based difference.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Instant — Machine Timestamp:</strong> Represents a point on the UTC time line in nanosecond precision. Used for timestamps (e.g., logging events, DB timestamps), not for human-readable dates.
+<pre><span class="c-type">Instant</span> now = <span class="c-type">Instant</span>.now();               <span class="c-cmt">// current UTC instant</span>
+<span class="c-type">Instant</span> epoch = <span class="c-type">Instant</span>.EPOCH;             <span class="c-cmt">// 1970-01-01T00:00:00Z</span>
+now.toEpochMilli();                          <span class="c-cmt">// millis since epoch</span>
+<span class="c-type">Instant</span>.ofEpochMilli(<span class="c-num">1713200000000L</span>);       <span class="c-cmt">// from millis</span>
+now.plus(<span class="c-type">Duration</span>.ofHours(<span class="c-num">2</span>));</pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Period — Date-Based Difference (years, months, days):</strong>
+<pre><span class="c-type">LocalDate</span> dob = <span class="c-type">LocalDate</span>.of(<span class="c-num">1995</span>, <span class="c-num">6</span>, <span class="c-num">15</span>);
+<span class="c-type">LocalDate</span> today = <span class="c-type">LocalDate</span>.now();
+<span class="c-type">Period</span> age = <span class="c-type">Period</span>.between(dob, today);
+age.getYears();   <span class="c-cmt">// e.g. 29</span>
+age.getMonths();  <span class="c-cmt">// months part (not total months)</span>
+age.getDays();    <span class="c-cmt">// days part</span>
+
+<span class="c-type">Period</span>.of(<span class="c-num">1</span>, <span class="c-num">6</span>, <span class="c-num">15</span>); <span class="c-cmt">// 1 year, 6 months, 15 days</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Duration — Time-Based Difference (hours, minutes, seconds):</strong>
+<pre><span class="c-type">LocalTime</span> start = <span class="c-type">LocalTime</span>.of(<span class="c-num">9</span>, <span class="c-num">0</span>);
+<span class="c-type">LocalTime</span> end = <span class="c-type">LocalTime</span>.of(<span class="c-num">17</span>, <span class="c-num">30</span>);
+<span class="c-type">Duration</span> workDay = <span class="c-type">Duration</span>.between(start, end);
+workDay.toHours();   <span class="c-cmt">// 8</span>
+workDay.toMinutes(); <span class="c-cmt">// 510</span>
+
+<span class="c-type">Duration</span>.ofSeconds(<span class="c-num">3600</span>);   <span class="c-cmt">// 1 hour in seconds</span>
+<span class="c-type">Duration</span>.ofMillis(<span class="c-num">1000</span>);    <span class="c-cmt">// 1 second</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>ChronoUnit for Simple Differences:</strong>
+<pre><span class="c-kw">long</span> daysBetween = <span class="c-type">ChronoUnit</span>.DAYS.between(dob, today);     <span class="c-cmt">// e.g. 10876</span>
+<span class="c-kw">long</span> hoursBetween = <span class="c-type">ChronoUnit</span>.HOURS.between(start, end);   <span class="c-cmt">// 8</span>
+<span class="c-kw">long</span> monthsBetween = <span class="c-type">ChronoUnit</span>.MONTHS.between(dob, today); <span class="c-cmt">// total months</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Immutability — All java.time Classes are Immutable:</strong> Every operation on a <code>LocalDate</code>, <code>Duration</code>, etc. returns a NEW object — the original is unchanged. This makes them <kw class="kw">inherently thread-safe</kw>. This is why DateTimeFormatter can be stored as a <code>static final</code> constant safely, unlike SimpleDateFormat which must be thread-local.</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Temporal Adjusters:</strong>
+<pre><span class="c-kw">import</span> <span class="c-kw">static</span> java.time.temporal.TemporalAdjusters.*;
+
+<span class="c-type">LocalDate</span> today2 = <span class="c-type">LocalDate</span>.now();
+today2.with(firstDayOfMonth());   <span class="c-cmt">// 2025-04-01</span>
+today2.with(lastDayOfMonth());    <span class="c-cmt">// 2025-04-30</span>
+today2.with(nextOrSame(<span class="c-type">DayOfWeek</span>.MONDAY)); <span class="c-cmt">// next Monday</span>
+today2.with(firstDayOfNextYear()); <span class="c-cmt">// 2026-01-01</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  SECTION 6 — COMPLETABLEFUTURE ETC.      -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="sec-hdr" data-cat="misc">
+    <span class="sec-tag">Section 06</span>
+    <span class="sec-title">CompletableFuture, forEach, removeIf, Map Enhancements</span>
+    <span class="sec-count">Q17–Q20</span>
+  </div>
+
+  <!-- Q17 -->
+  <div class="qa-card" data-cat="misc">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">17</span>
+      <div class="q-body">
+        <div class="q-text">What is CompletableFuture? How does it improve on Future?</div>
+        <div class="q-badges"><span class="badge b-orange">CompletableFuture</span><span class="badge b-purple">Senior Topic</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">This is a senior-level Java 8 topic. Frame your answer in terms of the limitations of the old Future API.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Problems with Future:</strong> The old <code>Future&lt;T&gt;</code> interface had critical limitations: (1) <code>future.get()</code> blocks the calling thread — no callback mechanism, (2) Cannot chain multiple async operations, (3) No way to combine multiple Futures, (4) Cannot handle exceptions gracefully, (5) Cannot be completed manually. <code>CompletableFuture&lt;T&gt;</code> solves all of these.</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Creating CompletableFutures:</strong>
+<pre><span class="c-cmt">// supplyAsync — returns a value (Supplier)</span>
+<span class="c-type">CompletableFuture</span>&lt;<span class="c-type">String</span>&gt; cf =
+    <span class="c-type">CompletableFuture</span>.supplyAsync(<span class="c-lambda">() -></span> fetchDataFromAPI());
+
+<span class="c-cmt">// runAsync — fire and forget (Runnable)</span>
+<span class="c-type">CompletableFuture</span>&lt;<span class="c-type">Void</span>&gt; cf2 =
+    <span class="c-type">CompletableFuture</span>.runAsync(<span class="c-lambda">() -></span> sendEmail());
+
+<span class="c-cmt">// With custom executor (don't abuse common pool for I/O)</span>
+<span class="c-type">ExecutorService</span> pool = <span class="c-type">Executors</span>.newFixedThreadPool(<span class="c-num">4</span>);
+<span class="c-type">CompletableFuture</span>.supplyAsync(<span class="c-lambda">() -></span> fetch(), pool);</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Chaining — thenApply, thenAccept, thenRun:</strong>
+<pre><span class="c-type">CompletableFuture</span>.supplyAsync(<span class="c-lambda">() -></span> <span class="c-str">"hello"</span>)
+    .thenApply(<span class="c-type">String</span>::toUpperCase)     <span class="c-cmt">// transform: Function</span>
+    .thenApply(s <span class="c-lambda">-></span> s + <span class="c-str">"!"</span>)
+    .thenAccept(<span class="c-type">System</span>.out::println)   <span class="c-cmt">// consume: Consumer, returns Void</span>
+    .thenRun(<span class="c-lambda">() -></span> cleanup());          <span class="c-cmt">// run after: Runnable</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Combining Multiple Futures:</strong>
+<pre><span class="c-type">CompletableFuture</span>&lt;<span class="c-type">String</span>&gt; f1 = <span class="c-type">CompletableFuture</span>.supplyAsync(<span class="c-lambda">() -></span> getUser());
+<span class="c-type">CompletableFuture</span>&lt;<span class="c-type">String</span>&gt; f2 = <span class="c-type">CompletableFuture</span>.supplyAsync(<span class="c-lambda">() -></span> getOrder());
+
+<span class="c-cmt">// thenCombine — both complete, then combine results</span>
+f1.thenCombine(f2, (user, order) <span class="c-lambda">-></span> user + <span class="c-str">" ordered: "</span> + order);
+
+<span class="c-cmt">// allOf — wait for ALL to complete</span>
+<span class="c-type">CompletableFuture</span>.allOf(f1, f2).thenRun(<span class="c-lambda">() -></span> processAll());
+
+<span class="c-cmt">// anyOf — continue when FIRST completes</span>
+<span class="c-type">CompletableFuture</span>.anyOf(f1, f2).thenAccept(result <span class="c-lambda">-></span> handle(result));</pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Error Handling:</strong>
+<pre><span class="c-type">CompletableFuture</span>.supplyAsync(<span class="c-lambda">() -></span> riskyCall())
+    .exceptionally(ex <span class="c-lambda">-></span> {
+        log.error(<span class="c-str">"Failed: "</span>, ex);
+        <span class="c-kw">return</span> <span class="c-str">"fallback"</span>;         <span class="c-cmt">// recovery value</span>
+    })
+    .handle((result, ex) <span class="c-lambda">-></span> {    <span class="c-cmt">// handle both success and error</span>
+        <span class="c-kw">if</span> (ex != <span class="c-kw">null</span>) <span class="c-kw">return</span> <span class="c-str">"error"</span>;
+        <span class="c-kw">return</span> result.toUpperCase();
+    });</pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>thenCompose vs thenApply:</strong> <code>thenApply</code> wraps the result: if function returns <code>CompletableFuture</code>, you get <code>CF&lt;CF&lt;T&gt;&gt;</code>. <code>thenCompose</code> flattens it: returns <code>CF&lt;T&gt;</code>. Same relationship as map vs flatMap in streams.
+<pre><span class="c-cmt">// thenCompose — when second CF depends on first result</span>
+<span class="c-type">CompletableFuture</span>.supplyAsync(<span class="c-lambda">() -></span> getUserId())
+    .thenCompose(id <span class="c-lambda">-></span> <span class="c-type">CompletableFuture</span>.supplyAsync(<span class="c-lambda">() -></span> getUser(id)));
+<span class="c-cmt">// Returns CF&lt;User&gt; not CF&lt;CF&lt;User&gt;&gt;</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q18 -->
+  <div class="qa-card" data-cat="misc">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">18</span>
+      <div class="q-body">
+        <div class="q-text">What are the Java 8 Collection enhancements — forEach, removeIf, replaceAll, Map.compute, merge?</div>
+        <div class="q-badges"><span class="badge b-orange">Collections</span><span class="badge b-green">Practical</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">These are the default method additions to existing collections. Show you use them fluently.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Iterable.forEach() — Cleaner Iteration:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; names = <span class="c-type">List</span>.of(<span class="c-str">"Zuber"</span>, <span class="c-str">"Ali"</span>);
+names.forEach(<span class="c-type">System</span>.out::println);
+names.forEach(name <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(name.toUpperCase()));</pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Collection.removeIf() — Conditional Removal:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; nums = <span class="c-kw">new</span> <span class="c-type">ArrayList</span>&lt;&gt;(<span class="c-type">Arrays</span>.asList(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">4</span>,<span class="c-num">5</span>));
+nums.removeIf(n <span class="c-lambda">-></span> n % <span class="c-num">2</span> == <span class="c-num">0</span>); <span class="c-cmt">// removes 2,4 → [1,3,5]</span>
+<span class="c-cmt">// Avoids ConcurrentModificationException from iterator remove</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>List.replaceAll() — Transform in Place:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; list = <span class="c-kw">new</span> <span class="c-type">ArrayList</span>&lt;&gt;(<span class="c-type">Arrays</span>.asList(<span class="c-str">"hello"</span>, <span class="c-str">"world"</span>));
+list.replaceAll(<span class="c-type">String</span>::toUpperCase); <span class="c-cmt">// [HELLO, WORLD]</span>
+list.replaceAll(s <span class="c-lambda">-></span> s + <span class="c-str">"!"</span>);         <span class="c-cmt">// [HELLO!, WORLD!]</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Map.getOrDefault, putIfAbsent, computeIfAbsent:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>&gt; map = <span class="c-kw">new</span> <span class="c-type">HashMap</span>&lt;&gt;();
+map.getOrDefault(<span class="c-str">"key"</span>, <span class="c-num">0</span>);           <span class="c-cmt">// 0 if not present</span>
+map.putIfAbsent(<span class="c-str">"key"</span>, <span class="c-num">1</span>);             <span class="c-cmt">// only puts if key not present</span>
+
+<span class="c-cmt">// computeIfAbsent — build value lazily (common for multi-map pattern)</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt;&gt; multiMap = <span class="c-kw">new</span> <span class="c-type">HashMap</span>&lt;&gt;();
+multiMap.computeIfAbsent(<span class="c-str">"A"</span>, k <span class="c-lambda">-></span> <span class="c-kw">new</span> <span class="c-type">ArrayList</span>&lt;&gt;()).add(<span class="c-num">1</span>);
+multiMap.computeIfAbsent(<span class="c-str">"A"</span>, k <span class="c-lambda">-></span> <span class="c-kw">new</span> <span class="c-type">ArrayList</span>&lt;&gt;()).add(<span class="c-num">2</span>);
+<span class="c-cmt">// {A=[1,2]}</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Map.merge() — Accumulate Values:</strong>
+<pre><span class="c-cmt">// Word frequency counter using merge</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>&gt; freq = <span class="c-kw">new</span> <span class="c-type">HashMap</span>&lt;&gt;();
+<span class="c-kw">for</span> (<span class="c-type">String</span> word : words) {
+    freq.merge(word, <span class="c-num">1</span>, <span class="c-type">Integer</span>::sum);
+    <span class="c-cmt">// if key absent: put(word,1); if present: put(word, old+1)</span>
+}</pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Map.forEach() and Map.compute():</strong>
+<pre><span class="c-cmt">// forEach on Map — BiConsumer</span>
+map.forEach((k, v) <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(k + <span class="c-str">" = "</span> + v));
+
+<span class="c-cmt">// compute — update value regardless of presence</span>
+map.compute(<span class="c-str">"count"</span>, (k, v) <span class="c-lambda">-></span> v == <span class="c-kw">null</span> ? <span class="c-num">1</span> : v + <span class="c-num">1</span>);
+
+<span class="c-cmt">// replaceAll — transform all values</span>
+map.replaceAll((k, v) <span class="c-lambda">-></span> v * <span class="c-num">2</span>); <span class="c-cmt">// double all values</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!--  SECTION 7 — CODING PROBLEMS             -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="sec-hdr" data-cat="coding">
+    <span class="sec-tag">Section 07</span>
+    <span class="sec-title">Java 8 Coding Problems — Most Asked</span>
+    <span class="sec-count">Q19–Q50</span>
+  </div>
+
+  <!-- Q19 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">19</span>
+      <div class="q-body">
+        <div class="q-text">Find the frequency of each element in a list using Java 8.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-orange">groupingBy</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Solution using Collectors.groupingBy + counting:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; fruits = <span class="c-type">List</span>.of(<span class="c-str">"apple"</span>,<span class="c-str">"banana"</span>,<span class="c-str">"apple"</span>,<span class="c-str">"kiwi"</span>,<span class="c-str">"banana"</span>,<span class="c-str">"apple"</span>);
+
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Long</span>&gt; freq = fruits.stream()
+    .collect(<span class="c-type">Collectors</span>.groupingBy(f <span class="c-lambda">-></span> f, <span class="c-type">Collectors</span>.counting()));
+<span class="c-cmt">// {apple=3, banana=2, kiwi=1}</span></pre>
+<div class="output">{apple=3, banana=2, kiwi=1}</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Alternative using Map.merge:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Long</span>&gt; freq2 = <span class="c-kw">new</span> <span class="c-type">HashMap</span>&lt;&gt;();
+fruits.forEach(f <span class="c-lambda">-></span> freq2.merge(f, <span class="c-num">1L</span>, <span class="c-type">Long</span>::sum));</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Sort by frequency descending:</strong>
+<pre>freq.entrySet().stream()
+    .sorted(<span class="c-type">Map</span>.<span class="c-type">Entry</span>.&lt;<span class="c-type">String</span>, <span class="c-type">Long</span>&gt;comparingByValue().reversed())
+    .forEach(e <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(e.getKey() + <span class="c-str">": "</span> + e.getValue()));</pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Find duplicate elements (frequency &gt; 1):</strong>
+<pre><span class="c-type">Set</span>&lt;<span class="c-type">String</span>&gt; duplicates = freq.entrySet().stream()
+    .filter(e <span class="c-lambda">-></span> e.getValue() > <span class="c-num">1</span>)
+    .map(<span class="c-type">Map</span>.<span class="c-type">Entry</span>::getKey)
+    .collect(<span class="c-type">Collectors</span>.toSet());
+<span class="c-cmt">// [apple, banana]</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Find element with max frequency:</strong>
+<pre><span class="c-type">String</span> mostFrequent = freq.entrySet().stream()
+    .max(<span class="c-type">Map</span>.<span class="c-type">Entry</span>.comparingByValue())
+    .map(<span class="c-type">Map</span>.<span class="c-type">Entry</span>::getKey)
+    .orElse(<span class="c-str">"none"</span>);
+<span class="c-cmt">// "apple"</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Find unique elements (frequency == 1):</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; uniques = freq.entrySet().stream()
+    .filter(e <span class="c-lambda">-></span> e.getValue() == <span class="c-num">1</span>)
+    .map(<span class="c-type">Map</span>.<span class="c-type">Entry</span>::getKey)
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [kiwi]</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q20 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">20</span>
+      <div class="q-body">
+        <div class="q-text">Find the first non-repeating character in a string using Java 8.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-green">String</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Solution:</strong>
+<pre><span class="c-type">String</span> s = <span class="c-str">"aabbcdde"</span>;
+<span class="c-type">Optional</span>&lt;<span class="c-type">Character</span>&gt; firstUnique = s.chars()
+    .mapToObj(c <span class="c-lambda">-></span> (<span class="c-type">char</span>) c)
+    .collect(<span class="c-type">Collectors</span>.groupingBy(c <span class="c-lambda">-></span> c, <span class="c-type">LinkedHashMap</span>::new, <span class="c-type">Collectors</span>.counting()))
+    .entrySet().stream()
+    .filter(e <span class="c-lambda">-></span> e.getValue() == <span class="c-num">1</span>)
+    .map(<span class="c-type">Map</span>.<span class="c-type">Entry</span>::getKey)
+    .findFirst();
+<span class="c-cmt">// Optional[c]</span></pre>
+<div class="output">Optional[c]</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Why LinkedHashMap? Insertion Order Preserved:</strong> The default <code>groupingBy</code> uses HashMap which has no guaranteed order. To preserve the original character order (so we find the <em>first</em> non-repeating, not just any non-repeating), we use <code>LinkedHashMap::new</code> as the map factory in the 3-arg <code>groupingBy</code>.</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Shorter Alternative:</strong>
+<pre><span class="c-cmt">// Using chars() and filter directly</span>
+<span class="c-type">Optional</span>&lt;<span class="c-type">Character</span>&gt; result = s.chars()
+    .mapToObj(c <span class="c-lambda">-></span> (<span class="c-type">char</span>) c)
+    .filter(c <span class="c-lambda">-></span> s.indexOf(c) == s.lastIndexOf(c))
+    .findFirst();
+<span class="c-cmt">// Optional[c]  — simpler but O(n²) due to indexOf inside stream</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>First Repeating Character:</strong>
+<pre><span class="c-type">Optional</span>&lt;<span class="c-type">Character</span>&gt; firstRepeat = s.chars()
+    .mapToObj(c <span class="c-lambda">-></span> (<span class="c-type">char</span>) c)
+    .filter(c <span class="c-lambda">-></span> s.indexOf(c) != s.lastIndexOf(c))
+    .findFirst();
+<span class="c-cmt">// Optional[a] — first character that appears more than once</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Character Frequency Map for String:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">Character</span>, <span class="c-type">Long</span>&gt; charFreq = <span class="c-str">"hello world"</span>.chars()
+    .mapToObj(c <span class="c-lambda">-></span> (<span class="c-type">char</span>) c)
+    .collect(<span class="c-type">Collectors</span>.groupingBy(c <span class="c-lambda">-></span> c, <span class="c-type">Collectors</span>.counting()));
+<span class="c-cmt">// {h=1, e=1, l=3, o=2, ' '=1, w=1, r=1, d=1}</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Count vowels using Java 8:</strong>
+<pre><span class="c-kw">long</span> vowelCount = <span class="c-str">"Hello World"</span>.toLowerCase().chars()
+    .filter(c <span class="c-lambda">-></span> <span class="c-str">"aeiou"</span>.indexOf(c) >= <span class="c-num">0</span>)
+    .count();
+<span class="c-cmt">// 3 (e, o, o)</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q21 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">21</span>
+      <div class="q-body">
+        <div class="q-text">Find the second highest number in a list using Java 8 Streams.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-orange">Stream Ops</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Primary Solution — sorted + skip:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; nums = <span class="c-type">List</span>.of(<span class="c-num">5</span>,<span class="c-num">3</span>,<span class="c-num">9</span>,<span class="c-num">1</span>,<span class="c-num">7</span>,<span class="c-num">9</span>,<span class="c-num">2</span>);
+
+<span class="c-type">Optional</span>&lt;<span class="c-type">Integer</span>&gt; second = nums.stream()
+    .distinct()                          <span class="c-cmt">// remove duplicates</span>
+    .sorted(<span class="c-type">Comparator</span>.reverseOrder())   <span class="c-cmt">// [9,7,5,3,2,1]</span>
+    .skip(<span class="c-num">1</span>)                             <span class="c-cmt">// skip 9</span>
+    .findFirst();                         <span class="c-cmt">// Optional[7]</span></pre>
+<div class="output">Optional[7]</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Why distinct() matters:</strong> Without distinct(), if the list is [9, 9, 7, 5], sorted descending is [9, 9, 7, 5], skip(1) gives [9, 7, 5], findFirst() returns 9 — wrong! We'd return the second instance of 9, not the true second highest. Always dedup first.</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Alternative using reduce:</strong>
+<pre><span class="c-kw">int</span>[] topTwo = {<span class="c-type">Integer</span>.MIN_VALUE, <span class="c-type">Integer</span>.MIN_VALUE};
+nums.forEach(n <span class="c-lambda">-></span> {
+    <span class="c-kw">if</span> (n > topTwo[<span class="c-num">0</span>]) { topTwo[<span class="c-num">1</span>] = topTwo[<span class="c-num">0</span>]; topTwo[<span class="c-num">0</span>] = n; }
+    <span class="c-kw">else if</span> (n > topTwo[<span class="c-num">1</span>] && n != topTwo[<span class="c-num">0</span>]) { topTwo[<span class="c-num">1</span>] = n; }
+});
+<span class="c-cmt">// topTwo[1] = 7</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Generalize: nth highest number:</strong>
+<pre><span class="c-type">Optional</span>&lt;<span class="c-type">Integer</span>&gt; nthHighest(<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; list, <span class="c-kw">int</span> n) {
+    <span class="c-kw">return</span> list.stream()
+               .distinct()
+               .sorted(<span class="c-type">Comparator</span>.reverseOrder())
+               .skip(n - <span class="c-num">1</span>)
+               .findFirst();
+}</pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Min and Max using Streams:</strong>
+<pre>nums.stream().max(<span class="c-type">Integer</span>::compareTo).orElse(<span class="c-num">0</span>); <span class="c-cmt">// 9</span>
+nums.stream().min(<span class="c-type">Integer</span>::compareTo).orElse(<span class="c-num">0</span>); <span class="c-cmt">// 1</span>
+nums.stream().mapToInt(<span class="c-type">Integer</span>::intValue).max().orElse(<span class="c-num">0</span>); <span class="c-cmt">// IntStream.max()</span>
+nums.stream().mapToInt(<span class="c-type">Integer</span>::intValue).summaryStatistics();</pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Sum of all numbers / sum of even numbers:</strong>
+<pre><span class="c-kw">int</span> total = nums.stream().mapToInt(<span class="c-type">Integer</span>::intValue).sum(); <span class="c-cmt">// 36</span>
+<span class="c-kw">int</span> evenSum = nums.stream()
+                  .filter(n <span class="c-lambda">-></span> n % <span class="c-num">2</span> == <span class="c-num">0</span>)
+                  .mapToInt(<span class="c-type">Integer</span>::intValue).sum(); <span class="c-cmt">// 2</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q22 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">22</span>
+      <div class="q-body">
+        <div class="q-text">Reverse a string and check if it is a palindrome using Java 8.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-green">String</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Reverse a String using Stream + Collectors.joining:</strong>
+<pre><span class="c-type">String</span> s = <span class="c-str">"Hello"</span>;
+<span class="c-type">String</span> reversed = <span class="c-kw">new</span> <span class="c-type">StringBuilder</span>(s.chars()
+    .mapToObj(c <span class="c-lambda">-></span> <span class="c-type">String</span>.valueOf((<span class="c-type">char</span>) c))
+    .collect(<span class="c-type">Collectors</span>.joining()))
+    .reverse().toString();
+<span class="c-cmt">// "olleH"</span></pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Cleaner Reverse:</strong>
+<pre><span class="c-type">String</span> reversed2 = <span class="c-kw">new</span> <span class="c-type">StringBuilder</span>(s).reverse().toString();
+<span class="c-cmt">// Most concise — StringBuilder.reverse() is the standard approach</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Palindrome Check using Java 8:</strong>
+<pre><span class="c-kw">boolean</span> isPalindrome(<span class="c-type">String</span> s) {
+    <span class="c-type">String</span> clean = s.toLowerCase().replaceAll(<span class="c-str">"[^a-z0-9]"</span>, <span class="c-str">""</span>);
+    <span class="c-type">String</span> rev = <span class="c-kw">new</span> <span class="c-type">StringBuilder</span>(clean).reverse().toString();
+    <span class="c-kw">return</span> clean.equals(rev);
+}
+isPalindrome(<span class="c-str">"racecar"</span>); <span class="c-cmt">// true</span>
+isPalindrome(<span class="c-str">"A man a plan a canal Panama"</span>); <span class="c-cmt">// true</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Palindrome Check using Stream IntStream:</strong>
+<pre><span class="c-kw">boolean</span> isPalindromeStream(<span class="c-type">String</span> s) {
+    <span class="c-kw">int</span> len = s.length();
+    <span class="c-kw">return</span> <span class="c-type">IntStream</span>.range(<span class="c-num">0</span>, len / <span class="c-num">2</span>)
+        .allMatch(i <span class="c-lambda">-></span> s.charAt(i) == s.charAt(len - <span class="c-num">1</span> - i));
+}
+isPalindromeStream(<span class="c-str">"racecar"</span>); <span class="c-cmt">// true</span></pre>
+<div class="output">true</div>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Check each word in a sentence is palindrome:</strong>
+<pre><span class="c-type">String</span> sentence = <span class="c-str">"racecar level java"</span>;
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Boolean</span>&gt; result = <span class="c-type">Arrays</span>.stream(sentence.split(<span class="c-str">" "</span>))
+    .collect(<span class="c-type">Collectors</span>.toMap(
+        w <span class="c-lambda">-></span> w,
+        w <span class="c-lambda">-></span> w.equals(<span class="c-kw">new</span> <span class="c-type">StringBuilder</span>(w).reverse().toString())
+    ));
+<span class="c-cmt">// {racecar=true, level=true, java=false}</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Sort list of strings by reverse alphabetical order:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; words = <span class="c-type">List</span>.of(<span class="c-str">"banana"</span>,<span class="c-str">"apple"</span>,<span class="c-str">"cherry"</span>);
+words.stream()
+     .sorted(<span class="c-type">Comparator</span>.reverseOrder())
+     .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [cherry, banana, apple]</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q23 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">23</span>
+      <div class="q-body">
+        <div class="q-text">Group a list of strings by their length using Java 8.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-orange">groupingBy</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Group by length:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; words = <span class="c-type">List</span>.of(<span class="c-str">"hi"</span>,<span class="c-str">"hey"</span>,<span class="c-str">"hello"</span>,<span class="c-str">"world"</span>,<span class="c-str">"ok"</span>,<span class="c-str">"bye"</span>);
+
+<span class="c-type">Map</span>&lt;<span class="c-type">Integer</span>, <span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt;&gt; byLen = words.stream()
+    .collect(<span class="c-type">Collectors</span>.groupingBy(<span class="c-type">String</span>::length));
+<span class="c-cmt">// {2=[hi, ok], 3=[hey, bye], 5=[hello, world]}</span></pre>
+<div class="output">{2=[hi, ok], 3=[hey, bye], 5=[hello, world]}</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Find anagrams — group by sorted characters:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; list = <span class="c-type">List</span>.of(<span class="c-str">"eat"</span>,<span class="c-str">"tea"</span>,<span class="c-str">"tan"</span>,<span class="c-str">"ate"</span>,<span class="c-str">"nat"</span>,<span class="c-str">"bat"</span>);
+
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt;&gt; anagrams = list.stream()
+    .collect(<span class="c-type">Collectors</span>.groupingBy(w <span class="c-lambda">-></span> {
+        <span class="c-type">char</span>[] c = w.toCharArray(); <span class="c-type">Arrays</span>.sort(c); <span class="c-kw">return</span> <span class="c-kw">new</span> <span class="c-type">String</span>(c);
+    }));
+<span class="c-cmt">// {aet=[eat,tea,ate], ant=[tan,nat], abt=[bat]}</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Longest string in a list:</strong>
+<pre>words.stream()
+     .max(<span class="c-type">Comparator</span>.comparingInt(<span class="c-type">String</span>::length))
+     .orElse(<span class="c-str">""</span>);
+<span class="c-cmt">// "hello" (or "world")</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Sort strings by length, then alphabetically:</strong>
+<pre>words.stream()
+     .sorted(<span class="c-type">Comparator</span>.comparingInt(<span class="c-type">String</span>::length)
+                       .thenComparing(<span class="c-type">Comparator</span>.naturalOrder()))
+     .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [hi, ok, bye, hey, hello, world]</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Filter strings starting with a letter and convert to uppercase:</strong>
+<pre>words.stream()
+     .filter(w <span class="c-lambda">-></span> w.startsWith(<span class="c-str">"h"</span>))
+     .map(<span class="c-type">String</span>::toUpperCase)
+     .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [HI, HEY, HELLO]</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Join all strings with separator:</strong>
+<pre>words.stream().collect(<span class="c-type">Collectors</span>.joining(<span class="c-str">", "</span>, <span class="c-str">"["</span>, <span class="c-str">"]"</span>));
+<span class="c-cmt">// "[hi, hey, hello, world, ok, bye]"</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q24 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">24</span>
+      <div class="q-body">
+        <div class="q-text">Flatten a list of lists (nested list) into a single list using Java 8.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-orange">flatMap</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Flatten nested list:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt;&gt; nested = <span class="c-type">List</span>.of(
+    <span class="c-type">List</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>), <span class="c-type">List</span>.of(<span class="c-num">4</span>,<span class="c-num">5</span>), <span class="c-type">List</span>.of(<span class="c-num">6</span>,<span class="c-num">7</span>,<span class="c-num">8</span>)
+);
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; flat = nested.stream()
+    .flatMap(<span class="c-type">List</span>::stream)
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [1,2,3,4,5,6,7,8]</span></pre>
+<div class="output">[1, 2, 3, 4, 5, 6, 7, 8]</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Flatten, sort, distinct:</strong>
+<pre>nested.stream()
+      .flatMap(<span class="c-type">List</span>::stream)
+      .distinct()
+      .sorted()
+      .collect(<span class="c-type">Collectors</span>.toList());</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Sum of all elements in nested list:</strong>
+<pre><span class="c-kw">int</span> sum = nested.stream()
+               .flatMapToInt(l <span class="c-lambda">-></span> l.stream().mapToInt(<span class="c-type">Integer</span>::intValue))
+               .sum();
+<span class="c-cmt">// 36</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Convert list of sentences into unique words:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; sentences = <span class="c-type">List</span>.of(<span class="c-str">"Java is great"</span>, <span class="c-str">"Java 8 is powerful"</span>);
+<span class="c-type">Set</span>&lt;<span class="c-type">String</span>&gt; uniqueWords = sentences.stream()
+    .flatMap(s <span class="c-lambda">-></span> <span class="c-type">Arrays</span>.stream(s.split(<span class="c-str">" "</span>)))
+    .collect(<span class="c-type">Collectors</span>.toSet());
+<span class="c-cmt">// [Java, 8, is, great, powerful]</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Word count in a sentence:</strong>
+<pre><span class="c-type">String</span> text = <span class="c-str">"the quick brown fox jumps over the lazy dog"</span>;
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Long</span>&gt; wordCount = <span class="c-type">Arrays</span>.stream(text.split(<span class="c-str">" "</span>))
+    .collect(<span class="c-type">Collectors</span>.groupingBy(w <span class="c-lambda">-></span> w, <span class="c-type">Collectors</span>.counting()));
+<span class="c-cmt">// {the=2, quick=1, brown=1, fox=1, ...}</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Find words with length > 4 in all sentences:</strong>
+<pre>sentences.stream()
+         .flatMap(s <span class="c-lambda">-></span> <span class="c-type">Arrays</span>.stream(s.split(<span class="c-str">" "</span>)))
+         .filter(w <span class="c-lambda">-></span> w.length() > <span class="c-num">4</span>)
+         .distinct()
+         .sorted()
+         .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [great, powerful]</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q25 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">25</span>
+      <div class="q-body">
+        <div class="q-text">Given a list of Employee objects, solve 6 classic Java 8 stream problems on them.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-orange">Employee Stream</span><span class="badge b-blue">Most Common</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <div class="ans-intro">The Employee object stream questions are the #1 most asked category in Java 8 interviews. Master these 6 patterns.</div>
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Setup:</strong>
+<pre><span class="c-kw">record</span> <span class="c-type">Employee</span>(<span class="c-type">String</span> name, <span class="c-type">String</span> dept, <span class="c-kw">double</span> salary, <span class="c-kw">int</span> age) {}
+
+<span class="c-type">List</span>&lt;<span class="c-type">Employee</span>&gt; emps = <span class="c-type">List</span>.of(
+    <span class="c-kw">new</span> <span class="c-type">Employee</span>(<span class="c-str">"Zuber"</span>, <span class="c-str">"IT"</span>, <span class="c-num">90000</span>, <span class="c-num">29</span>),
+    <span class="c-kw">new</span> <span class="c-type">Employee</span>(<span class="c-str">"Ali"</span>, <span class="c-str">"IT"</span>, <span class="c-num">75000</span>, <span class="c-num">25</span>),
+    <span class="c-kw">new</span> <span class="c-type">Employee</span>(<span class="c-str">"Amreen"</span>, <span class="c-str">"HR"</span>, <span class="c-num">60000</span>, <span class="c-num">28</span>),
+    <span class="c-kw">new</span> <span class="c-type">Employee</span>(<span class="c-str">"Sara"</span>, <span class="c-str">"Finance"</span>, <span class="c-num">80000</span>, <span class="c-num">32</span>),
+    <span class="c-kw">new</span> <span class="c-type">Employee</span>(<span class="c-str">"John"</span>, <span class="c-str">"Finance"</span>, <span class="c-num">70000</span>, <span class="c-num">35</span>)
+);</pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>1. Get names of all IT employees earning > 80K:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; result = emps.stream()
+    .filter(e <span class="c-lambda">-></span> e.dept().equals(<span class="c-str">"IT"</span>) && e.salary() > <span class="c-num">80000</span>)
+    .map(<span class="c-type">Employee</span>::name)
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [Zuber]</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>2. Average salary per department:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Double</span>&gt; avgSal = emps.stream()
+    .collect(<span class="c-type">Collectors</span>.groupingBy(
+        <span class="c-type">Employee</span>::dept,
+        <span class="c-type">Collectors</span>.averagingDouble(<span class="c-type">Employee</span>::salary)));
+<span class="c-cmt">// {IT=82500.0, HR=60000.0, Finance=75000.0}</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>3. Highest paid employee per department:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Optional</span>&lt;<span class="c-type">Employee</span>&gt;&gt; topEarner = emps.stream()
+    .collect(<span class="c-type">Collectors</span>.groupingBy(
+        <span class="c-type">Employee</span>::dept,
+        <span class="c-type">Collectors</span>.maxBy(<span class="c-type">Comparator</span>.comparingDouble(<span class="c-type">Employee</span>::salary))));
+<span class="c-cmt">// {IT=Optional[Zuber,IT,90000,29], HR=..., Finance=...}</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>4. Count employees per department + total salary per dept:</strong>
+<pre><span class="c-cmt">// Count per department</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Long</span>&gt; count = emps.stream()
+    .collect(<span class="c-type">Collectors</span>.groupingBy(<span class="c-type">Employee</span>::dept, <span class="c-type">Collectors</span>.counting()));
+
+<span class="c-cmt">// Total salary per department</span>
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Double</span>&gt; totalSal = emps.stream()
+    .collect(<span class="c-type">Collectors</span>.groupingBy(<span class="c-type">Employee</span>::dept,
+        <span class="c-type">Collectors</span>.summingDouble(<span class="c-type">Employee</span>::salary)));</pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>5. Partition into senior (salary > 75K) and junior:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">Boolean</span>, <span class="c-type">List</span>&lt;<span class="c-type">Employee</span>&gt;&gt; seniorJunior = emps.stream()
+    .collect(<span class="c-type">Collectors</span>.partitioningBy(e <span class="c-lambda">-></span> e.salary() > <span class="c-num">75000</span>));
+<span class="c-cmt">// {true=[Zuber,Sara], false=[Ali,Amreen,John]}</span>
+
+<span class="c-cmt">// 6. All employee names sorted alphabetically</span>
+emps.stream().map(<span class="c-type">Employee</span>::name).sorted().collect(<span class="c-type">Collectors</span>.joining(<span class="c-str">", "</span>));
+<span class="c-cmt">// "Ali, Amreen, John, Sara, Zuber"</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q26 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">26</span>
+      <div class="q-body">
+        <div class="q-text">Find common elements and differences between two lists using Java 8.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-green">Set Operations</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Common elements (Intersection):</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; list1 = <span class="c-type">List</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">4</span>,<span class="c-num">5</span>);
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; list2 = <span class="c-type">List</span>.of(<span class="c-num">3</span>,<span class="c-num">4</span>,<span class="c-num">5</span>,<span class="c-num">6</span>,<span class="c-num">7</span>);
+
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; common = list1.stream()
+    .filter(list2::contains)
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [3, 4, 5]</span></pre>
+<div class="output">[3, 4, 5]</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Elements in list1 NOT in list2 (Difference):</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; diff = list1.stream()
+    .filter(n <span class="c-lambda">-></span> !list2.contains(n))
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [1, 2]</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Union (merge + distinct):</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; union = <span class="c-type">Stream</span>.concat(list1.stream(), list2.stream())
+    .distinct()
+    .sorted()
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [1,2,3,4,5,6,7]</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Performance Note — Convert to Set first for O(1) lookup:</strong>
+<pre><span class="c-type">Set</span>&lt;<span class="c-type">Integer</span>&gt; set2 = <span class="c-kw">new</span> <span class="c-type">HashSet</span>&lt;&gt;(list2);
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; commonFast = list1.stream()
+    .filter(set2::contains)    <span class="c-cmt">// O(1) per check instead of O(n)</span>
+    .collect(<span class="c-type">Collectors</span>.toList());</pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Symmetric Difference (in one but not both):</strong>
+<pre><span class="c-type">Set</span>&lt;<span class="c-type">Integer</span>&gt; s1 = <span class="c-kw">new</span> <span class="c-type">HashSet</span>&lt;&gt;(list1);
+<span class="c-type">Set</span>&lt;<span class="c-type">Integer</span>&gt; s2 = <span class="c-kw">new</span> <span class="c-type">HashSet</span>&lt;&gt;(list2);
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; symDiff = <span class="c-type">Stream</span>.concat(
+    list1.stream().filter(n <span class="c-lambda">-></span> !s2.contains(n)),
+    list2.stream().filter(n <span class="c-lambda">-></span> !s1.contains(n))
+).sorted().collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [1, 2, 6, 7]</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Remove duplicates, sort, and merge into one list:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; merged = <span class="c-type">Stream</span>.of(list1, list2)
+    .flatMap(<span class="c-type">List</span>::stream)
+    .distinct()
+    .sorted()
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [1,2,3,4,5,6,7]</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q27 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">27</span>
+      <div class="q-body">
+        <div class="q-text">Generate Fibonacci series and prime numbers using Java 8 Stream.iterate().</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-purple">Infinite Streams</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Fibonacci using Stream.iterate:</strong>
+<pre><span class="c-type">Stream</span>.iterate(<span class="c-kw">new long</span>[]{<span class="c-num">0</span>, <span class="c-num">1</span>}, f <span class="c-lambda">-></span> <span class="c-kw">new long</span>[]{f[<span class="c-num">1</span>], f[<span class="c-num">0</span>] + f[<span class="c-num">1</span>]})
+    .limit(<span class="c-num">10</span>)
+    .map(f <span class="c-lambda">-></span> f[<span class="c-num">0</span>])
+    .forEach(n <span class="c-lambda">-></span> <span class="c-type">System</span>.out.print(n + <span class="c-str">" "</span>));
+<span class="c-cmt">// 0 1 1 2 3 5 8 13 21 34</span></pre>
+<div class="output">0 1 1 2 3 5 8 13 21 34</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>First N prime numbers using Stream:</strong>
+<pre><span class="c-kw">static boolean</span> isPrime(<span class="c-kw">int</span> n) {
+    <span class="c-kw">if</span> (n < <span class="c-num">2</span>) <span class="c-kw">return false</span>;
+    <span class="c-kw">return</span> <span class="c-type">IntStream</span>.rangeClosed(<span class="c-num">2</span>, (<span class="c-kw">int</span>) <span class="c-type">Math</span>.sqrt(n))
+                   .noneMatch(i <span class="c-lambda">-></span> n % i == <span class="c-num">0</span>);
+}
+
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; primes = <span class="c-type">IntStream</span>.iterate(<span class="c-num">2</span>, n <span class="c-lambda">-></span> n + <span class="c-num">1</span>)
+    .filter(Main::isPrime)
+    .limit(<span class="c-num">10</span>)
+    .boxed()
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [2,3,5,7,11,13,17,19,23,29]</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Sum of first N even numbers:</strong>
+<pre><span class="c-kw">long</span> sumOfEvens = <span class="c-type">LongStream</span>.iterate(<span class="c-num">2</span>, n <span class="c-lambda">-></span> n + <span class="c-num">2</span>)
+    .limit(<span class="c-num">10</span>)
+    .sum();
+<span class="c-cmt">// 2+4+6+...+20 = 110</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Stream.generate for random numbers:</strong>
+<pre><span class="c-type">Stream</span>.generate(<span class="c-type">Math</span>::random)
+    .limit(<span class="c-num">5</span>)
+    .map(d <span class="c-lambda">-></span> (<span class="c-kw">int</span>)(d * <span class="c-num">100</span>))
+    .forEach(<span class="c-type">System</span>.out::println);</pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Java 9 Stream.iterate with predicate (takeWhile):</strong>
+<pre><span class="c-cmt">// Java 9+ — iterate with stop condition</span>
+<span class="c-type">Stream</span>.iterate(<span class="c-num">1</span>, n <span class="c-lambda">-></span> n <= <span class="c-num">100</span>, n <span class="c-lambda">-></span> n * <span class="c-num">2</span>)
+    .forEach(<span class="c-type">System</span>.out::print);
+<span class="c-cmt">// 1 2 4 8 16 32 64</span>
+
+<span class="c-cmt">// takeWhile (Java 9+) — take while condition is true</span>
+<span class="c-type">Stream</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">10</span>,<span class="c-num">4</span>,<span class="c-num">5</span>).takeWhile(n <span class="c-lambda">-></span> n < <span class="c-num">5</span>).collect(...);
+<span class="c-cmt">// [1,2,3] — stops at 10</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Sum of squares of numbers 1 to 10:</strong>
+<pre><span class="c-kw">int</span> sumOfSquares = <span class="c-type">IntStream</span>.rangeClosed(<span class="c-num">1</span>, <span class="c-num">10</span>)
+    .map(n <span class="c-lambda">-></span> n * n)
+    .sum();
+<span class="c-cmt">// 385  (1+4+9+16+25+36+49+64+81+100)</span></pre>
+<div class="output">385</div>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q28 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">28</span>
+      <div class="q-body">
+        <div class="q-text">Sort a Map by value using Java 8 Streams.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-orange">Map + Stream</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Sort Map by value ascending:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>&gt; scores = <span class="c-type">Map</span>.of(<span class="c-str">"Zuber"</span>,<span class="c-num">90</span>,<span class="c-str">"Ali"</span>,<span class="c-num">75</span>,<span class="c-str">"Sara"</span>,<span class="c-num">85</span>);
+
+<span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>&gt; sortedByVal = scores.entrySet().stream()
+    .sorted(<span class="c-type">Map</span>.<span class="c-type">Entry</span>.comparingByValue())
+    .collect(<span class="c-type">Collectors</span>.toMap(
+        <span class="c-type">Map</span>.<span class="c-type">Entry</span>::getKey,
+        <span class="c-type">Map</span>.<span class="c-type">Entry</span>::getValue,
+        (e1, e2) <span class="c-lambda">-></span> e1,
+        <span class="c-type">LinkedHashMap</span>::new  <span class="c-cmt">// preserve order!</span>
+    ));
+<span class="c-cmt">// {Ali=75, Sara=85, Zuber=90}</span></pre>
+<div class="output">{Ali=75, Sara=85, Zuber=90}</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Sort by value descending:</strong>
+<pre>scores.entrySet().stream()
+    .sorted(<span class="c-type">Map</span>.<span class="c-type">Entry</span>.&lt;<span class="c-type">String</span>,<span class="c-type">Integer</span>&gt;comparingByValue().reversed())
+    .collect(<span class="c-type">Collectors</span>.toMap(<span class="c-type">Map</span>.<span class="c-type">Entry</span>::getKey, <span class="c-type">Map</span>.<span class="c-type">Entry</span>::getValue,
+             (e1,e2)<span class="c-lambda">-></span>e1, <span class="c-type">LinkedHashMap</span>::new));
+<span class="c-cmt">// {Zuber=90, Sara=85, Ali=75}</span></pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Sort by key:</strong>
+<pre>scores.entrySet().stream()
+    .sorted(<span class="c-type">Map</span>.<span class="c-type">Entry</span>.comparingByKey())
+    .forEach(e <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(e.getKey() + <span class="c-str">":"</span> + e.getValue()));
+<span class="c-cmt">// Ali:75, Sara:85, Zuber:90</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Get top N entries from a Map:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Map</span>.<span class="c-type">Entry</span>&lt;<span class="c-type">String</span>,<span class="c-type">Integer</span>&gt;&gt; topTwo = scores.entrySet().stream()
+    .sorted(<span class="c-type">Map</span>.<span class="c-type">Entry</span>.&lt;<span class="c-type">String</span>,<span class="c-type">Integer</span>&gt;comparingByValue().reversed())
+    .limit(<span class="c-num">2</span>)
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [Zuber=90, Sara=85]</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Filter map entries by value:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">String</span>,<span class="c-type">Integer</span>&gt; highScorers = scores.entrySet().stream()
+    .filter(e <span class="c-lambda">-></span> e.getValue() >= <span class="c-num">85</span>)
+    .collect(<span class="c-type">Collectors</span>.toMap(<span class="c-type">Map</span>.<span class="c-type">Entry</span>::getKey, <span class="c-type">Map</span>.<span class="c-type">Entry</span>::getValue));
+<span class="c-cmt">// {Zuber=90, Sara=85}</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Invert a Map (swap key and value):</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">Integer</span>,<span class="c-type">String</span>&gt; inverted = scores.entrySet().stream()
+    .collect(<span class="c-type">Collectors</span>.toMap(<span class="c-type">Map</span>.<span class="c-type">Entry</span>::getValue, <span class="c-type">Map</span>.<span class="c-type">Entry</span>::getKey));
+<span class="c-cmt">// {90=Zuber, 75=Ali, 85=Sara}</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q29 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">29</span>
+      <div class="q-body">
+        <div class="q-text">Remove null values and find distinct elements from a list using Java 8.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-green">Null Handling</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Remove nulls using filter:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; withNulls = <span class="c-type">Arrays</span>.asList(<span class="c-str">"a"</span>, <span class="c-kw">null</span>, <span class="c-str">"b"</span>, <span class="c-kw">null</span>, <span class="c-str">"c"</span>);
+
+<span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; nonNull = withNulls.stream()
+    .filter(s <span class="c-lambda">-></span> s != <span class="c-kw">null</span>)  <span class="c-cmt">// or Objects::nonNull</span>
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [a, b, c]</span></pre>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>Using Objects::nonNull as method reference:</strong>
+<pre><span class="c-kw">import</span> java.util.Objects;
+<span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; nonNull2 = withNulls.stream()
+    .filter(<span class="c-type">Objects</span>::nonNull)
+    .collect(<span class="c-type">Collectors</span>.toList());</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>distinct() — Remove duplicates:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; withDups = <span class="c-type">List</span>.of(<span class="c-num">1</span>,<span class="c-num">2</span>,<span class="c-num">2</span>,<span class="c-num">3</span>,<span class="c-num">3</span>,<span class="c-num">3</span>,<span class="c-num">4</span>);
+<span class="c-type">List</span>&lt;<span class="c-type">Integer</span>&gt; distinct = withDups.stream()
+    .distinct()
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [1, 2, 3, 4]</span></pre>
+<div class="output">[1, 2, 3, 4]</div>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Remove nulls, find distinct, sort:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; messy = <span class="c-type">Arrays</span>.asList(<span class="c-str">"c"</span>,<span class="c-kw">null</span>,<span class="c-str">"a"</span>,<span class="c-str">"b"</span>,<span class="c-kw">null</span>,<span class="c-str">"a"</span>,<span class="c-str">"c"</span>);
+messy.stream()
+     .filter(<span class="c-type">Objects</span>::nonNull)
+     .distinct()
+     .sorted()
+     .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [a, b, c]</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Replacing removeIf for null removal:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; mutable = <span class="c-kw">new</span> <span class="c-type">ArrayList</span>&lt;&gt;(<span class="c-type">Arrays</span>.asList(<span class="c-str">"a"</span>,<span class="c-kw">null</span>,<span class="c-str">"b"</span>,<span class="c-kw">null</span>));
+mutable.removeIf(<span class="c-type">Objects</span>::isNull); <span class="c-cmt">// modifies in place</span>
+<span class="c-cmt">// [a, b]</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Replace nulls with defaults using Optional.ofNullable:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; replaced = withNulls.stream()
+    .map(s <span class="c-lambda">-></span> <span class="c-type">Optional</span>.ofNullable(s).orElse(<span class="c-str">"UNKNOWN"</span>))
+    .collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [a, UNKNOWN, b, UNKNOWN, c]</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Q30 -->
+  <div class="qa-card" data-cat="coding">
+    <div class="qa-q" onclick="toggle(this)">
+      <span class="q-n">30</span>
+      <div class="q-body">
+        <div class="q-text">Convert a list of strings to uppercase, filter by length, and collect as comma-separated string.</div>
+        <div class="q-badges"><span class="badge b-blue">Coding</span><span class="badge b-orange">Pipeline</span></div>
+      </div>
+      <span class="q-arr">▾</span>
+    </div>
+    <div class="qa-ans">
+      <ul class="blist">
+        <li><span class="bicon ic1">01</span><div class="bcontent"><strong>Full pipeline — filter, transform, collect:</strong>
+<pre><span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt; words = <span class="c-type">List</span>.of(<span class="c-str">"hi"</span>, <span class="c-str">"hello"</span>, <span class="c-str">"java"</span>, <span class="c-str">"ok"</span>, <span class="c-str">"stream"</span>);
+
+<span class="c-type">String</span> result = words.stream()
+    .filter(w <span class="c-lambda">-></span> w.length() > <span class="c-num">3</span>)          <span class="c-cmt">// hello, java, stream</span>
+    .map(<span class="c-type">String</span>::toUpperCase)              <span class="c-cmt">// HELLO, JAVA, STREAM</span>
+    .sorted()                               <span class="c-cmt">// alphabetical order</span>
+    .collect(<span class="c-type">Collectors</span>.joining(<span class="c-str">", "</span>));   <span class="c-cmt">// join</span>
+
+<span class="c-cmt">// "HELLO, JAVA, STREAM"</span></pre>
+<div class="output">HELLO, JAVA, STREAM</div>
+</div></li>
+        <li><span class="bicon ic2">02</span><div class="bcontent"><strong>peek() for debugging without changing the stream:</strong>
+<pre>words.stream()
+     .peek(w <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(<span class="c-str">"Before filter: "</span> + w))
+     .filter(w <span class="c-lambda">-></span> w.length() > <span class="c-num">3</span>)
+     .peek(w <span class="c-lambda">-></span> <span class="c-type">System</span>.out.println(<span class="c-str">"After filter: "</span> + w))
+     .map(<span class="c-type">String</span>::toUpperCase)
+     .collect(<span class="c-type">Collectors</span>.toList());</pre>
+</div></li>
+        <li><span class="bicon ic3">03</span><div class="bcontent"><strong>Count, skip, limit:</strong>
+<pre><span class="c-kw">long</span> count = words.stream().filter(w <span class="c-lambda">-></span> w.length() > <span class="c-num">3</span>).count(); <span class="c-cmt">// 3</span>
+
+<span class="c-cmt">// Pagination: skip first 2, take next 2</span>
+words.stream().skip(<span class="c-num">2</span>).limit(<span class="c-num">2</span>).collect(<span class="c-type">Collectors</span>.toList());
+<span class="c-cmt">// [java, ok]</span></pre>
+</div></li>
+        <li><span class="bicon ic4">04</span><div class="bcontent"><strong>Convert List to Map using toMap:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">String</span>, <span class="c-type">Integer</span>&gt; wordLengthMap = words.stream()
+    .collect(<span class="c-type">Collectors</span>.toMap(
+        w <span class="c-lambda">-></span> w,
+        <span class="c-type">String</span>::length
+    ));
+<span class="c-cmt">// {hi=2, hello=5, java=4, ok=2, stream=6}</span></pre>
+</div></li>
+        <li><span class="bicon ic5">05</span><div class="bcontent"><strong>Partition by length >= 5:</strong>
+<pre><span class="c-type">Map</span>&lt;<span class="c-type">Boolean</span>, <span class="c-type">List</span>&lt;<span class="c-type">String</span>&gt;&gt; partitioned = words.stream()
+    .collect(<span class="c-type">Collectors</span>.partitioningBy(w <span class="c-lambda">-></span> w.length() >= <span class="c-num">5</span>));
+<span class="c-cmt">// {false=[hi, java, ok], true=[hello, stream]}</span></pre>
+</div></li>
+        <li><span class="bicon ic6">06</span><div class="bcontent"><strong>Statistics from IntStream:</strong>
+<pre><span class="c-type">IntSummaryStatistics</span> stats = words.stream()
+    .mapToInt(<span class="c-type">String</span>::length)
+    .summaryStatistics();
+
+stats.getMin();     <span class="c-cmt">// 2 (hi / ok)</span>
+stats.getMax();     <span class="c-cmt">// 6 (stream)</span>
+stats.getSum();     <span class="c-cmt">// 19</span>
+stats.getAverage(); <span class="c-cmt">// 3.8</span>
+stats.getCount();   <span class="c-cmt">// 5</span></pre>
+</div></li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">JAVA 8 INTERVIEW PREP · 50 Q&amp;A · LAMBDAS · STREAMS · COLLECTORS · CODING PROBLEMS</div>
+
+<script>
+  let reviewed = new Set();
+
+  function toggle(btn) {
+    const card = btn.closest('.qa-card');
+    card.classList.toggle('open');
+    const num = parseInt(card.querySelector('.q-n').textContent);
+    if (card.classList.contains('open')) reviewed.add(num);
+    updateProg();
+  }
+
+  function updateProg() {
+    const total = document.querySelectorAll('.qa-card').length;
+    const pct = Math.round((reviewed.size / total) * 100);
+    document.getElementById('pFill').style.width = pct + '%';
+    document.getElementById('pLabel').textContent = reviewed.size + ' / ' + total;
+  }
+
+  function filterCat(cat, btn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.qa-card').forEach(c => {
+      c.classList.toggle('hidden', cat !== 'all' && c.dataset.cat !== cat);
+    });
+    document.querySelectorAll('.sec-hdr').forEach(h => {
+      h.classList.toggle('hidden', cat !== 'all' && h.dataset.cat !== cat);
+    });
+  }
+
+  function searchQA(q) {
+    q = q.toLowerCase();
+    document.querySelectorAll('.qa-card').forEach(c => {
+      c.classList.toggle('hidden', q.length > 0 && !c.textContent.toLowerCase().includes(q));
+    });
+  }
+</script>
+
+  </main>
+  <script type="module" src="../../../js/topic.js"></script>
+  </body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 49  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 49  ·  STUDY CHECKLIST — Resilience Patterns — Resilience4j Deep Dive: Circuit Breaker, Bulkhead, Retry and Timeout</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 49 Checklist</div>
+    <h1 style="margin-top: 0;">Resilience Patterns — Resilience4j Deep Dive: Circuit Breaker, Bulkhead, Retry and Timeout</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 49 · STUDY CHECKLIST</h3>
+    <p>States, thresholds, sliding window, half-open</p>
+    <h3>Bulkhead</h3>
+    <p>Thread pool vs semaphore isolation</p>
+    <h3>Retry & Timeout</h3>
+    <p>Exponential backoff, jitter, deadline propagation</p>
+    <h3>Combining Patterns</h3>
+    <p>Order matters, fallback design, testing resilience</p>
+    <p>Note:</p>
+    <h3>Day 49 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Failure rate threshold vs slow call rate threshold — the difference</span></li>
+      <li><span class="checkbox-label">Half-open state: why it exists, what permittedNumberOfCallsInHalfOpenState does</span></li>
+      <li><span class="checkbox-label">Bulkhead — semaphore: max concurrent calls, how it differs from thread pool</span></li>
+      <li><span class="checkbox-label">Bulkhead — thread pool: isolation by thread pool, overhead vs semaphore</span></li>
+      <li><span class="checkbox-label">Retry: which errors to retry, maxAttempts, exponential backoff, jitter</span></li>
+      <li><span class="checkbox-label">TimeLimiter: how it differs from HTTP client timeout, what it interrupts</span></li>
+      <li><span class="checkbox-label">RateLimiter: token bucket vs sliding window, per-service limiting</span></li>
+      <li><span class="checkbox-label">Fallback design: return cached data, degraded response, or error — how to choose</span></li>
+      <li><span class="checkbox-label">Order of decorators: the correct order and why wrong order causes surprises</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <p>The problem it solves:</p>
+    <pre><code class="language-java"># Resilience4j circuit breaker configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      fraud-service:
+        # Sliding window: count-based (last N calls) or time-based (last N seconds)
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10          # evaluate last 10 calls
+        minimumNumberOfCalls: 5        # need at least 5 calls before opening
+        # Open circuit if failure rate &gt; 50% OR slow calls &gt; 80%
+        failureRateThreshold: 50
+        slowCallRateThreshold: 80
+        slowCallDurationThreshold: 2000ms
+        # How long to stay open before trying again
+        waitDurationInOpenState: 10s
+        # In half-open: allow 3 calls to test if service recovered
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        # What counts as failure (default: any exception)
+        recordExceptions:
+          - java.io.IOException
+          - com.example.FraudServiceException
+        ignoreExceptions:
+          - com.example.FraudBlockedException  # this is a valid response, not a failure
+// Usage with @CircuitBreaker
+@Service
+public class PaymentService {
+    @CircuitBreaker(name = "fraud-service", fallbackMethod = "fraudFallback")
+    public FraudResult checkFraud(PaymentRequest request) {
+        return fraudServiceClient.check(request);
+    }
+    // Fallback receives the exception that triggered it
+    private FraudResult fraudFallback(PaymentRequest request, Exception e) {
+        log.warn("Fraud service unavailable, using fallback for paymentId={}", request.getId());
+        // Return a conservative result: allow the payment but flag for manual review
+        return FraudResult.requiresManualReview(request.getId());
+    }
+}
+// Monitoring circuit breaker state
+// Actuator endpoint: /actuator/circuitbreakers
+// Metrics:
+// resilience4j.circuitbreaker.state (Gauge: 0=CLOSED, 1=OPEN, 2=HALF_OPEN)
+// resilience4j.circuitbreaker.failure.rate
+// resilience4j.circuitbreaker.calls (Timer by kind: successful, failed, slow)
+// Alert: state = 1 (OPEN) for more than 30 seconds</code></pre>
+    <h3>Bulkhead Pattern</h3>
+    <h3>Bulkhead type</h3>
+    <h3>How it works | Use when | Configuration</h3>
+    <h3>Semaphore</h3>
+    <p>Limits concurrent calls to a service using a semaphore. If limit is reached, new calls are rejected immediately. | Default — low overhead, same thread. Use for most services. | maxConcurrentCalls, maxWaitDuration</p>
+    <h3>Thread pool</h3>
+    <p>Each decorated service gets its own dedicated thread pool. Calls run on pool threads, not the caller thread. | When you need true isolation — a slow service blocks its own pool threads, not the caller's. Higher overhead. | coreThreadPoolSize, maxThreadPoolSize, queueCapacity</p>
+    <pre><code class="language-java"># Semaphore bulkhead — limit concurrent calls to fraud service
+resilience4j:
+  bulkhead:
+    instances:
+      fraud-service:
+        maxConcurrentCalls: 20     # max 20 concurrent fraud checks
+        maxWaitDuration: 500ms     # wait up to 500ms for a permit
+  # Thread pool bulkhead — isolated thread pool
+  thread-pool-bulkhead:
+    instances:
+      slow-report-service:
+        coreThreadPoolSize: 5
+        maxThreadPoolSize: 10
+        queueCapacity: 50
+// @Bulkhead annotation
+@Bulkhead(name = "fraud-service", fallbackMethod = "fraudFallback")
+@CircuitBreaker(name = "fraud-service", fallbackMethod = "fraudFallback")
+public FraudResult checkFraud(PaymentRequest request) { ... }
+// Order matters: decorators apply inside-out
+// @Bulkhead wraps @CircuitBreaker
+// First: bulkhead check (is there capacity?)
+// Then: circuit breaker check (is the circuit closed?)
+// Then: actual call</code></pre>
+    <h3>Retry with Exponential Backoff and Jitter</h3>
+    <pre><code class="language-java"># Retry configuration
+resilience4j:
+  retry:
+    instances:
+      fraud-service:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2   # 500ms, 1000ms, 2000ms
+        exponentialMaxWaitDuration: 5s
+        # Jitter: add randomness to prevent thundering herd
+        # actual wait = waitDuration * (1 + random * jitterFactor)
+        # Only retry on transient errors
+        retryExceptions:
+          - java.io.IOException
+          - java.net.SocketTimeoutException
+        ignoreExceptions:
+          - com.example.ValidationException  # permanent error, do not retry
+          - com.example.FraudBlockedException
+// Correct decorator order for combined resilience
+// Outermost to innermost: Retry → CircuitBreaker → Bulkhead → TimeLimiter → call
+// This means:
+// 1. Retry wraps everything — if circuit is open, retry backs off
+//    Actually: Retry → CircuitBreaker means retry hits the circuit breaker check
+//    If circuit is OPEN, circuit breaker throws immediately
+//    Retry sees this as a failure and retries (hits circuit again — still open)
+//    This is usually WRONG — you want Retry INSIDE CircuitBreaker
+// CORRECT ORDER: CircuitBreaker → Retry → Bulkhead → TimeLimiter → call
+// 1. Circuit breaker check: is circuit closed?
+// 2. Retry: if call fails, retry (within the circuit breaker's window)
+// 3. Bulkhead: is there capacity?
+// 4. TimeLimiter: does call complete within deadline?
+// 5. Actual call
+// Using the Decorators builder for explicit ordering
+CheckedFunction0&lt;FraudResult&gt; decorated = Decorators.ofCheckedSupplier(() -&gt; fraudClient.check(req))
+    .withCircuitBreaker(circuitBreaker)
+    .withRetry(retry)
+    .withBulkhead(bulkhead)
+    .withTimeLimiter(timeLimiter, scheduledExecutorService)
+    .decorate();</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is the correct order for combining resilience patterns and why does order matter? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The recommended order from outermost to innermost is: CircuitBreaker → Retry → Bulkhead → TimeLimiter → actual call. The reasoning: the circuit breaker is the outermost because it makes the first decision — if the circuit is open, nothing else runs. Retry sits inside the circuit breaker, which means retries count toward the circuit breaker's failure rate. If the call fails and retry also fails, both attempts count as failures in the circuit breaker's sliding window, which is the correct behaviour — the circuit breaker should see the full failure picture. Bulkhead limits concurrency at the point just before the call is made. TimeLimiter enforces the per-call deadline. The wrong order: Retry outside the circuit breaker means a failed call triggers retries that each hit the circuit breaker check — if the circuit opens during the retry sequence, the retry throws immediately. That changes the semantics in subtle ways. When using @annotations in Spring, the annotation that appears first in the annotation list is the outermost decorator.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h2>Section 2 — Exercises</h2>
+    <p>Task:</p>
+    <h3>Exercise 2 — Fallback Design</h3>
+    <p>Task:</p>
+    <p>Design fallbacks for three scenarios: 1) Fraud service down — payment cannot proceed without fraud check. 2) Notification service down — payment must still succeed, notification can be retried later. 3) Account service down — cannot process payment without account info. For each: state what the fallback returns and how the system recovers when the service comes back.</p>
+    <h3>Exercise 3 — Retry with Jitter</h3>
+    <p>Task:</p>
+    <p>Configure retry for a Kafka consumer: 3 attempts, exponential backoff 1s/2s/4s, add 20% jitter. Show the formula for jitter: actual_wait = wait * (1 + random(0,1) * jitter_factor). Explain: why jitter prevents thundering herd when 1000 consumers all fail at the same time. Show which exceptions should be retried vs go directly to DLT.</p>
+    <h3>Exercise 4 — Bulkhead Sizing</h3>
+    <p>Task:</p>
+    <p>A payment service calls 3 downstream services: fraud (fast, 50ms avg), gateway (slow, 2s avg), notification (very slow, 5s avg). Configure semaphore bulkheads for each assuming 200 requests per second. Formula: concurrent_calls = RPS * avg_response_time_seconds. Show: without bulkhead, how one slow service can exhaust the thread pool for all services.</p>
+    <h3>Exercise 5 — TimeLimiter vs HTTP Timeout</h3>
+    <p>Task:</p>
+    <p>Explain the difference between a TimeLimiter and an HTTP client timeout. Write a TimeLimiter config for a 2-second deadline. Show: what happens when the TimeLimiter fires — is the downstream call cancelled? Configure WebClient with both a TimeLimiter and a responseTimeout — which controls what?</p>
+    <p>Task:</p>
+    <h3>Exercise 7 — BOSS: Full Resilience for Payment Service</h3>
+    <p>Task:</p>
+    <h3>Interview Q&A — 12 Questions</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> How does a semaphore bulkhead differ from a thread pool bulkhead? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A semaphore bulkhead uses a counting semaphore to limit the number of concurrent calls. When the maximum is reached, new callers block for up to maxWaitDuration and then receive a BulkheadFullException. The calls execute on the caller's thread — no thread context switching, low overhead. A thread pool bulkhead allocates a dedicated thread pool for the protected service. Calls are submitted to the pool and the calling thread returns immediately (asynchronously). The thread pool provides true thread isolation — if the downstream service is slow and fills its pool threads, the calling threads are not blocked. The cost is higher overhead (thread creation, context switching) and the need to handle async results. Use semaphore bulkheads by default. Use thread pool bulkheads when you need the caller to remain responsive even while many calls are in flight.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> Why does retry need jitter and what is the thundering herd problem? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Without jitter, all retries happen at the same time after the same delay. If 1,000 consumers all fail at t=0 and all retry at t=1s, they create another spike at t=1s that might fail again, and then all retry at t=2s — a synchronized wave of retries that can overwhelm a service trying to recover. Jitter adds randomness to the retry delay: instead of all retrying exactly at 1 second, they retry at random intervals between 0.8 and 1.2 seconds (with 20% jitter). The load is spread over the interval instead of spiking. The formula: actual_wait = base_wait * (1 + random * jitter_factor). Jitter is especially important in microservices where many consumer instances all fail simultaneously when a service goes down.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is the difference between a TimeLimiter and an HTTP client timeout? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">An HTTP client timeout (like WebClient's responseTimeout or RestTemplate's connectTimeout/readTimeout) is a connection-level timeout — it cancels the outgoing HTTP request after the configured duration. A TimeLimiter is a Resilience4j decorator that applies a deadline to any callable, not just HTTP calls. It submits the work to a ScheduledExecutorService and cancels it if it does not complete within the duration. The key difference: a TimeLimiter wraps any operation (HTTP call, database query, complex computation) and integrates with the Resilience4j metrics and circuit breaker. When it fires, it also records the result as a timeout in the circuit breaker's sliding window, potentially contributing to opening the circuit. An HTTP client timeout only applies to HTTP and does not feed circuit breaker metrics. For HTTP calls, I configure both: the HTTP client timeout for connection-level control, and a TimeLimiter for application-level deadline enforcement with circuit breaker integration.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is the difference between failureRateThreshold and slowCallRateThreshold? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">failureRateThreshold opens the circuit when the percentage of failed calls (calls that threw an exception) exceeds the threshold in the sliding window. slowCallRateThreshold opens the circuit when the percentage of slow calls exceeds the threshold — calls that completed successfully but took longer than slowCallDurationThreshold. The slow call threshold is important because a service can be technically responding without errors but still be too slow to be useful. An API that takes 30 seconds per call is functionally failing even if it returns HTTP 200. Configuring both gives the circuit breaker a complete picture of service health: failing fast OR being very slow, either should open the circuit. In practice I set slowCallDurationThreshold to 2-3x the normal p99 latency — enough to catch genuine degradation without triggering on normal variance.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What should a fallback do and what are the different fallback strategies? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A fallback is what you return when the circuit is open or the call fails. The strategy depends on what the calling code needs. Return a cached value — the last successful response, stored in Redis. Safe for read operations where slightly stale data is acceptable. Return a degraded result — a partial response with default values. For fraud check, return 'unknown' and flag for manual review rather than blocking the payment. Throw a specific business exception — for operations that cannot proceed without the dependency, fail with a clear error (503, Retry-After header) rather than a confusing null or default. Return nothing (for optional services) — if the notification service is down, the payment still completes. The notification is queued for retry later. The key principle: the fallback should be a deliberate business decision, not just an empty return.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> How do Resilience4j patterns interact with Spring's @Transactional? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">This is a subtle integration question. If @CircuitBreaker is applied to a @Transactional method, the Spring proxy order matters. If the transaction starts before the circuit breaker check and the circuit is open, the transaction is started and then immediately rolled back when the circuit throws CallNotPermittedException. This is wasteful but usually harmless. The more important case: if the circuit breaker fallback method is called, the transaction context depends on where the fallback runs. If the fallback method is in the same class, the @Transactional annotation may or may not apply depending on how the proxy is structured. The recommended approach: put the Resilience4j annotations on a service layer that does not have @Transactional, and put @Transactional on a separate repository or persistence layer. This avoids the ambiguity.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is the difference between bulkhead and rate limiter in Resilience4j? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A bulkhead limits concurrent executions — how many calls can be in flight simultaneously. If 20 calls are already being processed and a 21st arrives, the bulkhead rejects it immediately. A rate limiter limits execution frequency — how many calls can be made per time period. If the limit is 100 calls per second and 101 calls arrive in one second, the 101st is rejected (or waits, depending on the strategy). Bulkhead prevents cascading failure from a slow service (too many concurrent waits). Rate limiter prevents overloading a service with traffic spikes. They address different failure modes and are often used together: rate limiter as the outer control (prevent too many calls per second) and bulkhead as the inner control (prevent too many concurrent in-flight calls).</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> When should you NOT retry a failed call? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Do not retry: non-idempotent operations (POST, PATCH with side effects) unless the server has idempotency key support. Do not retry on validation errors (400, 422) — the same request will always fail. Do not retry on authentication errors (401, 403) — a different request with different credentials might succeed, but retrying the same request does not help. Do not retry when the circuit breaker is open — Retry sitting outside CircuitBreaker means retries hit the circuit check; if open, they all fail immediately and count as failures in the next window. Do not retry on business-logic errors from the downstream service — if fraud check returns BLOCKED, retrying will get the same answer. Only retry on transient infrastructure errors: connection timeouts, network failures, 503 Service Unavailable, 504 Gateway Timeout.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How do you monitor the health of your resilience patterns in production? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Resilience4j exposes Micrometer metrics for all its patterns. For circuit breakers: resilience4j.circuitbreaker.state (a Gauge that is 0=CLOSED, 1=OPEN, 2=HALF_OPEN), resilience4j.circuitbreaker.failure.rate (percentage), resilience4j.circuitbreaker.slow.call.rate. I set up alerts: if circuit state stays at OPEN for more than 60 seconds, page on-call — this means a service has been failing for a full minute. For retries: resilience4j.retry.calls tagged with kind=failed.with.retry (succeeded after retry) and kind=failed.without.retry (all retries exhausted). High failed.without.retry rate signals a persistent problem. For bulkheads: resilience4j.bulkhead.available.concurrent.calls approaching 0 means the bulkhead is nearly full. Spring Actuator also exposes a /actuator/circuitbreakers endpoint showing the current state of all circuit breakers, which is useful for operational dashboards.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Self-Assessment</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <p>/5 |</p>
+    <h3>Half-open: purpose and configuration</h3>
+    <p>/5 |</p>
+    <h3>Bulkhead: semaphore vs thread pool</h3>
+    <p>/5 |</p>
+    <h3>Retry: jitter, which errors to retry</h3>
+    <p>/5 |</p>
+    <h3>Decorator order: why it matters</h3>
+    <p>/5 |</p>
+    <h3>Fallback design: three strategies</h3>
+    <p>/5 |</p>
+    <p>Day 49 complete:</p>
+    <p>Resilience patterns are table stakes for any service that makes downstream calls. The depth question is always about order and fallback design — candidates who can explain both clearly have clearly operated systems in production.</p>
+    <p>Day 49 of 60 · Resilience Patterns · Prepared for Md Zuber</p>
+    <p>"Resilience is not about never failing. It is about failing in a way your system can survive."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

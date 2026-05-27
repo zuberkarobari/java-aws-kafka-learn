@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring MVC Routing Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06090e;
+    --surface: #0f141e;
+    --surface2: #1a212e;
+    --surface3: #263040;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #E6EDF3;
+    --muted: #8b9eb3;
+    --muted2: #5b6b7d;
+    --blue: #38bdf8;
+    --blue-bg: rgba(56, 189, 248, 0.1);
+    --green: #34d399;
+    --green-bg: rgba(52, 211, 153, 0.1);
+    --amber: #fb923c;
+    --amber-bg: rgba(251, 146, 60, 0.1);
+    --red: #f43f5e;
+    --red-bg: rgba(244, 63, 94, 0.1);
+    --purple: #c084fc;
+    --purple-bg: rgba(192, 132, 252, 0.1);
+    --cyan: #22d3ee;
+    --cyan-bg: rgba(34, 211, 238, 0.1);
+    
+    /* Spring Colors */
+    --spring-green: #6db33f;
+    --spring-bg: rgba(109, 179, 63, 0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh; overflow-x: hidden;
+  }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ─── TOP BAR ─── */
+  #topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(6, 9, 14, 0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px; display: flex; align-items: center; height: 52px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px; margin-right: 32px;
+    font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--spring-green); box-shadow: 0 0 10px var(--spring-green); }
+  .step-tabs { display: flex; gap: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .step-tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 0 16px; height: 52px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; 
+    border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; user-select: none;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active { color: var(--spring-green); border-bottom-color: var(--spring-green); }
+  .tab.done { color: var(--blue); }
+  .tab-num {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--surface2); 
+    border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: var(--muted); transition: all 0.2s; flex-shrink: 0;
+  }
+  .tab.active .tab-num { background: var(--spring-green); border-color: var(--spring-green); color: #000; }
+  .tab.done .tab-num { background: var(--blue); border-color: var(--blue); color: #fff; }
+  
+  .nav-btns { display: flex; gap: 8px; margin-left: 16px; }
+  .nav-btn {
+    height: 32px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+    text-transform: uppercase;
+  }
+  .nav-btn:hover { background: var(--surface3); border-color: rgba(255,255,255,0.2); }
+  .nav-btn.primary { background: var(--spring-green); border-color: var(--spring-green); color: #000; }
+  .nav-btn.primary:hover { opacity: 0.85; box-shadow: 0 0 15px rgba(109, 179, 63, 0.4);}
+  .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ─── MAIN LAYOUT ─── */
+  #main {
+    display: grid; grid-template-columns: 280px 1fr 300px;
+    height: calc(100vh - 52px); overflow: hidden;
+  }
+
+  /* ─── LEFT PANEL ─── */
+  #left {
+    border-right: 1px solid var(--border); overflow-y: auto; padding: 20px 0;
+    background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .left-section-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: var(--muted2); text-transform: uppercase; padding: 8px 20px 6px;
+  }
+  .request-block {
+    margin: 0 12px 16px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; transition: all 0.3s;
+  }
+  .req-header {
+    padding: 10px 12px 8px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .method-badge { font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 2px 7px; border-radius: 4px; }
+  .method-get { background: var(--cyan-bg); color: var(--cyan); }
+  .req-path { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text); font-weight: 600;}
+  .req-body { padding: 10px 12px; font-size: 10px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; word-break: break-all; color: var(--muted);}
+  .json-key { color: var(--purple); }
+  .json-str { color: var(--spring-green); }
+  .divider { height: 1px; background: var(--border); margin: 4px 20px 12px; }
+
+  .phase-list { padding: 0 12px; display: flex; flex-direction: column; gap: 3px; }
+  .phase-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; font-weight: 500;
+  }
+  .phase-item:hover { background: var(--surface2); }
+  .phase-item.active { background: var(--spring-bg); border-color: rgba(109, 179, 63, 0.2); color: var(--spring-green); }
+  .phase-item.done { color: var(--blue); }
+  .phase-item.err { color: var(--red); }
+  .phase-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted2); flex-shrink: 0; transition: all 0.2s; }
+  .phase-item.active .phase-dot { background: var(--spring-green); box-shadow: 0 0 8px var(--spring-green); }
+  .phase-item.done .phase-dot { background: var(--blue); }
+  .phase-item.err .phase-dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .phase-label { flex: 1; }
+
+  /* ─── CENTER PANEL ─── */
+  #center {
+    overflow-y: auto; padding: 28px 32px; background: var(--bg);
+    scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .scene { display: none; }
+  .scene.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+
+  .scene-header { margin-bottom: 24px; }
+  .scene-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(56, 189, 248, 0.3);}
+  .badge-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(192, 132, 252, 0.3);}
+  .badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(251, 146, 60, 0.3);}
+  .badge-red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(244, 63, 94, 0.3);}
+  .badge-spring { background: var(--spring-bg); color: var(--spring-green); border: 1px solid rgba(109, 179, 63, 0.3);}
+
+  .scene-title { font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 10px; color: #fff;}
+  .scene-sub { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 600px; }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 30px 24px; margin: 24px 0; position: relative; overflow: hidden; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+    height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+
+  .engine-core {
+      position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.9); border: 2px solid var(--spring-green);
+      padding: 12px 20px; border-radius: 8px; font-family: 'Space Grotesk'; font-weight: bold;
+      box-shadow: 0 0 25px rgba(109, 179, 63, 0.3); z-index: 20; color: #fff; text-align: center;
+  }
+  .engine-core span { font-size: 9px; color: var(--spring-green); font-family: 'JetBrains Mono'; display: block; margin-top: 2px; text-transform: uppercase;}
+
+  .node {
+      position: absolute; background: rgba(0,0,0,0.8); border: 1px solid var(--muted);
+      padding: 10px 15px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--muted); font-weight: bold; text-align: center;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); z-index: 15; transition: all 0.4s ease;
+  }
+  
+  .node-controller { top: 120px; left: 50%; transform: translateX(-50%); border-color: var(--cyan); color: var(--cyan); }
+  .node-view { top: 220px; left: 80px; border-color: var(--amber); color: var(--amber); opacity: 0.3;}
+  .node-converter { top: 220px; right: 80px; border-color: var(--purple); color: var(--purple); opacity: 0.3;}
+  
+  .client-end { position: absolute; bottom: 30px; padding: 10px; border-radius: 6px; font-family: 'Space Grotesk'; font-size: 12px; font-weight: bold; text-align: center; opacity: 0; z-index: 15; border: 1px solid transparent;}
+  .ce-browser { left: 80px; background: rgba(251,146,60,0.1); color: var(--amber); border-color: var(--amber);}
+  .ce-mobile { right: 80px; background: rgba(192,132,252,0.1); color: var(--purple); border-color: var(--purple);}
+
+  /* Pipes */
+  .pipe-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;}
+  .pipe-line { fill: none; stroke: var(--border2); stroke-width: 2; stroke-dasharray: 4 4; transition: all 0.5s; }
+  .pipe-line.active-cyan { stroke: var(--cyan); stroke-dasharray: none; filter: drop-shadow(0 0 5px var(--cyan));}
+  .pipe-line.active-purple { stroke: var(--purple); stroke-dasharray: none; filter: drop-shadow(0 0 5px var(--purple));}
+  .pipe-line.active-amber { stroke: var(--amber); stroke-dasharray: none; filter: drop-shadow(0 0 5px var(--amber));}
+
+  /* Animated Packets */
+  .packet {
+      position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800;
+      background: #fff; color: #000; padding: 4px 8px; border-radius: 4px;
+      opacity: 0; z-index: 25; pointer-events: none; white-space: nowrap;
+      transform: translate(-50%, -50%); transition: left 0.6s ease-in-out, top 0.6s ease-in-out;
+  }
+  .dp-req { background: var(--cyan); box-shadow: 0 0 10px var(--cyan);}
+  .dp-html { background: var(--amber); box-shadow: 0 0 10px var(--amber);}
+  .dp-json { background: var(--purple); color: #fff; box-shadow: 0 0 10px var(--purple);}
+  .dp-error { background: var(--red); color: white; box-shadow: 0 0 10px var(--red);}
+
+  /* Detour Barrier */
+  .detour-sign {
+      position: absolute; top: 165px; left: 50%; transform: translate(-50%, -50%) rotate(-15deg);
+      background: var(--red); color: #fff; font-family: monospace; font-size: 10px; font-weight: bold;
+      padding: 4px 8px; border-radius: 4px; box-shadow: 0 0 15px var(--red); opacity: 0; z-index: 30; transition: opacity 0.3s;
+  }
+
+  /* Info cards */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; transition: all 0.2s; }
+  .info-card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .info-card-val { font-size: 14px; font-weight: 700; color: var(--text); }
+
+  /* Code blocks */
+  .code-block { background: #020617; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 16px 0; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);}
+  .code-header { padding: 8px 14px; border-bottom: 1px solid var(--surface2); display: flex; align-items: center; gap: 8px; background: var(--surface); }
+  .code-lang { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  .code-body { padding: 14px 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; line-height: 1.7; overflow-x: auto; color: #e2e8f0;}
+  .kw { color: #f472b6; font-weight: bold;}
+  .fn { color: #818cf8; }
+  .str { color: var(--spring-green); }
+  .an { color: var(--amber); }
+  .cm { color: var(--muted); font-style: italic; }
+  
+  .hl-cyan { background: rgba(34, 211, 238, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--cyan); }
+  .hl-purple { background: rgba(192, 132, 252, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--purple); }
+  .hl-red { background: rgba(244, 63, 94, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--red); }
+
+  /* Meta Annotation Visual */
+  .meta-box { border: 2px solid var(--spring-green); background: rgba(109, 179, 63, 0.05); padding: 20px; border-radius: 12px; box-shadow: 0 0 20px rgba(109, 179, 63, 0.1); margin-top: 20px;}
+  .meta-title { font-family: 'JetBrains Mono'; font-size: 12px; color: var(--spring-green); font-weight: bold; margin-bottom: 10px; border-bottom: 1px dashed var(--spring-green); padding-bottom: 5px;}
+
+  @keyframes shakeError {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        50% { transform: translateX(5px); }
+        75% { transform: translateX(-5px); }
+        100% { transform: translateX(0); }
+  }
+
+  /* ─── RIGHT PANEL ─── */
+  #right {
+    border-left: 1px solid var(--border); overflow-y: auto; padding: 20px 16px;
+    background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .right-section { margin-bottom: 24px; }
+  .right-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted2); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .metric-card {
+    background: var(--surface2); border-radius: 8px; padding: 12px 14px;
+    margin-bottom: 8px; border: 1px solid var(--border); transition: all 0.3s;
+  }
+  .metric-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 4px; text-transform: uppercase;}
+  .metric-val { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .metric-sub { font-size: 10px; color: var(--muted2); margin-top: 4px; }
+  
+  .metric-green { color: var(--spring-green); text-shadow: 0 0 10px rgba(109, 179, 63, 0.3);}
+  .metric-cyan { color: var(--cyan); text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);}
+  .metric-red { color: var(--red); text-shadow: 0 0 10px rgba(244, 63, 94, 0.3); animation: shakeError 0.4s infinite;}
+
+  /* Dynamic State Panel */
+  .state-panel { background: #000; border: 1px solid var(--border2); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 10px; line-height: 1.5; margin-bottom: 15px; color: var(--text);}
+  .sp-key { color: var(--muted); }
+  .sp-val { color: var(--cyan); font-weight: bold;}
+  .sp-err { color: var(--red); font-weight: bold;}
+
+  /* ─── FOOTER ─── */
+  #footer {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 36px;
+    background: rgba(6, 9, 14, 0.95); border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; gap: 16px;
+    font-size: 11px; font-weight: 600; color: var(--muted); backdrop-filter: blur(8px); z-index: 99;
+  }
+  .footer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--spring-green); flex-shrink: 0; box-shadow: 0 0 8px var(--spring-green);}
+  .kbd {
+    display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 4px;
+    background: var(--surface2); border: 1px solid var(--border2); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #fff;
+  }
+  .separator { color: var(--surface3); }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <a href="../../index.html?pathway=keytopics" style="text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-right: 20px; flex-shrink: 0; transition: opacity 0.2s;">
+    <span>←</span> Back
+  </a>
+  <div class="brand">
+    <div class="brand-dot"></div>
+    Spring MVC Routing Engine
+  </div>
+  <div class="step-tabs" id="tabs"></div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
+    <button class="nav-btn primary" id="nextBtn" onclick="navigate(1)">Next →</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT -->
+  <div id="left">
+    <div class="left-section-title">Active Request</div>
+    
+    <div class="request-block" id="req-block">
+      <div class="req-header">
+        <span class="method-badge method-get">GET</span>
+        <span class="req-path" id="r-path">/home</span>
+      </div>
+      <div class="req-body" id="r-body">
+        Accept: text/html<br>
+        Host: localhost:8080
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="left-section-title">Dispatcher Pipeline</div>
+    <div class="phase-list" id="phaseList"></div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center" id="scenes">
+
+    <!-- SCENE 0: Overview -->
+    <div class="scene active" id="scene0">
+      <div class="scene-header">
+        <div class="scene-badge badge-spring">Architecture</div>
+        <div class="scene-title">The MVC Routing Engine</div>
+        <div class="scene-sub">Every developer uses <code>@RestController</code>, but very few understand the mechanical routing engine underneath. If you don't understand the <code>DispatcherServlet</code>, debugging 406 errors is impossible. Let's open the black box.</div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title">🧠 DispatcherServlet</div>
+          <div class="info-card-val">The Front Controller</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:5px;">Intercepts EVERY incoming HTTP request and decides exactly which component should handle it.</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">📄 ViewResolver</div>
+          <div class="info-card-val">Template Engine</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:5px;">Scans your hard drive for HTML/JSP templates, injects data, and renders full web pages.</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">📦 HttpMessageConverter</div>
+          <div class="info-card-val">Data Serializer (Jackson)</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:5px;">Bypasses templates entirely. Translates raw Java objects into JSON or XML for API clients.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Persistent Architecture Diagram -->
+    <div class="arch-diagram" id="arch-canvas" style="display: none;">
+        <svg class="pipe-layer">
+            <path class="pipe-line" id="pipe-in" d="M 50% 10 L 50% 80"></path>
+            <!-- Dispatcher to Controller -->
+            <path class="pipe-line" id="pipe-d-c" d="M 50% 130 L 50% 160"></path>
+            
+            <!-- Dispatcher to View (Left) -->
+            <path class="pipe-line" id="pipe-d-v" d="M 50% 130 C 50% 200, 140 200, 140 240"></path>
+            
+            <!-- Dispatcher to Jackson (Right) -->
+            <path class="pipe-line" id="pipe-d-j" d="M 50% 130 C 50% 200, calc(100% - 140px) 200, calc(100% - 140px) 240"></path>
+            
+            <!-- View to Client -->
+            <path class="pipe-line" id="pipe-v-c" d="M 140 280 L 140 310"></path>
+            <!-- Jackson to Client -->
+            <path class="pipe-line" id="pipe-j-c" d="M calc(100% - 140px) 280 L calc(100% - 140px) 310"></path>
+        </svg>
+
+        <div class="engine-core" id="n-disp">DispatcherServlet<span>The Brain</span></div>
+        
+        <div class="node node-controller" id="n-ctrl">@Controller</div>
+
+        <!-- Barriers -->
+        <div class="detour-sign" id="detour">ABORT! @ResponseBody</div>
+
+        <!-- Handlers -->
+        <div class="node node-view" id="n-view">ViewResolver<br><span style="font-size:8px; color:var(--muted);">(Thymeleaf/JSP)</span></div>
+        <div class="node node-converter" id="n-conv">MessageConverter<br><span style="font-size:8px; color:var(--muted);">(Jackson)</span></div>
+        
+        <!-- Outputs -->
+        <div class="client-end ce-browser" id="ce-browser">Browser<br><span style="font-size:8px; color:var(--amber);">text/html</span></div>
+        <div class="client-end ce-mobile" id="ce-mobile">Mobile/SPA<br><span style="font-size:8px; color:var(--purple);">application/json</span></div>
+
+        <!-- Moving Packet -->
+        <div class="packet" id="pkt"></div>
+    </div>
+
+    <!-- SCENE 1: Traditional Pipeline -->
+    <div class="scene" id="scene1">
+      <div class="scene-header">
+        <div class="scene-badge badge-amber">Legacy</div>
+        <div class="scene-title">The Traditional Pipeline</div>
+        <div class="scene-sub">When your method returns a string like <code>"home"</code>, the DispatcherServlet routes that string to the <strong>ViewResolver</strong>. It finds <code>home.html</code> on the disk and returns a full webpage.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JAVA</span></div>
+        <div class="code-body">
+<span class="an">@Controller</span>
+<span class="kw">public class</span> <span class="ty">WebController</span> {
+    <span class="an">@GetMapping</span>(<span class="str">"/home"</span>)
+    <span class="kw">public</span> <span class="ty">String</span> <span class="fn">getHome</span>(<span class="ty">Model</span> m) {
+        m.addAttribute(<span class="str">"user"</span>, <span class="str">"Zuber"</span>);
+<span class="hl-cyan">        <span class="kw">return</span> <span class="str">"home"</span>; <span class="cm">// -> Routes to ViewResolver</span></span>
+    }
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 2: The Crash -->
+    <div class="scene" id="scene2">
+      <div class="scene-header">
+        <div class="scene-badge badge-red">Disaster</div>
+        <div class="scene-title">The API Catastrophe</div>
+        <div class="scene-sub">You try to build an API. You return a <code>User</code> object. The DispatcherServlet blindly fires that object into the ViewResolver. It searches for an HTML file named <code>User@0x12A4</code>, fails, and crashes.</div>
+      </div>
+      <div class="code-block" style="border-color: var(--red); box-shadow: inset 0 0 20px rgba(244,63,94,0.2);">
+        <div class="code-header" style="background: rgba(244,63,94,0.1);"><span class="code-lang" style="color:var(--red);">JAVA</span></div>
+        <div class="code-body">
+<span class="an">@Controller</span>
+<span class="kw">public class</span> <span class="ty">ApiController</span> {
+    <span class="an">@GetMapping</span>(<span class="str">"/api/user"</span>)
+    <span class="kw">public</span> <span class="ty">User</span> <span class="fn">getUser</span>() {
+<span class="hl-red">        <span class="kw">return new</span> User(<span class="str">"Bob"</span>); <span class="cm">// MASSIVE CRASH!</span></span>
+    }
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 3: Detour -->
+    <div class="scene" id="scene3">
+      <div class="scene-header">
+        <div class="scene-badge badge-purple">Solution</div>
+        <div class="scene-title">The @ResponseBody Detour</div>
+        <div class="scene-sub">To fix this, we inject <code>@ResponseBody</code>. This is a physical barricade. It screams: <em>'ABORT! Skip the ViewResolver!'</em> The object is forcefully detoured into Jackson, which serializes it to JSON.</div>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JAVA</span></div>
+        <div class="code-body">
+<span class="an">@Controller</span>
+<span class="kw">public class</span> <span class="ty">ApiController</span> {
+    <span class="an">@GetMapping</span>(<span class="str">"/api/user"</span>)
+<span class="hl-purple">    <span class="an">@ResponseBody</span> <span class="cm">// THE DETOUR BARRICADE</span></span>
+    <span class="kw">public</span> <span class="ty">User</span> <span class="fn">getUser</span>() {
+        <span class="kw">return new</span> User(<span class="str">"Bob"</span>); 
+    }
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 4: Meta Annotation -->
+    <div class="scene" id="scene4">
+      <div class="scene-header">
+        <div class="scene-badge badge-spring">Exposed</div>
+        <div class="scene-title">The Meta-Annotation Secret</div>
+        <div class="scene-sub">Writing <code>@ResponseBody</code> on 50 different methods is bloated. So, Spring engineers created <code>@RestController</code>. It contains ZERO new routing logic. It is literally just syntactic sugar.</div>
+      </div>
+      <div class="meta-box">
+        <div class="meta-title">Decompiled: RestController.java</div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6; color:#e2e8f0;">
+            <span class="an">@Target</span>(ElementType.TYPE)<br>
+            <span class="an">@Retention</span>(RetentionPolicy.RUNTIME)<br>
+            <span class="an">@Documented</span><br><br>
+            <span style="background: rgba(109,179,63,0.2); padding: 2px 5px; border-radius:4px; font-weight:bold; color:var(--spring-green);">@Controller</span><br>
+            <span style="background: rgba(109,179,63,0.2); padding: 2px 5px; border-radius:4px; font-weight:bold; color:var(--spring-green);">@ResponseBody</span><br>
+            <span class="kw">public @interface</span> <span class="ty">RestController</span> {<br>
+            &nbsp;&nbsp;<span class="cm">// Zero routing logic.</span><br>
+            &nbsp;&nbsp;<span class="cm">// Pure syntactic sugar wrapping the detour.</span><br>
+            }
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 5: Content Negotiation -->
+    <div class="scene" id="scene5">
+      <div class="scene-header">
+        <div class="scene-badge badge-cyan">Content Negotiation</div>
+        <div class="scene-title">The 406 Error Mystery</div>
+        <div class="scene-sub">What if a client requests XML but you only have Jackson (JSON) loaded? The converter realizes it CANNOT satisfy the request. It throws a <code>406 Not Acceptable</code> error.</div>
+      </div>
+      
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+          <div class="code-block" style="margin:0;">
+            <div class="code-header"><span class="code-lang">HTTP Client</span></div>
+            <div class="code-body">
+<span class="kw">GET</span> /api/user <span class="num">HTTP/1.1</span>
+<span class="err-hl">Accept: application/xml</span>
+            </div>
+          </div>
+          <div class="code-block" style="margin:0;">
+            <div class="code-header"><span class="code-lang">pom.xml Fix</span></div>
+            <div class="code-body">
+&lt;dependency&gt;
+  &lt;groupId&gt;com.fasterxml...&lt;/groupId&gt;
+<span class="hl-cyan">  &lt;artifactId&gt;jackson-dataformat-xml&lt;/artifactId&gt;</span>
+&lt;/dependency&gt;
+            </div>
+          </div>
+      </div>
+    </div>
+
+  </div><!-- end center -->
+
+  <!-- RIGHT -->
+  <div id="right">
+    <div class="right-section">
+      <div class="right-title">⚡ Live Engine Metrics</div>
+      <div class="metric-card">
+        <div class="metric-label">Routing Latency</div>
+        <div class="metric-val metric-cyan" id="m-lat">0.0 ms</div>
+        <div class="metric-sub">DispatcherServlet Overhead</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Response Status</div>
+        <div class="metric-val metric-green" id="m-status">--</div>
+        <div class="metric-sub" id="ms-status">HTTP Code</div>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <div class="right-title">🔍 Context State</div>
+      <div class="state-panel" id="state-panel">
+        <span style="color: var(--muted2);">[Engine Idle]</span>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <div class="right-title">📶 Pipeline Flow</div>
+      <div class="phase-list" id="r-phaseList" style="padding:0;">
+          <!-- Cloned phases will go here visually -->
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- FOOTER -->
+<div id="footer">
+  <div class="footer-dot pulse"></div>
+  <span>Spring Boot Routing Engine</span>
+  <span class="separator">|</span>
+  <span>Use <span class="kbd">←</span> <span class="kbd">→</span> to navigate</span>
+  <span class="separator">|</span>
+  <span id="footerStage">Stage: Overview</span>
+</div>
+
+<script>
+  const STAGES = [
+    { id: 'scene0', short: 'Overview',  phase: 'Architecture Overview' },
+    { id: 'scene1', short: 'Legacy',    phase: '1 · ViewResolver (HTML)' },
+    { id: 'scene2', short: 'Disaster',  phase: '2 · Controller API Crash' },
+    { id: 'scene3', short: 'Detour',    phase: '3 · @ResponseBody Detour' },
+    { id: 'scene4', short: 'Sugar',     phase: '4 · @RestController' },
+    { id: 'scene5', short: '406 Error', phase: '5 · Content Negotiation' }
+  ];
+
+  const PHASES = [
+    { label: 'DispatcherServlet', id: 'p-ds' },
+    { label: '@Controller',       id: 'p-ctrl' },
+    { label: 'ViewResolver',      id: 'p-vr' },
+    { label: 'MessageConverter',  id: 'p-mc' },
+    { label: 'Client Delivery',   id: 'p-cd' }
+  ];
+
+  let current = 0;
+
+  function buildUI() {
+    const tabContainer = document.getElementById('tabs');
+    STAGES.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'tab' + (i === 0 ? ' active' : '');
+      div.innerHTML = `<span class="tab-num">${i}</span>${s.short}`;
+      div.onclick = () => goTo(i);
+      tabContainer.appendChild(div);
+    });
+
+    const pContainer = document.getElementById('phaseList');
+    const rContainer = document.getElementById('r-phaseList');
+    PHASES.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'phase-item';
+      div.id = 'l-phase-' + i;
+      div.innerHTML = `<div class="phase-dot"></div><span class="phase-label">${p.label}</span>`;
+      pContainer.appendChild(div);
+
+      const rdiv = document.createElement('div');
+      rdiv.className = 'phase-item';
+      rdiv.id = 'r-phase-' + i;
+      rdiv.innerHTML = `<div class="phase-dot"></div><span class="phase-label">${p.label}</span>`;
+      rContainer.appendChild(rdiv);
+    });
+  }
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function setLineActive(id, colorClass) {
+      const el = document.getElementById(id);
+      el.classList.add(colorClass);
+  }
+  function clearLines() {
+      ['pipe-in', 'pipe-d-c', 'pipe-d-v', 'pipe-d-j', 'pipe-v-c', 'pipe-j-c'].forEach(id => {
+          document.getElementById(id).className = 'pipe-line';
+      });
+  }
+
+  async function animPacket(startSelector, endSelector, typeClass, textStr, duration) {
+      const pkt = document.getElementById('pkt');
+      pkt.className = `packet ${typeClass}`;
+      pkt.innerText = textStr;
+      
+      // We'll use CSS translation for animation based on percentage/px
+      // Since SVG paths are hard to trace exactly without libs, we'll do straight lines
+      pkt.style.transition = 'none';
+      pkt.style.opacity = '1';
+      
+      if(startSelector === 'start') { pkt.style.top = '10px'; pkt.style.left = '50%'; }
+      else if(startSelector === 'disp') { pkt.style.top = '80px'; pkt.style.left = '50%'; }
+      else if(startSelector === 'ctrl') { pkt.style.top = '160px'; pkt.style.left = '50%'; }
+      else if(startSelector === 'view') { pkt.style.top = '240px'; pkt.style.left = '140px'; }
+      else if(startSelector === 'conv') { pkt.style.top = '240px'; pkt.style.left = 'calc(100% - 140px)'; }
+
+      void pkt.offsetWidth; // reflow
+
+      pkt.style.transition = `top ${duration}ms ease-in-out, left ${duration}ms ease-in-out`;
+      
+      if(endSelector === 'disp') { pkt.style.top = '80px'; pkt.style.left = '50%'; }
+      else if(endSelector === 'ctrl') { pkt.style.top = '160px'; pkt.style.left = '50%'; }
+      else if(endSelector === 'view') { pkt.style.top = '240px'; pkt.style.left = '140px'; }
+      else if(endSelector === 'conv') { pkt.style.top = '240px'; pkt.style.left = 'calc(100% - 140px)'; }
+      else if(endSelector === 'cb') { pkt.style.top = '310px'; pkt.style.left = '140px'; }
+      else if(endSelector === 'cm') { pkt.style.top = '310px'; pkt.style.left = 'calc(100% - 140px)'; }
+      
+      await sleep(duration);
+  }
+
+  async function updateDynamicContent(idx) {
+    const mLat = document.getElementById('m-lat');
+    const mStatus = document.getElementById('m-status');
+    const statePanel = document.getElementById('state-panel');
+    
+    // Reset Pipeline Visuals
+    for(let i=0; i<5; i++) {
+        document.getElementById('l-phase-'+i).className = 'phase-item';
+        document.getElementById('r-phase-'+i).className = 'phase-item';
+    }
+    
+    document.getElementById('arch-canvas').style.display = (idx > 0 && idx < 4) || idx === 5 ? 'flex' : 'none';
+    clearLines();
+    document.getElementById('pkt').style.opacity = '0';
+    document.getElementById('n-view').style.opacity = '0.3'; document.getElementById('n-view').style.borderColor = 'var(--amber)'; document.getElementById('n-view').style.color = 'var(--amber)'; document.getElementById('n-view').innerHTML = 'ViewResolver<br><span style="font-size:8px; color:var(--muted);">(Thymeleaf/JSP)</span>'; document.getElementById('n-view').style.animation = 'none';
+    document.getElementById('n-conv').style.opacity = '0.3'; document.getElementById('n-conv').style.borderColor = 'var(--purple)'; document.getElementById('n-conv').style.color = 'var(--purple)'; document.getElementById('n-conv').innerHTML = 'MessageConverter<br><span style="font-size:8px; color:var(--muted);">(Jackson)</span>'; document.getElementById('n-conv').style.animation = 'none';
+    document.getElementById('ce-browser').style.opacity = '0';
+    document.getElementById('ce-mobile').style.opacity = '0';
+    document.getElementById('detour').style.opacity = '0';
+
+    if (idx === 0) { // Overview
+        mLat.innerText = "0.0 ms";
+        mStatus.innerText = "--"; mStatus.className = "metric-val metric-green";
+        statePanel.innerHTML = `<span style="color: var(--muted2);">[Engine Idle]</span>`;
+        document.getElementById('r-path').innerText = "Awaiting...";
+        document.getElementById('m-badge').innerText = "INIT";
+    } 
+    else if (idx === 1) { // Legacy
+        mLat.innerText = "1.2 ms";
+        mStatus.innerText = "200 OK"; mStatus.className = "metric-val metric-green";
+        statePanel.innerHTML = `<span class="sp-key">Return Type:</span> <span class="sp-val">String</span><br><span class="sp-key">Routing:</span> <span class="sp-val" style="color:var(--amber);">ViewResolver</span>`;
+        document.getElementById('r-path').innerText = "/home"; document.getElementById('m-badge').innerText = "GET"; document.getElementById('m-badge').className = "method-badge method-get";
+        
+        document.getElementById('n-view').style.opacity = '1';
+        document.getElementById('ce-browser').style.opacity = '1';
+        
+        document.getElementById('l-phase-0').classList.add('active'); document.getElementById('r-phase-0').classList.add('active');
+        
+        setLineActive('pipe-in', 'active-cyan');
+        await animPacket('start', 'disp', 'dp-req', 'GET /home', 500);
+        
+        document.getElementById('l-phase-0').classList.replace('active', 'done'); document.getElementById('r-phase-0').classList.replace('active', 'done');
+        document.getElementById('l-phase-1').classList.add('active'); document.getElementById('r-phase-1').classList.add('active');
+        
+        setLineActive('pipe-d-c', 'active-cyan');
+        await animPacket('disp', 'ctrl', 'dp-req', 'String "home"', 500);
+        
+        document.getElementById('l-phase-1').classList.replace('active', 'done'); document.getElementById('r-phase-1').classList.replace('active', 'done');
+        document.getElementById('l-phase-2').classList.add('active'); document.getElementById('r-phase-2').classList.add('active');
+        
+        setLineActive('pipe-d-v', 'active-amber');
+        await animPacket('ctrl', 'view', 'dp-html', 'Model+Template', 600);
+        
+        document.getElementById('l-phase-2').classList.replace('active', 'done'); document.getElementById('r-phase-2').classList.replace('active', 'done');
+        document.getElementById('l-phase-4').classList.add('active'); document.getElementById('r-phase-4').classList.add('active');
+        
+        setLineActive('pipe-v-c', 'active-amber');
+        await animPacket('view', 'cb', 'dp-html', '<html>...</html>', 500);
+        document.getElementById('pkt').style.opacity = '0';
+        document.getElementById('l-phase-4').classList.replace('active', 'done'); document.getElementById('r-phase-4').classList.replace('active', 'done');
+    }
+    else if (idx === 2) { // Disaster
+        mLat.innerText = "5.4 ms";
+        mStatus.innerText = "500 ERROR"; mStatus.className = "metric-val metric-red";
+        statePanel.innerHTML = `<span class="sp-key">Return Type:</span> <span class="sp-val">Object (User)</span><br><span class="sp-key">Routing:</span> <span class="sp-err">ViewResolver</span><br><span class="sp-key">Error:</span> <span class="sp-err">Template Not Found</span>`;
+        document.getElementById('r-path').innerText = "/api/user";
+        
+        document.getElementById('n-view').style.opacity = '1';
+        
+        document.getElementById('l-phase-0').classList.add('done'); document.getElementById('r-phase-0').classList.add('done');
+        document.getElementById('l-phase-1').classList.add('done'); document.getElementById('r-phase-1').classList.add('done');
+        document.getElementById('l-phase-2').classList.add('active'); document.getElementById('r-phase-2').classList.add('active');
+        
+        setLineActive('pipe-in', 'active-cyan'); setLineActive('pipe-d-c', 'active-cyan'); setLineActive('pipe-d-v', 'active-amber');
+        
+        await animPacket('ctrl', 'view', 'dp-req', 'User@0x12A4', 600);
+        
+        document.getElementById('n-view').style.borderColor = 'var(--red)'; document.getElementById('n-view').style.color = 'var(--red)';
+        document.getElementById('n-view').innerHTML = `500 ERROR<br><span style="font-size:8px;">Template 'User@0x12A4' not found</span>`;
+        document.getElementById('n-view').style.animation = 'shakeError 0.5s infinite';
+        
+        document.getElementById('l-phase-2').classList.replace('active', 'err'); document.getElementById('r-phase-2').classList.replace('active', 'err');
+    }
+    else if (idx === 3) { // Detour
+        mLat.innerText = "2.1 ms";
+        mStatus.innerText = "200 OK"; mStatus.className = "metric-val metric-green";
+        statePanel.innerHTML = `<span class="sp-key">Return Type:</span> <span class="sp-val">Object (User)</span><br><span class="sp-key">Directive:</span> <span class="sp-val" style="color:var(--purple);">@ResponseBody</span><br><span class="sp-key">Routing:</span> <span class="sp-val" style="color:var(--purple);">MessageConverter</span>`;
+        
+        document.getElementById('n-conv').style.opacity = '1';
+        document.getElementById('ce-mobile').style.opacity = '1';
+        
+        document.getElementById('l-phase-0').classList.add('done'); document.getElementById('r-phase-0').classList.add('done');
+        document.getElementById('l-phase-1').classList.add('active'); document.getElementById('r-phase-1').classList.add('active');
+        
+        setLineActive('pipe-in', 'active-cyan'); setLineActive('pipe-d-c', 'active-cyan');
+        
+        document.getElementById('detour').style.opacity = '1';
+        await sleep(400);
+        
+        document.getElementById('l-phase-1').classList.replace('active', 'done'); document.getElementById('r-phase-1').classList.replace('active', 'done');
+        document.getElementById('l-phase-3').classList.add('active'); document.getElementById('r-phase-3').classList.add('active');
+        
+        setLineActive('pipe-d-j', 'active-purple');
+        await animPacket('ctrl', 'conv', 'dp-json', 'User@0x12A4', 600);
+        
+        document.getElementById('l-phase-3').classList.replace('active', 'done'); document.getElementById('r-phase-3').classList.replace('active', 'done');
+        document.getElementById('l-phase-4').classList.add('active'); document.getElementById('r-phase-4').classList.add('active');
+        
+        setLineActive('pipe-j-c', 'active-purple');
+        await animPacket('conv', 'cm', 'dp-json', '{"name":"Bob"}', 500);
+        document.getElementById('pkt').style.opacity = '0';
+        document.getElementById('l-phase-4').classList.replace('active', 'done'); document.getElementById('r-phase-4').classList.replace('active', 'done');
+    }
+    else if (idx === 4) { // Sugar
+        mLat.innerText = "0.0 ms";
+        mStatus.innerText = "--"; mStatus.className = "metric-val metric-green";
+        statePanel.innerHTML = `<span class="sp-key">Analysis:</span> <span class="sp-val">Source Code Verified</span>`;
+        // No pipeline animation needed, just scene change
+    }
+    else if (idx === 5) { // 406 Error
+        mLat.innerText = "1.8 ms";
+        mStatus.innerText = "406 ERROR"; mStatus.className = "metric-val metric-red";
+        statePanel.innerHTML = `<span class="sp-key">Accept Header:</span> <span class="sp-val">application/xml</span><br><span class="sp-key">Available Converters:</span> <span class="sp-err">Jackson (JSON only)</span>`;
+        
+        document.getElementById('n-conv').style.opacity = '1';
+        setLineActive('pipe-d-j', 'active-purple');
+        
+        document.getElementById('l-phase-0').classList.add('done'); document.getElementById('r-phase-0').classList.add('done');
+        document.getElementById('l-phase-1').classList.add('done'); document.getElementById('r-phase-1').classList.add('done');
+        document.getElementById('l-phase-3').classList.add('active'); document.getElementById('r-phase-3').classList.add('active');
+        
+        await animPacket('ctrl', 'conv', 'dp-json', 'User Object', 600);
+        
+        const conv = document.getElementById('n-conv');
+        conv.style.borderColor = 'var(--red)';
+        conv.style.color = 'var(--red)';
+        conv.innerHTML = '406 Not Acceptable<br><span style="font-size:8px;">(No XML Converter!)</span>';
+        conv.style.animation = 'shakeError 0.5s infinite';
+        
+        document.getElementById('l-phase-3').classList.replace('active', 'err'); document.getElementById('r-phase-3').classList.replace('active', 'err');
+    }
+  }
+
+  function goTo(idx) {
+    const scenes = document.querySelectorAll('.scene');
+    scenes.forEach(s => s.classList.remove('active'));
+    document.getElementById(STAGES[idx].id).classList.add('active');
+
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach((t, i) => {
+      t.classList.remove('active', 'done');
+      if (i < idx) t.classList.add('done');
+      if (i === idx) t.classList.add('active');
+    });
+
+    document.getElementById('footerStage').textContent = 'Stage: ' + STAGES[idx].phase;
+    document.getElementById('prevBtn').disabled = idx === 0;
+    document.getElementById('nextBtn').disabled = idx === STAGES.length - 1;
+    document.getElementById('nextBtn').textContent = idx === STAGES.length - 1 ? 'Done ✓' : 'Next →';
+
+    current = idx;
+    updateDynamicContent(idx);
+    document.getElementById('center').scrollTop = 0;
+  }
+
+  function navigate(dir) {
+    const next = Math.max(0, Math.min(STAGES.length - 1, current + dir));
+    goTo(next);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
+  });
+
+  buildUI();
+  updateDynamicContent(0);
+</script>
+</body>
+</html>

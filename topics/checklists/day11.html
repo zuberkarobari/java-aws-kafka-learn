@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 11  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 11  ·  STUDY CHECKLIST — Collections Framework Deep Dive — Internals, Concurrency, Iterators & 80 Interview Q&A Cards</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 11 Checklist</div>
+    <h1 style="margin-top: 0;">Collections Framework Deep Dive — Internals, Concurrency, Iterators & 80 Interview Q&A Cards</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 11 · STUDY CHECKLIST</h3>
+    <h3>~</h3>
+    <h3>6 Deep-Dives</h3>
+    <p>Day 11 Mentor Note:</p>
+    <h3>Full Day Schedule</h3>
+    <p>Morning warm-up — Day 10 Generics + JMM recall</p>
+    <h2>Topic 1: List — ArrayList internals, growth, LinkedList, Arrays.asList vs List.of</h2>
+    <hr class="section-divider" />
+    <h2>Topic 2: Map — HashMap full internal chain, LinkedHashMap LRU, TreeMap NavigableMap</h2>
+    <hr class="section-divider" />
+    <h2>Topic 3: Set — HashSet, LinkedHashSet, TreeSet, EnumSet</h2>
+    <hr class="section-divider" />
+    <h2>Topic 4: Queue & Deque — ArrayDeque, PriorityQueue heap, BlockingQueue family</h2>
+    <hr class="section-divider" />
+    <h2>Topic 5: Iterators — fail-fast, fail-safe, ConcurrentModificationException, safe patterns</h2>
+    <hr class="section-divider" />
+    <h2>Topic 6: Concurrent Collections — ConcurrentHashMap internals, COWAL, compound ops</h2>
+    <p>Coding Lab — 8 exercises</p>
+    <p>80-Card Collections Interview Q&A — full drill</p>
+    <p>Daily Review + self-assessment</p>
+
+    <div class="mentor-card" style="border-left-color: var(--warning) !important;">
+      <div class="mentor-avatar">🏆</div>
+      <div class="mentor-bubble">
+        <h4 class="mentor-title" style="color: var(--warning) !important;">Today's Golden Rule</h4>
+        <p class="mentor-text">For every collection type know: internal data structure, time complexity of add/get/remove/contains, thread safety, iteration order, null handling, and one production use case. If you can recite those six dimensions for HashMap, ArrayList, TreeMap, PriorityQueue, ArrayDeque, and ConcurrentHashMap, you will answer 80% of Collections questions correctly.</p>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>☀️</h2>
+    <h3>Morning Warm-Up — Day 10 Core Java Recall</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">PECS — write: <? extends T> and <? super T> use case in one sentence each</span></li>
+      <li><span class="checkbox-label">Double-checked locking: why is volatile required? What reordering does it prevent?</span></li>
+      <li><span class="checkbox-label">Java Record: 4 auto-generated members? The accessor method naming trap?</span></li>
+      <li><span class="checkbox-label">Sealed class + pattern matching switch: what does the compiler guarantee?</span></li>
+    </ul>
+    <hr class="section-divider" />
+    <h2>🔵 Topic 1: List — ArrayList, LinkedList, Arrays.asList, List.of</h2>
+    <h3>Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">ArrayList: internal Object[] array, initial capacity 10, growth formula newCap = old + (old>>1)</span></li>
+      <li><span class="checkbox-label">System.arraycopy in ArrayList — what it does, when called (shift + resize)</span></li>
+      <li><span class="checkbox-label">Time complexity: add O(1) amortised, add(index) O(n), get O(1), remove O(n)</span></li>
+      <li><span class="checkbox-label">LinkedList: doubly-linked Node objects, O(1) add/remove at ends, O(n) random access</span></li>
+      <li><span class="checkbox-label">ArrayList vs LinkedList — cache locality argument, when LinkedList actually wins</span></li>
+      <li><span class="checkbox-label">Arrays.asList() — fixed-size, backed by array, set() works, add/remove UOE</span></li>
+      <li><span class="checkbox-label">List.of() — truly immutable, no nulls, no mutations</span></li>
+      <li><span class="checkbox-label">Collections.unmodifiableList() — wrapper, mutable through original reference</span></li>
+      <li><span class="checkbox-label">CopyOnWriteArrayList — snapshot on write, O(n) write, O(1) lock-free read</span></li>
+      <li><span class="checkbox-label">subList() — live view, structural modification danger, defensive copy fix</span></li>
+    </ul>
+    <p>ArrayList Growth — The Numbers You Must Know:</p>
+    <pre><code class="language-java">// ArrayList growth: 10→15→22→33→49→73... newCap = old + (old&gt;&gt;1)
+List&lt;Transaction&gt; sized = new ArrayList&lt;&gt;(500_000); // zero resizes
+// Arrays.asList vs List.of
+String[] arr = {"DEBIT", "CREDIT"};
+List&lt;String&gt; asList = Arrays.asList(arr);
+asList.set(0, "REFUND");   // OK — modifies arr[0] too (shared array)
+// asList.add("X");         // UnsupportedOperationException
+List&lt;String&gt; immutable = List.of("DEBIT", "CREDIT");
+// immutable.set(0, "X");  // UnsupportedOperationException
+// List.of(null);           // NullPointerException
+// CopyOnWriteArrayList: read-heavy, rarely-written shared list
+CopyOnWriteArrayList&lt;EventHandler&gt; handlers = new CopyOnWriteArrayList&lt;&gt;();
+// Iterator: works on snapshot — no CME if another thread adds during iteration
+// subList danger
+List&lt;Transaction&gt; page = allTx.subList(0, 20);  // LIVE view
+// allTx.add(tx) → CME on next page operation
+// FIX: new ArrayList&lt;&gt;(allTx.subList(0, 20))  — defensive copy</code></pre>
+    <h3>Interview Questions — Topic 1</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is the internal structure of ArrayList and how does it grow? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">ArrayList backs elements in an Object[] array. Default initial capacity: 10 (lazy in Java 8+). On add() exceeding capacity: newCapacity = oldCapacity + (oldCapacity >> 1) — ~50% growth. Growth calls Arrays.copyOf() (System.arraycopy JVM intrinsic). add(E) at end: O(1) amortised. add(int, E): O(n) — shifts elements. get(int): O(1) direct index. remove(int): O(n) — shifts elements. Iteration is cache-friendly — contiguous memory.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What is the difference between Arrays.asList() and List.of()? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Arrays.asList(): fixed-size List backed by original array. set() works AND modifies original array. add/remove throw UnsupportedOperationException. Allows null. List.of() (Java 9+): truly immutable — ALL mutations throw UOE. Null throws NPE. More compact implementation. Use Arrays.asList() when you still need element replacement but not structural changes. Use List.of() for true constants.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> When would you choose LinkedList over ArrayList? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">LinkedList wins for: frequent insertions/deletions at the HEAD (O(1) vs O(n) shift). Queue/Deque operations with frequent head/tail modification. Mid-list insertion via ListIterator.add() (O(1) vs O(n)). ArrayList wins for everything else — random access O(1) vs O(n), cache locality (contiguous memory vs scattered Nodes). In practice: ArrayDeque outperforms LinkedList even for queue operations. Real-world LinkedList use is rare in modern Java.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>🟢 Topic 2: Map — HashMap Full Internals, LinkedHashMap, TreeMap, EnumMap</h2>
+    <h3>Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">HashMap: array of Node[], each bucket is linked list → tree at 8 nodes (TREEIFY_THRESHOLD)</span></li>
+      <li><span class="checkbox-label">Full hash chain: hashCode() → (h ^ h>>>16) → (n-1) & hash → bucket index</span></li>
+      <li><span class="checkbox-label">Load factor 0.75: resize triggers at capacity × 0.75, doubles capacity, rehashes all</span></li>
+      <li><span class="checkbox-label">Java 8 treeification: threshold 8 → Red-Black tree, untreeify at 6</span></li>
+      <li><span class="checkbox-label">Map.compute(), merge(), computeIfAbsent() — atomic put-if-absent operations</span></li>
+      <li><span class="checkbox-label">LinkedHashMap: insertion-order vs access-order LRU cache with removeEldestEntry</span></li>
+      <li><span class="checkbox-label">TreeMap: Red-Black tree, all 8 NavigableMap methods, null key restriction</span></li>
+    </ul>
+    <p>HashMap Internal Hash Chain — The Full Picture:</p>
+    <p>Step 1: h = key.hashCode(). Step 2: hash = h ^ (h >>> 16) — spreads high bits into low bits. Without this, poor hashCodes differing only in high bits would all hit the same bucket. Step 3: index = (n-1) & hash — n is always power of 2, bitwise AND is hash % n but faster. Step 4: walk bucket's linked list (or TreeNode), comparing hash first then equals(). Treeification at 8 nodes: O(n) → O(log n) lookup — also defends against hash collision DoS attacks.</p>
+    <pre><code class="language-java">// HashMap pre-sizing: avoid resize for N entries
+// threshold = capacity * 0.75, so capacity needed = N / 0.75 + 1
+Map&lt;String, BigDecimal&gt; balances = new HashMap&lt;&gt;(134); // holds 100 without resize
+// merge: atomic upsert with combining function
+totals.merge(accountId, txAmount, BigDecimal::add);
+// absent → puts txAmount. present → replaces with add(existing, txAmount)
+// null return → removes key
+// computeIfAbsent: insert lazily only if absent
+grouped.computeIfAbsent("ACC-001", k -&gt; new ArrayList&lt;&gt;()).add(tx);
+// LinkedHashMap LRU cache (accessOrder=true)
+Map&lt;String, Session&gt; lruCache = new LinkedHashMap&lt;String, Session&gt;(100, 0.75f, true) {
+    protected boolean removeEldestEntry(Map.Entry&lt;String,Session&gt; e) {
+        return size() &gt; 100;  // evict LRU when over capacity
+    }
+};
+// TreeMap: sorted, NavigableMap operations
+TreeMap&lt;LocalDateTime, Transaction&gt; byTime = new TreeMap&lt;&gt;();
+// floorKey(t): largest key &lt;= t
+// ceilingKey(t): smallest key &gt;= t
+// headMap(t): all keys &lt; t
+// tailMap(t): all keys &gt;= t
+// subMap(lo, hi): [lo, hi)
+// firstKey() / lastKey(): min / max</code></pre>
+    <h3>Interview Questions — Topic 2</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> Explain the full hash chain in HashMap from key.hashCode() to bucket index. [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Step 1: h = key.hashCode(). Step 2: hash = h ^ (h >>> 16) — XOR spreads high 16 bits into low 16 so bucket index (which only uses low bits) is influenced by the full hash. Step 3: index = (n-1) & hash where n is always power of 2 — equivalent to hash % n but using fast bitwise AND. Step 4: examine bucket[index] — if empty insert; if occupied walk linked list comparing hash (cheap) then equals() (correct match). Java 8+: if bucket >= 8 nodes, convert to Red-Black tree for O(log n) lookup.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is treeification in HashMap and why was it introduced? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When a bucket accumulates 8+ nodes, HashMap converts it from a linked list to a Red-Black tree (TreeNode). Lookup: O(n) list → O(log n) tree. Untreeify at 6 nodes (hysteresis). MIN_TREEIFY_CAPACITY = 64: below 64 total buckets, resize instead (cheaper). Before Java 8: hash collision attacks could craft keys all landing in same bucket — O(n) per operation could DoS a web server. Treeification caps worst-case at O(log n) regardless of collision count.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What does Map.merge() do and when would you use it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">merge(key, value, remappingFn): if key absent or null → put value. If present → replace with remappingFn(existing, value). If fn returns null → remove key. Classic uses: totals.merge(k, amount, BigDecimal::add) for aggregation; counts.merge(word, 1, Integer::sum) for counting. Replaces the verbose getOrDefault + put pattern with a single atomic-intent call. NOT atomic in HashMap — use ConcurrentHashMap for thread-safe merge.<br><br>☕<br><br>Break<br><br>Hold this thought:<br><br>HashSet is just a HashMap where values are a dummy PRESENT object. This explains everything about HashSet's performance, null handling, and ordering. TreeSet is a TreeMap with the same trick. EnumSet uses a single long bitmask — the most memory-efficient collection in the JDK. After break: Sets in full.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>🟠 Topic 3: Set — HashSet, LinkedHashSet, TreeSet, EnumSet</h2>
+    <h3>Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">HashSet = HashMap<E, PRESENT> — all HashMap characteristics follow directly</span></li>
+      <li><span class="checkbox-label">LinkedHashSet = LinkedHashMap<E, PRESENT> — insertion order preserved, O(1)</span></li>
+      <li><span class="checkbox-label">TreeSet = TreeMap<E, PRESENT> — sorted, NavigableSet, no null, O(log n)</span></li>
+      <li><span class="checkbox-label">EnumSet: bit vector backed by a long — most compact Set for enums, O(1)</span></li>
+      <li><span class="checkbox-label">Set.of() — immutable, no nulls, no duplicate insertion order guarantee</span></li>
+      <li><span class="checkbox-label">TreeSet: compareTo used for equality (not equals) — the hidden trap</span></li>
+      <li><span class="checkbox-label">EnumSet.complementOf(), allOf(), noneOf(), range() factory methods</span></li>
+    </ul>
+    <h3>Set Type</h3>
+    <h3>Structure | Order | Null | Time | Best Use</h3>
+    <h3>HashSet</h3>
+    <p>HashMap backed | None | 1 null | O(1) | Membership test, deduplication</p>
+    <h3>LinkedHashSet</h3>
+    <p>LinkedHashMap backed | Insertion order | 1 null | O(1) | Ordered deduplication</p>
+    <h3>TreeSet</h3>
+    <p>TreeMap backed Red-Black | Sorted | No null | O(log n) | Sorted set, range queries</p>
+    <h3>EnumSet</h3>
+    <pre><code class="language-java">long bitmask  |  Enum ordinal order  |  No null  |  O(1)  |  Enum value sets — fastest</code></pre>
+    <h3>Set.of(...)</h3>
+    <p>Immutable array | No guaranteed order | No null | O(1) | Constant immutable sets</p>
+    <pre><code class="language-java">// EnumSet: single long bitmask — most efficient for enum sets
+enum TxType { DEBIT, CREDIT, REFUND, REVERSAL, FEE }
+EnumSet&lt;TxType&gt; creditTypes = EnumSet.of(TxType.CREDIT, TxType.REFUND);
+// contains(): single bitwise AND — O(1), extremely fast
+// complement: EnumSet.complementOf(creditTypes) → DEBIT, REVERSAL, FEE
+// TreeSet: NavigableSet operations
+TreeSet&lt;String&gt; sorted = new TreeSet&lt;&gt;();
+sorted.addAll(List.of("ACC-003", "ACC-001", "ACC-002"));
+sorted.floor("ACC-002");    // ACC-002 (&lt;=)
+sorted.lower("ACC-002");    // ACC-001 (strictly &lt;)
+sorted.higher("ACC-002");   // ACC-003 (strictly &gt;)
+sorted.subSet("ACC-001", "ACC-003"); // [ACC-001, ACC-002]
+// TreeSet equality uses compareTo/compare — NOT equals()
+// If compareTo returns 0: treated as duplicate — not inserted
+// Even if equals() returns false</code></pre>
+    <h3>Interview Questions — Topic 3</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> How is HashSet implemented and what are its performance characteristics? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">HashSet is backed by a HashMap<E, Object> where all values are a shared PRESENT dummy object. add(e) calls map.put(e, PRESENT). contains(e) calls map.containsKey(e). remove(e) calls map.remove(e). All performance: O(1) amortised — directly from HashMap. One null allowed. No guaranteed order. Not thread-safe. All HashMap characteristics (load factor, treeification, growth) apply. This design means improvements to HashMap automatically improve HashSet.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is EnumSet and why is it more efficient than HashSet for enum values? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">EnumSet uses a bit vector — for enums with <= 64 constants, a single long (RegularEnumSet). Each constant's ordinal() is a bit position. add/contains/remove are single bitwise operations — O(1), no allocation, no hashing, no collision. 5-10x faster and dramatically less memory than HashSet<MyEnum>. Iteration in enum declaration order. Always use EnumSet when element type is an enum — it is always the right choice.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>🟣 Topic 4: Queue & Deque — ArrayDeque, PriorityQueue, BlockingQueue</h2>
+    <h3>Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Queue API: offer/poll/peek (special value) vs add/remove/element (exception)</span></li>
+      <li><span class="checkbox-label">ArrayDeque: circular array, faster than LinkedList AND Stack for all ops</span></li>
+      <li><span class="checkbox-label">Why not java.util.Stack: extends Vector, synchronized on every operation</span></li>
+      <li><span class="checkbox-label">PriorityQueue: min-heap array, O(log n) add/poll, O(1) peek, no null</span></li>
+      <li><span class="checkbox-label">Top-K pattern: min-heap of size K — O(n log k) vs O(n log n) full sort</span></li>
+      <li><span class="checkbox-label">BlockingQueue: put()/take() blocking, LinkedBlockingQueue two-lock design</span></li>
+    </ul>
+    <pre><code class="language-java">// ArrayDeque: circular array — faster than LinkedList for all ops
+Deque&lt;String&gt; stack = new ArrayDeque&lt;&gt;();
+stack.push("first");   // addFirst
+stack.push("second");
+stack.pop();           // "second" — LIFO. No sync overhead unlike Stack.
+// PriorityQueue: min-heap. peek()=O(1), add/poll=O(log n)
+// Top-K largest amounts using a MIN-heap of size K
+int K = 5;
+PriorityQueue&lt;BigDecimal&gt; topK = new PriorityQueue&lt;&gt;(K);
+for (Transaction tx : transactions) {
+    topK.offer(tx.getAmount());
+    if (topK.size() &gt; K) topK.poll(); // evict smallest — keeps K largest
+}
+// Why min-heap? The minimum IN the heap is the one to evict next
+// O(n log K) — far better than O(n log n) sort for small K, huge n
+// Max-heap (largest first):
+PriorityQueue&lt;BigDecimal&gt; maxHeap =
+    new PriorityQueue&lt;&gt;(Comparator.reverseOrder());
+// BlockingQueue producer-consumer
+BlockingQueue&lt;PaymentJob&gt; queue = new ArrayBlockingQueue&lt;&gt;(1000);
+// Producer: queue.put(job)  — blocks if full (back-pressure)
+// Consumer: queue.take()    — blocks if empty
+// LinkedBlockingQueue: two locks (head + tail) → higher concurrent throughput
+// SynchronousQueue: capacity 0 — direct hand-off, used by newCachedThreadPool</code></pre>
+    <h3>Interview Questions — Topic 4</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is PriorityQueue and how does it implement a min-heap? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">PriorityQueue uses a binary heap in an Object[] array. Heap property: parent at index i <= children at 2i+1 and 2i+2 (min-heap). peek(): O(1) — return heap. add(): O(log n) — append, sift up. poll(): O(log n) — remove root, move last element to root, sift down. Iteration does NOT give sorted order — only poll() sequence is sorted. No null allowed. Not thread-safe. For concurrent use: PriorityBlockingQueue.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> What is the difference between LinkedBlockingQueue and ArrayBlockingQueue? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">ArrayBlockingQueue: fixed capacity array, single ReentrantLock shared by producers and consumers, fair mode available. LinkedBlockingQueue: linked nodes, separate locks for head (consumers) and tail (producers) — producers and consumers can proceed simultaneously → higher throughput. Can be unbounded (risk: OOM if consumers slow). Use ArrayBlockingQueue for bounded back-pressure. Use LinkedBlockingQueue for higher-throughput pipelines.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>🔴 Topic 5: Iterators — fail-fast, fail-safe, CME, Safe Patterns</h2>
+    <h3>Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">fail-fast iterator: modCount check → ConcurrentModificationException on mismatch</span></li>
+      <li><span class="checkbox-label">What counts as structural modification vs non-structural (set/get is NOT structural)</span></li>
+      <li><span class="checkbox-label">3 safe remove-during-iteration patterns: Iterator.remove(), removeIf(), stream filter</span></li>
+      <li><span class="checkbox-label">fail-safe iterators: CopyOnWriteArrayList snapshot, ConcurrentHashMap weak-consistency</span></li>
+      <li><span class="checkbox-label">ListIterator: bidirectional, add() and set() safe during iteration</span></li>
+      <li><span class="checkbox-label">Spliterator: parallel-friendly, trySplit(), characteristics flags</span></li>
+    </ul>
+    <pre><code class="language-java">// modCount mechanism: structural mods increment modCount
+// Iterator stores expectedModCount at creation
+// next() checks: modCount != expectedModCount → CME
+// BAD: modify collection during for-each
+for (Transaction tx : transactions) {
+    if (tx.isFailed()) transactions.remove(tx); // CME
+}
+// PATTERN 1: Iterator.remove() — updates modCount + expectedModCount
+Iterator&lt;Transaction&gt; it = transactions.iterator();
+while (it.hasNext()) {
+    if (it.next().isFailed()) it.remove(); // safe
+}
+// PATTERN 2: removeIf() — single-pass, efficient, cleanest
+transactions.removeIf(Transaction::isFailed);
+// PATTERN 3: stream filter — new list (non-destructive)
+List&lt;Transaction&gt; ok = transactions.stream()
+    .filter(tx -&gt; !tx.isFailed()).collect(Collectors.toList());
+// fail-safe: ConcurrentHashMap — weakly consistent, never CME
+// CopyOnWriteArrayList — snapshot at iterator creation, never CME</code></pre>
+    <h3>Interview Questions — Topic 5</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What causes ConcurrentModificationException and what are two safe ways to remove during iteration? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">CME: fail-fast iterator throws when collection's modCount (incremented on any structural modification) does not match iterator's expectedModCount stored at creation. Even single-threaded modification during iteration triggers it. Safe options: 1) Iterator.remove() — updates both counters atomically. 2) Collection.removeIf(predicate) — single-pass, internally safe. 3) Build new filtered list via stream. 4) Use CopyOnWriteArrayList (snapshot iterator) or ConcurrentHashMap (weakly consistent).</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is the difference between a fail-fast and a fail-safe iterator? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Fail-fast: throws CME if collection structurally modified after iterator creation — detected via modCount. Best-effort (not guaranteed in all race conditions). Used by ArrayList, HashMap, HashSet. Fail-safe: never throws CME. CopyOnWriteArrayList: iterator works on snapshot — never sees concurrent modifications, may see stale data. ConcurrentHashMap: weakly consistent — may or may not reflect concurrent modifications. Use fail-safe when iteration must complete without exception even with concurrent writes.<br><br>🥗<br><br>Lunch Break<br><br>Hold this thought:<br><br>ConcurrentHashMap's Java 8 design uses CAS for empty buckets (no lock at all) and synchronized on the first node of an occupied bucket (only locks one bucket at a time). Reads use volatile reads — zero locking. This allows fully concurrent reads and parallel writes to different buckets simultaneously. The subtle trap: compound operations (check-then-act) are still not atomic unless you use compute/merge/computeIfAbsent.<br><br>⚡</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Topic 6: Concurrent Collections — ConcurrentHashMap, COWAL, Atomic Ops</h2>
+    <h3>Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">ConcurrentHashMap Java 8: CAS for empty bucket, synchronized on first node for occupied</span></li>
+      <li><span class="checkbox-label">Reads: volatile reads — zero locking, fully concurrent</span></li>
+      <li><span class="checkbox-label">size() approximate — LongAdder array of cells, summed on size()</span></li>
+      <li><span class="checkbox-label">Compound operation trap: get-then-put race condition</span></li>
+      <li><span class="checkbox-label">Atomic methods: putIfAbsent, computeIfAbsent, merge, compute — truly atomic</span></li>
+      <li><span class="checkbox-label">Collections.synchronizedMap: coarse single lock, iteration needs external sync</span></li>
+    </ul>
+    <pre><code class="language-java">// ConcurrentHashMap Java 8: fine-grained, no global lock
+// READ: volatile reads of Node.val — no lock at all
+// WRITE empty bucket: CAS — atomic CPU instruction, no lock
+// WRITE occupied bucket: synchronized on first node of that bucket only
+// → reads never block writes, writes to different buckets never block each other
+// THE COMPOUND OPERATION TRAP
+// BAD — two separate operations, race condition between them:
+if (!balances.containsKey(id)) {          // Thread A: absent
+    balances.put(id, BigDecimal.ZERO);     // Thread B also sees absent
+}                                          // Both put ZERO — one silently lost
+// GOOD — single atomic operation:
+balances.putIfAbsent(id, BigDecimal.ZERO);
+balances.computeIfAbsent(id, k -&gt; loadFromDB(k));
+// computeIfAbsent: function runs at most ONCE per key — guaranteed
+// Atomic counter pattern
+ConcurrentHashMap&lt;String, LongAdder&gt; counts = new ConcurrentHashMap&lt;&gt;();
+counts.computeIfAbsent(category, k -&gt; new LongAdder()).increment();
+// merge: atomic aggregation
+totals.merge(category, 1L, Long::sum); // atomic in ConcurrentHashMap
+// synchronizedMap: coarse lock, iteration STILL needs external sync
+Map&lt;String, V&gt; syncMap = Collections.synchronizedMap(new HashMap&lt;&gt;());
+synchronized (syncMap) {  // must sync on map for iteration
+    for (Map.Entry&lt;String,V&gt; e : syncMap.entrySet()) { ... }
+}
+// → Always prefer ConcurrentHashMap in new code</code></pre>
+    <h3>Interview Questions — Topic 6</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> How does ConcurrentHashMap allow concurrent reads and writes without a global lock? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Java 8 ConcurrentHashMap: empty bucket writes use CAS (compare-and-swap CPU instruction — atomic, no lock). Occupied bucket writes synchronize on that bucket's first Node only — other buckets unaffected. Reads use volatile reads of Node.val and Node.next — zero locking. Multiple threads can read any key simultaneously. Threads writing to different buckets run truly concurrently. Near-linear scalability with thread count for workloads hitting different keys.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What is the compound operation trap in ConcurrentHashMap and how do you avoid it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Two individually atomic operations are not together atomic — a thread can interleave between them. Example: containsKey(k) returns false, then another thread inserts k, then put(k,v) overwrites it. Fix: use CHM's atomic methods — putIfAbsent(k,v), computeIfAbsent(k, fn), merge(k, v, fn), compute(k, fn). All execute within the bucket's lock scope — the read-and-write happen as one indivisible operation. Rule: if your logic is 'read then conditionally write', always use a single CHM atomic method.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>💻 Coding Lab — 8 Collections Exercises</h2>
+    <p>Rules:</p>
+    <p>Write from memory — no IDE. After each exercise write a comment stating the Big-O complexity of every operation used and the real payment system use case it maps to.</p>
+    <h3>Exercise 1 — ArrayList: Pre-sized Batch Import</h3>
+    <p>Task:</p>
+    <p>Write batchImport(List<Transaction> source): List<Transaction> — filter SUCCESS only</p>
+    <p>Version 1: dynamic growth, Version 2: pre-sized correctly, Version 3: stream</p>
+    <p>Comment: for 500k transactions, how many resize operations does Version 1 trigger?</p>
+    <p>Show the Arrays.asList() backed-array mutation trap and the fix</p>
+    <h3>Exercise 2 — HashMap: Transaction Aggregator</h3>
+    <p>Task:</p>
+    <p>aggregateByCategory(List<Transaction> txs): Map<String, BigDecimal></p>
+    <p>Version 1: getOrDefault + put. Version 2: merge(). Version 3: Collectors.groupingBy</p>
+    <p>Add nested groupBy: Map<String, Map<String, BigDecimal>> by account then category</p>
+    <p>Pre-size the HashMap for 50 categories — show the capacity calculation</p>
+    <h3>Exercise 3 — LinkedHashMap LRU Cache</h3>
+    <p>Task:</p>
+    <p>Implement LruCache<K,V> using LinkedHashMap with accessOrder=true + removeEldestEntry</p>
+    <p>Unit test: insert 5 items into capacity-3 cache, access item 1, insert 2 more — verify item 1 survives</p>
+    <p>Explain: why is this NOT thread-safe? How would you make it thread-safe for your payment service?</p>
+    <h3>Exercise 4 — PriorityQueue: Top-K Fraud Alerts</h3>
+    <p>Task:</p>
+    <p>topKAlerts(List<FraudAlert> alerts, int k): List<FraudAlert> — k highest severity</p>
+    <p>Use min-heap of size K. Explain: WHY min-heap (not max-heap) for top-K</p>
+    <p>Time complexity: O(n log k) — why better than O(n log n) for large n, small k</p>
+    <h3>Exercise 5 — ConcurrentHashMap: Thread-Safe Counter</h3>
+    <p>Task:</p>
+    <p>TransactionCounter with ConcurrentHashMap<String, LongAdder></p>
+    <p>Methods: increment(String category), getCount(String category), getTopCategories(int n)</p>
+    <p>Show the BROKEN get-then-put version, then the FIX with computeIfAbsent + LongAdder</p>
+    <p>Test: 10 threads × 1000 increments each → verify final count = 10000</p>
+    <h3>Exercise 6 — Iterator: Safe Batch Removal</h3>
+    <p>Task:</p>
+    <p>removeExpiredSessions(List<Session> sessions) — Iterator.remove() version</p>
+    <p>Same using removeIf() — compare: which is cleaner and faster?</p>
+    <p>Show the CME bug: for-each + remove(). Then the COWAL version — what changes?</p>
+    <p>Map version: removeExpiredEntries(Map<String, Session>) using entrySet().removeIf()</p>
+    <h3>Exercise 7 — EnumSet + EnumMap</h3>
+    <p>Task:</p>
+    <p>enum TransactionStatus { PENDING, PROCESSING, SUCCESS, FAILED, REVERSED, DISPUTED }</p>
+    <p>EnumSet<TransactionStatus> TERMINAL_STATES = EnumSet.of(SUCCESS, FAILED, REVERSED)</p>
+    <p>isTerminal(TransactionStatus s): boolean — show it is O(1) bitwise operation</p>
+    <p>EnumMap<TransactionStatus, String> STATUS_MESSAGES with descriptive messages</p>
+    <p>Show EnumSet.complementOf(TERMINAL_STATES) — what does it return?</p>
+    <h3>Exercise 8 — BOSS: Thread-Safe Payment Event Store</h3>
+    <p>Design a thread-safe in-memory event store:</p>
+    <p>Requirements: O(1) lookup by eventId, O(1) average lookup of all events for accountId, top-5 highest-amount events efficiently, thread-safe concurrent reads and writes, chronological iteration per account, per-eventType count. Design which collection for each requirement, write the class with full methods, concurrent access strategy for each (which CHM atomic method), Big-O analysis for every operation.</p>
+    <p>🃏</p>
+    <h3>80-Card Collections Interview Q&A — Full Drill</h3>
+    <p>Drill Format:</p>
+    <p>Q1 ArrayList default initial capacity and growth formula? [Easy]</p>
+    <p>▶ Default 10 (lazy-created on first add). Growth: newCap = old + (old>>1) → ×1.5 rounded down. 10→15→22→33→49→73→109...</p>
+    <p>Q2 What does System.arraycopy do in ArrayList and when is it called? [Medium]</p>
+    <p>▶ JVM intrinsic (native memcpy). Called: add(index,e) shifts elements right, remove(index) shifts left, grow() copies to new larger array.</p>
+    <p>Q3 Time complexity: ArrayList add(E), add(int,E), get(int), remove(int)? [Easy]</p>
+    <p>▶ add(E) end: O(1) amortised. add(int,E): O(n) shifts. get(int): O(1) direct index. remove(int): O(n) shifts. remove(Object): O(n) scan + shift.</p>
+    <p>Q4 LinkedList structure and time complexity? [Medium]</p>
+    <p>▶ Doubly-linked Node{prev,item,next}. addFirst/addLast: O(1). get(index): O(n) traversal. remove(index): O(n) to find + O(1) unlink. contains: O(n).</p>
+    <p>Q5 Why does ArrayList outperform LinkedList for iteration? [Medium]</p>
+    <p>▶ Cache locality: ArrayList elements are contiguous in memory — CPU prefetches next cache line. LinkedList: each Node is a separate heap object — each step is a potential cache miss.</p>
+    <p>Q6 Arrays.asList() vs List.of() key differences? [Easy]</p>
+    <p>▶ Arrays.asList: fixed-size, backed by original array, set() works, allows null. List.of: truly immutable (all mutations throw UOE), null throws NPE, more compact.</p>
+    <p>Q7 Collections.unmodifiableList() hidden danger? [Medium]</p>
+    <p>▶ The original mutable list is still reachable — changes to the original are visible through the unmodifiable view. For true immutability: List.copyOf() or List.of().</p>
+    <p>Q8 CopyOnWriteArrayList: when to use and when to avoid? [Medium]</p>
+    <p>▶ Use: read-heavy, rarely-written shared lists (event listeners, handler registries). Avoid: frequent writes — O(n) per write is expensive. Reads: lock-free, zero contention.</p>
+    <p>Q9 subList() danger and the fix? [Hard]</p>
+    <p>▶ Returns a live view referencing the parent. Parent structural mod → CME on subList. subList modifications affect parent. Fix: new ArrayList<>(list.subList(from, to)) — defensive copy.</p>
+    <p>Q10 RandomAccess marker interface — what does it signal? [Easy]</p>
+    <p>▶ Marker (no methods). Implemented by ArrayList. Algorithms (binarySearch, shuffle) check instanceof RandomAccess to choose O(1) random-access strategy vs sequential for non-RandomAccess lists.</p>
+    <p>Q11 List.copyOf() vs new ArrayList<>(source)? [Medium]</p>
+    <p>▶ List.copyOf(): unmodifiable, reuses backing if source already unmodifiable, rejects nulls. new ArrayList<>(source): fully mutable copy, allows nulls. Use copyOf() for defensive API returns.</p>
+    <p>Q12 What happens if you call sort() on a List during iteration? [Easy]</p>
+    <p>▶ ConcurrentModificationException — sort() increments modCount (structural modification). Never sort inside an active iteration loop.</p>
+    <p>Q13 How does ArrayList.removeIf() outperform iterator removal? [Hard]</p>
+    <p>▶ Single pass using a bitset to mark indices to remove, then one arraycopy to compact. O(n) total vs O(n) per remove with iterator (shifting after each removal). Far faster for bulk removal.</p>
+    <p>Q14 ArrayList vs int[] — when do you use a plain array? [Medium]</p>
+    <p>▶ int[]: no boxing, contiguous primitive storage, 4 bytes/element vs ~20 bytes for Integer. For millions of numeric elements (statistics, signal processing) use int[] or IntStream. Use ArrayList when: dynamic size, type safety, collection API needed.</p>
+    <p>Q15 Time complexity of Collections.sort()? [Easy]</p>
+    <p>▶ O(n log n) — TimSort (adaptive merge sort + insertion sort). Stable. Works on List via list.sort(). LinkedList: converted to array, sorted, written back — O(n log n) + O(n) extra memory.</p>
+    <p>Q16 How do you implement a stack in modern Java? [Easy]</p>
+    <p>▶ Deque<E> implemented by ArrayDeque<E>: push(e)=addFirst, pop()=removeFirst, peek()=peekFirst. Never use java.util.Stack — extends Vector, synchronized every operation even single-threaded.</p>
+    <p>Q17 What is list.clear() vs list = new ArrayList<>()? [Medium]</p>
+    <p>▶ clear(): O(n) nulls each ref, sets size=0, keeps backing array (capacity preserved). new ArrayList<>(): new object, capacity 10. clear() is better for reuse — avoids GC + realloc.</p>
+    <p>Q18 ArrayList pre-sizing: when does it matter most? [Medium]</p>
+    <p>▶ When final size is known upfront. Without: log₁.₅(n) resize+copy operations. For 1M elements: ~33 resizes. new ArrayList<>(n) → zero resizes and no wasted capacity.</p>
+    <p>Q19 How does Collections.binarySearch() work? [Medium]</p>
+    <p>▶ Requires sorted list (ascending natural or Comparator). Checks RandomAccess — binary search for ArrayList, sequential index scan for LinkedList. Returns index if found, -(insertionPoint+1) if not. Undefined result on unsorted list.</p>
+    <p>Q20 What is Collections.nCopies()? [Easy]</p>
+    <p>▶ Returns immutable List with n copies of obj. Zero allocation per call after creation. Use for: pre-filling, initializing fixed-size result templates. nCopies(10, BigDecimal.ZERO) for report templates.</p>
+    <p>Q21 HashMap default capacity, load factor, resize trigger? [Easy]</p>
+    <p>▶ Capacity 16 (power of 2). Load factor 0.75. Resize at 13th entry (16×0.75=12). New capacity = old×2, all entries rehashed. Pre-size: new HashMap<>(expectedSize/0.75+1).</p>
+    <p>Q22 Why must HashMap capacity always be a power of 2? [Hard]</p>
+    <p>▶ Bucket index = (n-1) & hash. Only works as hash%n when n is power of 2 — (n-1) becomes bitmask of all 1s in low bits. Bitwise AND is much faster than integer division. Non-power-of-2 constructor argument is rounded up.</p>
+    <p>Q23 What is the hash spreading step h ^ (h>>>16)? [Hard]</p>
+    <p>▶ XOR raw hashCode with its upper 16 bits shifted into lower 16. Purpose: poor hashCodes varying only in high bits (discarded by bucket index) would all collide without spreading. Mixes high and low bits — reduces collisions.</p>
+    <p>Q24 HashMap treeification threshold and why? [Hard]</p>
+    <p>▶ TREEIFY_THRESHOLD=8 (list→tree), UNTREEIFY_THRESHOLD=6 (tree→list). MIN_TREEIFY_CAPACITY=64 (resize preferred below 64 buckets). Converts O(n) bucket search to O(log n). Also defends against hash collision DoS attacks.</p>
+    <p>Q25 HashMap.getOrDefault() vs get() — which to prefer? [Easy]</p>
+    <p>▶ getOrDefault(k, def): returns def without map modification if absent — no null ambiguity. get(k): returns null if absent — ambiguous if null is a valid value. Always use containsKey(k) for true absence check when null is a valid value.</p>
+    <p>Q26 Map.computeIfAbsent(): when is the function NOT called? [Medium]</p>
+    <p>▶ If key already present with non-null value: function is NOT called, existing value returned. Function only called when key absent or mapped to null. In ConcurrentHashMap: function runs within bucket lock — guaranteed at most once per key.</p>
+    <p>Q27 Map.merge() — what happens when the function returns null? [Medium]</p>
+    <p>▶ Removes the key (tombstone). absent/null → put value. present → remappingFn(existing, value). Uses: totals.merge(k, amount, BigDecimal::add) for aggregation, counts.merge(word, 1, Integer::sum) for counting.</p>
+    <p>Q28 LinkedHashMap two ordering modes? [Medium]</p>
+    <p>▶ Insertion order (default): iteration reflects first-insertion order. Access order (constructor true): get() moves accessed entry to tail (MRU). Use access-order for LRU cache with removeEldestEntry override.</p>
+    <p>Q29 TreeMap structure, order, null key handling? [Medium]</p>
+    <p>▶ Red-Black BST. O(log n) all ops. Sorted by natural order or Comparator. No null keys (compareTo(null) throws NPE). Null values allowed. NavigableMap: floor/ceiling/lower/higher/headMap/tailMap/subMap.</p>
+    <p>Q30 TreeMap's 8 NavigableMap methods? [Hard]</p>
+    <p>▶ floorKey(k): largest<=k. ceilingKey(k): smallest>=k. lowerKey(k): strictly<k. higherKey(k): strictly>k. headMap(k): keys<k. tailMap(k): keys>=k. subMap(lo,hi): [lo,hi). firstKey()/lastKey(): min/max.</p>
+    <p>Q31 EnumMap vs HashMap<MyEnum,V>? [Medium]</p>
+    <p>▶ EnumMap: dense array indexed by ordinal(). No hashing, no collision, direct array lookup. Iteration in enum declaration order. 5-10x faster, dramatically less memory. Always use EnumMap for enum-keyed maps.</p>
+    <p>Q32 Map.Entry.setValue() — when is it useful? [Medium]</p>
+    <p>▶ Modifies value in-place during entrySet() iteration — safe (not structural). More efficient than calling map.put() inside loop. Note: adding/removing entries during iteration still causes CME.</p>
+    <p>Q33 HashMap vs Hashtable? [Easy]</p>
+    <p>▶ Hashtable: legacy, synchronized every method, no null keys/values, not fail-fast. HashMap: not synchronized, one null key, null values allowed, fail-fast. Never use Hashtable — use ConcurrentHashMap for thread-safety.</p>
+    <p>Q34 What is IdentityHashMap? [Hard]</p>
+    <p>▶ Uses == (reference equality) instead of equals() for key comparison. hashCode uses System.identityHashCode(). Use: graph traversal visited-state, object serialization (avoid revisiting same object). Very rare — only when reference identity is semantically correct.</p>
+    <p>Q35 What is WeakHashMap and its use case? [Hard]</p>
+    <p>▶ Keys are WeakReferences — when key has no strong references elsewhere, entry is auto-removed by GC on next access/size call. Use: cache where entries expire when key is no longer used (prevents memory leaks). Not thread-safe.</p>
+    <p>Q36 Count frequency of elements in a list using a Map? [Easy]</p>
+    <p>▶ list.stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting())). Or: freq.merge(e, 1, Integer::sum) in a forEach loop. merge approach is cleanest — single atomic-intent call per element.</p>
+    <p>Q37 Map.of() and Map.copyOf() restrictions? [Medium]</p>
+    <p>▶ Both: immutable (put/remove throw UOE), no null keys/values (NPE), unspecified iteration order. Map.of() supports up to 10 pairs — use Map.ofEntries() for more. Map.copyOf(): snapshot, rejects nulls. For mutable copy: new HashMap<>(source).</p>
+    <p>Q38 map.put() vs map.putIfAbsent()? [Medium]</p>
+    <p>▶ put(k,v): always inserts/replaces, returns previous (null if absent). putIfAbsent(k,v): inserts ONLY if absent, returns existing value (null if inserted). Atomic in ConcurrentHashMap. Use computeIfAbsent when value is expensive to compute — function only called when insertion will occur.</p>
+    <p>Q39 What happens on get(null) in HashMap vs TreeMap? [Medium]</p>
+    <p>▶ HashMap: null key always maps to bucket 0 (special case), get(null) works. TreeMap: compareTo(null) throws NullPointerException — null key never allowed.</p>
+    <p>Q40 HashMap with two keys having same hashCode? [Medium]</p>
+    <p>▶ Hash collision: both land in same bucket. HashMap walks linked list (or tree), comparing hash then equals() for each node. Multiple objects with same hash but different equals() coexist as separate nodes. Performance: O(1)→O(n) per bucket — mitigated by treeification at 8.</p>
+    <p>Q41 HashSet implemented as what? Performance? [Easy]</p>
+    <p>▶ HashMap<E,PRESENT> with shared PRESENT dummy. add=map.put, contains=containsKey, remove=map.remove. All O(1) amortised. One null allowed. No order. All HashMap performance characteristics apply directly.</p>
+    <p>Q42 TreeSet vs HashSet — when TreeSet? [Easy]</p>
+    <p>▶ TreeSet when: sorted iteration needed, range ops (subSet/headSet/tailSet), min/max access (first/last). O(log n) all ops, no null. HashSet: O(1), one null, no ordering — 3-10x faster. Choose HashSet for membership-only tests.</p>
+    <p>Q43 EnumSet two variants? [Hard]</p>
+    <p>▶ RegularEnumSet: <=64 enum constants — single long bitmask. JumboEnumSet: >64 constants — long[] array. EnumSet.of() picks automatically. All operations are single bitwise op — fastest possible Set.</p>
+    <p>Q44 LinkedHashSet vs HashSet? [Medium]</p>
+    <p>▶ LinkedHashSet = LinkedHashMap<E,PRESENT>. Maintains insertion-order iteration. Same O(1) as HashSet. Slight memory overhead (linked list pointers). Use when deduplication AND insertion order preservation both required.</p>
+    <p>Q45 TreeSet equality — the hidden trap? [Hard]</p>
+    <p>▶ TreeSet uses compareTo/compare for equality — NOT equals(). If compareTo returns 0: element treated as duplicate, NOT inserted, even if equals() returns false. This can cause 'missing' elements when Comparable is inconsistent with equals.</p>
+    <p>Q46 Queue API throw-exception vs return-special-value? [Easy]</p>
+    <p>▶ Throws exception: add(full), remove(empty), element(empty). Returns null/false: offer, poll, peek. Prefer offer/poll/peek — no exception handling in normal flow.</p>
+    <p>Q47 ArrayDeque vs LinkedList — which is faster? [Medium]</p>
+    <p>▶ ArrayDeque always: resizable circular array, contiguous memory, no per-node heap allocation. LinkedList: each Node is separate heap object — allocation overhead, cache misses. ArrayDeque wins for stack, queue, and deque operations.</p>
+    <p>Q48 PriorityQueue peek() vs poll()? [Easy]</p>
+    <p>▶ peek(): O(1) — returns minimum without removal (heap). Returns null if empty. poll(): O(log n) — removes and returns minimum, restores heap property by sifting. Iteration does NOT yield sorted order.</p>
+    <p>Q49 How to make a max-heap PriorityQueue? [Medium]</p>
+    <p>▶ new PriorityQueue<>(Comparator.reverseOrder()) for natural-order types. Or: Comparator.comparing(Obj::getField).reversed(). poll() returns largest element.</p>
+    <p>Q50 BlockingQueue put/offer and take/poll differences? [Medium]</p>
+    <p>▶ put(e): blocks indefinitely until space (bounded). offer(e,timeout,unit): waits up to timeout, returns false. take(): blocks indefinitely until element. poll(timeout,unit): waits up to timeout, returns null. Use take/put for blocking producer-consumer; offer/poll for bounded-wait.</p>
+    <p>Q51 What is SynchronousQueue? [Hard]</p>
+    <p>▶ Capacity 0 — every put() blocks until a take() is ready (and vice versa). Direct hand-off channel between threads. Used by Executors.newCachedThreadPool(): hands off tasks to waiting threads without queuing. Ideal when producer should not proceed until consumer is ready.</p>
+    <p>Q52 ArrayBlockingQueue internal structure? [Hard]</p>
+    <p>▶ Fixed capacity circular array. Single ReentrantLock + two Conditions: notEmpty (consumers await) and notFull (producers await). Fair mode available. put(): lock, await notFull if full, insert, signal notEmpty. take(): lock, await notEmpty if empty, remove, signal notFull.</p>
+    <p>Q53 Deque addFirst/offerFirst vs addLast/offerLast? [Easy]</p>
+    <p>▶ addFirst/offerFirst: insert at head. addLast/offerLast: insert at tail. Stack: push=addFirst, pop=removeFirst. Queue: offer=addLast, poll=removeFirst.</p>
+    <p>Q54 What is DelayQueue? [Hard]</p>
+    <p>▶ Unbounded blocking queue for Delayed elements. Elements only become available after delay expires (getDelay()<=0). take() blocks until earliest element expires. Use: scheduled task execution, session timeout, retry with exponential backoff, cache expiry.</p>
+    <p>Q55 PriorityBlockingQueue vs PriorityQueue? [Medium]</p>
+    <p>▶ PriorityBlockingQueue: thread-safe with ReentrantLock, unbounded (take() blocks when empty only, put() never blocks). Use in concurrent producer-consumer needing priority ordering. PriorityQueue: single-threaded, faster.</p>
+    <p>Q56 What is modCount and how does it cause CME? [Medium]</p>
+    <p>▶ modCount: counter incremented on every structural modification (add/remove/clear). Iterator stores expectedModCount at creation. Every next() checks modCount==expectedModCount. Mismatch → throw CME. Best-effort detection.</p>
+    <p>Q57 3 safe ways to remove during List iteration? [Easy]</p>
+    <p>▶ 1) Iterator.remove() after next() — updates expectedModCount. 2) removeIf(predicate) — single pass, efficient. 3) stream.filter().collect() — new list. Also: collect indices then remove in reverse.</p>
+    <p>Q58 Fail-safe iterator — 2 collections that use it? [Easy]</p>
+    <p>▶ CopyOnWriteArrayList: iterator on snapshot — never sees concurrent modifications, never CME. ConcurrentHashMap: weakly consistent — may or may not reflect concurrent mods, never CME. Trade-off: may see stale data.</p>
+    <p>Q59 ListIterator vs Iterator — additional capabilities? [Medium]</p>
+    <p>▶ ListIterator: hasPrevious()/previous() (bidirectional), nextIndex()/previousIndex(), add(e) at current position (safe), set(e) to replace last returned. Only for Lists.</p>
+    <p>Q60 What is a Spliterator? [Hard]</p>
+    <p>▶ Parallel-friendly iterator. trySplit(): splits into two halves for parallel processing. tryAdvance(Consumer): process one element. Characteristics: SIZED, ORDERED, SORTED, DISTINCT, etc. Used by parallel streams for ForkJoin work decomposition.</p>
+    <p>Q61 ConcurrentHashMap reads — how implemented? [Hard]</p>
+    <p>▶ Volatile reads of Node.val and Node.next — no locking at all. Value field declared volatile — writes immediately visible to all readers. Full concurrent reads across all buckets simultaneously. Reads never block writers.</p>
+    <p>Q62 putIfAbsent() guarantee vs put()? [Hard]</p>
+    <p>▶ putIfAbsent(k,v): check-and-insert is atomic — no race between check and insert. put(k,v): always replaces. In ConcurrentHashMap: putIfAbsent and computeIfAbsent are truly atomic. get() + put() in sequence is NOT atomic — race condition possible.</p>
+    <p>Q63 Weakly consistent iteration in ConcurrentHashMap? [Medium]</p>
+    <p>Q64 Collections.synchronizedMap() vs ConcurrentHashMap? [Medium]</p>
+    <p>▶ synchronizedMap: single mutex, one thread at a time, iteration needs external sync. ConcurrentHashMap: fine-grained, concurrent reads (no lock), parallel writes to different buckets. Choose synchronizedMap only to wrap non-HashMap implementations (e.g., TreeMap). Otherwise always prefer CHM.</p>
+    <p>Q65 CopyOnWriteArrayList performance trade-offs? [Medium]</p>
+    <p>▶ Write (add/set/remove): copies entire array under ReentrantLock — O(n), expensive. Read: lock-free snapshot — O(1), zero contention. Iterator: snapshot at creation, no CME. Best: read-heavy, rarely-written. Worst: high-write (use ConcurrentLinkedQueue instead).</p>
+    <p>Q66 ConcurrentSkipListMap vs ConcurrentHashMap? [Hard]</p>
+    <p>▶ ConcurrentSkipListMap: skip list, O(log n), sorted, NavigableMap (range queries), non-blocking CAS. Use when sorted order + concurrency both needed. ConcurrentHashMap: O(1), no order. Choose CHM for raw throughput; ConcurrentSkipListMap for sorted + concurrent.</p>
+    <p>Q67 ConcurrentHashMap size() — why approximate? [Hard]</p>
+    <p>▶ Uses LongAdder — array of counter cells, each thread updates its cell (reduces CAS contention). size() sums all cells. Between summing cells, other threads may insert/remove — result may be slightly stale. Fine for metrics/logging.</p>
+    <p>Q68 Collections.synchronizedList() iteration safety? [Hard]</p>
+    <p>▶ NOT safe by default — must manually synchronize on the list: synchronized(list){ for(E e : list){...} }. Without this: CME from concurrent modification. CopyOnWriteArrayList: no external sync needed — snapshot guarantees safety.</p>
+    <p>Q69 Atomic compound operation in ConcurrentHashMap — what does atomic mean? [Medium]</p>
+    <p>▶ Read AND write execute within the same bucket lock — no thread can interleave between them. Atomic methods: putIfAbsent, computeIfAbsent, compute, merge, replace(k,old,new). Contrast: get() + put() are two separate lock acquisitions — race possible between them.</p>
+    <p>Q70 Name 5 thread-safe collections in java.util.concurrent? [Easy]</p>
+    <p>▶ ConcurrentHashMap, CopyOnWriteArrayList, ConcurrentLinkedQueue, ArrayBlockingQueue, LinkedBlockingQueue, PriorityBlockingQueue, ConcurrentSkipListMap, ConcurrentSkipListSet, LinkedTransferQueue, DelayQueue.</p>
+    <p>Q71 Decision table: HashMap vs LinkedHashMap vs TreeMap vs ConcurrentHashMap? [Medium]</p>
+    <p>▶ HashMap: O(1), no order, single-threaded. LinkedHashMap: O(1), insertion/access order, LRU cache. TreeMap: O(log n), sorted, range queries. ConcurrentHashMap: O(1), no order, multi-threaded. EnumMap: O(1) direct array, enum keys only.</p>
+    <p>Q72 HashMap.putAll() time complexity and resize behaviour? [Medium]</p>
+    <p>▶ O(n) where n = source size. Before inserting: if current+source.size() > threshold → resize first (one upfront resize vs multiple incremental). Then inserts each entry.</p>
+    <p>Q73 Why is using a mutable object as a HashMap key dangerous? [Hard]</p>
+    <p>▶ If mutable fields used in hashCode/equals change after insertion: object is in wrong bucket. Lookups compute new bucket index — object not found (it's in old bucket). Object 'lost' in map — cannot retrieve or remove. Rule: only use immutable objects as Map keys.</p>
+    <p>Q74 Memory overhead of a single HashMap entry? [Hard]</p>
+    <p>▶ Each Node: ~32 bytes (16B object header + 4B hash + 4B key pointer + 4B value pointer + 4B next pointer). Plus key and value objects. Empty HashMap(16): 16×pointer_size bytes for array. For millions of small entries: consider flat map libraries or primitive arrays.</p>
+    <p>Q75 Why return Collections.emptyList() instead of null? [Easy]</p>
+    <p>▶ Shared immutable singleton — zero allocation. Callers can iterate safely without null check — eliminates NPE at call site. Contract: methods returning Collection should never return null. emptyList/emptyMap/emptySet are always the same object.</p>
+    <p>Q76 Collections.frequency() vs disjoint() vs nCopies()? [Medium]</p>
+    <p>▶ frequency(col,obj): count occurrences with equals(). disjoint(c1,c2): true if no common elements. nCopies(n,obj): immutable List of n copies of obj — for pre-filling/initializing.</p>
+    <p>Q77 PriorityQueue in a payment system — 3 use cases? [Medium]</p>
+    <p>▶ 1) Process high-priority transactions first (VIP/time-sensitive). 2) Retry queue: process soonest-due failed transaction first (min-heap by scheduledTime). 3) Top-K reporting: efficiently maintain top 10 highest-value transactions. For concurrent: PriorityBlockingQueue.</p>
+    <p>Q78 TreeMap thread-safe options? [Hard]</p>
+    <p>▶ TreeMap NOT thread-safe. Options: 1) Collections.synchronizedSortedMap(new TreeMap<>()) — coarse lock. 2) ConcurrentSkipListMap — lock-free, sorted, O(log n), better concurrent performance. 3) External ReadWriteLock if reads vastly outnumber writes.</p>
+    <p>Q79 stream() vs parallelStream() — when is parallel actually faster? [Medium]</p>
+    <p>▶ Parallel wins: large dataset (100k+ elements), CPU-bound per-element ops, stateless independent ops, easily splittable source (ArrayList, arrays). Parallel loses: small data, IO-bound ops, stateful/shared-state ops, LinkedList (poor Spliterator split). Always benchmark before using parallel.</p>
+    <p>Q80 Collections Framework hierarchy — top-level interfaces? [Hard]</p>
+    <p>▶ Iterable→Collection→{List,Set,Queue/Deque}. List: ArrayList,LinkedList,COWAL. Set→SortedSet→NavigableSet: HashSet,LinkedHashSet,TreeSet,EnumSet. Queue→BlockingQueue: ArrayBlockingQueue,LinkedBlockingQueue,PBQ. Map (NOT Collection): HashMap,LinkedHashMap,TreeMap,EnumMap,CHM,ConcurrentSkipListMap.</p>
+    <p>📝</p>
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 11 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">HashMap internals (hash chain + treeification) — explained without notes?</span></li>
+      <li><span class="checkbox-label">ConcurrentHashMap compound operation trap — broken code shown, fix written?</span></li>
+      <li><span class="checkbox-label">PriorityQueue top-K: O(n log k) explanation clear, why min-heap not max-heap?</span></li>
+      <li><span class="checkbox-label">All 8 coding exercises: Done / Partial / Not done — Boss exercise included?</span></li>
+      <li><span class="checkbox-label">Iterator fail-fast vs fail-safe — 2 examples of each, with collection names?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>ArrayList internals — growth, pre-sizing, time complexity</h3>
+    <p>/5 |</p>
+    <h3>HashMap — hash chain, treeification, load factor math</h3>
+    <p>/5 |</p>
+    <h3>Map atomic methods — merge, compute, computeIfAbsent</h3>
+    <p>/5 |</p>
+    <h3>LinkedHashMap LRU, TreeMap NavigableMap methods</h3>
+    <p>/5 |</p>
+    <h3>Set types — HashSet/TreeSet/EnumSet/LinkedHashSet</h3>
+    <p>/5 |</p>
+    <h3>PriorityQueue heap, top-K pattern, BlockingQueue family</h3>
+    <p>/5 |</p>
+    <h3>Iterators — fail-fast CME, 3 safe removal patterns</h3>
+    <p>/5 |</p>
+    <h3>ConcurrentHashMap — reads, CAS, atomic compound ops</h3>
+    <p>/5 |</p>
+    <h3>80-card drill total</h3>
+    <p>___/80 ✅ ⚠️ ❌</p>
+    <p>Day 11 Complete — Collections Is Now a Strength:</p>
+    <h3>Preview: Day 12 — Design Patterns (12 Essential Patterns)</h3>
+    <p>Singleton (5 implementations), Factory + Abstract Factory, Builder (fluent API), Prototype, Adapter, Decorator, Facade, Proxy, Observer, Strategy, Template Method, Command. Each with Java code, Spring Boot connection, and interview Q&A. The Builder pattern appears in virtually every modern Java API — understand it cold.</p>
+    <p>Day 11 of 60 · Collections Framework Deep Dive · Prepared for Md Zuber</p>
+    <p>"HashMap is not a black box. It is a 200-line class you should be able to re-implement from scratch. Today you earned the right to say that."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

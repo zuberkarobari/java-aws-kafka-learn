@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Singleton Pattern - Deep Space Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --space-dark: #030014;
+        --neon-cyan: #22d3ee;
+        --neon-pink: #f472b6;
+        --neon-purple: #a855f7;
+        --neon-red: #f43f5e;
+        --neon-green: #34d399;
+        --neon-orange: #fb923c;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #000;
+        color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container */
+    #reel-container {
+        width: 100%;
+        max-width: 420px;
+        height: 100vh;
+        max-height: 850px;
+        background: var(--space-dark);
+        position: relative;
+        box-shadow: 0 0 50px rgba(168, 85, 247, 0.3);
+        border: 1px solid #2e1065;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    /* Deep Space Background */
+    .space-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at 50% 20%, #2e1065 0%, #030014 60%);
+        z-index: 0;
+    }
+    
+    .stars {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 200px 50px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 250px 90px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 300px 150px, #ffffff, rgba(0,0,0,0));
+        background-repeat: repeat;
+        background-size: 400px 200px;
+        opacity: 0.4;
+        animation: drift 60s linear infinite;
+        z-index: 0;
+    }
+
+    @keyframes drift {
+        from { background-position: 0 0; }
+        to { background-position: 0 400px; }
+    }
+
+    /* Header */
+    .header {
+        padding: 30px 20px 10px;
+        text-align: center;
+        z-index: 10;
+    }
+    
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 24px;
+        font-weight: 800;
+        background: linear-gradient(to right, var(--neon-cyan), var(--neon-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
+        text-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    }
+
+    .header p {
+        color: var(--neon-cyan);
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Visual Canvas Area */
+    .canvas {
+        flex: 1;
+        position: relative;
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        perspective: 1000px;
+        padding-bottom: 60px; /* Offset for the explainer panel */
+    }
+
+    /* Sandbox Core Elements */
+    .core-container { position: relative; width: 100%; height: 250px; display: flex; align-items: center; justify-content: center; }
+    
+    .singleton-core {
+        width: 80px; height: 80px; background: radial-gradient(circle, #fff, var(--neon-cyan));
+        border-radius: 50%; box-shadow: 0 0 40px var(--neon-cyan), inset 0 0 20px #fff;
+        display: flex; align-items: center; justify-content: center; font-weight: 900; color: #000;
+        transition: all 0.5s ease; opacity: 0; transform: scale(0.5); position: absolute; z-index: 20;
+        font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    }
+    
+    .duplicate-core {
+        width: 80px; height: 80px; background: radial-gradient(circle, #fff, var(--neon-red));
+        border-radius: 50%; box-shadow: 0 0 40px var(--neon-red), inset 0 0 20px #fff;
+        display: flex; align-items: center; justify-content: center; font-weight: 900; color: #000;
+        transition: all 0.5s ease; opacity: 0; transform: scale(0.5) translate(60px, 0); position: absolute; z-index: 19;
+        font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    }
+
+    .core-label { position: absolute; top: -25px; font-family: 'JetBrains Mono', monospace; color: var(--neon-cyan); font-size: 10px; font-weight: bold; text-shadow: 0 0 5px var(--neon-cyan);}
+    .dup-label { position: absolute; top: -25px; font-family: 'JetBrains Mono', monospace; color: var(--neon-red); font-size: 10px; font-weight: bold; text-shadow: 0 0 5px var(--neon-red);}
+
+    /* Shields & Boxes */
+    .sync-shield {
+        position: absolute; width: 140px; height: 140px; border: 3px dashed var(--neon-purple); border-radius: 50%;
+        animation: spin 8s linear infinite; opacity: 0; transition: opacity 0.5s; z-index: 15;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    
+    .inner-class-box {
+        position: absolute; width: 130px; height: 130px; border: 2px solid var(--neon-green); background: rgba(52, 211, 153, 0.1);
+        border-radius: 12px; opacity: 0; transition: opacity 0.5s; z-index: 10; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px;
+        font-family: 'JetBrains Mono', monospace; color: var(--neon-green); font-size: 9px; box-shadow: 0 0 20px rgba(52, 211, 153, 0.2);
+    }
+    
+    .enum-shield {
+        position: absolute; width: 120px; height: 120px; border: 3px solid #fff; background: rgba(255,255,255,0.1);
+        clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        opacity: 0; transition: opacity 0.5s; z-index: 25; box-shadow: 0 0 40px #fff;
+    }
+
+    /* Threads and Hackers */
+    .thread { position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: bold; opacity: 0; transition: opacity 0.3s; z-index: 30;}
+    .thread-a { top: 30px; left: 10px; color: var(--neon-cyan); }
+    .thread-b { top: 30px; right: 10px; color: var(--neon-orange); }
+    
+    .laser { position: absolute; height: 2px; top: 5px; width: 0; transition: width 0.4s ease; box-shadow: 0 0 10px currentColor;}
+    .laser-a { left: 60px; background: var(--neon-cyan); color: var(--neon-cyan); }
+    .laser-b { right: 60px; background: var(--neon-orange); color: var(--neon-orange); }
+    
+    .hacker { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 24px; opacity: 0; transition: all 0.5s; z-index: 30;}
+    .hacker-laser { position: absolute; width: 2px; height: 0; bottom: 35px; left: 12px; background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); transition: height 0.3s ease;}
+
+    /* Comparison Matrix Cards (Mobile Friendly) */
+    .matrix-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; gap: 8px; padding: 0 20px;
+        opacity: 0; pointer-events: none; transition: opacity 0.5s; overflow-y: auto;
+    }
+    .m-card {
+        background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-neon);
+        border-radius: 8px; padding: 10px 15px; display: flex; flex-direction: column; gap: 4px;
+        backdrop-filter: blur(8px);
+    }
+    .m-header { display: flex; justify-content: space-between; align-items: center; }
+    .m-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;}
+    .m-tags { display: flex; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; }
+    .m-desc { font-size: 11px; color: #94a3b8; line-height: 1.4; margin-top: 4px;}
+
+    /* Explainer Panel at Bottom */
+    .explainer-panel {
+        background: linear-gradient(to top, rgba(3, 0, 20, 1) 85%, rgba(3, 0, 20, 0.9) 95%, transparent);
+        padding: 24px 20px 30px;
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        z-index: 30;
+        min-height: 480px; /* Taller to fit code blocks */
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    .step-badge {
+        display: inline-block;
+        background: rgba(34, 211, 238, 0.1);
+        color: var(--neon-cyan);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 1px solid rgba(34, 211, 238, 0.3);
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.15);
+        align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+    }
+
+    .explainer-text {
+        font-size: 12px;
+        color: #cbd5e1;
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: #000;
+        border: 1px solid rgba(139, 92, 246, 0.4);
+        border-radius: 8px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        line-height: 1.6;
+        color: #e2e8f0;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        box-shadow: inset 0 0 20px rgba(0,0,0,1);
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #22d3ee; } 
+    .c-fn { color: #a855f7; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-vl { color: #fb923c; font-style: italic; font-weight: bold;} 
+    .c-hi { background: rgba(34, 211, 238, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, var(--neon-purple), #ec4899);
+        color: white;
+        border: 1px solid var(--neon-pink);
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 13px;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(236, 72, 153, 0.3);
+        transition: all 0.2s;
+        width: 100%;
+        font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(236, 72, 153, 0.3); }
+    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="space-bg"></div>
+    <div class="stars"></div>
+
+    <!-- Header -->
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Singleton Evolution</h1>
+        <p>Architectural Thread Safety</p>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas" id="canvas">
+        
+        <div class="core-container" id="core-container">
+            <!-- Instances -->
+            <div class="singleton-core" id="core-1">
+                <div class="core-label">INSTANCE</div>0x1A
+            </div>
+            
+            <div class="duplicate-core" id="core-2">
+                <div class="dup-label">DUPLICATE</div>0x2B
+            </div>
+
+            <!-- Shields & Boxes -->
+            <div class="sync-shield" id="shield-sync"></div>
+            <div class="inner-class-box" id="box-inner">Helper Class</div>
+            <div class="enum-shield" id="shield-enum"></div>
+
+            <!-- Threads -->
+            <div class="thread thread-a" id="thread-a">Thread A <div class="laser laser-a" id="laser-a"></div></div>
+            <div class="thread thread-b" id="thread-b">Thread B <div class="laser laser-b" id="laser-b"></div></div>
+            
+            <!-- Hacker -->
+            <div class="hacker" id="hacker">🕵️<div class="hacker-laser" id="laser-hack"></div></div>
+        </div>
+
+        <!-- Matrix Container (Hidden until last step) -->
+        <div class="matrix-container" id="matrix-container">
+            <div class="m-card">
+                <div class="m-header">
+                    <span class="m-title" style="color:var(--neon-cyan);">Eager Init</span>
+                    <div class="m-tags"><span style="color:var(--neon-red);">Not Lazy</span> | <span style="color:var(--neon-green);">Safe</span></div>
+                </div>
+                <div class="m-desc">Good for lightweight objects that are always used. Wastes memory if heavy.</div>
+            </div>
+            <div class="m-card">
+                <div class="m-header">
+                    <span class="m-title" style="color:#94a3b8; text-decoration:line-through;">Naive Lazy</span>
+                    <div class="m-tags"><span style="color:var(--neon-green);">Lazy</span> | <span style="color:var(--neon-red); font-weight:bold;">FATAL</span></div>
+                </div>
+                <div class="m-desc">Race conditions cause duplicates. Never use in enterprise apps.</div>
+            </div>
+            <div class="m-card">
+                <div class="m-header">
+                    <span class="m-title" style="color:var(--neon-orange);">DCL (Double-Check)</span>
+                    <div class="m-tags"><span style="color:var(--neon-green);">Lazy</span> | <span style="color:var(--neon-orange);">Risky</span></div>
+                </div>
+                <div class="m-desc">Requires <code>volatile</code> to prevent CPU reordering. Legacy approach.</div>
+            </div>
+            <div class="m-card">
+                <div class="m-header">
+                    <span class="m-title" style="color:var(--neon-pink);">Bill Pugh</span>
+                    <div class="m-tags"><span style="color:var(--neon-green);">Lazy</span> | <span style="color:var(--neon-green);">Safe</span></div>
+                </div>
+                <div class="m-desc">Uses JVM classloader physics for safety without locks. Highly recommended.</div>
+            </div>
+            <div class="m-card" style="border-color:var(--neon-purple);">
+                <div class="m-header">
+                    <span class="m-title" style="color:var(--neon-purple);">Enum Singleton</span>
+                    <div class="m-tags"><span style="color:var(--neon-red);">Not Lazy</span> | <span style="color:var(--neon-green); font-weight:bold;">Absolute</span></div>
+                </div>
+                <div class="m-desc">Joshua Bloch's standard. Immune to Reflection & Serialization hacks. Indestructible.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Text Overlay / Explainer -->
+    <div class="explainer-panel">
+        <div id="step-badge" class="step-badge">[DESIGN_PATTERNS]</div>
+        <h2 id="explainer-title" class="explainer-title">The "Only One" Rule</h2>
+        <p id="explainer-text" class="explainer-text">Some objects must have exactly one instance globally (e.g. DB Connection Pools). If duplicated, systems crash or leak memory. Let's trace the 5 evolutionary stages of the Singleton.</p>
+        
+        <div id="code-container" class="code-block" style="display: none;"></div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initialize Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    const steps = [
+        {
+            badge: "Stage 1/5",
+            title: "Eager Initialization",
+            text: "The JVM builds the object immediately when the class loads. It is 100% thread-safe. But, if it consumes 500MB of RAM and is never used, you've wasted resources.",
+            code: `
+<span class="c-kw">public class</span> <span class="c-ty">Database</span> {
+  <span class="c-cm">// Built immediately. Thread-safe by JVM.</span>
+<span class="c-hi">  <span class="c-kw">private static final</span> <span class="c-ty">Database</span> INSTANCE = 
+       <span class="c-kw">new</span> Database();</span>
+
+  <span class="c-kw">private</span> <span class="c-fn">Database</span>() {}
+
+  <span class="c-kw">public static</span> <span class="c-ty">Database</span> <span class="c-fn">getInstance</span>() {
+    <span class="c-kw">return</span> INSTANCE;
+  }
+}
+            `,
+            action: async () => {
+                codeContainer.style.display = 'block';
+                const c1 = document.getElementById('core-1');
+                c1.style.transform = 'scale(1)';
+                c1.style.opacity = '1';
+            }
+        },
+        {
+            badge: "Stage 2/5",
+            title: "Naive Lazy Initialization",
+            text: "To save RAM, we only build it when <code>getInstance()</code> is called. But watch closely: If Thread A and Thread B call it at the exact same millisecond, they both pass the <code>null</code> check. Two instances are born!",
+            code: `
+<span class="c-kw">public static</span> <span class="c-ty">Database</span> <span class="c-fn">getInstance</span>() {
+<span class="c-err">  <span class="c-kw">if</span> (instance == <span class="c-kw">null</span>) { <span class="c-cm">// RACE CONDITION!</span></span>
+    instance = <span class="c-kw">new</span> Database();
+  }
+  <span class="c-kw">return</span> instance;
+}
+            `,
+            action: async () => {
+                const c1 = document.getElementById('core-1');
+                const c2 = document.getElementById('core-2');
+                const tA = document.getElementById('thread-a');
+                const tB = document.getElementById('thread-b');
+                const lA = document.getElementById('laser-a');
+                const lB = document.getElementById('laser-b');
+
+                // Reset
+                c1.style.transform = 'scale(0.5)'; c1.style.opacity = '0';
+                
+                await sleep(400);
+                tA.style.opacity = '1'; tB.style.opacity = '1';
+                
+                await sleep(500);
+                lA.style.width = '100px'; lB.style.width = '100px';
+                
+                await sleep(400);
+                c1.style.transform = 'scale(1) translate(-45px, 0)'; c1.style.opacity = '1';
+                c2.style.transform = 'scale(1) translate(45px, 0)'; c2.style.opacity = '1';
+            }
+        },
+        {
+            badge: "Stage 3/5",
+            title: "Double-Checked Locking",
+            text: "We add a <code>synchronized</code> block to act as a bouncer. Crucially, the variable MUST be <code>volatile</code>. Without it, the CPU can reorder assembly instructions, causing a fatal crash.",
+            code: `
+<span class="c-cm">// VOLATILE prevents CPU reordering bugs</span>
+<span class="c-hi"><span class="c-kw">private static <span class="c-vl">volatile</span></span> <span class="c-ty">Database</span> instance;</span>
+
+<span class="c-kw">public static</span> <span class="c-ty">Database</span> <span class="c-fn">getInstance</span>() {
+  <span class="c-kw">if</span> (instance == <span class="c-kw">null</span>) {
+<span class="c-hi">    <span class="c-kw">synchronized</span> (Database.class) {</span>
+      <span class="c-kw">if</span> (instance == <span class="c-kw">null</span>) {
+        instance = <span class="c-kw">new</span> Database();
+      }
+    }
+  }
+  <span class="c-kw">return</span> instance;
+}
+            `,
+            action: async () => {
+                const c1 = document.getElementById('core-1');
+                const c2 = document.getElementById('core-2');
+                const lA = document.getElementById('laser-a');
+                const lB = document.getElementById('laser-b');
+                const shS = document.getElementById('shield-sync');
+
+                // Reset
+                c1.style.transform = 'scale(0.5)'; c1.style.opacity = '0';
+                c2.style.transform = 'scale(0.5) translate(60px, 0)'; c2.style.opacity = '0';
+                lA.style.width = '0'; lB.style.width = '0';
+                
+                await sleep(500);
+                lA.style.width = '100px';
+                
+                await sleep(200);
+                shS.style.opacity = '1'; // Shield up
+                
+                await sleep(300);
+                c1.style.transform = 'scale(1) translate(0, 0)'; c1.style.opacity = '1';
+                
+                await sleep(400);
+                lB.style.width = '100px'; // B hits shield
+            }
+        },
+        {
+            badge: "Stage 4/5",
+            title: "The Bill Pugh Method",
+            text: "DCL is clunky. Bill Pugh used JVM physics: an Inner Static Class. The inner class isn't loaded until the method is called. Since JVM class loading is inherently thread-safe, we get absolute safety with zero <code>synchronized</code> locks!",
+            code: `
+<span class="c-kw">private</span> <span class="c-fn">Database</span>() {}
+
+<span class="c-cm">// Inner class not loaded until requested</span>
+<span class="c-hi"><span class="c-kw">private static class</span> <span class="c-ty">Helper</span> {
+  <span class="c-kw">private static final</span> <span class="c-ty">Database</span> INST = <span class="c-kw">new</span> Database();
+}</span>
+
+<span class="c-kw">public static</span> <span class="c-ty">Database</span> <span class="c-fn">getInstance</span>() {
+  <span class="c-kw">return</span> Helper.INST; <span class="c-cm">// Triggers class load</span>
+}
+            `,
+            action: async () => {
+                const tA = document.getElementById('thread-a');
+                const tB = document.getElementById('thread-b');
+                const lA = document.getElementById('laser-a');
+                const lB = document.getElementById('laser-b');
+                const shS = document.getElementById('shield-sync');
+                const boxI = document.getElementById('box-inner');
+                const c1 = document.getElementById('core-1');
+
+                // Clean up previous
+                tA.style.opacity = '0'; tB.style.opacity = '0';
+                lA.style.width = '0'; lB.style.width = '0';
+                shS.style.opacity = '0';
+                c1.style.transform = 'scale(0.5)'; c1.style.opacity = '0';
+                
+                await sleep(500);
+                boxI.style.opacity = '1';
+                
+                await sleep(500);
+                c1.style.transform = 'scale(1)'; c1.style.opacity = '1';
+            }
+        },
+        {
+            badge: "Vulnerability",
+            title: "The Reflection Hack",
+            text: "Bill Pugh is great, but hackers can use <strong>Java Reflection</strong> to force your private constructor to become public! Or, if the class is Serialized, deserializing spawns a clone. The pattern is broken.",
+            code: `
+<span class="c-cm">// ATTACK SCRIPT</span>
+<span class="c-ty">Database</span> inst1 = Database.getInstance();
+
+<span class="c-err"><span class="c-ty">Constructor</span>[] cons = Database.class.getDeclaredConstructors();
+cons[0].setAccessible(<span class="c-kw">true</span>); <span class="c-cm">// Break private!</span>
+<span class="c-ty">Database</span> inst2 = (<span class="c-ty">Database</span>) cons[0].newInstance();</span>
+
+System.out.println(inst1 == inst2); <span class="c-cm">// FALSE. Duplicate!</span>
+            `,
+            action: async () => {
+                const c1 = document.getElementById('core-1');
+                const c2 = document.getElementById('core-2');
+                const hack = document.getElementById('hacker');
+                const lHack = document.getElementById('laser-hack');
+
+                c1.style.transform = 'scale(1) translate(-45px, 0)';
+                
+                await sleep(400);
+                hack.style.opacity = '1';
+                
+                await sleep(400);
+                lHack.style.height = '80px';
+                
+                await sleep(300);
+                c2.style.transform = 'scale(1) translate(45px, 0)'; c2.style.opacity = '1';
+            }
+        },
+        {
+            badge: "Stage 5/5",
+            title: "The Enum Singleton",
+            text: "Joshua Bloch's ultimate solution: The Enum. Java mathematically guarantees an enum is instantiated exactly once. It inherently blocks Reflection attacks and handles Serialization flawlessly. Indestructible.",
+            code: `
+<span class="c-cm">// The Ultimate Solution by Joshua Bloch</span>
+<span class="c-cm">// Immune to Reflection & Serialization.</span>
+
+<span class="c-hi"><span class="c-kw">public enum</span> <span class="c-ty">Database</span> {
+  INSTANCE;</span>
+
+  <span class="c-kw">public void</span> <span class="c-fn">connect</span>() {
+    <span class="c-cm">// logic here</span>
+  }
+}
+            `,
+            action: async () => {
+                const c1 = document.getElementById('core-1');
+                const c2 = document.getElementById('core-2');
+                const boxI = document.getElementById('box-inner');
+                const shE = document.getElementById('shield-enum');
+                const lHack = document.getElementById('laser-hack');
+
+                // Cleanup
+                c2.style.transform = 'scale(0.5) translate(60px, 0)'; c2.style.opacity = '0';
+                boxI.style.opacity = '0';
+                lHack.style.height = '0';
+                
+                await sleep(400);
+                c1.style.transform = 'scale(1)';
+                
+                await sleep(300);
+                shE.style.opacity = '1'; // Diamond shield
+                
+                await sleep(500);
+                lHack.style.height = '80px'; // Hacker tries
+                
+                await sleep(300);
+                lHack.style.height = '0'; // Deflected!
+            }
+        },
+        {
+            badge: "Summary",
+            title: "Decision Matrix",
+            text: "Which to use? <strong>Eager</strong> for simple objects. <strong>Bill Pugh</strong> for heavy objects needing lazy loading. <strong>Enum</strong> for absolute security. You have mastered the Singleton.",
+            code: ``, // Hide code for matrix
+            action: async () => {
+                document.getElementById('core-container').style.display = 'none';
+                document.getElementById('code-container').style.display = 'none';
+                
+                const matrix = document.getElementById('matrix-container');
+                matrix.style.pointerEvents = 'auto';
+                matrix.style.opacity = '1';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            
+            document.getElementById('core-container').style.display = 'flex';
+            document.getElementById('matrix-container').style.opacity = '0';
+            document.getElementById('matrix-container').style.pointerEvents = 'none';
+            codeContainer.style.display = 'none';
+            
+            // Reset all visual elements
+            document.getElementById('core-1').style.opacity = '0';
+            document.getElementById('core-1').style.transform = 'scale(0.5)';
+            document.getElementById('core-2').style.opacity = '0';
+            document.getElementById('core-2').style.transform = 'scale(0.5) translate(60px, 0)';
+            document.getElementById('shield-sync').style.opacity = '0';
+            document.getElementById('box-inner').style.opacity = '0';
+            document.getElementById('shield-enum').style.opacity = '0';
+            document.getElementById('thread-a').style.opacity = '0';
+            document.getElementById('thread-b').style.opacity = '0';
+            document.getElementById('laser-a').style.width = '0';
+            document.getElementById('laser-b').style.width = '0';
+            document.getElementById('hacker').style.opacity = '0';
+            document.getElementById('laser-hack').style.height = '0';
+
+            badge.innerText = "[DESIGN_PATTERNS]";
+            title.innerText = "The 'Only One' Rule";
+            text.innerHTML = "Some objects must have exactly one instance globally (e.g. DB Connection Pools). If duplicated, systems crash or leak memory. Let's trace the 5 evolutionary stages of the Singleton.";
+            btnNext.innerText = "Initialize Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

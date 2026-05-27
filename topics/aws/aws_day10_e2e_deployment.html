@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 10 — End-to-End Spring Boot Deployment</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#EEEDFE;color:#3C3489;border:1px solid #9B97E8}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #4B45B2;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#EEEDFE;color:#3C3489;border-color:#9B97E8;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #4B45B2;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-purple{background:#EEEDFE;color:#3C3489}.p-green{background:#E1F5EE;color:#085041}
+.p-blue{background:#E6F1FB;color:#0C447C}.p-amber{background:#FAEEDA;color:#633806}
+.p-coral{background:#FAECE7;color:#712B13}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+.code-block{background:#1a1a18;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.code-block code{font-family:monospace;font-size:12px;line-height:1.7;color:#e8e6e0;display:block;white-space:pre}
+.k{color:#9FE1CB}.v{color:#FAC775}.s{color:#F0997B}.c{color:#666;font-style:italic}.cmd-g{color:#97C459}
+
+/* architecture diagram */
+.arch-diagram{background:#fff;border:1px solid #eee;border-radius:12px;padding:1.25rem;margin:12px 0}
+.arch-row{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+.arch-box{border-radius:8px;padding:8px 14px;font-size:11px;font-weight:600;text-align:center;min-width:80px}
+.ab-blue{background:#E6F1FB;border:1px solid #85B7EB;color:#0C447C}
+.ab-green{background:#E1F5EE;border:1px solid #5DCAA5;color:#085041}
+.ab-amber{background:#FAEEDA;border:1px solid #EF9F27;color:#633806}
+.ab-purple{background:#EEEDFE;border:1px solid #9B97E8;color:#3C3489}
+.ab-coral{background:#FAECE7;border:1px solid #F0997B;color:#712B13}
+.ab-gray{background:#f5f5f2;border:1px solid #ddd;color:#555}
+.arch-arrow{font-size:16px;color:#888}
+.arch-label{font-size:10px;color:#999;text-align:center;margin-top:2px}
+
+/* step tracker */
+.step-tracker{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:1.2rem}
+.step-pill{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid #eee;background:#fff;color:#888;cursor:pointer;transition:all .15s;font-family:inherit}
+.step-pill.done{background:#E1F5EE;border-color:#5DCAA5;color:#085041;font-weight:600}
+.step-pill.active{background:#EEEDFE;border-color:#9B97E8;color:#3C3489;font-weight:600}
+
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+.checklist{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.ci{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;background:#fff;border:1px solid #eee;border-radius:8px;font-size:13px;color:#444}
+.ci input{margin-top:2px;flex-shrink:0;accent-color:#4B45B2}
+.ci span{line-height:1.5}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 10 of 30</span>
+    <span class="tag">End-to-End Deployment</span>
+    <span class="tag">Phase 2 Capstone</span>
+    <span class="tag">VPC + EC2 + RDS + S3 + ALB + Spring Boot</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('arch',this)">Architecture</button>
+    <button class="ntab" onclick="show('config',this)">App configuration</button>
+    <button class="ntab" onclick="show('iam',this)">IAM wiring</button>
+    <button class="ntab" onclick="show('deploy',this)">Deployment pipeline</button>
+    <button class="ntab" onclick="show('observability',this)">Observability</button>
+    <button class="ntab" onclick="show('troubleshooting',this)">Troubleshooting</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div id="p-arch" class="panel active">
+    <div class="lede"><strong>Day 10 is the Phase 2 capstone. Everything built across Days 4–9 comes together: VPC networking, EC2 with a production Launch Template, RDS MySQL with Multi-AZ, S3 for object storage, ALB for load balancing and health checking. Today you connect all five layers into one cohesive production-grade deployment and understand exactly how data, requests, and credentials flow through the system.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('a',0,this)">1 · The complete architecture</button>
+      <button class="cbtn" onclick="showC('a',1,this)">2 · Request flow walkthrough</button>
+      <button class="cbtn" onclick="showC('a',2,this)">3 · What lives where</button>
+      <button class="cbtn" onclick="showC('a',3,this)">4 · Failure modes map</button>
+    </div>
+
+    <div id="a0" class="cpanel active">
+      <div class="ch">The complete five-tier architecture</div>
+      <div class="csub">Every component from Days 4–9 positioned correctly in the VPC</div>
+      <div class="cb">
+        <div class="arch-diagram">
+          <div style="font-size:11px;font-weight:600;color:#888;margin-bottom:10px;text-align:center">GetWork Production Architecture — ap-south-1 (Mumbai)</div>
+
+          <div class="arch-row">
+            <div class="arch-box ab-coral">Internet<br>Users</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box ab-blue">Route 53<br>DNS</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box ab-blue" style="min-width:140px">ALB<br>Public Subnets<br>1a + 1b</div>
+          </div>
+
+          <div style="text-align:center;font-size:18px;color:#888;margin:4px 0">↓</div>
+          <div style="font-size:10px;color:#888;text-align:center;margin-bottom:4px">HTTP health checks · TLS termination · Path-based routing</div>
+
+          <div class="arch-row">
+            <div style="background:#f5f5f2;border-radius:10px;padding:10px 16px;border:1px solid #eee">
+              <div style="font-size:10px;font-weight:600;color:#888;margin-bottom:8px;text-align:center">PRIVATE SUBNETS (app tier)</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+                <div class="arch-box ab-green" style="min-width:110px">EC2 app-1<br>ap-south-1a<br><span style="font-size:10px;font-weight:400">Spring Boot :8080</span></div>
+                <div class="arch-box ab-green" style="min-width:110px">EC2 app-2<br>ap-south-1b<br><span style="font-size:10px;font-weight:400">Spring Boot :8080</span></div>
+                <div class="arch-box ab-green" style="min-width:110px;opacity:0.6">EC2 app-N<br>(ASG scale-out)<br><span style="font-size:10px;font-weight:400">Spring Boot :8080</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align:center;font-size:18px;color:#888;margin:4px 0">↓ ↓</div>
+          <div style="font-size:10px;color:#888;text-align:center;margin-bottom:4px">Security Group chaining · app-sg → db-sg (port 3306) · app-sg → S3 (Gateway Endpoint)</div>
+
+          <div class="arch-row">
+            <div class="arch-box ab-amber" style="min-width:140px">RDS MySQL<br>Primary 1a<br><span style="font-size:10px;font-weight:400">Multi-AZ standby 1b</span></div>
+            <div style="width:30px"></div>
+            <div class="arch-box ab-purple" style="min-width:140px">S3 Bucket<br>app-data<br><span style="font-size:10px;font-weight:400">Via Gateway Endpoint</span></div>
+            <div style="width:30px"></div>
+            <div class="arch-box ab-gray" style="min-width:120px">Secrets Manager<br>/getwork/prod/*<br><span style="font-size:10px;font-weight:400">Via Interface Endpoint</span></div>
+          </div>
+
+          <div style="text-align:center;font-size:18px;color:#888;margin:4px 0">↑</div>
+          <div style="font-size:10px;color:#888;text-align:center">NAT Gateway (for outbound OS updates) · No inbound from internet to private subnets</div>
+        </div>
+
+        <p><strong>What this architecture provides:</strong> High availability across two AZs. No single point of failure below the region level. The ALB spans both public subnets — if 1a has an issue, the ALB routes all traffic to instances in 1b. The ASG maintains desired capacity across both AZs. RDS Multi-AZ provides automatic failover for the database. S3 provides 11-nines durability for object storage. Secrets Manager stores all credentials — no secrets in code or environment variables.</p>
+        <p><strong>What this architecture does NOT provide:</strong> Multi-region redundancy (a full ap-south-1 outage takes down this deployment), active-active replication (RDS is single-writer), CDN acceleration (CloudFront is Day 11). Those are the next layers of sophistication added in subsequent days.</p>
+      </div>
+      <span class="pill p-purple">Phase 2 capstone — all five services wired together</span>
+      <span class="pill p-green">Zero single points of failure within the region</span>
+    </div>
+
+    <div id="a1" class="cpanel">
+      <div class="ch">Request flow — what happens on every API call end to end</div>
+      <div class="csub">Tracing a single HTTP request from the mobile app through every layer to the database and back</div>
+      <div class="cb">
+        <p>Tracing a single request from a GetWork user submitting a job posting illustrates how all five layers interact. Following one request through the full stack also reveals every possible failure point.</p>
+
+        <p><strong>Step 1 — DNS resolution.</strong> The GetWork mobile app (React Native, Firebase on frontend) calls <span class="mono">https://api.getwork.app/api/v1/jobs</span>. The device resolves <span class="mono">api.getwork.app</span> via Route 53 — which returns the ALB's DNS name. The ALB's DNS name resolves to one of the ALB's public IPs (ENIs in ap-south-1a or 1b public subnets).</p>
+
+        <p><strong>Step 2 — TLS termination at ALB.</strong> The HTTPS connection is established with the ALB. TLS handshake uses the ACM certificate attached to the HTTPS listener. The ALB decrypts the request. The ALB's inbound Security Group (alb-sg) allows TCP 443 from 0.0.0.0/0.</p>
+
+        <p><strong>Step 3 — ALB routing decision.</strong> The ALB evaluates listener rules. The POST to <span class="mono">/api/v1/jobs</span> matches the path rule <span class="mono">/api/v1/*</span> → forwards to the <span class="mono">getwork-api-tg</span> target group. The ALB selects a healthy EC2 instance from the target group (round robin or least-outstanding-requests). The ALB makes a new TCP connection to the instance's private IP on port 8080, forwarding the request with <span class="mono">X-Forwarded-For: [client IP]</span> and <span class="mono">X-Forwarded-Proto: https</span> headers. The app-sg Security Group on the EC2 allows TCP 8080 from alb-sg.</p>
+
+        <p><strong>Step 4 — Spring Boot request handling.</strong> The request arrives at the Spring Boot application on port 8080. The application reads the <span class="mono">X-Forwarded-*</span> headers (because <span class="mono">server.forward-headers-strategy=native</span> is configured). JWT validation occurs. The request reaches the <span class="mono">JobController</span>. The controller calls <span class="mono">JobService.createJob()</span> with <span class="mono">@Transactional</span> — HikariCP provides a connection to RDS from the write pool.</p>
+
+        <p><strong>Step 5 — RDS MySQL write.</strong> The JDBC connection goes to the RDS primary endpoint. The EC2's app-sg is the source; the db-sg Security Group allows TCP 3306 from app-sg. The INSERT is executed, committed, and acknowledged. If Multi-AZ is enabled, the write has already been synchronously replicated to the standby before MySQL returns success. HikariCP returns the connection to the pool.</p>
+
+        <p><strong>Step 6 — S3 upload (if job has images).</strong> If the job posting includes images, the Spring Boot app calls <span class="mono">S3AsyncClient.putObject()</span>. The request goes to S3 via the VPC Gateway Endpoint — no NAT Gateway, no public internet. The S3 bucket policy allows PutObject from the VPC Endpoint ID. The IAM instance role has <span class="mono">s3:PutObject</span> on the bucket ARN.</p>
+
+        <p><strong>Step 7 — Response.</strong> Spring Boot returns HTTP 201 Created with the job ID. The ALB forwards the response to the client. The client's HTTP connection to the ALB closes. The backend connection from ALB to EC2 returns to the ALB's connection pool (HTTP/1.1 keep-alive) for potential reuse.</p>
+
+        <div class="mechbox"><strong>The complete security boundary at each step:</strong> Client → ALB: Security Group alb-sg allows 443 from internet. ALB → EC2: Security Group app-sg allows 8080 from alb-sg (SG reference, not CIDR). EC2 → RDS: Security Group db-sg allows 3306 from app-sg. EC2 → S3: VPC Gateway Endpoint + bucket policy restricts S3 access to VPC Endpoint. EC2 → Secrets Manager: VPC Interface Endpoint + IAM role with secretsmanager:GetSecretValue. Every hop has an explicit allow — deny by default at every boundary. No wildcards, no CIDR open rules for internal traffic.</div>
+      </div>
+    </div>
+
+    <div id="a2" class="cpanel">
+      <div class="ch">What lives where — the configuration map</div>
+      <div class="csub">Every configuration value, where it's stored, and how the application retrieves it</div>
+      <div class="cb">
+        <p>A clean production deployment has a clear answer for "where does each configuration value live?" The answer should never be "in the JAR" or "in application.properties" for anything sensitive.</p>
+        <div class="code-block"><code><span class="c">== WHAT LIVES IN SECRETS MANAGER (/getwork/prod/*) ==</span>
+/getwork/prod/database     <span class="c">→ JSON: {host, username, password, dbname, port}</span>
+/getwork/prod/jwt-secret   <span class="c">→ String: JWT signing key (256-bit minimum)</span>
+/getwork/prod/firebase-key <span class="c">→ JSON: Firebase Admin SDK service account</span>
+/getwork/prod/razorpay     <span class="c">→ JSON: {api_key, api_secret} payment gateway</span>
+
+<span class="c">== WHAT LIVES IN PARAMETER STORE (/getwork/prod/*) ==</span>
+/getwork/prod/app-bucket          <span class="c">→ S3 bucket name</span>
+/getwork/prod/app-version         <span class="c">→ Deployed JAR version</span>
+/getwork/prod/allowed-origins     <span class="c">→ CORS allowed origins list</span>
+/getwork/prod/max-upload-size-mb  <span class="c">→ 10 (config, not secret)</span>
+/getwork/prod/rds-endpoint        <span class="c">→ RDS hostname (not secret, but env-specific)</span>
+
+<span class="c">== WHAT LIVES IN application.properties (non-sensitive defaults) ==</span>
+server.port=8080
+server.forward-headers-strategy=native
+spring.profiles.active=${SPRING_PROFILE:production}
+management.endpoints.web.exposure.include=health,info,metrics
+management.endpoint.health.show-details=never
+management.health.livenessstate.enabled=true
+management.health.readinessstate.enabled=true
+
+<span class="c">== WHAT LIVES IN LAUNCH TEMPLATE USER DATA (startup commands) ==</span>
+<span class="c">→ Fetch version from SSM → download JAR from S3 → write systemd service → start</span>
+<span class="c">→ NO secrets — all fetched from Secrets Manager at runtime by the application</span>
+
+<span class="c">== WHAT LIVES IN IAM INSTANCE ROLE ==</span>
+<span class="c">→ s3:GetObject, s3:PutObject on getwork-app-bucket/*</span>
+<span class="c">→ s3:ListBucket on getwork-app-bucket</span>
+<span class="c">→ secretsmanager:GetSecretValue on /getwork/prod/* secrets</span>
+<span class="c">→ ssm:GetParameter on /getwork/prod/* parameters</span>
+<span class="c">→ logs:PutLogEvents, logs:CreateLogStream on /getwork/* log groups</span>
+<span class="c">→ cloudwatch:PutMetricData for custom application metrics</span></code></div>
+
+        <div class="prodbox"><strong>The application startup sequence — secrets fetched, not injected:</strong> When Spring Boot starts, a <span class="mono">@Configuration</span> class annotated with <span class="mono">@PostConstruct</span> calls AWS Secrets Manager via the SDK (using the instance's IAM role — no stored credentials) to fetch database credentials. These are used to construct the HikariCP DataSource. The JWT secret is fetched and stored in a Spring <span class="mono">@Value</span>. Environment variables contain only non-sensitive config. This is the correct pattern: secrets are fetched at runtime from a managed store, never baked into the deployment artifact or passed via environment variables. If a secret is rotated in Secrets Manager, a rolling restart of the ASG picks up the new value automatically.</div>
+      </div>
+    </div>
+
+    <div id="a3" class="cpanel">
+      <div class="ch">Failure modes map — what breaks when each component fails</div>
+      <div class="csub">Knowing the blast radius of every failure is what separates reactive engineers from proactive ones</div>
+      <div class="cb">
+        <p>For each component in the architecture, what is the user impact when it fails, how is it detected, and how is it recovered?</p>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0">
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Single EC2 instance fails</div>
+            <div style="font-size:12px;color:#555;line-height:1.65"><strong>Impact:</strong> ALB stops routing to the failed instance within 30 seconds (2 failed health checks × 15s interval). Requests are redistributed to remaining healthy instances. No user-visible impact if ≥2 instances are healthy. <strong>Recovery:</strong> ASG replaces terminated instance automatically. <strong>Detection:</strong> ALB HealthyHostCount alarm, ASG activity log.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">All EC2 instances in one AZ fail (AZ outage)</div>
+            <div style="font-size:12px;color:#555;line-height:1.65"><strong>Impact:</strong> ALB routes all traffic to remaining AZ's instances. If ASG has instances in both AZs (always configure this), impact is absorbed. Capacity is halved until ASG rebalances. <strong>Recovery:</strong> ASG launches replacement instances in the healthy AZ, then rebalances when the failed AZ recovers. <strong>Detection:</strong> CloudWatch — sudden drop in ALB target count, ASG instance count alert.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">RDS primary instance fails</div>
+            <div style="font-size:12px;color:#555;line-height:1.65"><strong>Impact:</strong> 20–120 seconds of database unavailability. Write operations fail during this window. HikariCP retries re-establish connections to the new primary after DNS propagates. <strong>Recovery:</strong> Automatic Multi-AZ failover. JVM DNS TTL=5s ensures fast reconnection. Resilience4j retry handles transient failures. <strong>Detection:</strong> CloudWatch RDS event notification, application error rate spike.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">S3 service degradation</div>
+            <div style="font-size:12px;color:#555;line-height:1.65"><strong>Impact:</strong> Image uploads fail. Core API functionality (job CRUD, worker management) continues because S3 is only used for media storage, not primary data. <strong>Recovery:</strong> S3 degradation is AWS-managed and self-heals. Retry failed uploads. <strong>Detection:</strong> S3 SDK errors in application logs, custom CloudWatch metric for S3 operation failures.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Secrets Manager unreachable</div>
+            <div style="font-size:12px;color:#555;line-height:1.65"><strong>Impact:</strong> Application cannot start (cannot fetch database credentials at startup). Existing running instances are unaffected — they fetched secrets at their last startup. New instances fail to launch, ASG may enter a crash loop. <strong>Recovery:</strong> Use VPC Interface Endpoint for Secrets Manager to avoid public internet dependency. Cache the secret value in application memory after first fetch. <strong>Detection:</strong> EC2 instance launch failures in ASG activity log, cloud-init errors.</div>
+          </div>
+        </div>
+
+        <div class="mechbox"><strong>The Secrets Manager unavailability design pattern:</strong> If Secrets Manager is temporarily unreachable when your Spring Boot app starts, the startup fails. Under an ASG with health check grace period, the ASG terminates the failed instance and tries again — potentially in a loop if Secrets Manager remains unreachable. Solution: implement Secrets Manager retrieval with retry logic (3 attempts, exponential backoff) at application startup. If all retries fail, log a clear error and exit with a non-zero code. The ASG activity log will show the startup failure clearly. Additionally, use a VPC Interface Endpoint for Secrets Manager — this routes all Secrets Manager API calls through the VPC private network, eliminating public internet dependency and providing more reliable connectivity.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('config',document.querySelectorAll('.ntab')[1])">Application configuration — wiring Spring Boot to AWS services →</button>
+  </div>
+
+  <!-- APP CONFIGURATION -->
+  <div id="p-config" class="panel">
+    <div class="lede"><strong>The Spring Boot application configuration layer is where your AWS architecture meets your application code. Getting this right means the same JAR runs correctly on a developer's laptop, in CI, in staging, and in production — with each environment automatically using its own credentials, endpoints, and configuration, without any code changes.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('cfg',0,this)">1 · Secrets Manager integration</button>
+      <button class="cbtn" onclick="showC('cfg',1,this)">2 · Full application.properties</button>
+      <button class="cbtn" onclick="showC('cfg',2,this)">3 · Health indicators</button>
+      <button class="cbtn" onclick="showC('cfg',3,this)">4 · Profile-based configuration</button>
+    </div>
+
+    <div id="cfg0" class="cpanel active">
+      <div class="ch">Fetching database credentials from Secrets Manager at startup</div>
+      <div class="csub">The correct Spring Boot pattern for secrets — no credentials in application.properties, no environment variable injection</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">// SecretsConfig.java — fetch all secrets at startup, fail fast if unavailable</span>
+<span class="cmd-g">@Configuration</span>
+<span class="cmd-g">@Slf4j</span>
+<span class="k">public class</span> SecretsConfig {
+
+    <span class="k">private final</span> SecretsManagerClient secretsClient;
+    <span class="k">private final</span> ObjectMapper objectMapper;
+
+    <span class="k">public</span> SecretsConfig(<span class="cmd-g">@Value</span>(<span class="s">"${aws.region:ap-south-1}"</span>) String region,
+                          ObjectMapper objectMapper) {
+        <span class="k">this</span>.secretsClient = SecretsManagerClient.builder()
+            .region(Region.of(region))
+            .credentialsProvider(DefaultCredentialsProvider.create())
+            .build();
+        <span class="k">this</span>.objectMapper = objectMapper;
+    }
+
+    <span class="c">// Fetch a secret with retry — returns null if secret doesn't exist,</span>
+    <span class="c">// throws AwsServiceException if Secrets Manager is unreachable after retries</span>
+    <span class="k">public</span> Map&lt;String, String&gt; fetchSecret(String secretName) {
+        RetryPolicy&lt;Object&gt; retry = RetryPolicy.builder()
+            .handle(SdkClientException.class)
+            .withDelay(Duration.ofSeconds(2))
+            .withMaxRetries(3)
+            .build();
+
+        <span class="k">return</span> Failsafe.with(retry).get(() -> {
+            <span class="k">try</span> {
+                String json = secretsClient.getSecretValue(
+                    r -> r.secretId(secretName)).secretString();
+                <span class="k">return</span> objectMapper.readValue(json, Map.class);
+            } <span class="k">catch</span> (ResourceNotFoundException e) {
+                log.warn(<span class="s">"Secret {} not found — using empty map"</span>, secretName);
+                <span class="k">return</span> Map.of();
+            }
+        });
+    }
+
+    <span class="cmd-g">@Bean</span>
+    <span class="cmd-g">@Primary</span>
+    <span class="k">public</span> DataSource dataSource() {
+        Map&lt;String, String&gt; dbSecrets = fetchSecret(<span class="s">"/getwork/prod/database"</span>);
+        log.info(<span class="s">"Configuring database connection to {}"</span>, dbSecrets.get(<span class="s">"host"</span>));
+
+        HikariConfig config = <span class="k">new</span> HikariConfig();
+        config.setJdbcUrl(String.format(
+            <span class="s">"jdbc:mysql://%s:%s/%s?useSSL=true&requireSSL=true&connectTimeout=10000&socketTimeout=30000"</span>,
+            dbSecrets.get(<span class="s">"host"</span>), dbSecrets.get(<span class="s">"port"</span>), dbSecrets.get(<span class="s">"dbname"</span>)));
+        config.setUsername(dbSecrets.get(<span class="s">"username"</span>));
+        config.setPassword(dbSecrets.get(<span class="s">"password"</span>));
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(3);
+        config.setConnectionTimeout(30_000);
+        config.setIdleTimeout(600_000);
+        config.setMaxLifetime(270_000);      <span class="c">// Recycle before MySQL wait_timeout (300s)</span>
+        config.setKeepaliveTime(60_000);     <span class="c">// Proactively detect dead connections</span>
+        config.setInitializationFailTimeout(-1); <span class="c">// Don't fail startup if DB unreachable</span>
+        config.setConnectionTestQuery(<span class="s">"SELECT 1"</span>);
+        config.setPoolName(<span class="s">"GetWorkPool"</span>);
+        <span class="k">return new</span> HikariDataSource(config);
+    }
+
+    <span class="cmd-g">@Bean</span>
+    <span class="k">public</span> String jwtSecret() {
+        Map&lt;String, String&gt; secrets = fetchSecret(<span class="s">"/getwork/prod/jwt-secret"</span>);
+        <span class="k">return</span> secrets.getOrDefault(<span class="s">"value"</span>, generateLocalDevSecret());
+    }
+
+    <span class="k">private</span> String generateLocalDevSecret() {
+        <span class="c">// Only for local development when Secrets Manager is unavailable</span>
+        log.warn(<span class="s">"JWT secret not found in Secrets Manager — using generated dev key"</span>);
+        <span class="k">return</span> Base64.getEncoder().encodeToString(
+            SecureRandom.getSeed(32));
+    }
+}</code></div>
+        <div class="failbox"><strong>The initialization-fail-timeout=-1 safety valve and its implication:</strong> Without this setting, if Secrets Manager is unreachable when Spring Boot starts, the DataSource bean creation fails and the application refuses to start. This seems safe but creates a problem: during an ASG rolling deployment, if a new instance launches while Secrets Manager has a brief API hiccup, the instance fails to start, the ASG marks it unhealthy, terminates it, and immediately tries another. If the hiccup lasts several minutes, the ASG can burn through its entire pool of instances trying to launch healthy ones, leaving zero capacity. With initialization-fail-timeout=-1, the DataSource starts without a pre-validated connection. The first actual database query will fail and trigger HikariCP's retry logic — gracefully degrading rather than refusing to start. The trade-off: startup errors are deferred to the first query rather than detected at launch.</div>
+      </div>
+    </div>
+
+    <div id="cfg1" class="cpanel">
+      <div class="ch">Complete production application.properties</div>
+      <div class="csub">Every Spring Boot setting that matters for production on AWS — with the reason behind each value</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># ============================================================</span>
+<span class="c"># GetWork Production Configuration — application-production.properties</span>
+<span class="c"># ============================================================</span>
+
+<span class="c"># Server</span>
+<span class="v">server.port</span>=8080
+<span class="v">server.forward-headers-strategy</span>=native      <span class="c"># Trust ALB's X-Forwarded-* headers (Day 8)</span>
+<span class="v">server.shutdown</span>=graceful                    <span class="c"># Finish in-flight requests on SIGTERM</span>
+<span class="v">spring.lifecycle.timeout-per-shutdown-phase</span>=30s  <span class="c"># Max 30s for graceful shutdown</span>
+<span class="v">server.tomcat.max-threads</span>=200               <span class="c"># Tomcat thread pool (default 200, usually fine)</span>
+<span class="v">server.tomcat.accept-count</span>=100              <span class="c"># Queue depth when all threads busy</span>
+<span class="v">server.tomcat.connection-timeout</span>=20000      <span class="c"># Drop idle connections after 20s</span>
+
+<span class="c"># Spring profiles and active profile</span>
+<span class="v">spring.profiles.active</span>=production
+<span class="v">spring.application.name</span>=getwork-api
+
+<span class="c"># JPA / Hibernate</span>
+<span class="v">spring.jpa.show-sql</span>=false                  <span class="c"># Never log SQL in production (log files flood)</span>
+<span class="v">spring.jpa.open-in-view</span>=false              <span class="c"># Disable OSIV — it holds DB connections during view rendering</span>
+<span class="v">spring.jpa.properties.hibernate.dialect</span>=org.hibernate.dialect.MySQL8Dialect
+<span class="v">spring.jpa.properties.hibernate.jdbc.batch_size</span>=20       <span class="c"># Batch inserts for performance</span>
+<span class="v">spring.jpa.properties.hibernate.order_inserts</span>=true
+<span class="v">spring.jpa.properties.hibernate.order_updates</span>=true
+<span class="v">spring.jpa.hibernate.ddl-auto</span>=validate     <span class="c"># NEVER use update/create in production</span>
+
+<span class="c"># Flyway database migrations</span>
+<span class="v">spring.flyway.enabled</span>=true
+<span class="v">spring.flyway.locations</span>=classpath:db/migration
+<span class="v">spring.flyway.baseline-on-migrate</span>=false    <span class="c"># Fail if migration baseline is missing</span>
+
+<span class="c"># Actuator — health and monitoring</span>
+<span class="v">management.server.port</span>=8081                <span class="c"># Separate management port (never expose to ALB)</span>
+<span class="v">management.endpoints.web.exposure.include</span>=health,info,metrics,prometheus
+<span class="v">management.endpoint.health.show-details</span>=never
+<span class="v">management.health.livenessstate.enabled</span>=true
+<span class="v">management.health.readinessstate.enabled</span>=true
+<span class="v">management.health.db.enabled</span>=true
+<span class="v">management.health.diskspace.enabled</span>=false  <span class="c"># Not meaningful on EC2 managed instances</span>
+
+<span class="c"># AWS region — read from environment, default to Mumbai</span>
+<span class="v">aws.region</span>=${AWS_DEFAULT_REGION:ap-south-1}
+<span class="v">aws.s3.bucket</span>=${S3_BUCKET_NAME}            <span class="c"># Set in Launch Template user data from SSM</span>
+
+<span class="c"># Logging</span>
+<span class="v">logging.level.root</span>=INFO
+<span class="v">logging.level.com.getwork</span>=INFO
+<span class="v">logging.level.org.hibernate.SQL</span>=OFF        <span class="c"># Disable query logging in prod</span>
+<span class="v">logging.pattern.console</span>=%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+<span class="c"># In production, logs go to journald (captured by CloudWatch Agent)</span>
+<span class="c"># JSON logging format preferred for structured log parsing</span></code></div>
+        <div class="mechbox"><strong>spring.jpa.open-in-view=false — the setting that prevents the most common connection leak:</strong> Open Session in View (OSIV) is enabled by default in Spring Boot. It keeps a JPA session (and therefore a database connection from HikariCP) open for the entire duration of an HTTP request — including during response serialisation. If your Jackson serialiser lazily loads related entities during JSON serialisation (after the service method has returned), OSIV provides the connection for that. The problem: a connection is held for the full HTTP request duration, not just the database operation duration. Under load, this exhausts the connection pool. With OSIV disabled, lazy loading during serialisation throws LazyInitializationException — which is the correct behavior that forces you to eagerly load all needed data in the transaction. This catches lazy loading bugs at development time rather than manifesting as production connection pool exhaustion.</div>
+      </div>
+    </div>
+
+    <div id="cfg2" class="cpanel">
+      <div class="ch">Custom health indicators — ALB health checks that reflect real readiness</div>
+      <div class="csub">Implementing readiness and liveness health indicators that the ALB uses to make intelligent routing decisions</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">// DatabaseHealthIndicator.java — included in readiness check</span>
+<span class="cmd-g">@Component</span>
+<span class="k">public class</span> DatabaseHealthIndicator <span class="k">implements</span> HealthIndicator {
+    <span class="k">private final</span> DataSource dataSource;
+
+    <span class="cmd-g">@Override</span>
+    <span class="k">public</span> Health health() {
+        <span class="k">try</span> (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            ResultSet rs = stmt.executeQuery(<span class="s">"SELECT 1"</span>);
+            rs.next();
+            <span class="k">return</span> Health.up()
+                .withDetail(<span class="s">"response"</span>, rs.getInt(1))
+                .withDetail(<span class="s">"pool.active"</span>, getActiveConnections())
+                .withDetail(<span class="s">"pool.max"</span>, getMaxConnections())
+                .build();
+        } <span class="k">catch</span> (SQLException e) {
+            <span class="k">return</span> Health.down()
+                .withException(e)
+                .withDetail(<span class="s">"message"</span>, <span class="s">"Database unavailable"</span>)
+                .build();
+        }
+    }
+}
+
+<span class="c">// ApplicationReadinessIndicator.java</span>
+<span class="c">// Spring Boot 2.3+ supports Readiness state — use this for ALB health check</span>
+<span class="cmd-g">@Component</span>
+<span class="k">public class</span> ApplicationReadinessIndicator <span class="k">implements</span> ApplicationReadinessCheck {
+    <span class="k">private final</span> DatabaseHealthIndicator dbHealth;
+    <span class="k">private final</span> S3HealthIndicator s3Health;
+
+    <span class="c">// Called by /actuator/health/readiness</span>
+    <span class="c">// Returns ACCEPTING_TRAFFIC or REFUSING_TRAFFIC</span>
+    <span class="cmd-g">@Override</span>
+    <span class="k">public</span> ApplicationAvailability.State check() {
+        Health dbStatus = dbHealth.health();
+        <span class="c">// Only db health gates readiness — S3 degradation doesn't block all traffic</span>
+        <span class="k">return</span> dbStatus.getStatus().equals(Status.UP)
+            ? ReadinessState.ACCEPTING_TRAFFIC
+            : ReadinessState.REFUSING_TRAFFIC;
+    }
+}
+
+<span class="c">// GracefulShutdown — connects to server.shutdown=graceful</span>
+<span class="c">// When SIGTERM received, Spring Boot stops accepting new requests,</span>
+<span class="c">// completes in-flight requests up to spring.lifecycle.timeout-per-shutdown-phase,</span>
+<span class="c">// then closes HikariCP pool and exits.</span>
+<span class="c">// The ALB deregistration delay (60s) must be >= the shutdown timeout (30s)</span>
+<span class="c">// to ensure the ALB stops sending new requests before the app stops accepting them.</span></code></div>
+        <div class="prodbox"><strong>The graceful shutdown sequence and why the timing matters:</strong> When the ASG terminates an EC2 instance (scale-in or rolling deployment), the following sequence must happen in order: (1) ASG lifecycle terminate hook fires → notifies the ALB to start connection draining (deregistration delay = 60s). (2) During draining, ALB stops sending new requests to this instance but completes in-flight ones. (3) After deregistration completes, AWS sends SIGTERM to the Spring Boot process. (4) Spring Boot's graceful shutdown accepts no new requests, completes in-flight requests within 30s, closes the HikariCP pool, and exits. The deregistration delay (60s) must be greater than the graceful shutdown timeout (30s). If they're reversed — SIGTERM arrives before draining completes — the app stops accepting requests while the ALB is still trying to send them.</div>
+      </div>
+    </div>
+
+    <div id="cfg3" class="cpanel">
+      <div class="ch">Profile-based configuration — same JAR, different environments</div>
+      <div class="csub">How Spring profiles make local development work without AWS credentials while production uses IAM roles</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># application-local.properties — overrides for local development</span>
+<span class="v">spring.datasource.url</span>=jdbc:mysql://localhost:3306/getwork_dev
+<span class="v">spring.datasource.username</span>=root
+<span class="v">spring.datasource.password</span>=localdev
+
+<span class="c"># Override AWS SDK to use LocalStack</span>
+<span class="v">aws.endpoint.override</span>=http://localhost:4566   <span class="c"># LocalStack endpoint</span>
+
+<span class="c"># Skip Secrets Manager — use local values directly</span>
+<span class="v">app.secrets.use-aws</span>=false
+
+<span class="c"># Faster startup without IMDS timeout</span>
+<span class="v">AWS_EC2_METADATA_DISABLED</span>=true
+
+<span class="c">----</span>
+<span class="c"># application-test.properties — for CI/CD integration tests against LocalStack</span>
+<span class="v">spring.datasource.url</span>=jdbc:mysql://localhost:3306/getwork_test
+<span class="v">spring.flyway.clean-on-validation-error</span>=true   <span class="c"># Allow schema reset between test runs</span>
+<span class="v">aws.endpoint.override</span>=http://localhost:4566
+
+<span class="c">----</span>
+<span class="c"># SecretsConfig.java — profile-aware secret fetching</span>
+<span class="cmd-g">@Bean</span>
+<span class="cmd-g">@Profile</span>(<span class="s">"production"</span>)
+<span class="k">public</span> DataSource productionDataSource() {
+    <span class="c">// Fetches from Secrets Manager using IAM role</span>
+    Map&lt;String, String&gt; secrets = fetchSecret(<span class="s">"/getwork/prod/database"</span>);
+    <span class="k">return</span> buildDataSource(secrets);
+}
+
+<span class="cmd-g">@Bean</span>
+<span class="cmd-g">@Profile</span>(<span class="s">"!production"</span>)
+<span class="k">public</span> DataSource localDataSource(
+        <span class="cmd-g">@Value</span>(<span class="s">"${spring.datasource.url}"</span>) String url,
+        <span class="cmd-g">@Value</span>(<span class="s">"${spring.datasource.username}"</span>) String user,
+        <span class="cmd-g">@Value</span>(<span class="s">"${spring.datasource.password}"</span>) String pass) {
+    <span class="c">// Uses local properties — no AWS SDK call</span>
+    HikariConfig config = <span class="k">new</span> HikariConfig();
+    config.setJdbcUrl(url);
+    config.setUsername(user);
+    config.setPassword(pass);
+    config.setMaximumPoolSize(5);
+    <span class="k">return new</span> HikariDataSource(config);
+}</code></div>
+        <div class="mechbox"><strong>Activating profiles — how production gets the right profile:</strong> The active Spring profile is set in the systemd service file (created by user data): <span class="mono">Environment=SPRING_PROFILES_ACTIVE=production</span>. This is set unconditionally in the Launch Template user data — any instance launched from this template is a production instance. Local development sets the profile in IDE run configuration or via <span class="mono">-Dspring.profiles.active=local</span>. CI sets <span class="mono">SPRING_PROFILES_ACTIVE=test</span>. The JAR itself contains all profiles — the runtime environment determines which one activates. This is the correct 12-factor app configuration pattern.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('iam',document.querySelectorAll('.ntab')[2])">IAM wiring — the permission layer that ties everything together →</button>
+  </div>
+
+  <!-- IAM WIRING -->
+  <div id="p-iam" class="panel">
+    <div class="lede"><strong>The IAM instance role is the credential that grants your Spring Boot EC2 instances permission to call every other AWS service. Getting the permissions right means least-privilege — only what the application actually needs, scoped to specific resources. Getting it wrong means either broken functionality or an over-privileged instance that's a security incident waiting to happen.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('iam',0,this)">1 · The complete instance policy</button>
+      <button class="cbtn" onclick="showC('iam',1,this)">2 · Resource ARN scoping</button>
+      <button class="cbtn" onclick="showC('iam',2,this)">3 · VPC endpoints and policies</button>
+    </div>
+
+    <div id="iam0" class="cpanel active">
+      <div class="ch">The complete least-privilege IAM policy for GetWork EC2 instances</div>
+      <div class="csub">Every permission the application needs, scoped to specific resources — nothing more</div>
+      <div class="cb">
+        <div class="code-block"><code>{
+  <span class="k">"Version"</span>: <span class="v">"2012-10-17"</span>,
+  <span class="k">"Statement"</span>: [
+    {
+      <span class="k">"Sid"</span>: <span class="v">"S3AppBucketObjects"</span>,
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: [<span class="v">"s3:GetObject"</span>, <span class="v">"s3:PutObject"</span>, <span class="v">"s3:DeleteObject"</span>],
+      <span class="k">"Resource"</span>: <span class="v">"arn:aws:s3:::getwork-app-data/*"</span>
+    },
+    {
+      <span class="k">"Sid"</span>: <span class="v">"S3AppBucketList"</span>,
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: <span class="v">"s3:ListBucket"</span>,
+      <span class="k">"Resource"</span>: <span class="v">"arn:aws:s3:::getwork-app-data"</span>,
+      <span class="k">"Condition"</span>: {<span class="v">"StringLike"</span>: {<span class="v">"s3:prefix"</span>: [<span class="v">"uploads/*"</span>, <span class="v">"exports/*"</span>]}}
+    },
+    {
+      <span class="k">"Sid"</span>: <span class="v">"SecretsManagerRead"</span>,
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: <span class="v">"secretsmanager:GetSecretValue"</span>,
+      <span class="k">"Resource"</span>: <span class="v">"arn:aws:secretsmanager:ap-south-1:ACCOUNT:secret:/getwork/prod/*"</span>
+    },
+    {
+      <span class="k">"Sid"</span>: <span class="v">"ParameterStoreRead"</span>,
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: [<span class="v">"ssm:GetParameter"</span>, <span class="v">"ssm:GetParameters"</span>, <span class="v">"ssm:GetParametersByPath"</span>],
+      <span class="k">"Resource"</span>: <span class="v">"arn:aws:ssm:ap-south-1:ACCOUNT:parameter/getwork/prod/*"</span>
+    },
+    {
+      <span class="k">"Sid"</span>: <span class="v">"CloudWatchLogs"</span>,
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: [
+        <span class="v">"logs:CreateLogGroup"</span>, <span class="v">"logs:CreateLogStream"</span>,
+        <span class="v">"logs:PutLogEvents"</span>, <span class="v">"logs:DescribeLogStreams"</span>
+      ],
+      <span class="k">"Resource"</span>: <span class="v">"arn:aws:logs:ap-south-1:ACCOUNT:log-group:/getwork/*:*"</span>
+    },
+    {
+      <span class="k">"Sid"</span>: <span class="v">"CloudWatchMetrics"</span>,
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: <span class="v">"cloudwatch:PutMetricData"</span>,
+      <span class="k">"Resource"</span>: <span class="v">"*"</span>,
+      <span class="k">"Condition"</span>: {<span class="v">"StringEquals"</span>: {<span class="v">"cloudwatch:namespace"</span>: <span class="v">"GetWork/API"</span>}}
+    },
+    {
+      <span class="k">"Sid"</span>: <span class="v">"SSMSessionManager"</span>,
+      <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+      <span class="k">"Action"</span>: [
+        <span class="v">"ssmmessages:CreateControlChannel"</span>,
+        <span class="v">"ssmmessages:CreateDataChannel"</span>,
+        <span class="v">"ssmmessages:OpenControlChannel"</span>,
+        <span class="v">"ssmmessages:OpenDataChannel"</span>,
+        <span class="v">"ec2messages:AcknowledgeMessage"</span>,
+        <span class="v">"ec2messages:SendReply"</span>,
+        <span class="v">"ec2messages:GetMessages"</span>
+      ],
+      <span class="k">"Resource"</span>: <span class="v">"*"</span>
+    }
+  ]
+}</code></div>
+        <div class="mechbox"><strong>SSM Session Manager — SSH without port 22 open:</strong> The SSMSessionManager permissions block allows AWS Systems Manager Session Manager to open a shell into your EC2 instance. Instead of SSH (which requires port 22 open in your Security Group and a key pair), Session Manager establishes a session via the SSM agent and AWS's control plane — no inbound port required. The EC2 Security Group has no port 22 rule. Engineers connect via: <span class="mono">aws ssm start-session --target i-instanceid</span>. All session activity is logged to CloudTrail. For your Deloitte project: this is the required access mechanism for instances in private subnets where you have no direct network path for SSH, and it satisfies audit requirements because every command is logged.</div>
+        <div class="failbox"><strong>The cloudwatch:PutMetricData without namespace condition — a silent over-permission:</strong> Many engineers write <span class="mono">Action: cloudwatch:PutMetricData, Resource: *</span> without a namespace condition. This allows the EC2 instance to write metrics into any CloudWatch namespace — including AWS-managed namespaces like AWS/EC2, AWS/RDS. A bug in application code or a compromised instance could write misleading data into AWS's own monitoring namespaces, causing false alarms or masking real issues. The namespace condition restricts metric writes to your application's own namespace. Apply this pattern to all CloudWatch permissions.</div>
+      </div>
+    </div>
+
+    <div id="iam1" class="cpanel">
+      <div class="ch">Why resource ARN scoping matters — the blast radius calculation</div>
+      <div class="csub">The difference between a compromised instance having access to one bucket versus all buckets in your account</div>
+      <div class="cb">
+        <p>Consider two IAM policies for S3 access:</p>
+        <p><strong>Over-permissive:</strong> <span class="mono">Action: s3:*, Resource: *</span> — grants all S3 operations on all buckets. If this EC2 instance is compromised via SSRF or supply chain attack, the attacker has full access to every S3 bucket in your account — production data, backups, other application data, CloudTrail logs.</p>
+        <p><strong>Least-privilege:</strong> <span class="mono">Action: [s3:GetObject, s3:PutObject], Resource: arn:aws:s3:::getwork-app-data/*</span> — grants only the specific operations the application needs on the specific bucket it uses. If this instance is compromised, the attacker can only access job posting images and upload files — not your RDS snapshots, other application's data, or account-wide data.</p>
+        <div class="mechbox"><strong>The IAM Access Analyzer validation step for every policy:</strong> Before attaching any policy, run it through IAM Access Analyzer's policy validation: <span class="mono">aws accessanalyzer validate-policy --policy-document file://policy.json --policy-type IDENTITY_POLICY</span>. This catches: over-broad wildcards (s3:* when you only need GetObject), typos in action names (s3:GetObiect silently grants nothing), incorrect resource ARN formats, and known privilege escalation patterns. Make this a mandatory pre-commit check in your Bitbucket pipeline for any IAM policy changes. A 30-second CLI call prevents silent IAM misconfigurations that take hours to diagnose in production.</div>
+        <p><strong>The Condition block on cloudwatch:PutMetricData:</strong> Restricts metric writes to the <span class="mono">GetWork/API</span> namespace. This means the application cannot pollute other namespaces and cannot forge metrics in AWS's own service namespaces (AWS/EC2, AWS/RDS) to mask real infrastructure issues.</p>
+        <p><strong>The Condition block on s3:ListBucket:</strong> Restricts the prefix scan to <span class="mono">uploads/*</span> and <span class="mono">exports/*</span>. The application cannot enumerate all objects in the bucket — only the paths it legitimately needs to list. This limits the data surface area if credentials are compromised.</p>
+      </div>
+    </div>
+
+    <div id="iam2" class="cpanel">
+      <div class="ch">VPC Endpoints and their resource policies — the final security layer</div>
+      <div class="csub">How VPC Endpoints restrict which buckets and secrets can be accessed, even from instances with broad IAM permissions</div>
+      <div class="cb">
+        <p>VPC Endpoints add a second permission boundary that's evaluated independently of IAM. Even if an EC2 instance's IAM role is over-permissive, VPC Endpoint policies can restrict what that identity can access when going through the endpoint.</p>
+        <p><strong>S3 Gateway Endpoint policy:</strong> Restrict the S3 Gateway Endpoint to only allow access to your specific buckets. This means any EC2 in the VPC using the Gateway Endpoint (which is all traffic to S3 from private subnets — it's free, so you route everything through it) can only access the whitelisted buckets. An attacker who compromises an EC2 with a broad IAM policy still cannot access other accounts' S3 buckets or other buckets in your account through this endpoint.</p>
+        <div class="code-block"><code><span class="c">{</span>
+  <span class="c">/* S3 Gateway Endpoint policy — attached to the VPC Endpoint, not the IAM role */</span>
+  <span class="k">"Statement"</span>: [{
+    <span class="k">"Effect"</span>: <span class="v">"Allow"</span>,
+    <span class="k">"Principal"</span>: <span class="v">"*"</span>,
+    <span class="k">"Action"</span>: [<span class="v">"s3:GetObject"</span>, <span class="v">"s3:PutObject"</span>, <span class="v">"s3:ListBucket"</span>],
+    <span class="k">"Resource"</span>: [
+      <span class="v">"arn:aws:s3:::getwork-app-data"</span>,
+      <span class="v">"arn:aws:s3:::getwork-app-data/*"</span>,
+      <span class="c">/* Also allow access to yum/dnf package repos for OS updates */</span>
+      <span class="v">"arn:aws:s3:::amazonlinux*"</span>,
+      <span class="v">"arn:aws:s3:::amazonlinux*/*"</span>
+    ]
+  }]
+}
+
+<span class="c">{</span>
+  <span class="c">/* S3 Bucket Policy — on the bucket itself, requiring VPC Endpoint access */</span>
+  <span class="k">"Statement"</span>: [{
+    <span class="k">"Effect"</span>: <span class="v">"Deny"</span>,
+    <span class="k">"Principal"</span>: <span class="v">"*"</span>,
+    <span class="k">"Action"</span>: <span class="v">"s3:*"</span>,
+    <span class="k">"Resource"</span>: [<span class="v">"arn:aws:s3:::getwork-app-data"</span>, <span class="v">"arn:aws:s3:::getwork-app-data/*"</span>],
+    <span class="k">"Condition"</span>: {
+      <span class="k">"StringNotEquals"</span>: {
+        <span class="k">"aws:SourceVpce"</span>: <span class="v">"vpce-your-endpoint-id"</span>
+      }
+    }
+  }]
+  <span class="c">/* This DENIES all access unless the request comes through the specific VPC Endpoint */</span>
+  <span class="c">/* Even if someone gets your IAM credentials, they cannot access this bucket */</span>
+  <span class="c">/* unless they're inside your VPC — dramatically limits credential theft blast radius */</span>
+}</code></div>
+        <div class="prodbox"><strong>The VPC-bound S3 bucket policy — the most underused security control:</strong> Adding this Deny condition to your S3 bucket policy means the bucket is inaccessible from anywhere except your VPC. Stolen IAM credentials used from an attacker's laptop cannot access the bucket because the request doesn't come through your VPC Endpoint. This one policy change elevates your S3 security from "protected by IAM credentials" to "protected by both IAM credentials AND network location." For a financial services project like your JP Morgan engagement, this is a standard requirement, not an optional hardening step.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('deploy',document.querySelectorAll('.ntab')[3])">Deployment pipeline — CI/CD for this architecture →</button>
+  </div>
+
+  <!-- DEPLOYMENT PIPELINE -->
+  <div id="p-deploy" class="panel">
+    <div class="lede"><strong>A complete CI/CD pipeline for this architecture connects your Bitbucket repository to an automated build, test, AMI baking, and rolling deployment process. Every commit to main that passes tests results in a new AMI and a triggered Instance Refresh — zero manual steps, zero downtime.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('dp',0,this)">1 · Pipeline stages</button>
+      <button class="cbtn" onclick="showC('dp',1,this)">2 · Bitbucket Pipelines config</button>
+      <button class="cbtn" onclick="showC('dp',2,this)">3 · Deployment validation</button>
+    </div>
+
+    <div id="dp0" class="cpanel active">
+      <div class="ch">The complete pipeline from commit to production</div>
+      <div class="csub">Eight stages, each building on the previous — and the gates that prevent bad code from reaching production</div>
+      <div class="cb">
+        <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0">
+          <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="background:#EEEDFE;color:#3C3489;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px">1</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Code push to Bitbucket main branch</strong> — Bitbucket pipeline triggers automatically. Branch protection rules prevent direct push to main — all changes via pull request with at least 1 approval.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="background:#EEEDFE;color:#3C3489;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px">2</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Build + unit tests</strong> — <span class="mono">mvn clean test</span>. Fails fast on compilation errors or unit test failures. Generates JaCoCo coverage report. Coverage gate: fail if below 70%.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="background:#EEEDFE;color:#3C3489;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px">3</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Integration tests against LocalStack</strong> — LocalStack service container started. <span class="mono">mvn test -P integration-test</span> with <span class="mono">SPRING_PROFILES_ACTIVE=test</span>. Tests create real S3 buckets, SQS queues, and DynamoDB tables in LocalStack — no real AWS costs.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="background:#EEEDFE;color:#3C3489;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px">4</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Package JAR + upload to S3</strong> — <span class="mono">mvn package -DskipTests</span>. Upload artifact to S3: <span class="mono">s3://getwork-builds/releases/getwork-api-${BUILD_NUMBER}.jar</span>. Update the <span class="mono">/getwork/prod/app-version</span> SSM parameter to the new build number.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="background:#EEEDFE;color:#3C3489;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px">5</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">IAM policy validation</strong> — If any IAM policy JSON files changed in this commit, run <span class="mono">aws accessanalyzer validate-policy</span> on each. Fail the pipeline on any SECURITY_WARNING or ERROR findings.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="background:#EEEDFE;color:#3C3489;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px">6</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Create new Launch Template version</strong> — Update the Launch Template's user data to reference the new app version. The user data script downloads <span class="mono">getwork-api-${BUILD_NUMBER}.jar</span> from S3 at instance startup.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="background:#EEEDFE;color:#3C3489;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px">7</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Trigger Instance Refresh</strong> — Start rolling deployment with MinHealthyPercentage=80% and a checkpoint at 50%. Pipeline polls the refresh status every 30 seconds. If refresh status is "Cancelled" or "Failed", pipeline fails and sends an alert.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px">
+            <div style="background:#EEEDFE;color:#3C3489;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;margin-top:1px">8</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Post-deployment validation</strong> — Call the ALB health endpoint. Check error rate in CloudWatch for 5 minutes post-deployment. If error rate > 1%, trigger automatic rollback: set Launch Template $Default back to previous version, trigger another Instance Refresh.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dp1" class="cpanel">
+      <div class="ch">Bitbucket Pipelines configuration</div>
+      <div class="csub">The actual bitbucket-pipelines.yml that implements the pipeline — using OIDC to avoid static AWS credentials</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># bitbucket-pipelines.yml</span>
+<span class="v">image</span>: maven:3.9-amazoncorretto-17
+
+<span class="v">definitions</span>:
+  <span class="v">services</span>:
+    <span class="v">localstack</span>:
+      <span class="v">image</span>: localstack/localstack:3.0
+      <span class="v">environment</span>:
+        SERVICES: s3,sqs,dynamodb,secretsmanager
+        AWS_DEFAULT_REGION: ap-south-1
+
+<span class="v">pipelines</span>:
+  <span class="v">branches</span>:
+    <span class="v">main</span>:
+      - <span class="v">step</span>:
+          <span class="v">name</span>: <span class="s">"Build and Unit Test"</span>
+          <span class="v">caches</span>: [maven]
+          <span class="v">script</span>:
+            - mvn clean test -B
+            - mvn jacoco:check  <span class="c"># Fails if coverage < 70%</span>
+
+      - <span class="v">step</span>:
+          <span class="v">name</span>: <span class="s">"Integration Tests"</span>
+          <span class="v">services</span>: [localstack]
+          <span class="v">caches</span>: [maven]
+          <span class="v">script</span>:
+            - export SPRING_PROFILES_ACTIVE=test
+            - export AWS_ENDPOINT_URL=http://localhost:4566
+            - export AWS_ACCESS_KEY_ID=test
+            - export AWS_SECRET_ACCESS_KEY=test
+            - mvn test -P integration-test -B
+
+      - <span class="v">step</span>:
+          <span class="v">name</span>: <span class="s">"Package and Upload"</span>
+          <span class="v">oidc</span>: <span class="v">true</span>   <span class="c"># Bitbucket OIDC — no stored AWS credentials!</span>
+          <span class="v">script</span>:
+            - mvn package -DskipTests -B
+            <span class="c"># Exchange OIDC token for AWS credentials</span>
+            - export AWS_ROLE_ARN=$AWS_DEPLOY_ROLE_ARN
+            - export AWS_WEB_IDENTITY_TOKEN_FILE=$(pwd)/oidc_token.txt
+            - echo $BITBUCKET_STEP_OIDC_TOKEN > oidc_token.txt
+
+            - aws s3 cp target/getwork-api.jar
+                s3://getwork-builds/releases/getwork-api-${BITBUCKET_BUILD_NUMBER}.jar
+            - aws ssm put-parameter
+                --name /getwork/prod/app-version
+                --value ${BITBUCKET_BUILD_NUMBER}
+                --type String --overwrite
+
+      - <span class="v">step</span>:
+          <span class="v">name</span>: <span class="s">"Deploy — Instance Refresh"</span>
+          <span class="v">oidc</span>: <span class="v">true</span>
+          <span class="v">script</span>:
+            - echo $BITBUCKET_STEP_OIDC_TOKEN > oidc_token.txt
+            - export AWS_ROLE_ARN=$AWS_DEPLOY_ROLE_ARN
+            - export AWS_WEB_IDENTITY_TOKEN_FILE=$(pwd)/oidc_token.txt
+
+            <span class="c"># Create new Launch Template version with updated app version</span>
+            - LT_DATA="{\"UserData\":\"$(base64 -w0 user-data.sh)\"}"
+            - aws ec2 create-launch-template-version
+                --launch-template-id $LT_ID
+                --source-version '$Latest'
+                --version-description "Build ${BITBUCKET_BUILD_NUMBER}"
+                --launch-template-data "$LT_DATA"
+
+            <span class="c"># Start rolling deployment</span>
+            - REFRESH_ID=$(aws autoscaling start-instance-refresh
+                --auto-scaling-group-name getwork-asg
+                --preferences MinHealthyPercentage=80,InstanceWarmup=120
+                --query InstanceRefreshId --output text)
+
+            <span class="c"># Poll until complete or failed</span>
+            - |
+              while true; do
+                STATUS=$(aws autoscaling describe-instance-refreshes
+                  --auto-scaling-group-name getwork-asg
+                  --instance-refresh-ids $REFRESH_ID
+                  --query 'InstanceRefreshes[0].Status' --output text)
+                echo "Status: $STATUS"
+                [[ "$STATUS" == "Successful" ]] && break
+                [[ "$STATUS" == "Failed" || "$STATUS" == "Cancelled" ]] && exit 1
+                sleep 30
+              done</code></div>
+        <div class="mechbox"><strong>Bitbucket OIDC — why oidc: true eliminates the biggest CI/CD security risk:</strong> Without OIDC, you'd store <span class="mono">AWS_ACCESS_KEY_ID</span> and <span class="mono">AWS_SECRET_ACCESS_KEY</span> as Bitbucket repository variables — static, long-lived credentials that could be exposed if the Bitbucket account is compromised. With <span class="mono">oidc: true</span>, Bitbucket generates a fresh OIDC token for each pipeline step. The pipeline exchanges this token for temporary AWS credentials by assuming an IAM role. The temporary credentials expire when the pipeline step completes. No static keys anywhere. The IAM role's trust policy specifies the exact Bitbucket workspace and repository allowed to assume it. This is the same OIDC mechanism covered on Day 5 for GitHub Actions — now applied to your actual Bitbucket pipeline at Deloitte.</div>
+      </div>
+    </div>
+
+    <div id="dp2" class="cpanel">
+      <div class="ch">Post-deployment validation — automated rollback on error rate spike</div>
+      <div class="csub">The CloudWatch-based canary check that triggers automatic rollback if a bad deployment slips through testing</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">#!/bin/bash
+# post-deploy-validate.sh — runs after Instance Refresh completes</span>
+set -euo pipefail
+ALB_ARN=$1
+TG_ARN=$2
+PREVIOUS_LT_VERSION=$3  <span class="c"># Version number to roll back to if validation fails</span>
+ASG_NAME=getwork-asg
+
+echo "Post-deployment validation starting..."
+
+<span class="c"># 1. Verify all instances are healthy in the target group</span>
+HEALTHY=$(aws elbv2 describe-target-health \
+  --target-group-arn $TG_ARN \
+  --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' \
+  --output text)
+DESIRED=$(aws autoscaling describe-auto-scaling-groups \
+  --auto-scaling-group-names $ASG_NAME \
+  --query 'AutoScalingGroups[0].DesiredCapacity' --output text)
+
+echo "Healthy instances: $HEALTHY / $DESIRED"
+[ "$HEALTHY" -lt "$DESIRED" ] && { echo "FAIL: Not all instances healthy"; exit 1; }
+
+<span class="c"># 2. Check error rate for the past 5 minutes</span>
+END_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+START_TIME=$(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ)
+
+ERROR_RATE=$(aws cloudwatch get-metric-statistics \
+  --namespace AWS/ApplicationELB \
+  --metric-name HTTPCode_Target_5XX_Count \
+  --dimensions Name=LoadBalancer,Value=$(echo $ALB_ARN | sed 's|.*loadbalancer/||') \
+  --start-time "$START_TIME" --end-time "$END_TIME" \
+  --period 300 --statistics Sum \
+  --query 'Datapoints[0].Sum // `0`' --output text)
+
+REQUEST_COUNT=$(aws cloudwatch get-metric-statistics \
+  --namespace AWS/ApplicationELB \
+  --metric-name RequestCount \
+  --dimensions Name=LoadBalancer,Value=$(echo $ALB_ARN | sed 's|.*loadbalancer/||') \
+  --start-time "$START_TIME" --end-time "$END_TIME" \
+  --period 300 --statistics Sum \
+  --query 'Datapoints[0].Sum // `1`' --output text)
+
+ERROR_PCT=$(echo "scale=2; $ERROR_RATE * 100 / $REQUEST_COUNT" | bc)
+echo "5xx error rate: ${ERROR_PCT}%"
+
+<span class="c"># 3. If error rate > 1%, trigger automatic rollback</span>
+if (( $(echo "$ERROR_PCT > 1.0" | bc -l) )); then
+  echo "ERROR RATE ${ERROR_PCT}% EXCEEDS THRESHOLD — triggering rollback"
+
+  <span class="c"># Create a new LT version pointing to the previous version's settings</span>
+  aws ec2 create-launch-template-version \
+    --launch-template-id $LT_ID \
+    --source-version $PREVIOUS_LT_VERSION \
+    --version-description "ROLLBACK to version $PREVIOUS_LT_VERSION"
+
+  <span class="c"># Trigger rollback refresh</span>
+  aws autoscaling start-instance-refresh \
+    --auto-scaling-group-name $ASG_NAME \
+    --desired-configuration "LaunchTemplate={LaunchTemplateId=$LT_ID,Version=\$Latest}" \
+    --preferences MinHealthyPercentage=80
+
+  echo "Rollback initiated — monitor Instance Refresh for completion"
+  exit 1
+fi
+
+echo "POST-DEPLOYMENT VALIDATION PASSED"</code></div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('observability',document.querySelectorAll('.ntab')[4])">Observability — seeing inside the running system →</button>
+  </div>
+
+  <!-- OBSERVABILITY -->
+  <div id="p-observability" class="panel">
+    <div class="lede"><strong>A deployed system without observability is a black box. CloudWatch Logs, CloudWatch Metrics, and CloudWatch Alarms form the observability stack for this architecture. Getting these right means you know about production issues before users report them, and you can diagnose what went wrong in minutes rather than hours.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('obs',0,this)">1 · CloudWatch Logs setup</button>
+      <button class="cbtn" onclick="showC('obs',1,this)">2 · Key metrics and alarms</button>
+      <button class="cbtn" onclick="showC('obs',2,this)">3 · Custom application metrics</button>
+    </div>
+
+    <div id="obs0" class="cpanel active">
+      <div class="ch">CloudWatch Logs — centralising all logs from all EC2 instances</div>
+      <div class="csub">The CloudWatch Agent configuration that ships Spring Boot logs to a central log group</div>
+      <div class="cb">
+        <p>Your Spring Boot application logs to journald (systemd's log system — since we configured <span class="mono">StandardOutput=journal</span> in the systemd service file). The CloudWatch Agent, installed on every EC2 instance, reads from journald and ships logs to CloudWatch Logs. All instances write to the same log group — you see all instances' logs in one place, with the instance ID as a dimension to filter by instance when needed.</p>
+        <div class="code-block"><code><span class="c"># CloudWatch Agent configuration — /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json</span>
+{
+  <span class="k">"logs"</span>: {
+    <span class="k">"logs_collected"</span>: {
+      <span class="k">"files"</span>: {
+        <span class="k">"collect_list"</span>: [
+          {
+            <span class="k">"file_path"</span>: <span class="v">"/var/log/user-data.log"</span>,
+            <span class="k">"log_group_name"</span>: <span class="v">"/getwork/ec2/user-data"</span>,
+            <span class="k">"log_stream_name"</span>: <span class="v">"{instance_id}"</span>,
+            <span class="k">"timezone"</span>: <span class="v">"UTC"</span>
+          }
+        ]
+      },
+      <span class="k">"systemd_journal"</span>: {
+        <span class="k">"collect_list"</span>: [
+          {
+            <span class="k">"log_group_name"</span>: <span class="v">"/getwork/app"</span>,
+            <span class="k">"log_stream_name"</span>: <span class="v">"{instance_id}"</span>,
+            <span class="k">"units"</span>: [<span class="v">"getwork-app.service"</span>],
+            <span class="k">"timezone"</span>: <span class="v">"UTC"</span>
+          }
+        ]
+      }
+    }
+  },
+  <span class="k">"metrics"</span>: {
+    <span class="k">"namespace"</span>: <span class="v">"GetWork/EC2"</span>,
+    <span class="k">"metrics_collected"</span>: {
+      <span class="k">"mem"</span>: {
+        <span class="k">"measurement"</span>: [<span class="v">"mem_used_percent"</span>],
+        <span class="k">"metrics_collection_interval"</span>: 60
+      },
+      <span class="k">"disk"</span>: {
+        <span class="k">"measurement"</span>: [<span class="v">"disk_used_percent"</span>],
+        <span class="k">"resources"</span>: [<span class="v">"/"</span>],
+        <span class="k">"metrics_collection_interval"</span>: 60
+      }
+    }
+  }
+}
+
+<span class="c"># Add to user data script after Java installation:</span>
+sudo dnf install -y amazon-cloudwatch-agent
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+  -a fetch-config -m ec2 -s -c ssm:/getwork/prod/cloudwatch-agent-config
+<span class="c"># Store the JSON config in SSM Parameter Store for central management</span></code></div>
+        <div class="prodbox"><strong>Log retention policy — set it or pay indefinitely:</strong> By default, CloudWatch Log Groups retain logs forever and charge you per GB stored. Set a retention policy on every log group: 30 days for debug/info logs from EC2 instances, 90 days for application error logs, 1 year for security/audit logs (CloudTrail, VPC Flow Logs). Use an AWS Config rule or a standard Terraform module to enforce retention on all log groups. Without retention policies, a high-volume application can accumulate terabytes of CloudWatch Logs storage costing hundreds of dollars per month for logs nobody reads after 2 weeks.</div>
+      </div>
+    </div>
+
+    <div id="obs1" class="cpanel">
+      <div class="ch">The alarm stack — what to monitor across all five layers</div>
+      <div class="csub">The minimum viable CloudWatch alarm set for this architecture — if these fire, something needs attention now</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># Terraform module for the complete alarm stack</span>
+<span class="c"># ============ ALB ALARMS ============</span>
+<span class="c"># High error rate — primary application health signal</span>
+ALB_5xx_RATE > 1% for 5 minutes → SNS → PagerDuty (SEV-2)
+ALB_4xx_RATE > 10% for 5 minutes → SNS → Slack alert (not pager — likely client bug)
+ALB_TargetResponseTime_P99 > 2s for 5 minutes → SNS → Slack
+ALB_HealthyHostCount < 1 → SNS → PagerDuty (SEV-1, site is DOWN)
+
+<span class="c"># ============ ASG / EC2 ALARMS ============</span>
+ASG_InService instances < min_size → SNS → PagerDuty (ASG can't maintain capacity)
+EC2_CPUUtilization_AVG > 80% for 10 min → SNS → Slack (check scaling policy)
+EC2_MemUsedPercent > 85% for 10 min → SNS → Slack (potential memory leak)
+
+<span class="c"># ============ RDS ALARMS ============</span>
+RDS_DatabaseConnections > 80% of max_connections → SNS → PagerDuty
+RDS_FreeStorageSpace < 5GB → SNS → PagerDuty (disk full imminent)
+RDS_CPUUtilization > 80% for 10 min → SNS → Slack
+RDS_WriteLatency > 20ms for 5 min → SNS → Slack
+RDS_FreeableMemory < 200MB → SNS → PagerDuty (risk of OOM kill)
+
+<span class="c"># ============ APPLICATION ALARMS ============</span>
+GetWork/API_JobCreationFailures > 0 for 1 min → SNS → PagerDuty
+GetWork/API_PaymentFailures > 0 for 1 min → SNS → PagerDuty
+GetWork/API_S3UploadFailures > 5 per minute → SNS → Slack</code></div>
+        <div class="mechbox"><strong>SNS → PagerDuty vs SNS → Slack — the severity routing:</strong> Not all alarms need to wake someone at 3AM. SEV-1 (site down, payment failures): PagerDuty with on-call escalation. SEV-2 (elevated error rate, database approaching limits): PagerDuty non-urgent. SEV-3 (high latency, CPU elevated): Slack channel notification — investigate during business hours. Configure this severity routing in your SNS topics. A team that pages for every CloudWatch alarm will start ignoring pages — alert fatigue makes you miss the real critical ones. Differentiated routing based on business impact is a maturity marker for production engineering teams.</div>
+      </div>
+    </div>
+
+    <div id="obs2" class="cpanel">
+      <div class="ch">Custom application metrics — measuring business outcomes, not just infrastructure</div>
+      <div class="csub">Micrometer + CloudWatch for application-level metrics that infrastructure monitoring misses</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">// MetricsConfig.java — Micrometer registry sending to CloudWatch</span>
+<span class="cmd-g">@Configuration</span>
+<span class="k">public class</span> MetricsConfig {
+
+    <span class="cmd-g">@Bean</span>
+    <span class="k">public</span> CloudWatchMeterRegistry cloudWatchRegistry(
+            <span class="cmd-g">@Value</span>(<span class="s">"${aws.region}"</span>) String region) {
+        CloudWatchConfig config = key -> switch (key) {
+            <span class="k">case</span> <span class="s">"cloudwatch.namespace"</span> -> <span class="s">"GetWork/API"</span>;
+            <span class="k">case</span> <span class="s">"cloudwatch.step"</span> -> <span class="s">"PT1M"</span>;  <span class="c">// Publish every 1 minute</span>
+            <span class="k">case</span> <span class="s">"cloudwatch.batchSize"</span> -> <span class="s">"20"</span>;  <span class="c">// Max metrics per API call</span>
+            <span class="k">default</span> -> null;
+        };
+        <span class="k">return new</span> CloudWatchMeterRegistry(config,
+            Clock.SYSTEM,
+            CloudWatchAsyncClient.builder().region(Region.of(region)).build());
+    }
+}
+
+<span class="c">// JobService.java — business metrics instrumented alongside business logic</span>
+<span class="cmd-g">@Service</span>
+<span class="k">public class</span> JobService {
+    <span class="k">private final</span> MeterRegistry registry;
+    <span class="k">private final</span> Counter jobsCreated;
+    <span class="k">private final</span> Counter jobsFailed;
+    <span class="k">private final</span> Timer jobCreationTimer;
+
+    <span class="k">public</span> JobService(MeterRegistry registry) {
+        <span class="k">this</span>.registry = registry;
+        <span class="k">this</span>.jobsCreated = Counter.builder(<span class="s">"getwork.jobs.created"</span>)
+            .description(<span class="s">"Number of job postings created"</span>)
+            .register(registry);
+        <span class="k">this</span>.jobsFailed = Counter.builder(<span class="s">"getwork.jobs.creation.failed"</span>)
+            .description(<span class="s">"Number of failed job creation attempts"</span>)
+            .register(registry);
+        <span class="k">this</span>.jobCreationTimer = Timer.builder(<span class="s">"getwork.jobs.creation.duration"</span>)
+            .description(<span class="s">"Job creation end-to-end latency"</span>)
+            .publishPercentiles(0.5, 0.95, 0.99)
+            .register(registry);
+    }
+
+    <span class="cmd-g">@Transactional</span>
+    <span class="k">public</span> Job createJob(CreateJobRequest request) {
+        <span class="k">return</span> jobCreationTimer.recordCallable(() -> {
+            <span class="k">try</span> {
+                Job job = jobRepository.save(<span class="k">new</span> Job(request));
+                jobsCreated.increment(1,
+                    Tags.of(<span class="s">"city"</span>, request.getCity(), <span class="s">"category"</span>, request.getCategory()));
+                <span class="k">return</span> job;
+            } <span class="k">catch</span> (Exception e) {
+                jobsFailed.increment();
+                <span class="k">throw</span> e;
+            }
+        });
+    }
+}</code></div>
+        <div class="prodbox"><strong>Why business metrics matter more than infrastructure metrics:</strong> CloudWatch shows your RDS CPU is 45% and your EC2 memory is 60% — all looks fine. But your custom metric shows <span class="mono">getwork.jobs.created</span> has been zero for 10 minutes. Something is wrong with job creation even though infrastructure appears healthy. Infrastructure metrics tell you about resources. Business metrics tell you about outcomes. A production system is healthy when users can accomplish their goals — not when infrastructure metrics are green. Always instrument the critical user-facing operations (job creation, worker registration, payment processing) with custom business metrics alongside infrastructure monitoring.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('troubleshooting',document.querySelectorAll('.ntab')[5])">Troubleshooting guide — diagnosing the full stack →</button>
+  </div>
+
+  <!-- TROUBLESHOOTING -->
+  <div id="p-troubleshooting" class="panel">
+    <div class="lede"><strong>When something breaks in this five-layer architecture, knowing which layer to investigate first prevents the 2AM spiral of checking random things for 3 hours. This systematic troubleshooting guide walks from the outermost layer (client) to the innermost (database), identifying the specific signals at each layer that narrow down the root cause.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('ts',0,this)">1 · Systematic diagnostic flow</button>
+      <button class="cbtn" onclick="showC('ts',1,this)">2 · The 10 most common failures</button>
+      <button class="cbtn" onclick="showC('ts',2,this)">3 · CloudTrail for the unexplainable</button>
+    </div>
+
+    <div id="ts0" class="cpanel active">
+      <div class="ch">The systematic diagnostic flow — outer to inner</div>
+      <div class="csub">Start with the outermost observable symptom and work inward — never start in the middle</div>
+      <div class="cb">
+        <p><strong>Step 1 — What does the user see?</strong> 5xx error (server problem), 4xx error (client or auth problem), timeout (slow response), or unexpected data (logic/data integrity issue). This determines the severity and likely layer.</p>
+
+        <p><strong>Step 2 — ALB layer check.</strong> Check ALB access logs or CloudWatch: is the error originating at the ALB (HTTP 502, 503) or forwarded from the target (5xx from your app)? HTTP 502 = ALB received an invalid response from your EC2. HTTP 503 = ALB has no healthy targets. HTTP 504 = ALB gateway timeout (your app took too long). Each error code tells you something specific about which layer failed.</p>
+
+        <p><strong>Step 3 — Target group health.</strong> <span class="mono">aws elbv2 describe-target-health --target-group-arn TG_ARN</span>. Any targets showing "unhealthy" means the Spring Boot app is failing health checks. Check the reason: "Response code mismatch" (app returning unexpected status), "Connection error" (app not listening on port 8080), "Timeout" (app responding slowly).</p>
+
+        <p><strong>Step 4 — Application logs.</strong> <span class="mono">aws logs tail /getwork/app --since 10m --filter-pattern "ERROR"</span>. Recent errors reveal the exception type and stack trace. Database connection errors, S3 SDK errors, OOM errors — all visible here without SSH.</p>
+
+        <p><strong>Step 5 — RDS check.</strong> <span class="mono">aws rds describe-db-instances --db-instance-identifier getwork-db --query 'DBInstances[0].DBInstanceStatus'</span>. Check CloudWatch RDS metrics: CPU, connections, free storage, replica lag. Performance Insights for slow query identification.</p>
+
+        <p><strong>Step 6 — If all else looks normal — CloudTrail.</strong> Recent IAM permission errors, unexpected API calls, configuration changes that could have caused the issue. More on this in the next section.</p>
+
+        <div class="mechbox"><strong>The specific ALB error codes and what they mean for your stack:</strong> 502 Bad Gateway: your Spring Boot app returned a malformed HTTP response, or closed the connection unexpectedly. Usually: app crashed mid-response, or Tomcat configuration issue. Check application logs for FATAL errors. 503 Service Unavailable: all targets are unhealthy. Check target group health. Usually: Spring Boot failing to start (dependency injection failure, database unreachable at startup with initialization-fail-timeout not set to -1). 504 Gateway Timeout: app didn't respond within the ALB's idle timeout (default 60 seconds). Your Spring Boot endpoint is taking >60 seconds. Usually: very slow database query, external API call without timeout, or deadlock. Check application logs and Performance Insights for long-running queries.</div>
+      </div>
+    </div>
+
+    <div id="ts1" class="cpanel">
+      <div class="ch">The 10 most common production failures and their root causes</div>
+      <div class="csub">Patterns from real production incidents — recognise the symptom, apply the fix</div>
+      <div class="cb">
+        <div style="display:flex;flex-direction:column;gap:6px;margin:8px 0">
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">1. "Connection refused" on ALB health check</strong><br>
+            Root cause: Spring Boot not listening on port 8080. Either startup failed (check cloud-init-output.log and journalctl for exception) or configured on wrong port. Fix: check service status, check app logs for startup exception.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">2. HikariCP "Connection is not available, request timed out"</strong><br>
+            Root cause: Connection pool exhausted. Either too many concurrent requests, long-running transactions, or @Transactional spanning external API calls. Fix: check hikaricp.connections.pending metric, reduce transaction scope, increase pool size temporarily.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">3. "Access Denied" on S3 calls after deployment</strong><br>
+            Root cause: IAM policy was updated and the ARN changed (new bucket name, new environment). Check the IAM role's policy against the actual bucket ARN. Run aws accessanalyzer validate-policy on the updated policy to catch typos.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">4. Spring Boot app starts then immediately crashes, loops</strong><br>
+            Root cause: Flyway migration failure (schema mismatch between code and DB), missing environment variable, or failed health check causing ASG to terminate and replace repeatedly. Check cloud-init-output.log and journalctl for the startup exception.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">5. RDS Multi-AZ failover: app never reconnects</strong><br>
+            Root cause: JVM DNS cache set to -1 (infinite). Fix: ensure -Dnetworkaddress.cache.ttl=5 is in JVM flags. Verify HikariCP keepalive-time is set. Restart the application instances if the fix wasn't in place before the failover.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">6. "Too many connections" error from MySQL</strong><br>
+            Root cause: Ghost connections from crashed app instances exhausted max_connections. The wait_timeout is too high (8 hours default) — old connections persist. Fix: set wait_timeout=300 in parameter group. Short-term: manually kill idle connections on the RDS instance.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">7. ALB returning 460 to some clients</strong><br>
+            Root cause: JWT token + other headers exceeding 16KB ALB header size limit. Fix: reduce JWT payload (remove unnecessary claims), or pass token in request body for relevant endpoints. Check which clients are sending large tokens — usually after a JWT schema change.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">8. New instances launched by ASG are never healthy</strong><br>
+            Root cause: Either the AMI has the wrong app version (stale AMI ID in Launch Template), the S3 bucket with the JAR is inaccessible, or the database schema migration fails on startup. Check: verify the Launch Template has the correct AMI ID, verify the instance role can access S3 and Secrets Manager, check user data logs on the failing instance.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">9. Intermittent 5xx errors only affecting ~10% of requests</strong><br>
+            Root cause: One of the EC2 instances is unhealthy but not failing health checks (app is responding to health endpoint but not to actual requests — e.g., out of memory or database connection exhaustion on that specific instance). Check per-instance metrics in CloudWatch, check logs on each instance separately using the instance ID log stream filter.
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;line-height:1.65">
+            <strong style="color:#A32D2D">10. Secrets Manager can't be reached at startup in new AZ</strong><br>
+            Root cause: VPC Interface Endpoint for Secrets Manager only exists in one subnet/AZ. When ASG launches an instance in the other AZ, the instance can't reach the Interface Endpoint. Fix: create Interface Endpoints in every private subnet/AZ that ASG instances can launch in.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="ts2" class="cpanel">
+      <div class="ch">CloudTrail — the audit log for "what changed and when"</div>
+      <div class="csub">Querying CloudTrail to find the specific configuration change that caused an unexplained production incident</div>
+      <div class="cb">
+        <p>CloudTrail records every AWS API call in your account. When an incident has no obvious root cause in application logs — "it was working fine, then it stopped" — CloudTrail often shows the configuration change that caused it: a Security Group rule changed, an IAM policy was modified, a parameter group was updated, an RDS instance was rebooted.</p>
+        <div class="code-block"><code><span class="c"># CloudTrail Insights — find anomalous API activity around the incident time</span>
+
+<span class="c"># Query 1: Find all changes to RDS in the last 6 hours</span>
+aws cloudtrail lookup-events \
+  --lookup-attributes AttributeKey=ResourceType,AttributeValue=AWS::RDS::DBInstance \
+  --start-time $(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --query 'Events[*].{Time:EventTime,Event:EventName,User:Username,Resource:Resources[0].ResourceName}' \
+  --output table
+
+<span class="c"># Query 2: Find all IAM changes (policy updates, role modifications)</span>
+aws cloudtrail lookup-events \
+  --lookup-attributes AttributeKey=EventSource,AttributeValue=iam.amazonaws.com \
+  --start-time $(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --query 'Events[*].{Time:EventTime,Event:EventName,User:Username}' \
+  --output table
+
+<span class="c"># Query 3: Find Security Group changes (rules modified)</span>
+aws cloudtrail lookup-events \
+  --lookup-attributes AttributeKey=EventName,AttributeValue=AuthorizeSecurityGroupIngress \
+  --start-time $(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --query 'Events[*].{Time:EventTime,Event:EventName,User:Username}' \
+  --output table
+
+<span class="c"># Query 4: Find who made changes during the incident window</span>
+<span class="c"># (useful for post-incident review and compliance)</span>
+aws cloudtrail lookup-events \
+  --start-time "2024-03-15T14:30:00Z" \
+  --end-time "2024-03-15T15:30:00Z" \
+  --query 'Events[?Username!=`AWSServiceRole*`].{Time:EventTime,User:Username,Event:EventName}' \
+  --output table | sort</code></div>
+        <div class="prodbox"><strong>CloudTrail for your Deloitte JP Morgan project:</strong> In regulated financial environments, CloudTrail isn't optional observability — it's a compliance requirement. Every API call (who called what, when, from which IP) is logged. Your IAM policies, role assumptions, and configuration changes are all in CloudTrail. JP Morgan's compliance team can request CloudTrail logs for any audit. Enable CloudTrail in every account, with logs sent to an S3 bucket with MFA delete enabled and a CloudTrail log integrity validation hash chain — ensuring logs cannot be tampered with after the fact.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[6])">Interview prep →</button>
+  </div>
+
+  <!-- INTERVIEW PREP -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>Day 10 interview questions are end-to-end system design questions — they test whether you can connect all the components you've learned into a coherent, defensible architecture. These are the questions senior and principal engineers are asked.</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">Design the AWS infrastructure for a production Spring Boot REST API serving 10,000 requests per day. Walk me through every component and why you chose it.</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>10,000 requests per day averages about 7 requests per second — low volume. But the design should be correct for production scale-up, not just optimal for current traffic.</p>
+          <p><strong>Network layer:</strong> Custom VPC in ap-south-1 with public subnets (for ALB) and private subnets (for EC2 and RDS) in two AZs. S3 Gateway Endpoint and Secrets Manager Interface Endpoint in both private subnets — eliminating NAT Gateway charges for these services. NAT Gateway in only one AZ for OS updates (cost optimisation at low traffic — add the second AZ NAT when traffic justifies it).</p>
+          <p><strong>Compute:</strong> Auto Scaling Group with t3.small instances, min=1, desired=2, max=6. Two instances for HA across AZs. Launch Template with IMDSv2 enforced, gp3 encrypted EBS, the application IAM role as instance profile. Target tracking scaling on ALBRequestCountPerTarget=800 — even at 7 req/s, the policy provides reactive scaling if traffic grows without manual intervention.</p>
+          <p><strong>Load balancing:</strong> Application Load Balancer in public subnets with HTTPS listener (ACM certificate, HTTP-to-HTTPS redirect on port 80). Target group with 15-second health check interval, 3 healthy threshold, 60-second deregistration delay, Slow Start Mode 120s for JVM warmup. Health check path: /actuator/health/readiness.</p>
+          <p><strong>Database:</strong> RDS MySQL 8.0 on db.t3.micro (cost-appropriate at this scale) with Multi-AZ enabled — data loss is unacceptable regardless of traffic volume. Custom parameter group with wait_timeout=300, slow_query_log enabled. gp3 storage with autoscaling to 100GB. Performance Insights enabled (free tier). Credentials in Secrets Manager — fetched at application startup via the instance IAM role.</p>
+          <p><strong>Storage:</strong> S3 bucket for user uploads (job images, documents) with versioning enabled, server-side encryption (SSE-S3), and a bucket policy requiring VPC Endpoint access. Lifecycle policy: move objects > 90 days old to S3 Glacier Instant Retrieval.</p>
+          <p><strong>Security:</strong> Security Group chaining throughout — internet → alb-sg (443), alb-sg → app-sg (8080), app-sg → db-sg (3306). No port 22 open — SSM Session Manager for administrative access. IAM policy on the instance role scoped to specific resource ARNs. Block Public Access enabled on S3. IMDSv2 required on every EC2.</p>
+          <p><strong>Observability:</strong> CloudWatch Agent shipping Spring Boot logs to /getwork/app log group. Custom business metrics via Micrometer to CloudWatch namespace GetWork/API. Alarms on 5xx error rate, target group health, RDS connections, and disk space. CloudTrail enabled.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It starts with the traffic context (10K/day = low), makes cost-appropriate choices (t3.micro, single NAT GW), but doesn't cut corners on correctness (Multi-AZ, IMDSv2, Secrets Manager). Every choice has a brief justification. The answer demonstrates that you understand production requirements across all five layers, not just one or two.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">A user reports they submitted a form and can see a success message, but when they refresh the page the data is gone. What could cause this and how do you investigate?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is a data consistency or routing bug. There are four possible causes, in order of likelihood.</p>
+          <p><strong>Most likely — Read Replica replication lag (if using replicas):</strong> The write went to the primary and succeeded. The success response was returned. The next page load is a read — if read traffic is routed to a Read Replica and the replica lags by even 2-3 seconds, the new record hasn't replicated yet. The user sees empty data. Investigation: check CloudWatch ReplicaLag metric on the replica. Check application logs — is the "view my submission" endpoint using @Transactional(readOnly=true)? If yes, it's routing to the replica. Fix: for the "view immediately after submit" pattern, always read from the primary within the same user session for a configurable "freshness window" after a write.</p>
+          <p><strong>Second most likely — Transaction rollback without error surfaced to user:</strong> The write appeared to succeed (no exception thrown to the controller) but was rolled back by the database or rolled back during a subsequent operation in the same transaction. Investigation: check application logs for any rolled-back transaction markers. Check RDS slow query log for long transactions that might have been killed by wait_timeout. Enable Spring's transaction event logging temporarily.</p>
+          <p><strong>Third — Multiple instances with in-memory state discrepancy:</strong> If the application has in-memory caching (an @Cacheable annotation using a local Caffeine cache rather than a distributed cache like Redis), the write invalidates the cache on Instance A, but the subsequent read goes to Instance B which still has the old cached data. Investigation: check if @Cacheable is used on the affected entity's read methods. Fix: use a distributed cache (ElastiCache Redis) instead of local cache, or disable caching for user-specific data that must be immediately consistent.</p>
+          <p><strong>Fourth — Application bug where the write is conditional and silently skipped:</strong> The form data triggers a conditional write that fails its precondition, returns 200 anyway (bad error handling), and the data is never written. Investigation: add database write audit logging for the affected entity — log every write attempt with the data. Check the write path for conditional logic that might silently skip the write.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The answer doesn't jump to "it's a bug" or "it's a database issue." It systematically walks through four concrete causes with specific investigation steps for each. The Read Replica lag explanation shows architectural awareness of the read/write routing pattern. The in-memory cache scenario shows knowledge of common Spring Boot caching pitfalls.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">How do you handle secrets in a Spring Boot application deployed on EC2? What's wrong with environment variables for secret injection?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>The correct pattern for secrets on EC2 is AWS Secrets Manager fetched at runtime using the instance's IAM role. The application fetches the secret via the SDK (DefaultCredentialsProvider uses IMDS to get temporary role credentials), caches the value in memory, and uses it for the connection pool or HMAC signing. No secrets in code, no secrets in config files committed to version control, no secrets passed via any external mechanism.</p>
+          <p>Environment variables for secrets have three specific problems. First, they're visible in process listings: <span class="mono">cat /proc/PID/environ</span> on Linux shows every environment variable of a running process to any user with sufficient permissions. On a shared host (unlikely on EC2 but possible) or via a container escape, environment variables leak. Second, they're visible in the AWS console to anyone with ec2:DescribeInstances permission — the Launch Template user data and the ECS task definition show environment variables. Third, rotating a secret requires updating the environment variable configuration and restarting the application — there's no rotation mechanism built in. With Secrets Manager, rotation can be automated and picked up at the next application startup without any code changes.</p>
+          <p>The one legitimate use of environment variables for configuration: non-sensitive runtime configuration that changes between environments — like the AWS region, the application profile, the log level, or the ALB DNS name. These aren't secrets. They're configuration. The 12-factor app methodology is correct that configuration belongs in environment variables. The mistake is treating secrets as just another form of configuration and putting them there too.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The three specific problems with environment variables (process listing, console visibility, rotation difficulty) are concrete rather than vague "security concerns." The distinction between configuration (environment variables are fine) and secrets (Secrets Manager) shows nuanced understanding of the 12-factor methodology, not a blanket rejection of environment variables.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[7])">Start the capstone lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>The Day 10 lab is the Phase 2 capstone — wiring all five components into one running system. You start stopped resources from Days 7–9, configure the IAM role, deploy the application via user data, create the ALB and ASG, and verify end-to-end request flow. By the end, a request enters the ALB, reaches the Spring Boot app, reads from RDS, writes to S3, and returns a response.</strong></div>
+
+    <div class="step-tracker" id="step-tracker">
+      <button class="step-pill active" id="sp1" onclick="activateStep(1)">1 Start resources</button>
+      <button class="step-pill" id="sp2" onclick="activateStep(2)">2 IAM role</button>
+      <button class="step-pill" id="sp3" onclick="activateStep(3)">3 User data</button>
+      <button class="step-pill" id="sp4" onclick="activateStep(4)">4 ALB + ASG</button>
+      <button class="step-pill" id="sp5" onclick="activateStep(5)">5 Verify</button>
+      <button class="step-pill" id="sp6" onclick="activateStep(6)">6 Cost cleanup</button>
+    </div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Start stopped resources and confirm all Day 4–9 infrastructure is in place</div>
+          <div class="sb">Start the stopped RDS instance from Day 9. Confirm the VPC, subnets, security groups, and S3 bucket from previous days are all present. This is the pre-flight check before wiring everything together.</div>
+          <code class="cmd">REGION=ap-south-1
+
+# Start the RDS instance (stopped from Day 9)
+aws rds start-db-instance \
+  --db-instance-identifier getwork-db --region $REGION
+echo "RDS starting — takes 3-5 minutes..."
+
+# While waiting, verify all prerequisite infrastructure
+echo "--- VPCs ---"
+aws ec2 describe-vpcs --query \
+  'Vpcs[?Tags[?Key==`Name`&&Value==`getwork-vpc`]].{ID:VpcId,CIDR:CidrBlock}' \
+  --output table --region $REGION
+
+echo "--- Subnets ---"
+aws ec2 describe-subnets \
+  --filters "Name=tag:Name,Values=*getwork*" \
+  --query 'Subnets[*].{Name:Tags[?Key==`Name`].Value|[0],ID:SubnetId,AZ:AvailabilityZone,Public:MapPublicIpOnLaunch}' \
+  --output table --region $REGION
+
+echo "--- Security Groups ---"
+aws ec2 describe-security-groups \
+  --filters "Name=tag:Name,Values=alb-sg,app-sg,db-sg" \
+  --query 'SecurityGroups[*].{Name:GroupName,ID:GroupId}' \
+  --output table --region $REGION
+
+echo "--- S3 Bucket ---"
+aws s3 ls | grep getwork
+
+echo "--- Secrets Manager ---"
+aws secretsmanager list-secrets \
+  --query 'SecretList[?Name==`/getwork/prod/database`].{Name:Name,LastChanged:LastChangedDate}' \
+  --output table --region $REGION
+
+# Wait for RDS to be available
+aws rds wait db-instance-available \
+  --db-instance-identifier getwork-db --region $REGION
+echo "RDS available!"
+
+# Get the RDS endpoint for later use
+RDS_ENDPOINT=$(aws rds describe-db-instances \
+  --db-instance-identifier getwork-db \
+  --query 'DBInstances[0].Endpoint.Address' \
+  --output text --region $REGION)
+echo "RDS endpoint: $RDS_ENDPOINT"</code>
+          <div class="snote">If any component is missing, refer to the day it was created (VPC=Day 4, S3=Day 3, IAM=Day 5, RDS=Day 9). All infrastructure is designed to persist between lab sessions in its stopped/idle state.</div>
+          <button class="mbtn" onclick="done('s1');markStep(1)">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create the EC2 instance IAM role with least-privilege permissions</div>
+          <div class="sb">Create the IAM role that EC2 instances will use to access S3, Secrets Manager, SSM, and CloudWatch. This role is attached to the Launch Template as an instance profile.</div>
+          <code class="cmd">ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# Create the IAM role with EC2 trust policy
+aws iam create-role \
+  --role-name getwork-app-role \
+  --assume-role-policy-document '{
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Principal": {"Service": "ec2.amazonaws.com"},
+      "Action": "sts:AssumeRole"
+    }]
+  }' --region $REGION 2>/dev/null || echo "Role already exists"
+
+# Create the application permissions policy
+cat > /tmp/app-policy.json << POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject"],
+     "Resource":"arn:aws:s3:::getwork-app-data/*"},
+    {"Effect":"Allow","Action":"s3:ListBucket",
+     "Resource":"arn:aws:s3:::getwork-app-data"},
+    {"Effect":"Allow","Action":"secretsmanager:GetSecretValue",
+     "Resource":"arn:aws:secretsmanager:ap-south-1:${ACCOUNT_ID}:secret:/getwork/prod/*"},
+    {"Effect":"Allow","Action":["ssm:GetParameter","ssm:GetParameters","ssm:GetParametersByPath"],
+     "Resource":"arn:aws:ssm:ap-south-1:${ACCOUNT_ID}:parameter/getwork/prod/*"},
+    {"Effect":"Allow","Action":["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],
+     "Resource":"arn:aws:logs:ap-south-1:${ACCOUNT_ID}:log-group:/getwork/*:*"},
+    {"Effect":"Allow","Action":["ssmmessages:CreateControlChannel","ssmmessages:CreateDataChannel",
+     "ssmmessages:OpenControlChannel","ssmmessages:OpenDataChannel",
+     "ec2messages:AcknowledgeMessage","ec2messages:SendReply","ec2messages:GetMessages"],
+     "Resource":"*"}
+  ]
+}
+POLICY
+
+# Validate the policy before attaching
+aws accessanalyzer validate-policy \
+  --policy-document file:///tmp/app-policy.json \
+  --policy-type IDENTITY_POLICY \
+  --query 'findings[*].{Type:findingType,Issue:issueCode}' \
+  --output table --region $REGION 2>/dev/null || echo "AccessAnalyzer not enabled — skipping validation"
+
+# Create and attach the policy
+aws iam put-role-policy \
+  --role-name getwork-app-role \
+  --policy-name getwork-app-policy \
+  --policy-document file:///tmp/app-policy.json
+
+# Create instance profile (required to attach role to EC2)
+aws iam create-instance-profile \
+  --instance-profile-name getwork-app-profile 2>/dev/null || echo "Profile exists"
+aws iam add-role-to-instance-profile \
+  --instance-profile-name getwork-app-profile \
+  --role-name getwork-app-role 2>/dev/null || echo "Role already in profile"
+
+echo "IAM role and instance profile created"</code>
+          <div class="snote">The AccessAnalyzer validate-policy step catches policy issues before deployment. Notice the S3 bucket ARN uses a specific bucket name — not wildcard. The Secrets Manager ARN ends with * to match the auto-generated suffix AWS adds to secret names.</div>
+          <button class="mbtn" onclick="done('s2');markStep(2)">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create production-grade user data and update the Launch Template</div>
+          <div class="sb">Write the user data script that: fetches app version from SSM, downloads the JAR from S3, writes the systemd service with correct Spring profile and JVM flags, and verifies health before completing.</div>
+          <code class="cmd">cat > /tmp/user-data.sh << 'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/user-data.log | logger -t user-data -s 2>/dev/console) 2>&1
+echo "--- User data start: $(date -u +%Y-%m-%dT%H:%M:%SZ) ---"
+
+dnf update -y --exclude=kernel
+dnf install -y java-17-amazon-corretto amazon-cloudwatch-agent
+
+java -version
+useradd -r -s /sbin/nologin -d /opt/app appuser 2>/dev/null || true
+mkdir -p /opt/app
+
+# Fetch configuration from SSM (not secrets - just config)
+APP_VERSION=$(aws ssm get-parameter \
+  --name /getwork/prod/app-version \
+  --region ap-south-1 --query Parameter.Value --output text 2>/dev/null || echo "latest")
+S3_BUCKET=$(aws ssm get-parameter \
+  --name /getwork/prod/app-bucket \
+  --region ap-south-1 --query Parameter.Value --output text 2>/dev/null || echo "getwork-app-data")
+
+echo "Deploying version: $APP_VERSION from bucket: $S3_BUCKET"
+
+# For this lab: create a simple HTTP health responder since we may not have a real JAR
+# In production: aws s3 cp "s3://${S3_BUCKET}/releases/getwork-api-${APP_VERSION}.jar" /opt/app/app.jar
+cat > /opt/app/start.sh << 'APP'
+#!/bin/bash
+while true; do
+  echo -e "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 15\r\n\r\n{\"status\":\"UP\"}" | nc -l -p 8080 -q 1 2>/dev/null
+done
+APP
+chmod +x /opt/app/start.sh
+chown -R appuser:appuser /opt/app
+
+cat > /etc/systemd/system/getwork-app.service << UNIT
+[Unit]
+Description=GetWork API Application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=appuser
+WorkingDirectory=/opt/app
+ExecStart=/opt/app/start.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=getwork-app
+Environment=SPRING_PROFILES_ACTIVE=production
+Environment=AWS_DEFAULT_REGION=ap-south-1
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable getwork-app
+systemctl start getwork-app
+sleep 5
+
+for i in $(seq 1 12); do
+  if curl -sf http://localhost:8080 > /dev/null 2>&1; then
+    echo "Service healthy after $((i*5)) seconds"
+    break
+  fi
+  [ $i -eq 12 ] && { echo "ERROR: Service failed to start"; exit 1; }
+  sleep 5
+done
+
+echo "--- User data complete: $(date -u +%Y-%m-%dT%H:%M:%SZ) ---"
+SCRIPT
+
+# Update the Launch Template with the new user data and instance profile
+LT_ID=$(aws ec2 describe-launch-templates \
+  --launch-template-names getwork-app-lt \
+  --query 'LaunchTemplates[0].LaunchTemplateId' \
+  --output text --region $REGION 2>/dev/null || echo "")
+
+if [ -z "$LT_ID" ]; then
+  APP_SG=$(aws ec2 describe-security-groups \
+    --filters "Name=group-name,Values=app-sg" \
+    --query 'SecurityGroups[0].GroupId' --output text --region $REGION)
+
+  LT_ID=$(aws ec2 create-launch-template \
+    --launch-template-name getwork-app-lt \
+    --launch-template-data "{
+      \"InstanceType\":\"t3.micro\",
+      \"KeyName\":\"day2-key\",
+      \"SecurityGroupIds\":[\"$APP_SG\"],
+      \"IamInstanceProfile\":{\"Name\":\"getwork-app-profile\"},
+      \"MetadataOptions\":{\"HttpTokens\":\"required\",\"HttpPutResponseHopLimit\":1},
+      \"BlockDeviceMappings\":[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"VolumeSize\":20,\"VolumeType\":\"gp3\",\"Encrypted\":true,\"DeleteOnTermination\":true}}],
+      \"UserData\":\"$(base64 -w0 /tmp/user-data.sh)\"
+    }" \
+    --query 'LaunchTemplate.LaunchTemplateId' \
+    --output text --region $REGION)
+  echo "Launch Template created: $LT_ID"
+else
+  echo "Updating existing Launch Template: $LT_ID"
+  aws ec2 create-launch-template-version \
+    --launch-template-id $LT_ID \
+    --source-version '$Latest' \
+    --version-description "day10-capstone" \
+    --launch-template-data "{\"UserData\":\"$(base64 -w0 /tmp/user-data.sh)\",\"IamInstanceProfile\":{\"Name\":\"getwork-app-profile\"}}" \
+    --region $REGION
+fi
+echo "Launch Template ready: $LT_ID"</code>
+          <div class="snote">The lab uses a netcat HTTP responder instead of a real Spring Boot JAR — the goal is proving the infrastructure wiring works correctly, not the application logic. In production this would download your actual JAR from S3.</div>
+          <button class="mbtn" onclick="done('s3');markStep(3)">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Create ALB, Target Group, and ASG — the complete load-balanced deployment</div>
+          <div class="sb">Create the ALB and ASG using your Day 8 commands as a template. The difference from Day 8: the instances now have the correct IAM role attached and the full user data that starts the application service.</div>
+          <code class="cmd">VPC_ID=$(aws ec2 describe-vpcs \
+  --filters "Name=tag:Name,Values=getwork-vpc" \
+  --query 'Vpcs[0].VpcId' --output text --region $REGION)
+
+PUB_SUBNETS=$(aws ec2 describe-subnets \
+  --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=true" \
+  --query 'Subnets[*].SubnetId' --output text --region $REGION)
+PUB_1A=$(echo $PUB_SUBNETS | tr ' ' '\n' | head -1)
+PUB_1B=$(echo $PUB_SUBNETS | tr ' ' '\n' | tail -1)
+
+PRIV_SUBNETS=$(aws ec2 describe-subnets \
+  --filters "Name=vpc-id,Values=$VPC_ID" "Name=map-public-ip-on-launch,Values=false" \
+  --query 'Subnets[*].SubnetId' --output text --region $REGION)
+PRIV_1A=$(echo $PRIV_SUBNETS | tr ' ' '\n' | head -1)
+PRIV_1B=$(echo $PRIV_SUBNETS | tr ' ' '\n' | tail -1)
+
+ALB_SG=$(aws ec2 describe-security-groups \
+  --filters "Name=group-name,Values=alb-sg" \
+  --query 'SecurityGroups[0].GroupId' --output text --region $REGION)
+
+# Create ALB
+ALB_ARN=$(aws elbv2 create-load-balancer \
+  --name getwork-alb \
+  --subnets $PUB_1A $PUB_1B \
+  --security-groups $ALB_SG \
+  --scheme internet-facing --type application \
+  --query 'LoadBalancers[0].LoadBalancerArn' \
+  --output text --region $REGION 2>/dev/null || \
+  aws elbv2 describe-load-balancers --names getwork-alb \
+  --query 'LoadBalancers[0].LoadBalancerArn' --output text --region $REGION)
+echo "ALB: $ALB_ARN"
+
+ALB_DNS=$(aws elbv2 describe-load-balancers \
+  --load-balancer-arns $ALB_ARN \
+  --query 'LoadBalancers[0].DNSName' --output text --region $REGION)
+echo "ALB DNS: $ALB_DNS"
+
+# Create Target Group
+TG_ARN=$(aws elbv2 create-target-group \
+  --name getwork-api-tg \
+  --protocol HTTP --port 8080 \
+  --vpc-id $VPC_ID \
+  --health-check-path / \
+  --health-check-interval-seconds 15 \
+  --health-check-timeout-seconds 5 \
+  --healthy-threshold-count 3 \
+  --unhealthy-threshold-count 2 \
+  --matcher HttpCode=200 \
+  --target-type instance \
+  --query 'TargetGroups[0].TargetGroupArn' \
+  --output text --region $REGION 2>/dev/null || \
+  aws elbv2 describe-target-groups --names getwork-api-tg \
+  --query 'TargetGroups[0].TargetGroupArn' --output text --region $REGION)
+
+aws elbv2 modify-target-group-attributes \
+  --target-group-arn $TG_ARN \
+  --attributes Key=deregistration_delay.timeout_seconds,Value=60 \
+               Key=slow_start.duration_seconds,Value=60 \
+  --region $REGION
+
+# Create HTTP Listener
+aws elbv2 create-listener \
+  --load-balancer-arn $ALB_ARN \
+  --protocol HTTP --port 80 \
+  --default-actions Type=forward,TargetGroupArn=$TG_ARN \
+  --region $REGION 2>/dev/null || echo "Listener already exists"
+
+# Create ASG
+aws autoscaling create-auto-scaling-group \
+  --auto-scaling-group-name getwork-asg \
+  --launch-template "LaunchTemplateId=$LT_ID,Version=\$Latest" \
+  --min-size 1 --max-size 4 --desired-capacity 2 \
+  --vpc-zone-identifier "$PRIV_1A,$PRIV_1B" \
+  --target-group-arns $TG_ARN \
+  --health-check-type ELB \
+  --health-check-grace-period 180 \
+  --tags Key=Name,Value=getwork-app,PropagateAtLaunch=true \
+  --region $REGION 2>/dev/null || echo "ASG already exists"
+
+echo "=== Infrastructure created ==="
+echo "ALB DNS (save this): http://$ALB_DNS"
+echo "Wait ~3-4 minutes for instances to launch and pass health checks"</code>
+          <div class="snote">The app-sg Security Group must allow inbound port 8080 from alb-sg for health checks to work. If health checks fail, verify: aws ec2 describe-security-group-rules --filters Name=group-id,Values=$APP_SG</div>
+          <button class="mbtn" onclick="done('s4');markStep(4)">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Verify end-to-end — request flows from ALB through to application</div>
+          <div class="sb">Wait for instances to launch, pass health checks, and verify the complete request flow. Connect to an instance via SSM Session Manager (no SSH needed) and verify S3 and RDS connectivity from the instance role.</div>
+          <code class="cmd"># Wait for instances to become healthy in the target group
+echo "Waiting for healthy targets..."
+for i in $(seq 1 20); do
+  HEALTHY=$(aws elbv2 describe-target-health \
+    --target-group-arn $TG_ARN \
+    --query 'length(TargetHealthDescriptions[?TargetHealth.State==`healthy`])' \
+    --output text --region $REGION)
+  echo "$(date +%H:%M:%S) Healthy instances: $HEALTHY"
+  [ "$HEALTHY" -ge "1" ] && break
+  sleep 15
+done
+
+# Test the ALB endpoint
+echo ""
+echo "Testing ALB endpoint..."
+curl -sf "http://$ALB_DNS/" && echo " ← Health check returned 200 OK!"
+
+# Get an instance ID to connect to via SSM
+INSTANCE_ID=$(aws autoscaling describe-auto-scaling-groups \
+  --auto-scaling-group-names getwork-asg \
+  --query 'AutoScalingGroups[0].Instances[0].InstanceId' \
+  --output text --region $REGION)
+echo "Instance: $INSTANCE_ID"
+
+# Connect via SSM Session Manager (no port 22, no SSH key needed)
+# Run this in a separate terminal:
+# aws ssm start-session --target $INSTANCE_ID --region $REGION
+
+# From inside the SSM session, verify AWS service connectivity:
+# Test IAM role identity
+# aws sts get-caller-identity --region ap-south-1
+# Should show: arn:aws:sts::ACCOUNT:assumed-role/getwork-app-role/i-...
+
+# Test S3 access
+# aws s3 ls s3://getwork-app-data --region ap-south-1
+# Should succeed (role has s3:ListBucket permission)
+
+# Test Secrets Manager access
+# aws secretsmanager get-secret-value \
+#   --secret-id /getwork/prod/database --region ap-south-1 \
+#   --query 'SecretString' --output text
+# Should return the DB credentials JSON
+
+# Test RDS connectivity from inside the instance
+# DB_ENDPOINT=$(aws ssm get-parameter --name /getwork/prod/rds-endpoint \
+#   --region ap-south-1 --query Parameter.Value --output text)
+# nc -zv $DB_ENDPOINT 3306  # Should connect successfully
+
+echo ""
+echo "=== PHASE 2 CAPSTONE COMPLETE ==="
+echo "Your infrastructure: VPC → ALB → EC2 (ASG) → RDS + S3"
+echo "ALB URL: http://$ALB_DNS"
+echo "Instances have IAM role for Secrets Manager, S3, SSM, CloudWatch"</code>
+          <div class="snote">The SSM Session Manager connection requires the SSM agent running on the instance (Amazon Linux 2023 has it pre-installed) and the ssmmessages permissions in the IAM role (which we added in Step 2). No port 22 in the security group needed — this is the production-correct access mechanism.</div>
+          <button class="mbtn" onclick="done('s5');markStep(5)">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div></div>
+        <div class="ls-r">
+          <div class="st">Cost-optimised cleanup — stop resources, keep infrastructure for Phase 3</div>
+          <div class="sb">Scale down the ASG to zero (stops EC2 charges), delete the ALB (stops LB charges), stop the RDS instance. Keep the VPC, security groups, IAM role, Launch Template, and secrets — Day 11+ builds on this infrastructure.</div>
+          <code class="cmd"># Scale ASG to 0 (terminates all EC2 instances)
+aws autoscaling update-auto-scaling-group \
+  --auto-scaling-group-name getwork-asg \
+  --min-size 0 --desired-capacity 0 \
+  --region $REGION
+
+# Delete ALB and Target Group (fixed hourly cost even at zero traffic)
+LISTENER_ARN=$(aws elbv2 describe-listeners \
+  --load-balancer-arn $ALB_ARN \
+  --query 'Listeners[0].ListenerArn' --output text --region $REGION)
+aws elbv2 delete-listener --listener-arn $LISTENER_ARN --region $REGION
+aws elbv2 delete-load-balancer --load-balancer-arn $ALB_ARN --region $REGION
+sleep 5
+aws elbv2 delete-target-group --target-group-arn $TG_ARN --region $REGION
+
+# Stop RDS (data preserved, compute billing stops)
+aws rds stop-db-instance \
+  --db-instance-identifier getwork-db --region $REGION
+
+echo ""
+echo "=== Cost cleanup complete ==="
+echo ""
+echo "RESOURCES PRESERVED FOR PHASE 3 (Days 11+):"
+echo "  VPC: $VPC_ID (free)"
+echo "  Security Groups: alb-sg, app-sg, db-sg (free)"
+echo "  IAM Role: getwork-app-role (free)"
+echo "  Launch Template: getwork-app-lt (free)"
+echo "  Secrets Manager: /getwork/prod/* (~\$0.40/month)"
+echo "  RDS: getwork-db (stopped — EBS storage cost only ~\$0.002/hr)"
+echo "  S3 Bucket: getwork-app-data (minimal storage cost)"
+echo ""
+echo "ESTIMATED IDLE COST: ~\$1-2/month"</code>
+          <div class="snote">At this point you have a complete, re-launchable production infrastructure. To bring it back up for future labs: start RDS (3-5 min), recreate ALB + TG (5 min), update ASG desired to 2 (3-4 min to become healthy). Total time to restore: ~15 minutes.</div>
+          <button class="mbtn" onclick="done('s6');markStep(6)">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[8])">Phase 2 complete — cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:4px">Day 10 — End-to-end deployment integration</div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">Phase 2 Application Deployment complete. Days 11–13 begin: Route 53, CloudFront, ECS, ElastiCache, DynamoDB.</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">Configuration hierarchy</div><div class="cs-d">Secrets Manager for credentials. Parameter Store for config. application.properties for defaults. Environment variables for profile activation. Never credentials in properties or env vars.</div></div>
+      <div class="cs-item"><div class="cs-t">Graceful shutdown timing</div><div class="cs-d">ALB deregistration delay ≥ Spring lifecycle.timeout-per-shutdown-phase. Otherwise SIGTERM arrives while ALB is still sending requests. Correct order: drain → SIGTERM → shutdown.</div></div>
+      <div class="cs-item"><div class="cs-t">OSIV disabled</div><div class="cs-d">spring.jpa.open-in-view=false. Prevents holding DB connections during response serialisation. Forces eager loading of all needed data in the transaction — eliminates lazy-load connection pool exhaustion.</div></div>
+      <div class="cs-item"><div class="cs-t">SSM Session Manager</div><div class="cs-d">Access EC2 instances without port 22 or SSH key. Requires ssmmessages permissions in IAM role + SSM agent on instance. All commands logged to CloudTrail. Required for private subnet instances.</div></div>
+      <div class="cs-item"><div class="cs-t">VPC-bound S3 bucket</div><div class="cs-d">Bucket policy with Deny unless aws:SourceVpce = your endpoint ID. Stolen IAM credentials cannot access the bucket from outside the VPC. Most important S3 security control for internal data.</div></div>
+      <div class="cs-item"><div class="cs-t">IAM policy validation</div><div class="cs-d">aws accessanalyzer validate-policy before every policy deployment. Catches typos, over-broad wildcards, wrong resource ARN formats. Run in CI/CD pipeline as mandatory pre-deploy gate.</div></div>
+      <div class="cs-item"><div class="cs-t">ALB error codes map</div><div class="cs-d">502 = malformed response from backend. 503 = no healthy targets. 504 = backend timeout. 460 = header size limit exceeded (JWT too large). Each maps to a specific layer and fix.</div></div>
+      <div class="cs-item"><div class="cs-t">Business metrics vs infra metrics</div><div class="cs-d">Infrastructure green ≠ application healthy. Instrument critical user paths (job creation, payment) with custom CloudWatch metrics. Alarm on business outcome failure, not just infrastructure thresholds.</div></div>
+      <div class="cs-item"><div class="cs-t">Read-after-write consistency</div><div class="cs-d">User submits → reads from replica → stale data. Fix: route reads that follow a write in the same session to the primary. AbstractRoutingDataSource detects readOnly=true transactions automatically.</div></div>
+      <div class="cs-item"><div class="cs-t">Log retention policies</div><div class="cs-d">Set on every CloudWatch Log Group. Default: infinite (billing forever). Production: 30 days app logs, 90 days errors, 1 year audit logs. Terraform module to enforce across all groups.</div></div>
+      <div class="cs-item"><div class="cs-t">Initialization fail timeout</div><div class="cs-d">HikariCP initialization-fail-timeout=-1 prevents startup failure when DB is briefly unreachable. Without it: Secrets Manager hiccup → app refuses to start → ASG crash loop → zero capacity.</div></div>
+      <div class="cs-item"><div class="cs-t">CloudTrail for incidents</div><div class="cs-d">When application logs show no cause: CloudTrail shows the IAM, SG, or RDS change that happened before the incident. Always the first place to look for "it was fine, then it stopped."</div></div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Phase 2 complete — what you have built</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      Day 7: EC2 deep dive — user data, cloud-init phases, AMI as EBS snapshot pointer, gp3 vs gp2, Launch Templates with IMDSv2 enforced.<br>
+      Day 8: ALB as Layer 7 full proxy, listener rules for microservices routing, target group health checks, ASG lifecycle hooks, Instance Refresh rolling deployment, target tracking scaling.<br>
+      Day 9: RDS three-layer architecture, Multi-AZ synchronous replication, failover DNS propagation, HikariCP resilience configuration, Aurora distributed storage engine, connection pool sizing.<br>
+      Day 10: All five layers wired together — VPC, ALB, EC2+ASG, RDS, S3. IAM least-privilege. Secrets Manager credential injection. CloudWatch observability. Troubleshooting methodology. CI/CD pipeline with OIDC.
+    </div>
+    <div class="prodbox" style="margin-top:1rem"><strong>Phase 3 begins: Days 11–13 — Route 53, CloudFront, ECS, ElastiCache, DynamoDB</strong><br>
+    Day 11: Route 53 DNS management + CloudFront CDN (add HTTPS with custom domain to today's ALB). Day 12: ECS + Docker on AWS (containerise the Spring Boot app). Day 13: ElastiCache (Redis caching layer) + DynamoDB introduction. Each day extends the architecture built in Phase 2.</div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+function markStep(n){
+  const pill=document.getElementById('sp'+n);
+  if(pill){pill.classList.add('done');pill.classList.remove('active')}
+  const next=document.getElementById('sp'+(n+1));
+  if(next){next.classList.add('active')}
+}
+function activateStep(n){
+  document.querySelectorAll('.step-pill').forEach(p=>p.classList.remove('active'));
+  const p=document.getElementById('sp'+n);
+  if(p)p.classList.add('active');
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

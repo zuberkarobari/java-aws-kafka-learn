@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA Top 50 — Q1 to Q5 | Arrays & Two Pointers</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#06080e;--surface:#0a0d16;--card:#0d1120;--border:#151f35;--acc:#facc15;--acc2:#38bdf8;--acc3:#4ade80;--acc4:#f472b6;--acc5:#fb923c;--text:#dde8f5;--muted:#4a6080;--cb:#050810;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;line-height:1.75}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,#090c18 0%,#06091200 100%),linear-gradient(135deg,#090c18,#070a14);border-bottom:2px solid var(--border);padding:46px 44px 34px;position:relative;overflow:hidden}
+.hdr::before{content:'';position:absolute;top:-80px;right:-60px;width:460px;height:460px;background:radial-gradient(circle,rgba(250,204,21,0.08) 0%,transparent 65%);pointer-events:none}
+.hdr::after{content:'';position:absolute;bottom:-80px;left:80px;width:360px;height:360px;background:radial-gradient(circle,rgba(56,189,248,0.05) 0%,transparent 65%);pointer-events:none}
+.eye{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--acc);text-transform:uppercase;margin-bottom:10px}
+.hdr h1{font-size:44px;font-weight:700;letter-spacing:-2px;line-height:1.1;margin-bottom:8px}
+.hdr h1 .d{color:var(--acc)}.hdr h1 .s{color:var(--acc2)}
+.hdesc{color:var(--muted);font-size:14px;margin-bottom:22px;max-width:660px}
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 14px;border-radius:3px;text-transform:uppercase}
+.cy{background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.2);color:var(--acc)}
+.cb{background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.18);color:var(--acc2)}
+.cg{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.18);color:var(--acc3)}
+.cp{background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.18);color:var(--acc4)}
+
+/* BATCH INDICATOR */
+.batch{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 22px;margin:32px 0 28px;display:flex;align-items:center;gap:16px}
+.batch-tag{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--acc);background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.2);padding:4px 12px;border-radius:3px;text-transform:uppercase}
+.batch-title{font-size:15px;font-weight:600;color:var(--text)}
+.batch-count{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+
+/* PROGRESS */
+.prog{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.prog-track{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:3px;transition:width .4s}
+.prog-lbl{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* CARD */
+.qc{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:22px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.qc:hover{border-color:rgba(250,204,21,0.2)}
+.qc.open{border-color:rgba(250,204,21,0.4);box-shadow:0 4px 40px rgba(250,204,21,0.06)}
+
+/* QUESTION HEADER */
+.qq{display:flex;align-items:flex-start;gap:16px;padding:20px 24px;cursor:pointer;user-select:none}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--acc);min-width:44px;margin-top:1px;opacity:.9}
+.qmeta{flex:1}
+.qtitle{font-weight:600;font-size:16px;line-height:1.45;color:var(--text);margin-bottom:7px}
+.qrow{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.diff{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;padding:3px 10px;border-radius:3px;text-transform:uppercase;font-weight:600}
+.easy{background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);color:var(--acc3)}
+.med{background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.25);color:var(--acc)}
+.hard{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);color:#f87171}
+.tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.8px;padding:3px 9px;border-radius:3px;text-transform:uppercase}
+.tb{background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.16);color:var(--acc2)}
+.tp{background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.16);color:var(--acc4)}
+.to{background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.16);color:var(--acc5)}
+.qarr{color:var(--muted);font-size:18px;transition:transform .25s;min-width:20px;text-align:right;margin-top:4px}
+.qc.open .qarr{transform:rotate(180deg);color:var(--acc)}
+.qc.open .qq{border-bottom:1px solid var(--border)}
+
+/* ANSWER BODY */
+.ans{display:none;padding:0}
+.qc.open .ans{display:block}
+
+/* TABS */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 24px;background:rgba(255,255,255,0.01)}
+.tab{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.8px;text-transform:uppercase;padding:11px 16px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--acc)}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc)}
+
+/* TAB PANELS */
+.panel{display:none;padding:22px 26px 26px}
+.panel.active{display:block}
+
+/* PATTERN BOX */
+.pattern-box{background:rgba(250,204,21,0.04);border:1px solid rgba(250,204,21,0.15);border-radius:7px;padding:16px 18px;margin-bottom:16px}
+.pattern-box .plabel{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--acc);text-transform:uppercase;margin-bottom:8px}
+.pattern-box .ptxt{font-size:14px;line-height:1.75;color:var(--text)}
+
+/* APPROACH */
+.step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+.snum{width:24px;height:24px;min-width:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;margin-top:2px}
+.s1{background:rgba(250,204,21,0.14);color:var(--acc)}
+.s2{background:rgba(56,189,248,0.12);color:var(--acc2)}
+.s3{background:rgba(74,222,128,0.12);color:var(--acc3)}
+.s4{background:rgba(244,114,182,0.12);color:var(--acc4)}
+.s5{background:rgba(251,146,60,0.12);color:var(--acc5)}
+.stxt{flex:1;font-size:14px;line-height:1.75;color:var(--text)}
+.stxt strong{color:var(--acc2);font-weight:600}
+.stxt .kw{color:var(--acc);font-weight:500}
+
+/* CODE */
+pre{background:var(--cb);border:1px solid var(--border);border-radius:7px;padding:16px 18px;margin:10px 0;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7;position:relative}
+.kw{color:#c792ea}.ty{color:#82aaff}.st{color:#c3e88d}.cm{color:#37516a;font-style:italic}.nm{color:#f78c6c}.an{color:#ffcb6b}.op{color:#89ddff}
+
+/* COMPLEXITY */
+.complexity{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.cbox{background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:8px 14px;text-align:center}
+.cbox .clabel{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.cbox .cval{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--acc3)}
+
+/* VISUAL */
+.viz{background:rgba(56,189,248,0.03);border:1px solid rgba(56,189,248,0.15);border-radius:7px;padding:14px 18px;margin:10px 0;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2;color:var(--acc2)}
+.viz .dim{color:var(--muted)}
+
+/* OUTPUT */
+.output{background:rgba(74,222,128,0.04);border:1px solid rgba(74,222,128,0.18);border-radius:5px;padding:10px 14px;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--acc3)}
+.output::before{content:'Output: ';color:var(--muted);font-size:10px}
+
+/* TIP */
+.tip{background:rgba(56,189,248,0.04);border:1px solid rgba(56,189,248,0.18);border-radius:6px;padding:12px 16px;margin-top:14px;font-size:13px;color:var(--acc2);line-height:1.65}
+.tip::before{content:'💡 Interview Tip: ';font-weight:700}
+
+.main{max-width:1040px;margin:0 auto;padding:40px 32px}
+.footer{border-top:1px solid var(--border);text-align:center;padding:26px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px;margin-top:12px}
+@media(max-width:600px){.hdr{padding:28px 18px 22px}.hdr h1{font-size:30px}.main{padding:20px 14px}.panel{padding:16px}}
+</style>
+
+  <link rel="stylesheet" href="../../../css/styles.css" />
+  <link rel="stylesheet" href="../../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="hdr">
+  <div class="eye">DSA Interview Preparation · Java 8</div>
+  <h1><span class="d">DSA Top 50</span><br/><span class="s">Coding Problems</span></h1>
+  <div class="hdesc">Production-ready Java 8 solutions with patterns, visual dry-runs, time/space complexity, and the exact thought process interviewers at Razorpay, Groww, PhonePe, Juspay &amp; Zepto expect.</div>
+  <div class="chips">
+    <span class="chip cy">Arrays</span><span class="chip cb">Two Pointers</span>
+    <span class="chip cg">Sliding Window</span><span class="chip cp">Hash Map</span>
+    <span class="chip cy">Sorting</span><span class="chip cb">Java 8 Streams</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="batch">
+    <span class="batch-tag">Batch 01</span>
+    <span class="batch-title">Arrays &amp; Two Pointers — Foundational Patterns</span>
+    <span class="batch-count">Q1–Q5 of 50</span>
+  </div>
+
+  <div class="prog">
+    <span class="prog-lbl">BATCH 1/10</span>
+    <div class="prog-track"><div class="prog-fill" id="pF" style="width:10%"></div></div>
+    <span class="prog-lbl" id="pL">0 / 5 solved</span>
+  </div>
+
+  <!-- ═══════════════════ Q1 ═══════════════════ -->
+  <div class="qc" id="q1">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum">01</span>
+      <div class="qmeta">
+        <div class="qtitle">Two Sum — Find two numbers that add up to a target</div>
+        <div class="qrow">
+          <span class="diff easy">Easy</span>
+          <span class="tag tb">Array</span><span class="tag tp">HashMap</span><span class="tag to">Most Asked</span>
+        </div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'q1','problem')">Problem</button>
+        <button class="tab" onclick="switchTab(this,'q1','approach')">Approach</button>
+        <button class="tab" onclick="switchTab(this,'q1','code')">Java 8 Code</button>
+        <button class="tab" onclick="switchTab(this,'q1','dry')">Dry Run</button>
+      </div>
+
+      <div class="panel active" id="q1-problem">
+        <div class="pattern-box">
+          <div class="plabel">Pattern</div>
+          <div class="ptxt">HashMap for O(1) complement lookup. For any number <code>x</code>, the complement is <code>target - x</code>. Store each number's index in a map while iterating — if complement already exists in map, return both indices.</div>
+        </div>
+        <div class="step"><span class="snum s1">P</span><div class="stxt"><strong>Problem:</strong> Given an array of integers <code>nums</code> and an integer <code>target</code>, return indices of the two numbers that add up to <code>target</code>. Exactly one solution exists. Cannot use the same element twice.<br/><br/>Input: <code>nums = [2, 7, 11, 15], target = 9</code><br/>Output: <code>[0, 1]</code> — because nums[0] + nums[1] = 2 + 7 = 9</div></div>
+      </div>
+
+      <div class="panel" id="q1-approach">
+        <div class="step"><span class="snum s1">1</span><div class="stxt"><strong>Brute Force O(n²):</strong> Two nested loops — check every pair. For each element i, check all j &gt; i. Simple but fails for large inputs (10⁴ elements = 10⁸ operations). Never say this as your final answer — say it as a starting point.</div></div>
+        <div class="step"><span class="snum s2">2</span><div class="stxt"><strong>Optimal — HashMap O(n):</strong> Single pass. For each number at index i, compute <code>complement = target - nums[i]</code>. Check if complement is already in the map. If yes — found the pair. If no — store <code>nums[i] → i</code> in the map and continue. The map answers "have I seen the complement before?" in O(1).</div></div>
+        <div class="step"><span class="snum s3">3</span><div class="stxt"><strong>Why Store BEFORE Checking? No — Check FIRST, Then Store:</strong> Check complement first (to avoid using same element twice), then store current element. If target=6 and nums=[3,3], we need indices [0,1] not [0,0]. Checking before storing prevents accidentally matching an element with itself.</div></div>
+        <div class="step"><span class="snum s4">4</span><div class="stxt"><strong>Edge Cases:</strong> Negative numbers (handled naturally by HashMap), duplicate values in array (handled because we check before storing), target = 0 (works fine), empty or single-element array (no solution — but problem guarantees exactly one solution).</div></div>
+        <div class="complexity">
+          <div class="cbox"><div class="clabel">Time</div><div class="cval">O(n)</div></div>
+          <div class="cbox"><div class="clabel">Space</div><div class="cval">O(n)</div></div>
+          <div class="cbox"><div class="clabel">Pattern</div><div class="cval" style="color:var(--acc)">HashMap</div></div>
+        </div>
+      </div>
+
+      <div class="panel" id="q1-code">
+<pre><span class="cm">// Approach 1: HashMap — O(n) time, O(n) space</span>
+<span class="kw">public int</span>[] twoSum(<span class="kw">int</span>[] nums, <span class="kw">int</span> target) {
+    <span class="ty">Map</span>&lt;<span class="ty">Integer</span>, <span class="ty">Integer</span>&gt; map = <span class="kw">new</span> <span class="ty">HashMap</span>&lt;&gt;();
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nm">0</span>; i &lt; nums.length; i++) {
+        <span class="kw">int</span> complement = target - nums[i];
+        <span class="kw">if</span> (map.containsKey(complement)) {
+            <span class="kw">return new int</span>[]{map.get(complement), i};
+        }
+        map.put(nums[i], i); <span class="cm">// store AFTER checking to avoid self-match</span>
+    }
+    <span class="kw">throw new</span> <span class="ty">IllegalArgumentException</span>(<span class="st">"No solution found"</span>);
+}
+
+<span class="cm">// Java 8 Stream version (shows Java 8 skill — good to mention)</span>
+<span class="kw">public int</span>[] twoSumStream(<span class="kw">int</span>[] nums, <span class="kw">int</span> target) {
+    <span class="ty">Map</span>&lt;<span class="ty">Integer</span>, <span class="ty">Integer</span>&gt; map = <span class="kw">new</span> <span class="ty">HashMap</span>&lt;&gt;();
+    <span class="kw">return</span> <span class="ty">IntStream</span>.range(<span class="nm">0</span>, nums.length)
+        .filter(i -&gt; {
+            <span class="kw">if</span> (map.containsKey(target - nums[i])) <span class="kw">return true</span>;
+            map.put(nums[i], i);
+            <span class="kw">return false</span>;
+        })
+        .mapToObj(i -&gt; <span class="kw">new int</span>[]{map.get(target - nums[i]), i})
+        .findFirst()
+        .orElseThrow();
+}</pre>
+      </div>
+
+      <div class="panel" id="q1-dry">
+        <div class="viz">nums = [2, 7, 11, 15],  target = 9
+<span class="dim">──────────────────────────────────────</span>
+i=0: nums[0]=2,  complement=9-2=<span style="color:var(--acc)">7</span>
+     map={},  7 not in map
+     → store: map={2→0}
+
+i=1: nums[1]=7,  complement=9-7=<span style="color:var(--acc)">2</span>
+     map={2→0},  <span style="color:var(--acc3)">2 IS in map!</span>
+     → return [map.get(2), 1] = [<span style="color:var(--acc3)">0</span>, <span style="color:var(--acc3)">1</span>]
+<span class="dim">──────────────────────────────────────</span>
+Answer: [0, 1]  ✓  (nums[0]+nums[1] = 2+7 = 9)</div>
+        <div class="tip">Interviewers love: "I start with the complement idea — for any nums[i], I need target-nums[i] to have appeared before. HashMap gives O(1) lookup. Single pass — check then store."</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ Q2 ═══════════════════ -->
+  <div class="qc" id="q2">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum">02</span>
+      <div class="qmeta">
+        <div class="qtitle">Best Time to Buy and Sell Stock — Maximum profit from one transaction</div>
+        <div class="qrow">
+          <span class="diff easy">Easy</span>
+          <span class="tag tb">Array</span><span class="tag tp">Sliding Min</span><span class="tag to">Fintech Favourite</span>
+        </div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'q2','problem')">Problem</button>
+        <button class="tab" onclick="switchTab(this,'q2','approach')">Approach</button>
+        <button class="tab" onclick="switchTab(this,'q2','code')">Java 8 Code</button>
+        <button class="tab" onclick="switchTab(this,'q2','dry')">Dry Run</button>
+      </div>
+
+      <div class="panel active" id="q2-problem">
+        <div class="pattern-box">
+          <div class="plabel">Pattern</div>
+          <div class="ptxt">Track minimum price seen so far. At each day, profit = current price − minimum price so far. Track maximum profit seen. One pass, O(1) space. This pattern — "track best so far, compute delta" — appears in many array problems.</div>
+        </div>
+        <div class="step"><span class="snum s1">P</span><div class="stxt"><strong>Problem:</strong> Given array <code>prices</code> where <code>prices[i]</code> is the stock price on day i. Maximize profit by buying on one day and selling on a later day. If no profit is possible, return 0.<br/><br/>Input: <code>prices = [7, 1, 5, 3, 6, 4]</code><br/>Output: <code>5</code> — Buy day 1 (price=1), sell day 4 (price=6), profit = 5</div></div>
+      </div>
+
+      <div class="panel" id="q2-approach">
+        <div class="step"><span class="snum s1">1</span><div class="stxt"><strong>Key Insight:</strong> To maximize profit on day i, you want to have bought at the lowest price seen so far (days 0 to i-1). So maintain a running minimum. For each day, compute profit = price[i] - minPrice. Update maxProfit if this is better.</div></div>
+        <div class="step"><span class="snum s2">2</span><div class="stxt"><strong>Why NOT sort?</strong> Sorting destroys time order. You must BUY before SELL — sorting removes this constraint. Many candidates make this mistake.</div></div>
+        <div class="step"><span class="snum s3">3</span><div class="stxt"><strong>Why NOT two pointers?</strong> Two pointers work when both pointers move independently. Here the buy point (minPrice) updates greedily — whenever we see a new minimum, we reset the buy point. It's more naturally modeled as "track running minimum."</div></div>
+        <div class="step"><span class="snum s4">4</span><div class="stxt"><strong>Follow-Up — Multiple Transactions:</strong> If allowed to buy/sell multiple times, greedily collect every upward slope: sum all <code>max(0, prices[i] - prices[i-1])</code>. This is a different problem — mention it proactively.</div></div>
+        <div class="complexity">
+          <div class="cbox"><div class="clabel">Time</div><div class="cval">O(n)</div></div>
+          <div class="cbox"><div class="clabel">Space</div><div class="cval">O(1)</div></div>
+          <div class="cbox"><div class="clabel">Pattern</div><div class="cval" style="color:var(--acc)">Running Min</div></div>
+        </div>
+      </div>
+
+      <div class="panel" id="q2-code">
+<pre><span class="kw">public int</span> maxProfit(<span class="kw">int</span>[] prices) {
+    <span class="kw">int</span> minPrice = <span class="ty">Integer</span>.MAX_VALUE;
+    <span class="kw">int</span> maxProfit = <span class="nm">0</span>;
+
+    <span class="kw">for</span> (<span class="kw">int</span> price : prices) {
+        <span class="kw">if</span> (price &lt; minPrice) {
+            minPrice = price;           <span class="cm">// new buy opportunity found</span>
+        } <span class="kw">else</span> {
+            maxProfit = <span class="ty">Math</span>.max(maxProfit, price - minPrice);
+        }
+    }
+    <span class="kw">return</span> maxProfit;
+}
+
+<span class="cm">// Java 8 Stream version — elegant but slightly harder to read</span>
+<span class="kw">public int</span> maxProfitStream(<span class="kw">int</span>[] prices) {
+    <span class="kw">int</span>[] minPrice = {<span class="ty">Integer</span>.MAX_VALUE};
+    <span class="kw">int</span>[] maxProfit = {<span class="nm">0</span>};
+    <span class="ty">Arrays</span>.stream(prices).forEach(price -&gt; {
+        minPrice[<span class="nm">0</span>] = <span class="ty">Math</span>.min(minPrice[<span class="nm">0</span>], price);
+        maxProfit[<span class="nm">0</span>] = <span class="ty">Math</span>.max(maxProfit[<span class="nm">0</span>], price - minPrice[<span class="nm">0</span>]);
+    });
+    <span class="kw">return</span> maxProfit[<span class="nm">0</span>];
+}
+
+<span class="cm">// Follow-up: Multiple transactions (Leetcode 122)</span>
+<span class="kw">public int</span> maxProfitMultiple(<span class="kw">int</span>[] prices) {
+    <span class="kw">return</span> <span class="ty">IntStream</span>.range(<span class="nm">1</span>, prices.length)
+        .map(i -&gt; <span class="ty">Math</span>.max(<span class="nm">0</span>, prices[i] - prices[i - <span class="nm">1</span>]))
+        .sum();
+}</pre>
+      </div>
+
+      <div class="panel" id="q2-dry">
+        <div class="viz">prices = [7, 1, 5, 3, 6, 4]
+<span class="dim">──────────────────────────────────────────────</span>
+day 0: price=7   minPrice=7    profit=0      maxProfit=0
+day 1: price=1   <span style="color:var(--acc)">minPrice=1</span>   profit=0      maxProfit=0
+day 2: price=5   minPrice=1    profit=5-1=<span style="color:var(--acc3)">4</span>  maxProfit=4
+day 3: price=3   minPrice=1    profit=3-1=2  maxProfit=4
+day 4: price=6   minPrice=1    profit=6-1=<span style="color:var(--acc3)">5</span>  maxProfit=<span style="color:var(--acc3)">5</span>
+day 5: price=4   minPrice=1    profit=4-1=3  maxProfit=5
+<span class="dim">──────────────────────────────────────────────</span>
+Answer: 5  ✓  (Buy at 1, sell at 6)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ Q3 ═══════════════════ -->
+  <div class="qc" id="q3">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum">03</span>
+      <div class="qmeta">
+        <div class="qtitle">Container With Most Water — Maximum area between two heights</div>
+        <div class="qrow">
+          <span class="diff med">Medium</span>
+          <span class="tag tb">Two Pointers</span><span class="tag tp">Greedy</span><span class="tag to">Must Know</span>
+        </div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'q3','problem')">Problem</button>
+        <button class="tab" onclick="switchTab(this,'q3','approach')">Approach</button>
+        <button class="tab" onclick="switchTab(this,'q3','code')">Java 8 Code</button>
+        <button class="tab" onclick="switchTab(this,'q3','dry')">Dry Run</button>
+      </div>
+
+      <div class="panel active" id="q3-problem">
+        <div class="pattern-box">
+          <div class="plabel">Pattern — Two Pointers (Shrink from Ends)</div>
+          <div class="ptxt">Place pointers at both ends. Area = min(height[L], height[R]) × (R - L). Always move the pointer with the SHORTER height inward — because keeping the shorter side and moving the taller side can never increase the area (width decreases AND height is still limited by the shorter side).</div>
+        </div>
+        <div class="step"><span class="snum s1">P</span><div class="stxt"><strong>Problem:</strong> Given array <code>height</code> of n non-negative integers representing heights of lines, find two lines that together with the x-axis forms a container with the most water.<br/><br/>Input: <code>height = [1, 8, 6, 2, 5, 4, 8, 3, 7]</code><br/>Output: <code>49</code> — Lines at index 1 (h=8) and 8 (h=7), area = min(8,7) × (8-1) = 7×7 = 49</div></div>
+      </div>
+
+      <div class="panel" id="q3-approach">
+        <div class="step"><span class="snum s1">1</span><div class="stxt"><strong>Why Move the Shorter Pointer?</strong> Proof by contradiction: If we move the taller pointer inward, width decreases AND the limiting height stays at the shorter side (or gets worse). We can NEVER do better by moving the taller pointer. So the only hope for improvement is moving the shorter pointer — it might find a taller line that overcomes the width reduction.</div></div>
+        <div class="step"><span class="snum s2">2</span><div class="stxt"><strong>The Loop Invariant:</strong> At every step, the maximum area achievable with the current pointer pair has been considered. When L and R meet, all pairs have been evaluated. This greedy proof is what makes two pointers work — it's important to be able to explain WHY it works, not just WHAT it does.</div></div>
+        <div class="step"><span class="snum s3">3</span><div class="stxt"><strong>Common Mistake:</strong> Moving both pointers when heights are equal. Move either one (or either — both are fine). The proof holds because both sides are the bottleneck when equal, and moving either can only maintain or improve.</div></div>
+        <div class="complexity">
+          <div class="cbox"><div class="clabel">Time</div><div class="cval">O(n)</div></div>
+          <div class="cbox"><div class="clabel">Space</div><div class="cval">O(1)</div></div>
+          <div class="cbox"><div class="clabel">Pattern</div><div class="cval" style="color:var(--acc)">Two Pointers</div></div>
+        </div>
+      </div>
+
+      <div class="panel" id="q3-code">
+<pre><span class="kw">public int</span> maxArea(<span class="kw">int</span>[] height) {
+    <span class="kw">int</span> left = <span class="nm">0</span>, right = height.length - <span class="nm">1</span>;
+    <span class="kw">int</span> maxArea = <span class="nm">0</span>;
+
+    <span class="kw">while</span> (left &lt; right) {
+        <span class="kw">int</span> h = <span class="ty">Math</span>.min(height[left], height[right]);
+        <span class="kw">int</span> area = h * (right - left);
+        maxArea = <span class="ty">Math</span>.max(maxArea, area);
+
+        <span class="cm">// Move the shorter side inward — only way to potentially improve</span>
+        <span class="kw">if</span> (height[left] &lt; height[right]) left++;
+        <span class="kw">else</span> right--;
+    }
+    <span class="kw">return</span> maxArea;
+}
+
+<span class="cm">// Alternative: Functional-ish using IntStream.iterate (Java 9+)</span>
+<span class="cm">// For Java 8, the imperative version above is cleaner — use it</span>
+
+<span class="cm">// Brute force O(n²) — only mention to show you started from basics:</span>
+<span class="kw">public int</span> maxAreaBrute(<span class="kw">int</span>[] height) {
+    <span class="kw">return</span> <span class="ty">IntStream</span>.range(<span class="nm">0</span>, height.length)
+        .boxed()
+        .flatMapToInt(i -&gt; <span class="ty">IntStream</span>.range(i + <span class="nm">1</span>, height.length)
+            .map(j -&gt; <span class="ty">Math</span>.min(height[i], height[j]) * (j - i)))
+        .max().orElse(<span class="nm">0</span>);
+}</pre>
+      </div>
+
+      <div class="panel" id="q3-dry">
+        <div class="viz">height = [1, 8, 6, 2, 5, 4, 8, 3, 7]
+          idx:  0  1  2  3  4  5  6  7  8
+<span class="dim">──────────────────────────────────────────────</span>
+L=0,R=8: min(1,7)×8  = 1×8=8    max=8   h[0]&lt;h[8] → L++
+L=1,R=8: min(8,7)×7  = 7×7=<span style="color:var(--acc3)">49</span>  max=<span style="color:var(--acc3)">49</span>  h[1]&gt;h[8] → R--
+L=1,R=7: min(8,3)×6  = 3×6=18   max=49  h[7]&lt;h[1] → R--
+L=1,R=6: min(8,8)×5  = 8×5=40   max=49  equal → R--
+L=1,R=5: min(8,4)×4  = 4×4=16   max=49  h[5]&lt;h[1] → R--
+L=1,R=4: min(8,5)×3  = 5×3=15   max=49  h[4]&lt;h[1] → R--
+L=1,R=3: min(8,2)×2  = 2×2=4    max=49  h[3]&lt;h[1] → R--
+L=1,R=2: min(8,6)×1  = 6×1=6    max=49  h[2]&lt;h[1] → R--
+L=1,R=1: L==R → stop
+<span class="dim">──────────────────────────────────────────────</span>
+Answer: 49  ✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ Q4 ═══════════════════ -->
+  <div class="qc" id="q4">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum">04</span>
+      <div class="qmeta">
+        <div class="qtitle">Longest Substring Without Repeating Characters — Sliding Window</div>
+        <div class="qrow">
+          <span class="diff med">Medium</span>
+          <span class="tag tb">Sliding Window</span><span class="tag tp">HashMap</span><span class="tag to">Extremely Frequent</span>
+        </div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'q4','problem')">Problem</button>
+        <button class="tab" onclick="switchTab(this,'q4','approach')">Approach</button>
+        <button class="tab" onclick="switchTab(this,'q4','code')">Java 8 Code</button>
+        <button class="tab" onclick="switchTab(this,'q4','dry')">Dry Run</button>
+      </div>
+
+      <div class="panel active" id="q4-problem">
+        <div class="pattern-box">
+          <div class="plabel">Pattern — Sliding Window (Variable Size)</div>
+          <div class="ptxt">Maintain a window [left, right] where all characters are unique. Use a HashMap to store each character's last seen index. When a duplicate is found at index i, jump left past the duplicate's last position. The window always contains unique characters — no need to manually shrink one step at a time.</div>
+        </div>
+        <div class="step"><span class="snum s1">P</span><div class="stxt"><strong>Problem:</strong> Given a string s, find the length of the longest substring without repeating characters.<br/><br/>Input: <code>s = "abcabcbb"</code><br/>Output: <code>3</code> — "abc" (indices 0-2)</div></div>
+      </div>
+
+      <div class="panel" id="q4-approach">
+        <div class="step"><span class="snum s1">1</span><div class="stxt"><strong>The Key Insight — Jump Don't Slide:</strong> Instead of moving left one step at a time when a duplicate is found, jump left directly to (lastSeen[char] + 1). This skips all positions that would still contain the duplicate. Result: each character is processed at most twice — O(n) total.</div></div>
+        <div class="step"><span class="snum s2">2</span><div class="stxt"><strong>Critical Guard — left = max(left, lastSeen[c]+1):</strong> When you see a character again, its last-seen index might be to the LEFT of the current window. Without the max(), you'd move left backwards — bug! Always take max to ensure left only moves forward.</div></div>
+        <div class="step"><span class="snum s3">3</span><div class="stxt"><strong>Alternative — HashSet:</strong> Use a Set instead of Map. When duplicate found, keep removing from Set and advancing left until duplicate is removed. Simpler to understand, but worst-case O(2n) instead of O(n). Map approach is more elegant.</div></div>
+        <div class="step"><span class="snum s4">4</span><div class="stxt"><strong>Space Optimization:</strong> Since inputs are ASCII (128 chars), replace HashMap with <code>int[128]</code> array initialized to -1. Array access is faster than HashMap. For Unicode, keep HashMap.</div></div>
+        <div class="complexity">
+          <div class="cbox"><div class="clabel">Time</div><div class="cval">O(n)</div></div>
+          <div class="cbox"><div class="clabel">Space</div><div class="cval">O(min(m,n))</div></div>
+          <div class="cbox"><div class="clabel">Pattern</div><div class="cval" style="color:var(--acc)">Sliding Window</div></div>
+        </div>
+      </div>
+
+      <div class="panel" id="q4-code">
+<pre><span class="cm">// Optimal: HashMap stores last seen index → O(n)</span>
+<span class="kw">public int</span> lengthOfLongestSubstring(<span class="ty">String</span> s) {
+    <span class="ty">Map</span>&lt;<span class="ty">Character</span>, <span class="ty">Integer</span>&gt; lastSeen = <span class="kw">new</span> <span class="ty">HashMap</span>&lt;&gt;();
+    <span class="kw">int</span> maxLen = <span class="nm">0</span>;
+    <span class="kw">int</span> left = <span class="nm">0</span>;
+
+    <span class="kw">for</span> (<span class="kw">int</span> right = <span class="nm">0</span>; right &lt; s.length(); right++) {
+        <span class="kw">char</span> c = s.charAt(right);
+        <span class="kw">if</span> (lastSeen.containsKey(c)) {
+            <span class="cm">// Jump left past the previous occurrence</span>
+            <span class="cm">// max() ensures left never moves backward</span>
+            left = <span class="ty">Math</span>.max(left, lastSeen.get(c) + <span class="nm">1</span>);
+        }
+        lastSeen.put(c, right);
+        maxLen = <span class="ty">Math</span>.max(maxLen, right - left + <span class="nm">1</span>);
+    }
+    <span class="kw">return</span> maxLen;
+}
+
+<span class="cm">// Space-optimised: int[128] for ASCII — faster than HashMap</span>
+<span class="kw">public int</span> lengthOfLongestSubstringAscii(<span class="ty">String</span> s) {
+    <span class="kw">int</span>[] lastSeen = <span class="kw">new int</span>[<span class="nm">128</span>];
+    <span class="ty">Arrays</span>.fill(lastSeen, <span class="nm">-1</span>);
+    <span class="kw">int</span> maxLen = <span class="nm">0</span>, left = <span class="nm">0</span>;
+
+    <span class="kw">for</span> (<span class="kw">int</span> right = <span class="nm">0</span>; right &lt; s.length(); right++) {
+        <span class="kw">char</span> c = s.charAt(right);
+        <span class="kw">if</span> (lastSeen[c] &gt;= left) left = lastSeen[c] + <span class="nm">1</span>;
+        lastSeen[c] = right;
+        maxLen = <span class="ty">Math</span>.max(maxLen, right - left + <span class="nm">1</span>);
+    }
+    <span class="kw">return</span> maxLen;
+}</pre>
+      </div>
+
+      <div class="panel" id="q4-dry">
+        <div class="viz">s = "abcabcbb"
+<span class="dim">─────────────────────────────────────────────────</span>
+right=0: c='a'  left=0  window="a"    map={a:0}  len=1
+right=1: c='b'  left=0  window="ab"   map={b:1}  len=2
+right=2: c='c'  left=0  window="abc"  map={c:2}  len=<span style="color:var(--acc3)">3</span>
+right=3: c='a'  <span style="color:var(--acc)">a seen at 0</span>  left=max(0,0+1)=<span style="color:var(--acc)">1</span>
+         window="bca"  map={a:3}  len=3
+right=4: c='b'  <span style="color:var(--acc)">b seen at 1</span>  left=max(1,1+1)=<span style="color:var(--acc)">2</span>
+         window="cab"  map={b:4}  len=3
+right=5: c='c'  <span style="color:var(--acc)">c seen at 2</span>  left=max(2,2+1)=<span style="color:var(--acc)">3</span>
+         window="abc"  map={c:5}  len=3
+right=6: c='b'  <span style="color:var(--acc)">b seen at 4</span>  left=max(3,4+1)=<span style="color:var(--acc)">5</span>
+         window="cb"   map={b:6}  len=2
+right=7: c='b'  <span style="color:var(--acc)">b seen at 6</span>  left=max(5,6+1)=<span style="color:var(--acc)">7</span>
+         window="b"    map={b:7}  len=1
+<span class="dim">─────────────────────────────────────────────────</span>
+Answer: 3  ✓  ("abc")</div>
+        <div class="tip">The max() guard is the most common bug. Practice saying: "I take max(left, lastSeen+1) so the window never shrinks backward — only moves forward."</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ Q5 ═══════════════════ -->
+  <div class="qc" id="q5">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum">05</span>
+      <div class="qmeta">
+        <div class="qtitle">Product of Array Except Self — No division allowed</div>
+        <div class="qrow">
+          <span class="diff med">Medium</span>
+          <span class="tag tb">Array</span><span class="tag tp">Prefix Product</span><span class="tag to">Razorpay / Groww Asked</span>
+        </div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab(this,'q5','problem')">Problem</button>
+        <button class="tab" onclick="switchTab(this,'q5','approach')">Approach</button>
+        <button class="tab" onclick="switchTab(this,'q5','code')">Java 8 Code</button>
+        <button class="tab" onclick="switchTab(this,'q5','dry')">Dry Run</button>
+      </div>
+
+      <div class="panel active" id="q5-problem">
+        <div class="pattern-box">
+          <div class="plabel">Pattern — Prefix &amp; Suffix Products</div>
+          <div class="ptxt">For index i, result[i] = product of all elements to the LEFT × product of all elements to the RIGHT. Build a prefix product array (left to right), then multiply by suffix product (right to left) in a second pass. O(n) time, O(1) extra space (output array doesn't count).</div>
+        </div>
+        <div class="step"><span class="snum s1">P</span><div class="stxt"><strong>Problem:</strong> Given integer array <code>nums</code>, return array <code>output</code> where <code>output[i]</code> = product of all elements of <code>nums</code> except <code>nums[i]</code>. Must run in O(n), cannot use division.<br/><br/>Input: <code>nums = [1, 2, 3, 4]</code><br/>Output: <code>[24, 12, 8, 6]</code></div></div>
+      </div>
+
+      <div class="panel" id="q5-approach">
+        <div class="step"><span class="snum s1">1</span><div class="stxt"><strong>Why No Division?</strong> Division approach: totalProduct / nums[i]. Breaks when array contains zero (division by zero). The constraint "no division" forces a cleaner, more general solution. Also: interviewers use this constraint to test if you can think beyond the obvious.</div></div>
+        <div class="step"><span class="snum s2">2</span><div class="stxt"><strong>Prefix Pass (Left to Right):</strong> <code>result[i]</code> = product of all elements to the LEFT of i. result[0] = 1 (nothing to the left). result[1] = nums[0]. result[2] = nums[0]*nums[1]. etc.</div></div>
+        <div class="step"><span class="snum s3">3</span><div class="stxt"><strong>Suffix Pass (Right to Left):</strong> Maintain a running <code>rightProduct</code> initialized to 1. For each i from right to left: multiply result[i] by rightProduct, then update rightProduct *= nums[i]. This multiplies in the right side product without a separate suffix array — O(1) extra space.</div></div>
+        <div class="step"><span class="snum s4">4</span><div class="stxt"><strong>Follow-Up — With Zeros:</strong> If the array has exactly one zero, only the position of that zero has a non-zero result (product of all others). If two or more zeros, all results are zero. This can be handled with the same algorithm naturally — the zero product propagates correctly.</div></div>
+        <div class="complexity">
+          <div class="cbox"><div class="clabel">Time</div><div class="cval">O(n)</div></div>
+          <div class="cbox"><div class="clabel">Space</div><div class="cval">O(1)*</div></div>
+          <div class="cbox"><div class="clabel">Pattern</div><div class="cval" style="color:var(--acc)">Prefix×Suffix</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">* O(1) extra space — output array doesn't count</div>
+      </div>
+
+      <div class="panel" id="q5-code">
+<pre><span class="kw">public int</span>[] productExceptSelf(<span class="kw">int</span>[] nums) {
+    <span class="kw">int</span> n = nums.length;
+    <span class="kw">int</span>[] result = <span class="kw">new int</span>[n];
+
+    <span class="cm">// Pass 1: Fill result with prefix products (product of all LEFT of i)</span>
+    result[<span class="nm">0</span>] = <span class="nm">1</span>;
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nm">1</span>; i &lt; n; i++) {
+        result[i] = result[i - <span class="nm">1</span>] * nums[i - <span class="nm">1</span>];
+    }
+
+    <span class="cm">// Pass 2: Multiply by suffix product (product of all RIGHT of i)</span>
+    <span class="kw">int</span> rightProduct = <span class="nm">1</span>;
+    <span class="kw">for</span> (<span class="kw">int</span> i = n - <span class="nm">1</span>; i &gt;= <span class="nm">0</span>; i--) {
+        result[i] *= rightProduct;
+        rightProduct *= nums[i];
+    }
+
+    <span class="kw">return</span> result;
+}
+
+<span class="cm">// Java 8 — harder to do elegantly (stateful prefix scan)</span>
+<span class="cm">// For this problem, the imperative version is preferred in interviews</span>
+<span class="cm">// Show Java 8 for simpler problems like twoSum / maxProfit</span>
+
+<span class="cm">// Verify:</span>
+<span class="cm">// nums = [1, 2, 3, 4]</span>
+<span class="cm">// After Pass 1: result = [1, 1, 2, 6]  ← prefix products</span>
+<span class="cm">// Pass 2: i=3: result[3]*=1=6,   right=4</span>
+<span class="cm">//         i=2: result[2]*=4=8,   right=12</span>
+<span class="cm">//         i=1: result[1]*=12=12, right=24</span>
+<span class="cm">//         i=0: result[0]*=24=24, right=24</span>
+<span class="cm">// Final: [24, 12, 8, 6]  ✓</span></pre>
+      </div>
+
+      <div class="panel" id="q5-dry">
+        <div class="viz">nums = [1, 2, 3, 4]
+<span class="dim">────────────────────────────────────────────</span>
+PASS 1 (Prefix — Left Products):
+result[0] = 1          (nothing to left)
+result[1] = 1×nums[0]  = 1×1 = <span style="color:var(--acc2)">1</span>
+result[2] = 1×nums[1]  = 1×2 = <span style="color:var(--acc2)">2</span>
+result[3] = 2×nums[2]  = 2×3 = <span style="color:var(--acc2)">6</span>
+result = [1, 1, 2, 6]
+
+PASS 2 (Suffix — Right Products):
+rightProduct = 1
+i=3: result[3] = 6×1  = <span style="color:var(--acc3)">6</span>,  rightProduct = 1×4  = 4
+i=2: result[2] = 2×4  = <span style="color:var(--acc3)">8</span>,  rightProduct = 4×3  = 12
+i=1: result[1] = 1×12 = <span style="color:var(--acc3)">12</span>, rightProduct = 12×2 = 24
+i=0: result[0] = 1×24 = <span style="color:var(--acc3)">24</span>, rightProduct = 24×1 = 24
+<span class="dim">────────────────────────────────────────────</span>
+Final: [24, 12, 8, 6]  ✓</div>
+        <div class="tip">When interviewer says "no division" — immediately think Prefix × Suffix. This constraint is the hint. Say: "Without division, I can compute for each index the product of everything to its left, and separately everything to its right. I can do both passes in O(n) using O(1) extra space."</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEXT BATCH -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 24px;text-align:center;margin-top:8px">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">Coming Next</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Batch 02 — Q6 to Q10</div>
+    <div style="font-size:13px;color:var(--muted)">3Sum · Maximum Subarray (Kadane's) · Merge Intervals · Find Duplicate Number · Rotate Array</div>
+  </div>
+
+</div>
+
+<div class="footer">DSA TOP 50 · BATCH 01 · Q1–Q5 · ARRAYS &amp; TWO POINTERS · JAVA 8 · RAZORPAY · GROWW · PHONEPE · 2025</div>
+
+<script>
+let solved = new Set();
+function tog(btn) {
+  const card = btn.closest('.qc');
+  card.classList.toggle('open');
+  if (card.classList.contains('open')) solved.add(card.id);
+  const pct = Math.round((solved.size / 5) * 100);
+  document.getElementById('pF').style.width = pct + '%';
+  document.getElementById('pL').textContent = solved.size + ' / 5 solved';
+}
+function switchTab(btn, qid, panel) {
+  const card = document.getElementById(qid);
+  card.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  card.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(qid + '-' + panel).classList.add('active');
+}
+</script>
+
+  </main>
+  <script type="module" src="../../../js/topic.js"></script>
+  </body>
+</html>

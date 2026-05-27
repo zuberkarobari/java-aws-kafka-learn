@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 21  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 21  ·  STUDY CHECKLIST — Advanced Kafka — Producers, Consumers, Exactly-Once, Kafka Streams and Operations</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 21 Checklist</div>
+    <h1 style="margin-top: 0;">Advanced Kafka — Producers, Consumers, Exactly-Once, Kafka Streams and Operations</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 21 · STUDY CHECKLIST</h3>
+    <h3>Advanced Kafka — Producers, Consumers, Exactly-Once, Kafka Streams and Operations</h3>
+    <h3>Producer</h3>
+    <p>acks, retries, idempotence, batching, compression</p>
+    <h3>Consumer</h3>
+    <p>Rebalancing, partition assignment, lag monitoring</p>
+    <h3>Delivery Semantics</h3>
+    <p>At-most-once, at-least-once, exactly-once (EOS)</p>
+    <h3>Patterns & Ops</h3>
+    <p>Note:</p>
+    <p>Kafka comes up in most senior Java backend interviews because almost every event-driven system uses it. The gap between junior and senior is not knowing that Kafka exists — it is understanding what happens when acks=1 and the leader crashes, why rebalancing hurts throughput, when exactly-once is worth the cost, and how to keep a consumer group healthy in production. Every section today connects to a real operational decision.</p>
+    <h3>Day 21 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Producer acks: acks=0, acks=1, acks=all — what each guarantees and when each loses data</span></li>
+      <li><span class="checkbox-label">Idempotent producer: how it prevents duplicates, what enable.idempotence actually does</span></li>
+      <li><span class="checkbox-label">Producer batching: linger.ms, batch.size, compression.type — throughput vs latency trade-off</span></li>
+      <li><span class="checkbox-label">Consumer groups: how partition assignment works, what happens when a consumer joins or leaves</span></li>
+      <li><span class="checkbox-label">Rebalancing: why it stops all processing, eager vs cooperative rebalancing</span></li>
+      <li><span class="checkbox-label">Offset commit: auto vs manual, commitSync vs commitAsync — the duplicate and loss scenarios</span></li>
+      <li><span class="checkbox-label">At-most-once, at-least-once, exactly-once — the delivery guarantee each achieves and its cost</span></li>
+      <li><span class="checkbox-label">Exactly-once semantics (EOS): idempotent producer + transactions — how they work together</span></li>
+      <li><span class="checkbox-label">Kafka Streams: KStream vs KTable, stateful operations, windowing</span></li>
+      <li><span class="checkbox-label">Partition sizing: how to calculate the right partition count for a topic</span></li>
+      <li><span class="checkbox-label">Consumer lag: how to monitor it, what high lag signals, how to fix it</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Producer Configuration</h2>
+    <h3>The acks Setting — The Most Important Producer Decision</h3>
+    <h3>acks value</h3>
+    <h3>What it means | Data loss risk | Latency | Use when</h3>
+    <h3>acks=0</h3>
+    <p>Fire and forget. Producer does not wait for any acknowledgement. | Highest — broker crash = lost message | Lowest | Metrics, telemetry — data loss is acceptable</p>
+    <h3>acks=1</h3>
+    <p>Leader broker acknowledges once it writes to its local log. Replicas have not confirmed yet. | Medium — leader crashes before replication = lost message | Medium | Rarely the right choice — false sense of safety</p>
+    <h3>acks=all (or -1)</h3>
+    <p>All in-sync replicas (ISR) must acknowledge before the producer gets a response. | Lowest — requires min.insync.replicas brokers to agree | Highest | Payments, orders, any data that cannot be lost</p>
+    <p>The acks=1 trap:</p>
+    <p>Many teams use acks=1 thinking it is a good balance. It is not. If the leader crashes after acknowledging but before replicating to followers, the message is lost. The new leader elected from the followers does not have it. For anything important, use acks=all with min.insync.replicas=2. This ensures at least two brokers have confirmed the write before success is reported to the producer.</p>
+    <h3>Idempotent Producer</h3>
+    <p>The problem it solves:</p>
+    <pre><code class="language-java">// Producer configuration for a payment service
+spring:
+  kafka:
+    producer:
+      bootstrap-servers: ${KAFKA_BROKERS}
+      key-serializer:   org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      # Durability — do not lose data
+      acks: all                    # wait for all ISR replicas
+      retries: 2147483647          # retry indefinitely (bounded by delivery.timeout.ms)
+      enable-idempotence: true     # deduplication via PID + sequence number
+      # Throughput — batch messages before sending
+      linger-ms: 5                 # wait up to 5ms to fill a batch
+      batch-size: 65536            # 64KB batch (default 16KB)
+      compression-type: snappy     # good balance of CPU and ratio
+      buffer-memory: 33554432      # 32MB send buffer
+      # Ordering — required with retries
+      max-in-flight-requests-per-connection: 5  # safe with idempotence enabled
+      # Without idempotence, set this to 1 to preserve order under retries
+// Sending a message with explicit error handling
+@Service
+public class PaymentEventPublisher {
+    private final KafkaTemplate&lt;String, PaymentEvent&gt; kafkaTemplate;
+    public void publish(PaymentEvent event) {
+        kafkaTemplate.send("payments.completed", event.getPaymentId(), event)
+            .whenComplete((result, ex) -&gt; {
+                if (ex != null) {
+                    log.error("Failed to publish payment event [id={}]: {}",
+                        event.getPaymentId(), ex.getMessage(), ex);
+                    // Consider writing to outbox for retry
+                } else {
+                    log.info("Published to partition {} offset {}
+                        result.getRecordMetadata().partition(),
+                        result.getRecordMetadata().offset());
+                }
+            });
+    }
+}</code></pre>
+    <h3>Batching and Throughput</h3>
+    <h3>Config</h3>
+    <h3>What it does | Throughput impact | Latency impact</h3>
+    <h3>linger.ms=0 (default)</h3>
+    <p>Send immediately when a record is ready | Low — one record per network round trip | Lowest possible latency</p>
+    <h3>linger.ms=5</h3>
+    <p>Wait up to 5ms to accumulate records into a batch | High — many records per round trip | Up to 5ms extra</p>
+    <h3>batch.size=16384 (16KB)</h3>
+    <p>Max batch size per partition per request | Larger = fewer requests = better throughput | No latency penalty unless linger.ms is 0</p>
+    <h3>compression.type=snappy</h3>
+    <p>Compress batch before sending | Less bandwidth, more broker I/O capacity | Small CPU cost, worth it at scale</p>
+    <h3>compression.type=lz4</h3>
+    <p>Faster decompression than snappy, similar ratio | Better for high-throughput consumer scenarios | Slightly better than snappy on consumer side</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is the difference between acks=1 and acks=all, and which would you use for a payment service? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">With acks=1, the producer waits for the partition leader to write the message to its own log and acknowledge. Replicas have not confirmed anything yet. If the leader crashes after acknowledging but before the followers replicate the message, the message is gone. A new leader is elected from the followers, and they do not have the message. With acks=all, every in-sync replica must acknowledge before the producer gets a success response. Combined with min.insync.replicas=2 on the broker, you need at least two brokers to have written the message before the producer proceeds. For a payment service, acks=all is the only acceptable setting. Losing a payment event because the leader crashed after acknowledging is not a trade-off we make. The latency cost is real but small compared to the consequences of data loss in a financial system.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — Consumer Groups and Rebalancing</h2>
+    <h3>How Partition Assignment Works</h3>
+    <p>The core rule:</p>
+    <p>Each partition is assigned to exactly one consumer within a group at any time. Multiple consumer groups can read the same partition independently. If a topic has 6 partitions and your group has 3 consumers, each consumer gets 2 partitions. If you add a 7th consumer, one consumer will be idle — you cannot have more active consumers than partitions.</p>
+    <pre><code class="language-java">// Consumer group assignment — visual
+// Topic: payments (6 partitions: P0-P5)
+// Group: payment-processor (3 consumers: C0, C1, C2)
+//
+// C0 → P0, P1
+// C1 → P2, P3
+// C2 → P4, P5
+// If C2 crashes:
+// REBALANCE triggered
+// C0 → P0, P1, P4   (C0 gets one of C2's partitions)
+// C1 → P2, P3, P5   (C1 gets the other)
+// If we add C3:
+// REBALANCE triggered again
+// C0 → P0, P1
+// C1 → P2, P3
+// C2 → P4
+// C3 → P5
+// If we add C7 (more consumers than partitions):
+// C0 → P0, C1 → P1, C2 → P2, C3 → P3, C4 → P4, C5 → P5
+// C6 → idle (no partition to assign)
+// Never useful to have more consumers than partitions in a group</code></pre>
+    <h3>Rebalancing — The Throughput Killer</h3>
+    <p>What happens during rebalance:</p>
+    <p>When any consumer in the group joins, leaves, or fails to heartbeat within session.timeout.ms, the group coordinator triggers a rebalance. During eager rebalancing (the default before Kafka 2.4), ALL consumers in the group stop processing and revoke ALL their partitions. They then wait for the group leader to assign new partitions to everyone. During this window, the entire group is idle. For a busy consumer group, this means measurable gaps in processing and consumer lag spikes.</p>
+    <h3>Rebalance type</h3>
+    <h3>How it works | Processing pause | Use when</h3>
+    <h3>Eager (EAGER)</h3>
+    <p>All consumers stop. All partitions revoked. Group leader reassigns everything from scratch. | Full group stops for entire rebalance | Legacy — avoid for latency-sensitive consumers</p>
+    <h3>Cooperative (COOPERATIVE_STICKY)</h3>
+    <p>Only the partitions that need to move are revoked. Other consumers keep processing. | Minimal — only consumers gaining or losing partitions pause briefly | Default since Kafka 3.1 — use this</p>
+    <h3>Static membership</h3>
+    <pre><code class="language-java">// Spring Kafka consumer config — cooperative rebalancing + static membership
+spring:
+  kafka:
+    consumer:
+      bootstrap-servers: ${KAFKA_BROKERS}
+      group-id: payment-processor
+      key-deserializer:   org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: earliest   # start from beginning if no committed offset
+      enable-auto-commit: false      # manual commit — never trust auto-commit
+      properties:
+        partition.assignment.strategy: org.apache.kafka.clients.consumer.CooperativeStickyAssignor
+        group.instance.id: ${POD_NAME}  # static membership — Kubernetes pod name
+        session.timeout.ms: 45000       # how long before coordinator declares consumer dead
+        heartbeat.interval.ms: 15000    # must be &lt; session.timeout.ms / 3
+        max.poll.interval.ms: 300000    # max time between polls before consumer is removed
+    listener:
+      ack-mode: MANUAL_IMMEDIATE   # call Acknowledgment.acknowledge() explicitly
+      concurrency: 3               # 3 listener threads — one per partition in a 3-partition topic</code></pre>
+    <h3>Offset Commit Strategies</h3>
+    <h3>Strategy</h3>
+    <h3>When offset is committed | Risk | Use when</h3>
+    <h3>Auto-commit (enable.auto.commit=true)</h3>
+    <p>Every auto.commit.interval.ms (default 5s) regardless of processing state | Commits before processing completes → message lost if consumer crashes | Only for truly at-most-once scenarios</p>
+    <h3>Manual commitSync()</h3>
+    <p>After processing, blocks until broker confirms | Slower — synchronous round trip per batch | When you need guaranteed at-least-once with ordered commits</p>
+    <h3>Manual commitAsync()</h3>
+    <p>After processing, does not block — callback on completion | If commit fails and is not retried, offset may not advance | High throughput with careful error handling</p>
+    <h3>Commit after batch (default Spring)</h3>
+    <p>After all records in a poll batch are processed | Reprocesses the whole batch on crash — consumers must be idempotent | Most Spring Kafka services — good default</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What happens during a Kafka consumer group rebalance and how do you minimise the impact? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">During an eager rebalance, which was the default until recently, every consumer in the group stops processing and revokes all its partition assignments. They wait for the group coordinator to redistribute partitions. For a payment consumer with 6 consumers processing a busy topic, this can mean several seconds of zero processing — lag spikes, delayed events, and timeouts upstream. Three things reduce the impact. First, switch to cooperative-sticky rebalancing. Only the partitions that actually need to move are revoked. Consumers that keep their partitions continue processing throughout. Second, use static membership by setting group.instance.id to a stable identifier like the Kubernetes pod name. When a consumer restarts, it re-joins with the same ID and the coordinator gives it back its previous partitions without triggering a full rebalance. Third, tune session.timeout.ms and max.poll.interval.ms carefully. If processing is slow and you are not polling frequently enough, the coordinator wrongly declares the consumer dead and triggers an unnecessary rebalance.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Delivery Semantics and Exactly-Once</h2>
+    <h3>The Three Delivery Guarantees</h3>
+    <h3>Guarantee</h3>
+    <h3>How it is achieved | Risk | Real-world use</h3>
+    <h3>At-most-once</h3>
+    <h3>At-least-once</h3>
+    <h3>Exactly-once (EOS)</h3>
+    <p>Idempotent producer + transactional API. Producer writes records and commits consumer offsets in a single atomic transaction. A record is either processed exactly once or not at all — no duplicates, no loss. | Higher latency, lower throughput — transactional overhead | Financial ledgers, inventory, anywhere duplicates cause business harm</p>
+    <p>The honest position on exactly-once:</p>
+    <p>Exactly-once within Kafka is real and works well. Exactly-once across Kafka plus a database is harder — you need the Outbox pattern or transactional outbox to tie them together. Most systems use at-least-once with idempotent consumers because it is simpler to operate and the cost of an occasional duplicate is lower than the complexity of maintaining transactional producers across all services.</p>
+    <h3>Exactly-Once Semantics — How It Works</h3>
+    <pre><code class="language-java">// Exactly-once: idempotent producer + transactions
+// Step 1: Configure transactional producer
+spring:
+  kafka:
+    producer:
+      transaction-id-prefix: payment-processor-  # enables transactional mode
+      enable-idempotence: true                   # required for transactions
+      acks: all                                  # required for transactions
+// Step 2: Use KafkaTemplate within a transaction
+@Service
+public class PaymentProcessor {
+    private final KafkaTemplate&lt;String, PaymentEvent&gt; kafkaTemplate;
+    // Process a record and publish result — exactly once
+    @Transactional("kafkaTransactionManager")
+    public void processAndPublish(PaymentCommand command) {
+        // All sends and the offset commit happen atomically
+        PaymentEvent event = processPayment(command);
+        kafkaTemplate.send("payments.completed", event.getId(), event);
+        kafkaTemplate.send("audit.log",         event.getId(), AuditEvent.from(event));
+        // If anything fails, both sends are rolled back
+        // Consumer offset is NOT committed if the transaction aborts
+    }
+}
+// Step 3: Consumer must set isolation.level=read_committed
+// This ensures consumers only see messages from committed transactions
+// Messages from aborted transactions are invisible to read_committed consumers
+spring:
+  kafka:
+    consumer:
+      properties:
+        isolation.level: read_committed  # never read messages from aborted transactions
+// The atomic unit:
+// BEGIN TRANSACTION
+//   produce record to payments.completed
+//   produce record to audit.log
+//   commit consumer offset for payments.commands
+// COMMIT TRANSACTION (or ABORT if anything fails)
+// Consumer sees nothing until COMMIT — no partial results</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What is exactly-once delivery in Kafka and when would you actually use it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Exactly-once in Kafka means a message is processed and its effects are visible exactly one time — not zero, not twice. It is achieved by combining an idempotent producer (which prevents duplicate writes via PID and sequence numbers) with Kafka transactions (which atomically commit the produced records and the consumer offset together). If the consumer crashes mid-processing, the transaction aborts. When it restarts, it reprocesses from the uncommitted offset and the transaction runs again cleanly. Consumers with isolation.level=read_committed only see messages from committed transactions, so aborted messages are invisible. I would use it when duplicates cause real business harm — a financial ledger where processing a payment twice creates incorrect balances, or an inventory system where a duplicate message over-reserves stock. For most services, at-least-once with idempotent consumers is simpler to operate and sufficient. The transactional overhead roughly halves throughput, so it is not a default choice.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>The Problem with Failing Messages</h3>
+    <p>What happens without a DLT:</p>
+    <p>A consumer throws an exception processing message at offset 100. The offset is not committed. Kafka keeps delivering the same message. The consumer keeps failing. All messages after offset 100 are stuck waiting. This is called a poison pill — one bad message blocks the entire partition. A Dead Letter Topic (DLT) gives you a way to move poison pills out of the way and keep processing, then investigate and reprocess them separately.</p>
+    <pre><code class="language-java">// Spring Kafka @RetryableTopic — declarative retry + DLT
+@Component
+public class PaymentEventConsumer {
+    @RetryableTopic(
+        attempts = "4",                    // 1 original + 3 retries
+        backoff = @Backoff(
+            delay = 1000,                   // 1s first retry
+            multiplier = 2.0,               // exponential: 1s, 2s, 4s
+            maxDelay = 10000                // cap at 10s
+        ),
+        dltTopicSuffix = "-dlt",
+        retryTopicSuffix = "-retry-",
+        include = { TransientPaymentException.class },  // only retry transient errors
+        exclude = { InvalidPaymentException.class }     // do NOT retry — send straight to DLT
+    )
+    @KafkaListener(topics = "payments.commands", groupId = "payment-processor")
+    public void handlePayment(PaymentCommand command, Acknowledgment ack) {
+        try {
+            paymentService.process(command);
+            ack.acknowledge();
+        } catch (InvalidPaymentException e) {
+            // Non-retryable — goes directly to DLT
+            log.error("Non-retryable payment error [id={}]: {}", command.getId(), e.getMessage());
+            throw e;
+        } catch (TransientPaymentException e) {
+            // Retryable — Spring will retry on retry topics before DLT
+            log.warn("Transient error [id={}], will retry: {}", command.getId(), e.getMessage());
+            throw e;
+        }
+    }
+    // Separate listener for the DLT — inspect, alert, potentially reprocess
+    @DltHandler
+    public void handleDlt(PaymentCommand command, @Header KafkaHeaders.RECEIVED_TOPIC String topic) {
+        log.error("Payment landed in DLT [id={}, sourceTopic={}]",
+                  command.getId(), topic);
+        // Alert on-call, write to a dead_letter_payments table for manual review
+        alertingService.sendAlert("DLT message", command);
+        dltRepository.save(DeadLetterRecord.from(command, topic));
+    }
+}
+// Spring creates these topics automatically:
+// payments.commands-retry-0   (1s delay)
+// payments.commands-retry-1   (2s delay)
+// payments.commands-retry-2   (4s delay)
+// payments.commands-dlt       (final resting place)
+// The message flow on failure:
+// payments.commands → fail → payments.commands-retry-0
+// payments.commands-retry-0 → fail → payments.commands-retry-1
+// payments.commands-retry-1 → fail → payments.commands-retry-2
+// payments.commands-retry-2 → fail → payments.commands-dlt</code></pre>
+    <h3>Decision</h3>
+    <h3>Choice | Why</h3>
+    <h3>Which errors to retry</h3>
+    <p>Transient errors: network timeouts, gateway unavailable, DB connection lost | Retrying fixes them</p>
+    <h3>Which errors NOT to retry</h3>
+    <p>Permanent errors: invalid schema, business rule violation, data corruption | Retrying will never fix them — go straight to DLT</p>
+    <h3>DLT consumer action</h3>
+    <p>Alert on-call + write to dead_letter table for manual investigation + expose /admin/dead-letters endpoint to resubmit | DLT messages need human attention</p>
+    <h3>Resubmitting from DLT</h3>
+    <p>Produce the DLT message back to the original topic with a corrected payload | After fixing the root cause, replay the message</p>
+    <h3>DLT retention</h3>
+    <p>Long — days or weeks | You need time to investigate and fix before messages expire</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is a dead letter topic and how do you decide which errors should go there immediately vs which should be retried? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A dead letter topic is where messages go after all retry attempts are exhausted, or immediately if the error is non-retryable. Without it, a message that cannot be processed blocks the partition — the consumer keeps failing on the same offset and nothing after it can move forward. The key design decision is the retry vs dead letter split. Transient errors — network timeouts, a downstream service being temporarily unavailable, a database connection failure — are worth retrying because the underlying condition will likely clear. I use exponential backoff: 1 second, 2 seconds, 4 seconds. Permanent errors — malformed schema, business rule violations, data that is fundamentally invalid — should never be retried because repeating the same operation on bad data will always produce the same failure. These go directly to the DLT. In Spring, @RetryableTopic handles this cleanly with the include and exclude parameters. The DLT listener alerts on-call and writes the message to a database table so it can be investigated and potentially resubmitted after the root cause is fixed.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — Kafka Streams</h2>
+    <h3>KStream vs KTable</h3>
+    <h3>KStream | KTable</h3>
+    <h3>Represents</h3>
+    <p>An unbounded stream of events — each record is an independent event | A changelog of the latest value per key — like a materialised view</p>
+    <h3>Key semantics</h3>
+    <p>Each record is processed independently regardless of key | A new record with the same key overwrites the previous value for that key</p>
+    <h3>Example</h3>
+    <p>A stream of payment events — each event matters | Account balances — only the latest balance per account matters</p>
+    <h3>Join semantics</h3>
+    <p>Stream-stream join: both sides are events in a time window | Stream-table join: enrich every stream event with the current table value</p>
+    <h3>State</h3>
+    <p>Stateless by default (stateful with aggregations) | Always stateful — maintains the latest value per key in a RocksDB store</p>
+    <pre><code class="language-java">// Kafka Streams: real-time payment fraud detection
+@Configuration
+@EnableKafkaStreams
+public class FraudDetectionStreams {
+    @Bean
+    public KStream&lt;String, PaymentEvent&gt; fraudDetectionStream(StreamsBuilder builder) {
+        // KStream of all payment events
+        KStream&lt;String, PaymentEvent&gt; payments = builder
+            .stream("payments.completed",
+                    Consumed.with(Serdes.String(), paymentSerde()));
+        // KTable of account risk profiles — enrichment table
+        KTable&lt;String, AccountRisk&gt; riskProfiles = builder
+            .table("account.risk.profiles",
+                   Consumed.with(Serdes.String(), accountRiskSerde()),
+                   Materialized.as("account-risk-store"));
+        // Enrich each payment with the account's risk profile
+        KStream&lt;String, EnrichedPayment&gt; enriched = payments.join(
+            riskProfiles,
+            (payment, risk) -&gt; new EnrichedPayment(payment, risk),
+            Joined.with(Serdes.String(), paymentSerde(), accountRiskSerde())
+        );
+        // Count payments per account in a 5-minute tumbling window
+        KTable&lt;Windowed&lt;String&gt;, Long&gt; paymentCounts = enriched
+            .groupByKey()
+            .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5)))
+            .count(Materialized.as("payment-counts-store"));
+        // Flag accounts with more than 10 payments in 5 minutes
+        paymentCounts
+            .toStream()
+            .filter((windowedKey, count) -&gt; count &gt; 10)
+            .map((windowedKey, count) -&gt; KeyValue.pair(
+                windowedKey.key(),
+                new FraudAlert(windowedKey.key(), count, windowedKey.window())))
+            .to("fraud.alerts", Produced.with(Serdes.String(), fraudAlertSerde()));
+        return payments;
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is the difference between KStream and KTable in Kafka Streams? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">KStream represents an unbounded sequence of independent events — every record matters and nothing overwrites anything else. KTable represents the current state per key — if two records arrive with the same key, the second one replaces the first. Think of KStream as a log of events and KTable as a database table that is continuously updated from that log. The practical difference shows up in joins. Joining two KStreams means matching events that fall within the same time window — both sides are records in time. Joining a KStream against a KTable means enriching each event with the current value for that key in the table. In our payment example: the stream of payment events is a KStream, and the account risk profiles are a KTable. For every payment event, I look up the current risk score for that account from the table and use it to decide whether to flag the payment. KTable state is stored in RocksDB locally on each Kafka Streams instance, with a changelog topic in Kafka as the backup for fault tolerance.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — Partition Sizing and Consumer Lag</h2>
+    <h3>How to Size Partitions</h3>
+    <p>Why partition count matters:</p>
+    <p>Partitions are the unit of parallelism in Kafka. More partitions means more consumer threads can process in parallel. But partitions also have overhead — each partition requires memory on the broker, leader election time during failover, and coordination overhead. You cannot easily reduce partition count later — only increase. Partition count also sets the maximum concurrency for a consumer group.</p>
+    <h3>Factor</h3>
+    <h3>Guidance</h3>
+    <h3>Target throughput</h3>
+    <p>Measure: one producer and one consumer thread each handle roughly 10-50MB/s. Partition count = max(target_producer_throughput / per_producer_throughput, target_consumer_throughput / per_consumer_throughput)</p>
+    <h3>Consumer parallelism</h3>
+    <p>You need at least as many partitions as your maximum consumer thread count. 12 partitions = maximum 12 concurrent consumers. Plan for future growth — over-partition slightly.</p>
+    <h3>Retention and storage</h3>
+    <p>Each partition retains up to retention.bytes of data. Total storage = partitions × retention.bytes × replication.factor. Factor this into broker disk planning.</p>
+    <h3>Adding partitions later</h3>
+    <h3>Consumer Lag — The Most Important Kafka Metric</h3>
+    <p>What consumer lag means:</p>
+    <p>Consumer lag is the difference between the latest offset produced to a partition and the last offset committed by the consumer group. If the topic has offset 1000 and the consumer has committed offset 850, the lag is 150. A lag of zero means the consumer is keeping up. Growing lag means the consumer is falling behind — it is processing slower than messages are arriving.</p>
+    <pre><code class="language-java">// Monitoring lag from the command line
+kafka-consumer-groups.sh --bootstrap-server broker:9092 \
+  --describe --group payment-processor
+// Output:
+// GROUP              TOPIC             PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+// payment-processor  payments.commands  0          850             1000            150
+// payment-processor  payments.commands  1          920             920             0
+// payment-processor  payments.commands  2          100             800             700  ← problem
+// Partition 2 has lag 700 — one consumer thread is stuck or slow
+// Micrometer Gauge for consumer lag — publish to CloudWatch
+@Component
+public class KafkaLagMonitor {
+    private final AdminClient  adminClient;
+    private final MeterRegistry registry;
+    @Scheduled(fixedDelay = 30000)   // check every 30 seconds
+    public void reportLag() {
+        Map&lt;TopicPartition, OffsetAndMetadata&gt; committed =
+            adminClient.listConsumerGroupOffsets("payment-processor")
+                .partitionsToOffsetAndMetadata().get();
+        Map&lt;TopicPartition, Long&gt; endOffsets =
+            adminClient.listOffsets(endOffsetSpec(committed.keySet())).all().get()
+                .entrySet().stream()
+                .collect(toMap(Map.Entry::getKey, e -&gt; e.getValue().offset()));
+        committed.forEach((tp, offsetMeta) -&gt; {
+            long lag = endOffsets.get(tp) - offsetMeta.offset();
+            Gauge.builder("kafka.consumer.lag", () -&gt; lag)
+                .tag("topic",     tp.topic())
+                .tag("partition", String.valueOf(tp.partition()))
+                .tag("group",     "payment-processor")
+                .register(registry);
+        });
+    }
+}
+// CloudWatch alarm: alert when lag &gt; 10,000 for 5 minutes
+// This means consumers are ~10,000 messages behind — investigate immediately</code></pre>
+    <h3>Lag symptom</h3>
+    <h3>Likely cause | Fix</h3>
+    <h3>Lag growing on all partitions</h3>
+    <p>Producer throughput exceeds consumer capacity | Add consumer instances (up to partition count); scale up consumer resources</p>
+    <h3>Lag growing on one partition only</h3>
+    <p>That consumer thread is stuck, slow, or processing a poison pill | Check that consumer's logs; look for exceptions; check if DLT has messages</p>
+    <h3>Lag spikes then recovers</h3>
+    <p>Rebalancing — all consumers paused during rebalance | Switch to cooperative-sticky; use static membership to reduce rebalance frequency</p>
+    <h3>Lag at zero but processing latency high</h3>
+    <p>Consumer is keeping up in terms of offsets but each message takes too long | Profile the processing code; check downstream service latency; add parallelism within consumer</p>
+    <h3>Lag jumps after deployment</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> How do you monitor Kafka consumer health in production and what does growing lag tell you? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Consumer lag is the primary health signal. It tells you whether consumers are keeping up with the rate of incoming messages. A lag trending toward zero is healthy. A lag that grows consistently means producers are outpacing consumers. I expose lag as a Micrometer Gauge per partition and publish it to CloudWatch. I set an alarm when lag exceeds 10,000 on any partition for more than five minutes — that is the signal to look at what is happening. When lag is growing on all partitions, it usually means consumer throughput is the bottleneck — either add more consumer instances or make processing faster. When lag grows on one partition only, I look at that specific consumer thread: is it stuck on a poison pill message, is it throwing exceptions, is a downstream service it depends on slow. The lag number alone tells you there is a problem. The partition-level breakdown and the consumer logs tell you where.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory. After each exercise, name one production incident this knowledge would have prevented.</p>
+    <h3>Exercise 1 — Producer Configuration for a Payment Service</h3>
+    <p>Task:</p>
+    <p>Configure a KafkaTemplate for a payment service with: acks=all, idempotent producer, snappy compression, linger.ms=5, batch.size=64KB.</p>
+    <p>Write a PaymentEventPublisher that sends to payments.completed with the payment ID as the key.</p>
+    <p>Handle the send future: log success with partition and offset, log failure and fall back to the Outbox table.</p>
+    <p>Show why using the payment ID as the message key matters for ordering within a partition.</p>
+    <h3>Exercise 2 — Consumer with Manual Offset Commit</h3>
+    <p>Task:</p>
+    <p>Write a @KafkaListener with ack-mode=MANUAL_IMMEDIATE and concurrency=3.</p>
+    <p>Call ack.acknowledge() only after the message is successfully processed and the DB is updated.</p>
+    <p>On processing failure: do NOT acknowledge — let the retry mechanism handle it.</p>
+    <p>Show the duplicate scenario: consumer processes message, updates DB, crashes before ack — message is redelivered. How does your consumer handle the duplicate?</p>
+    <p>Show why enable-auto-commit=true would cause data loss in this scenario.</p>
+    <h3>Exercise 3 — @RetryableTopic with Dead Letter Handler</h3>
+    <p>Task:</p>
+    <p>Configure @RetryableTopic with 4 attempts, exponential backoff (1s, 2s, 4s, max 10s).</p>
+    <p>Include TransientGatewayException for retry. Exclude InvalidPaymentException — send straight to DLT.</p>
+    <p>Write a @DltHandler that alerts, writes to dead_letter_payments table, and exposes a /admin/dead-letters endpoint to inspect and resubmit.</p>
+    <p>Show the topic names Spring creates automatically for the retry chain.</p>
+    <p>Test: publish a message that always throws TransientGatewayException — verify it lands in the DLT after 4 attempts.</p>
+    <h3>Exercise 4 — Exactly-Once with Kafka Transactions</h3>
+    <p>Task:</p>
+    <p>Configure a transactional producer with transaction-id-prefix=payment-tx-.</p>
+    <p>Write a consumer that reads from payments.commands, processes the payment, and produces to payments.completed — all in a single Kafka transaction.</p>
+    <p>Configure the downstream consumer with isolation.level=read_committed.</p>
+    <p>Show what happens to the produced message if the consumer crashes mid-transaction — verify the downstream consumer never sees the aborted message.</p>
+    <p>Explain why throughput drops with transactions and when you accept that cost.</p>
+    <h3>Exercise 5 — Kafka Streams: Windowed Aggregation</h3>
+    <p>Task:</p>
+    <p>Build a Kafka Streams topology that reads from payments.completed.</p>
+    <p>Aggregate total payment amount per account in a 1-hour tumbling window.</p>
+    <p>Join with a KTable of account credit limits (account.credit.limits).</p>
+    <p>Publish to alerts.credit-limit-exceeded when window total exceeds the account's credit limit.</p>
+    <p>Show how the RocksDB state store is backed by a Kafka changelog topic for fault tolerance.</p>
+    <h3>Exercise 6 — Consumer Lag Monitoring</h3>
+    <p>Task:</p>
+    <p>Write a KafkaLagMonitor @Component that uses AdminClient to calculate lag per partition.</p>
+    <p>Register a Micrometer Gauge per partition with tags: topic, partition, consumer group.</p>
+    <p>Publish to CloudWatch every 30 seconds.</p>
+    <p>Write a CloudWatch alarm definition that fires when any partition's lag exceeds 10,000 for 5 minutes.</p>
+    <p>Show how to diagnose lag growing on only one partition — what you would check first, second, third.</p>
+    <h3>Exercise 7 — BOSS: Full Event-Driven Payment Pipeline</h3>
+    <p>Build a complete, production-grade Kafka pipeline for payment processing:</p>
+    <p>Producer (PaymentCommandPublisher): acks=all, idempotent, snappy, Outbox fallback. Consumer (PaymentCommandConsumer): cooperative-sticky rebalancing, static membership, manual ack, @RetryableTopic with DLT. Processing: transactional — read command, update DB, produce PaymentCompletedEvent all in one Kafka transaction. Enrichment: Kafka Streams join payment events with account risk profiles (KTable), flag suspicious activity. Monitoring: lag Gauge per partition, CloudWatch alarm, DLT alert. Show how all five layers connect. Identify three failure scenarios and the specific mechanism in each layer that handles them.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Every answer connects the mechanism to the production problem it solves.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What does the acks setting control and what are the trade-offs between acks=1 and acks=all? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">acks controls how many brokers must confirm a write before the producer considers it successful. With acks=1, only the partition leader needs to write and acknowledge. It is faster but has a gap: if the leader crashes after acknowledging but before the followers replicate, the message is gone and the new leader will not have it. This is silent data loss — the producer got a success but the message is not there. With acks=all, every in-sync replica must confirm. Combined with min.insync.replicas=2 on the broker side, you need at least two brokers to have the message before success is reported. This protects against leader failures. The cost is higher latency on each send. For payments or any financial data, acks=all is not optional — data loss is worse than extra milliseconds.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is an idempotent producer and what problem does it solve? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The problem: with retries enabled, a producer sends a message, the broker writes it, but the network drops the acknowledgement. The producer retries and the broker receives a duplicate. Without idempotence, the topic has the message twice — downstream consumers process a payment twice. With enable.idempotence=true, the broker assigns the producer a PID (Producer ID) and tracks a sequence number per partition. If a message arrives with a PID and sequence number it has already seen, the broker drops the duplicate silently. The producer gets a success response and has no idea a duplicate was received and discarded. The result is exactly-once writes per producer session within a single partition. Idempotence is required when you enable transactions and is strongly recommended any time you have retries enabled with data that must not be duplicated.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> Why does Kafka rebalancing hurt throughput and how do you mitigate it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">During a rebalance with eager rebalancing (the old default), the entire consumer group stops. Every consumer revokes its partitions, waits for the coordinator to run the assignment algorithm, and then starts fresh. For a group with heavy processing, this can mean several seconds of zero throughput — and because messages are still arriving from producers, lag accumulates during that window. Three mitigations. Cooperative-sticky rebalancing only revokes and reassigns the partitions that actually need to move. Consumers that keep their partitions continue processing during the rebalance. Static membership, configured via group.instance.id, lets a consumer restart and rejoin with the same identity, getting its previous partitions back without triggering a rebalance. And careful tuning of max.poll.interval.ms prevents unnecessary rebalances caused by a consumer that is processing a large batch and appears dead to the coordinator.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> What is the difference between at-least-once and exactly-once delivery? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">At-least-once means a message will be delivered one or more times. You get this by committing offsets after processing — if the consumer crashes after processing but before committing, the message is redelivered and processed again. The consumer must be idempotent to handle duplicates correctly. Exactly-once means a message is processed and its effects are applied exactly one time. In Kafka, this is achieved by combining idempotent producers with Kafka transactions. The producer writes its output records and commits the input consumer offset in a single atomic operation. If the transaction aborts, neither the output records nor the offset commit are applied — the consumer restarts and tries again from the same input offset. The cost is roughly half the throughput of at-least-once because of the transactional overhead. Most services use at-least-once with idempotent consumers because it is simpler and sufficient. Exactly-once is for cases where duplicates would cause real business harm that cannot be handled by idempotency logic.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What is a Dead Letter Topic and how does Spring's @RetryableTopic implement the pattern? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A Dead Letter Topic is where messages go after all retry attempts fail, or immediately for errors that are not worth retrying. Without a DLT, a message that consistently fails blocks its partition — the consumer keeps failing on the same offset and nothing after it can be processed. The DLT takes the poison pill out of the main flow so the rest of the queue can continue. Spring's @RetryableTopic automatically creates a chain of retry topics with configurable delays between attempts. The message moves from the original topic to retry-0, then retry-1, then retry-2, and finally to the DLT. You configure which exceptions trigger a retry and which go directly to the DLT. A @DltHandler method on the same class handles DLT messages — typically alerting the on-call team, writing to a database for investigation, and exposing a way to resubmit after the root cause is fixed.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> How do you choose between retrying an error and sending it to the DLT immediately? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The split is between transient and permanent errors. Transient errors are conditions that will likely resolve with time — a downstream service that is temporarily unavailable, a network timeout, a database connection pool exhausted. Retrying after a delay gives these a chance to clear. Exponential backoff prevents hammering a struggling service. Permanent errors are conditions that will never fix themselves by retrying — a payment with an invalid structure, a business rule violation, a schema mismatch, or data that is simply wrong. Retrying a message with an invalid account ID four times does not make the account ID valid. It just delays landing in the DLT by however long the retry backoff takes. I use the include and exclude parameters in @RetryableTopic to classify exception types. The classification matters operationally: a high DLT rate on transient errors tells you a dependency is having issues. A high DLT rate on permanent errors tells you something upstream is producing bad data.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What does consumer lag mean and what does it tell you about your system? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Consumer lag is the number of messages sitting in the topic that the consumer group has not yet processed. Specifically, it is the difference between the latest produced offset and the last committed consumer offset per partition. Zero lag means the consumer is processing messages as fast as they arrive. Growing lag means producers are outpacing consumers. The diagnosis depends on where the lag is growing. If lag grows on all partitions equally, the consumer group as a whole is too slow — add more consumer instances or optimise processing. If lag grows on one partition only, that specific consumer thread is the problem — look for exceptions, a blocking downstream call, or a poison pill. Lag spikes that recover quickly usually indicate rebalancing. I track lag as a Micrometer Gauge per partition and alert when any partition exceeds a threshold for more than a few minutes, because prolonged lag means event processing is falling behind real time.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> How many partitions should a Kafka topic have? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Partition count determines the maximum parallelism for consumers and cannot be reduced after creation. I think about it from two angles. From the consumer side: how many consumer threads will I run at peak? If I want 12 consumer threads, I need at least 12 partitions. I usually create 1.5 to 2 times the expected peak consumer count to allow for future growth without schema changes. From the throughput side: measure how much throughput one producer thread and one consumer thread can sustain for your message size and processing logic, then divide the target throughput by that number. For a payment topic where I expect 6 consumers initially but may scale to 12, I would start with 18 partitions. The practical advice: it is better to over-partition than under-partition. Adding partitions later breaks key-to-partition mapping for keyed messages, which can break ordering guarantees for consumers that depend on them.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What is the role of isolation.level=read_committed and when must it be set? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">isolation.level=read_committed controls what messages a consumer sees when producers are using Kafka transactions. With the default read_uncommitted, a consumer sees all messages as soon as they are written, including messages from transactions that have not committed yet and messages from transactions that will eventually abort. If a transactional producer writes a record and then aborts the transaction, a read_uncommitted consumer has already processed a message that was supposed to never exist. With read_committed, consumers only see messages from committed transactions. Messages from in-progress or aborted transactions are invisible until either the transaction commits or the consumer advances past them. This must be set any time you use Kafka transactions for exactly-once semantics. Without it, the consumer-side half of exactly-once does not hold — consumers can read phantom records from aborted transactions.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> What is linger.ms and how does it affect throughput vs latency? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">linger.ms tells the producer how long to wait for more records before sending a batch. With the default of 0, the producer sends a record immediately as soon as it is ready — one record per network round trip in the low-throughput case. With linger.ms=5, the producer waits up to 5 milliseconds to accumulate more records into the same batch. If 50 records arrive in that 5ms window, they all go in one network request instead of 50 separate ones. This dramatically improves throughput and reduces broker CPU load. The trade-off is up to 5ms of additional latency for each record. For a payment service where end-to-end latency matters but is measured in hundreds of milliseconds, adding 5ms at the Kafka layer is usually invisible. For a real-time bidding system where latency is measured in single-digit milliseconds, linger.ms=0 is the right choice. I pair linger.ms=5 with batch.size=65536 to get good batching for high-throughput scenarios.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What is static membership in Kafka and why does it matter in Kubernetes? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Static membership lets you assign a stable identity — group.instance.id — to each consumer. Without it, every time a consumer restarts it looks like a new member to the group coordinator, which triggers a rebalance. In Kubernetes, pods restart frequently — rolling deploys, OOM restarts, node evictions. Each restart without static membership triggers a full group rebalance, pausing all processing during the reassignment. With static membership, a restarting pod rejoins with the same identity and the coordinator gives it back its previous partitions without a rebalance, as long as it rejoins within session.timeout.ms. I set group.instance.id to the Kubernetes pod name using the Downward API. This is one of the most impactful operational improvements for Kafka in Kubernetes — it eliminates most of the unnecessary rebalances that happen during normal pod lifecycle events.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> How do you handle a Kafka consumer that is processing a message too slowly and timing out? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The symptom: the consumer takes longer than max.poll.interval.ms to process a message, so the coordinator declares it dead and triggers a rebalance. Two approaches depending on root cause. If the processing itself is genuinely slow — a large payload, a complex calculation, a slow downstream call — increase max.poll.interval.ms to match realistic processing time, and reduce max.poll.records so each poll fetches fewer records and the processing time per poll batch is bounded. If the slow path is in a specific downstream call, add a timeout and circuit breaker on that call so slow dependencies do not cascade into consumer timeouts. The second approach is to move the slow processing off the consumer thread: the consumer writes the message to a work queue and immediately acknowledges, while a separate thread pool does the heavy processing. This keeps the poll loop fast and prevents coordinator timeouts, at the cost of adding at-least-once semantics to the work queue as well.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What is the relationship between partition count, consumer count, and throughput? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Partitions are the unit of parallelism. One consumer thread processes one partition at a time within a consumer group. If you have 6 partitions and 3 consumers, each consumer handles 2 partitions — you have 3 threads of parallelism. Adding a 4th consumer means one of the existing consumers gives up one partition — you get 4 threads of parallelism. If you add a 7th consumer to a 6-partition topic, the 7th consumer sits idle — you cannot have more active consumer threads than partitions. To increase throughput beyond what 6 consumers can achieve, you need more partitions. This is why partition count should be planned generously up front. The relationship with throughput is roughly linear until other bottlenecks appear — broker I/O, network, or downstream service capacity.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> How do you replay Kafka messages from a specific point in time? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Kafka retains messages for a configurable period (default 7 days, configurable per topic). To replay from a specific point: reset the consumer group's committed offsets to the desired position. The kafka-consumer-groups.sh tool with --reset-offsets can reset to earliest (beginning of retention), latest (current end), a specific offset, a specific datetime, or a duration ago (--shift-by). With Spring Kafka, you can also do this programmatically via the AdminClient API or by listening to the ConsumerRebalanceListener callback and calling consumer.seek() on partition assignment. One important operational note: before replaying, stop the consumer group so there are no active consumers. Resetting offsets while consumers are running is either rejected or races with their commits. After the reset, restart the consumers — they will pick up from the new offset. Replay is one of the genuinely powerful properties of Kafka over traditional message queues — the log is persistent and replayable, not consumed and discarded.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q21:</span> What is the difference between a Kafka topic and a traditional message queue? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A traditional message queue — RabbitMQ, SQS — is designed around consume-and-delete. A consumer reads a message, processes it, and the message is gone. If you need to reprocess or replay, you have to store the messages somewhere else yourself. Kafka is a distributed log. Messages are retained for a configured period regardless of whether they have been consumed. Multiple independent consumer groups can read the same topic from different positions. One group can be at offset 5000 while another is at offset 100 catching up. Consumer groups can be reset to replay from the beginning. New groups start from wherever they choose. This changes the architecture of event-driven systems: producers publish events to a topic, and any number of consumers can subscribe independently without the producer needing to know about them. The durability and replayability also enable event sourcing patterns and audit trails naturally. The trade-off: Kafka is operationally heavier than a simple queue, and the log model means you must manage retention periods carefully to control disk usage.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 21 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you explain acks=all and min.insync.replicas and why acks=1 is often a false safety net?</span></li>
+      <li><span class="checkbox-label">Can you describe what happens during a Kafka rebalance and name two ways to reduce its impact?</span></li>
+      <li><span class="checkbox-label">Can you draw the retry topic chain Spring creates from @RetryableTopic?</span></li>
+      <li><span class="checkbox-label">Can you explain exactly-once semantics and when you would pay the throughput cost?</span></li>
+      <li><span class="checkbox-label">Can you explain KStream vs KTable and when to join each?</span></li>
+      <li><span class="checkbox-label">Can you describe what consumer lag tells you and how to diagnose lag on one partition vs all?</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises — Boss exercise (full pipeline) done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Producer: acks, idempotence, batching config</h3>
+    <p>/5 |</p>
+    <h3>Consumer group: partition assignment rules</h3>
+    <p>/5 |</p>
+    <h3>Rebalancing: eager vs cooperative, static membership</h3>
+    <p>/5 |</p>
+    <h3>Offset commit: manual vs auto, duplicate scenario</h3>
+    <p>/5 |</p>
+    <h3>Delivery guarantees: at-least-once vs exactly-once</h3>
+    <p>/5 |</p>
+    <h3>@RetryableTopic: retry chain, DLT handler, error types</h3>
+    <p>/5 |</p>
+    <h3>KStream vs KTable: semantics and join types</h3>
+    <p>/5 |</p>
+    <h3>Partition sizing: how to calculate</h3>
+    <p>/5 |</p>
+    <h3>Consumer lag: diagnosis by partition</h3>
+    <p>/5 |</p>
+    <p>Day 21 complete:</p>
+    <p>Kafka questions at senior level go beyond configuration. The questions that reveal depth are: why acks=1 is a trap, what cooperative rebalancing actually changes, and how to diagnose lag growth on one partition versus the whole group. Those answers require understanding the internals, not just the settings.</p>
+    <h3>Preview: Day 22 — Advanced AWS</h3>
+    <p>Day 21 of 60 · Advanced Kafka · Prepared for Md Zuber</p>
+    <p>"Kafka does not make systems simpler. It makes failure modes more predictable — and that is worth more than simplicity."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

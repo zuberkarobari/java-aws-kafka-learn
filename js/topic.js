@@ -6,22 +6,32 @@
 
 import {
   getTopics,
-  getTopicsByCategory,
   getCurrentTopicId,
   getVisited,
   markVisited,
   getSavedTheme,
   saveTheme,
+  getPathPrefix,
+  getTopicsByCategoryAndPathway,
+  getActivePathway,
 } from './utils.js';
+import { PATHWAYS } from './topics.config.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
+const prefix = getPathPrefix();
 const currentId = getCurrentTopicId();
 const topics = getTopics();
-const currentIndex = topics.findIndex((t) => t.id === currentId);
-const currentTopic = topics[currentIndex] || null;
-const prevTopic = currentIndex > 0 ? topics[currentIndex - 1] : null;
-const nextTopic = currentIndex < topics.length - 1 ? topics[currentIndex + 1] : null;
+const activePathway = getActivePathway();
+
+// Filter topics list by the active pathway to keep navigation consistent
+const pathwayTopics = topics.filter(t => 
+  PATHWAYS[activePathway]?.categories.includes(t.category)
+);
+const currentIndexInPathway = pathwayTopics.findIndex((t) => t.id === currentId);
+const currentTopic = topics.find((t) => t.id === currentId) || null;
+const prevTopic = currentIndexInPathway > 0 ? pathwayTopics[currentIndexInPathway - 1] : null;
+const nextTopic = currentIndexInPathway < pathwayTopics.length - 1 ? pathwayTopics[currentIndexInPathway + 1] : null;
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -39,12 +49,27 @@ const injectHeader = () => {
   header.id = 'site-header';
   header.innerHTML = `
     <div class="header-inner">
-      <a href="../index.html" class="header-logo" aria-label="Go to homepage">
+      <a href="${prefix}index.html" class="header-logo" aria-label="Go to homepage">
         <span class="logo-icon">☕</span>
         <span class="logo-text">Java Learn</span>
       </a>
+
+      <!-- Pathway Navigation Tabs (Redirect Context) -->
+      <nav class="pathway-nav" id="pathway-nav" aria-label="Learning Pathways">
+        <a href="${prefix}index.html?pathway=dashboard" class="pathway-tab ${activePathway === 'dashboard' ? 'active' : ''}" data-pathway="dashboard">
+          <span class="tab-icon">📊</span>
+          <span class="tab-text">Dashboard</span>
+        </a>
+        ${Object.entries(PATHWAYS).map(([id, pw]) => `
+          <a href="${prefix}index.html?pathway=${id}" class="pathway-tab ${id === activePathway ? 'active' : ''}" data-pathway="${id}">
+            <span class="tab-icon">${pw.icon}</span>
+            <span class="tab-text">${pw.title}</span>
+          </a>
+        `).join('')}
+      </nav>
+
       <div class="header-actions">
-        <a href="../index.html" class="btn-home" aria-label="Home">
+        <a href="${prefix}index.html" class="btn-home" aria-label="Home">
           <span>🏠</span> Home
         </a>
         <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
@@ -70,11 +95,11 @@ const injectBreadcrumb = () => {
   breadcrumb.innerHTML = `
     <ol class="breadcrumb-list">
       <li class="breadcrumb-item">
-        <a href="../index.html">Home</a>
+        <a href="${prefix}index.html">Home</a>
       </li>
       <li class="breadcrumb-sep" aria-hidden="true">›</li>
       <li class="breadcrumb-item">
-        <a href="../index.html#cat-${slugify(currentTopic.category)}">${currentTopic.category}</a>
+        <a href="${prefix}index.html#cat-${slugify(currentTopic.category)}">${currentTopic.category}</a>
       </li>
       <li class="breadcrumb-sep" aria-hidden="true">›</li>
       <li class="breadcrumb-item breadcrumb-current" aria-current="page">
@@ -88,7 +113,7 @@ const injectBreadcrumb = () => {
 // ─── Sidebar Injection ────────────────────────────────────────────────────────
 
 const injectSidebar = () => {
-  const byCategory = getTopicsByCategory();
+  const byCategory = getTopicsByCategoryAndPathway(activePathway);
   const visited = getVisited();
 
   const sidebar = document.createElement('aside');
@@ -101,17 +126,34 @@ const injectSidebar = () => {
       <div class="sidebar-group">
         <h3 class="sidebar-group-title">${cat}</h3>
         <ul class="sidebar-topic-list">
-          ${catTopics.map((t) => `
-            <li>
-              <a href="${t.file}"
-                 class="sidebar-topic-link ${t.id === currentId ? 'sidebar-topic-active' : ''} ${visited.has(t.id) ? 'sidebar-topic-visited' : ''}"
-                 ${t.id === currentId ? 'aria-current="page"' : ''}>
-                <span class="sidebar-topic-icon">${t.icon}</span>
-                <span>${t.title}</span>
-                ${visited.has(t.id) ? '<span class="sidebar-check">✓</span>' : ''}
-              </a>
-            </li>
-          `).join('')}
+          ${catTopics.map((t) => {
+            const isCurrent = t.id === currentId;
+            const fileHref = `${prefix}topics/${t.file}`;
+            
+            if (t.isLocked) {
+              return `
+                <li>
+                  <div class="sidebar-topic-link" style="opacity: 0.55; cursor: default;" title="Roadmap Planned Topic">
+                    <span class="sidebar-topic-icon">${t.icon}</span>
+                    <span>${t.title}</span>
+                    <span style="font-size: 0.65rem; margin-left: auto; color: var(--text-muted);">🔒</span>
+                  </div>
+                </li>
+              `;
+            }
+
+            return `
+              <li>
+                <a href="${fileHref}"
+                   class="sidebar-topic-link ${isCurrent ? 'sidebar-topic-active' : ''} ${visited.has(t.id) ? 'sidebar-topic-visited' : ''}"
+                   ${isCurrent ? 'aria-current="page"' : ''}>
+                  <span class="sidebar-topic-icon">${t.icon}</span>
+                  <span>${t.title}</span>
+                  ${visited.has(t.id) ? '<span class="sidebar-check">✓</span>' : ''}
+                </a>
+              </li>
+            `;
+          }).join('')}
         </ul>
       </div>
     `).join('');
@@ -140,7 +182,7 @@ const injectPrevNext = () => {
     <div class="prev-next-inner">
       <div class="prev-link-wrap">
         ${prevTopic ? `
-          <a href="${prevTopic.file}" class="prev-next-link prev-link" id="prev-topic-link">
+          <a href="${prefix}topics/${prevTopic.file}" class="prev-next-link prev-link" id="prev-topic-link">
             <span class="prev-next-dir">← Previous</span>
             <span class="prev-next-title">${prevTopic.icon} ${prevTopic.title}</span>
           </a>
@@ -148,7 +190,7 @@ const injectPrevNext = () => {
       </div>
       <div class="next-link-wrap">
         ${nextTopic ? `
-          <a href="${nextTopic.file}" class="prev-next-link next-link" id="next-topic-link">
+          <a href="${prefix}topics/${nextTopic.file}" class="prev-next-link next-link" id="next-topic-link">
             <span class="prev-next-dir">Next →</span>
             <span class="prev-next-title">${nextTopic.icon} ${nextTopic.title}</span>
           </a>
@@ -184,7 +226,8 @@ const initSidebarFilter = () => {
     const query = input.value.toLowerCase();
     document.querySelectorAll('.sidebar-topic-link').forEach((link) => {
       const text = link.textContent.toLowerCase();
-      link.closest('li').style.display = text.includes(query) ? '' : 'none';
+      const li = link.closest('li');
+      if (li) li.style.display = text.includes(query) ? '' : 'none';
     });
 
     // Hide empty groups
@@ -320,3 +363,4 @@ const init = () => {
 };
 
 document.addEventListener('DOMContentLoaded', init);
+

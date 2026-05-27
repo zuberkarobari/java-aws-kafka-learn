@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 47  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 47  ·  STUDY CHECKLIST — Performance Tuning — Profiling, Bottleneck Identification and JVM Optimisation</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 47 Checklist</div>
+    <h1 style="margin-top: 0;">Performance Tuning — Profiling, Bottleneck Identification and JVM Optimisation</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 47 · STUDY CHECKLIST</h3>
+    <h3>Performance Tuning — Profiling, Bottleneck Identification and JVM Optimisation</h3>
+    <h3>JVM Profiling</h3>
+    <p>Heap dumps, thread dumps, CPU profiling</p>
+    <h3>GC Tuning</h3>
+    <p>G1GC, ZGC, heap sizing, GC log analysis</p>
+    <h3>App Bottlenecks</h3>
+    <p>Database, connection pool, N+1, slow queries</p>
+    <h3>Load Testing</h3>
+    <p>JMeter, k6, reading results, identifying limits</p>
+    <p>Note:</p>
+    <p>Performance questions at senior level are not about knowing JVM flags. They are about diagnosing a production problem under pressure — what you look at first, what tools you use, and how you confirm the fix worked. Connect every answer to a real diagnosis workflow.</p>
+    <h3>Day 47 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Performance diagnosis workflow: symptoms → metrics → profiling → hypothesis → fix → verify</span></li>
+      <li><span class="checkbox-label">JVM heap: Young gen, Old gen, Metaspace — what goes in each</span></li>
+      <li><span class="checkbox-label">GC algorithms: G1GC (default), ZGC, Shenandoah — when each applies</span></li>
+      <li><span class="checkbox-label">Heap dump analysis: how to take one, how to open in VisualVM or MAT</span></li>
+      <li><span class="checkbox-label">Thread dump analysis: identifying blocked threads, deadlocks</span></li>
+      <li><span class="checkbox-label">CPU profiling: flame graphs — reading them, what a wide plateau means</span></li>
+      <li><span class="checkbox-label">HikariCP tuning: pool size formula, connectionTimeout, idleTimeout</span></li>
+      <li><span class="checkbox-label">N+1 query problem: how to detect it, Hibernate batch fetching fix</span></li>
+      <li><span class="checkbox-label">JMeter or k6: setting up a load test, interpreting throughput and p99 results</span></li>
+      <li><span class="checkbox-label">Application-level profiling: Micrometer Timer, @Timed annotation</span></li>
+      <li><span class="checkbox-label">Common anti-patterns: serialisation in loops, missing indexes, unbounded lists</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Performance Diagnosis Workflow</h2>
+    <p>The wrong approach is to immediately attach a profiler to a production service. The right approach: look at the symptoms first (high latency? high CPU? high memory? OOMKill?), then look at existing metrics, then narrow to the subsystem, then profile. Each symptom points to a different investigation path.</p>
+    <h3>Symptom</h3>
+    <h3>First metric to check | Likely cause | Tool to use next</h3>
+    <h3>High p99 latency (p50 normal)</h3>
+    <p>Database call duration by query type | Slow query, missing index, lock contention | EXPLAIN ANALYZE, slow query log</p>
+    <h3>High CPU, all requests slow</h3>
+    <p>CPU flame graph — what method is at the top? | Serialisation in hot path, tight loop, GC pressure | async-profiler, VisualVM</p>
+    <h3>Growing memory, eventual OOMKill</h3>
+    <p>Heap usage over time — is it trending up? | Memory leak, unbounded cache, large object retention | Heap dump, MAT analysis</p>
+    <h3>High GC pause frequency</h3>
+    <p>GC log — pause duration and frequency | Heap too small, too many short-lived objects, wrong GC algorithm | GC log analysis, G1GC tuning</p>
+    <h3>Thread pool exhaustion</h3>
+    <p>Active threads, queue depth, rejection count | Slow downstream service, insufficient pool size | Thread dump, HikariCP metrics</p>
+    <h3>DB connection pool exhausted</h3>
+    <p>HikariCP pending connections metric | Pool too small, connections not returned, slow queries holding connections | HikariCP metrics, thread dump</p>
+    <h3>GC Tuning — What Actually Matters</h3>
+    <pre><code class="language-java"># JVM GC flags for production Spring Boot services
+# G1GC (default from Java 9+) — balanced latency and throughput
+# Good for most services with heap &lt; 32GB
+-XX:+UseG1GC
+-XX:MaxGCPauseMillis=200        # target pause time (not guaranteed)
+-XX:G1HeapRegionSize=16m        # larger regions for large heaps
+-Xms2g -Xmx4g                  # set min = max to avoid resizing pauses
+# ZGC — very low pause times (sub-millisecond), Java 15+
+# Good for latency-sensitive services (payment APIs, real-time)
+-XX:+UseZGC
+# ZGC pauses are typically &lt; 1ms regardless of heap size
+# Cost: slightly lower throughput than G1GC
+# GC logging — essential for diagnosis
+-Xlog:gc*:file=/var/log/app/gc.log:time,uptime,pid:filecount=5,filesize=20m
+# Heap dump on OOM — always enable in production
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=/tmp/heapdump.hprof
+# In Kubernetes: use MaxRAMPercentage not -Xmx
+-XX:+UseContainerSupport
+-XX:MaxRAMPercentage=75.0
+# Reading GC logs — key metrics
+# Pause duration: [GC pause (G1 Young Generation) 245M-&gt;120M(4096M) 45.234ms]
+# Frequency: how often GC pauses occur
+# Heap before/after: 245M-&gt;120M indicates how much was collected
+# If pause &gt; 200ms or frequency &gt; every 5s at idle: tuning needed</code></pre>
+    <h3>HikariCP Connection Pool Tuning</h3>
+    <pre><code class="language-java"># HikariCP is the default Spring Boot connection pool
+# Most teams use the default settings — which are often wrong for production
+spring:
+  datasource:
+    hikari:
+      # Pool size formula: (cpu_cores * 2) + effective_disk_spindles
+      # For a 4-core EC2 instance with SSD: (4 * 2) + 1 = 9
+      # More connections adds contention, not throughput
+      maximum-pool-size: 10
+      minimum-idle: 5            # keep 5 warm connections
+      # How long a thread waits for a connection before throwing
+      connection-timeout: 30000  # 30 seconds (default) — often too long
+      # Better for payment service: 3000ms — fail fast, not queue for 30s
+      # How long an idle connection stays in the pool
+      idle-timeout: 600000       # 10 minutes
+      # How long a connection can live before being retired
+      max-lifetime: 1800000      # 30 minutes (always &lt; DB's wait_timeout)
+      # Slow connection leak detection
+      leak-detection-threshold: 5000  # log if connection held &gt; 5s
+# Monitoring HikariCP with Micrometer
+# hikaric p.pending (Gauge) — connections waiting
+# hikaric p.active  (Gauge) — connections in use
+# hikaric p.idle    (Gauge) — idle connections
+# Alert: pending &gt; 0 for more than 30 seconds = pool exhausted</code></pre>
+    <h3>N+1 Query Detection and Fix</h3>
+    <pre><code class="language-java">// N+1 problem: loading N orders then making N separate queries for order items
+// This loads 100 orders then executes 100 more queries for items
+List&lt;Order&gt; orders = orderRepository.findAll();  // 1 query
+orders.forEach(order -&gt; {
+    // Each access triggers a lazy-loaded query
+    order.getItems().size();  // N queries — one per order
+});
+// Fix 1: JPQL JOIN FETCH
+@Query("SELECT o FROM Order o JOIN FETCH o.items WHERE o.status = :status")
+List&lt;Order&gt; findWithItems(@Param("status") OrderStatus status);
+// Single query with JOIN — loads orders and items together
+// Fix 2: @EntityGraph
+@EntityGraph(attributePaths = {"items", "items.product"})
+List&lt;Order&gt; findAll();
+// Fix 3: Hibernate batch fetching (for cases where JOIN FETCH causes too many rows)
+// application.yml
+spring:
+  jpa:
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+// Hibernate uses IN (:ids) to load all related entities in one query
+// Detection: enable SQL logging in dev
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+// Count the queries per request — N+1 is obvious when you see N+1 SELECTs
+// Better detection tool: datasource-proxy or p6spy
+// Counts queries per request in a filter, logs slow queries, alerts on high counts</code></pre>
+    <hr class="section-divider" />
+    <h2>Section 2 — Exercises</h2>
+    <h3>Exercise 1 — GC Log Analysis</h3>
+    <p>Task:</p>
+    <p>Given a GC log showing pauses of 800ms every 30 seconds on a 2GB heap with G1GC: identify what is likely wrong, what flag changes would help, and how you would verify the improvement. Calculate: at 800ms pauses every 30s, what percentage of time is spent in GC?</p>
+    <h3>Exercise 2 — HikariCP Under Load</h3>
+    <p>Task:</p>
+    <p>A service with maximum-pool-size=5 and connectionTimeout=30000 is handling 100 concurrent requests each taking 200ms of DB time. Calculate: how many requests will wait for a connection. Configure the correct pool size for a 4-core server. Write the Micrometer alarm condition for pool exhaustion.</p>
+    <h3>Exercise 3 — N+1 Fix</h3>
+    <p>Task:</p>
+    <p>Show the N+1 scenario: findAll() orders with lazy-loaded items. Show three fixes: JOIN FETCH, @EntityGraph, batch_fetch_size. Explain which is best for a list of 1000 orders with up to 50 items each. Write a test that counts the number of SQL queries executed.</p>
+    <h3>Exercise 4 — Flame Graph Reading</h3>
+    <p>Task:</p>
+    <p>Given a description of a CPU flame graph showing 60% of CPU time in a wide plateau at ObjectMapper.writeValueAsString(): diagnose what is happening, propose three fixes (Jackson reuse, streaming, caching serialised results), and explain how to measure the improvement.</p>
+    <h3>Exercise 5 — Memory Leak Diagnosis</h3>
+    <p>Task:</p>
+    <p>A service's heap grows by 50MB every hour and causes OOMKill after 8 hours. Describe the step-by-step diagnosis: which JVM flags to add, how to take a heap dump, what to look for in MAT (dominator tree, leak suspects), and what code patterns cause memory leaks in Spring Boot (static collections, event listeners not deregistered, ThreadLocal not cleared).</p>
+    <h3>Exercise 6 — k6 Load Test</h3>
+    <p>Task:</p>
+    <p>Write a k6 load test script for POST /api/payments: ramp from 0 to 100 virtual users over 1 minute, hold for 2 minutes, ramp down. Thresholds: p99 < 500ms, error rate < 1%. Interpret the results: what does p99 = 450ms at 100 VU mean vs p99 = 2s at 100 VU?</p>
+    <h3>Exercise 7 — BOSS: Full Performance Investigation</h3>
+    <p>Task:</p>
+    <p>A payment service shows p99 latency climbing from 150ms to 4 seconds over 2 hours of increasing load, then plateauing with high error rates. Walk through the complete investigation: which metric you check first, the GC log pattern you expect to see, the HikariCP metric that confirms pool exhaustion, the thread dump pattern showing threads waiting for connections, the slow query that is holding connections, and the sequence of fixes you apply in order of impact.</p>
+    <h3>Interview Q&A — 12 Questions</h3>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> How do you approach diagnosing a production latency spike? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I start with the shape of the problem. Is it all requests that are slow, or a subset? Is the spike correlated with a deployment? Does it recover on its own? Then I look at metrics in order: HTTP p99 by endpoint, then DB query duration, then thread pool active count, then GC pause frequency. This usually narrows the cause to one subsystem before I touch any profiling tool. If metrics point to the database, I run EXPLAIN ANALYZE on the slow query. If metrics point to the JVM, I take a thread dump to see what threads are doing. If I see threads blocked on connection acquisition, the pool is exhausted. If I see threads in GC-related code, heap pressure is the issue. I only attach async-profiler or take a heap dump if the lightweight investigation does not give a clear answer — attaching a profiler adds overhead that affects the system under investigation.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What is the HikariCP pool size formula and why is bigger not better? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The formula is (core_count * 2) + effective_disk_spindles. For a 4-core SSD instance: 9 connections. The intuition: a database query involves CPU work (parsing, planning, executing) and I/O waits. During I/O, the CPU is idle and can handle another query. With 2x cores, you keep the database CPU busy while maximising overlap. More connections than this adds contention — connections compete for database CPU, memory, and lock management. A pool of 100 connections to a 4-core database often performs worse than a pool of 9, because the database spends more time context-switching between sessions than doing actual work. The classic mistake: a service with 200 Tomcat threads all needing DB connections at the same time, with a pool of 10. Most threads queue. The fix is not a bigger pool — it is to make the queries faster or the service architecture more efficient.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What is a flame graph and how do you read it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A flame graph shows where a program spends its CPU time. Each row is a stack frame, with callers below and callees above. Width is proportional to time spent in that frame. The widest frames at the top — the plateau — are where most CPU time is spent. The entry point is usually at the bottom. Reading a flame graph: look for wide plateaus near the top. If Jackson's ObjectMapper.writeValueAsString is 40% wide, serialisation is consuming 40% of CPU. If a specific database driver call is 30% wide, that operation is the bottleneck. The flame graph does not tell you why something is slow — it tells you what is slow. Then you diagnose why. I generate flame graphs using async-profiler (the best tool for JVM) which can profile without significant overhead in production.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What causes a memory leak in a Spring Boot application? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Four common patterns. First: static collections that grow indefinitely — a static Map used as a cache with no eviction, or a static List used to track events. Second: event listeners that register on application startup but never deregister. If a prototype-scoped bean registers as a listener to a singleton-scoped event publisher, the singleton holds a reference to every created prototype bean, preventing garbage collection. Third: ThreadLocal values not removed after use. In a thread pool, threads are reused. If you set a ThreadLocal in a request but do not clear it in a finally block, the next request on that thread sees stale data and the old values are never GC'd. Fourth: Hibernate first-level cache in a long-running session — not typical in web requests but common in batch jobs that open one session for millions of operations. Detection: take a heap dump, open in Eclipse MAT, look at the dominator tree for classes with unexpectedly large retained heap.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is a thread dump and when would you take one? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A thread dump is a snapshot of all JVM threads at a point in time, showing each thread's state and stack trace. You take one when you suspect threads are blocked, deadlocked, or doing unexpected work. Common scenarios: pool exhaustion (threads WAITING on a monitor for a connection), deadlock (two threads each BLOCKED waiting for a lock the other holds), unexpected CPU (threads RUNNABLE in code you did not expect to be hot). In Kubernetes, I take a thread dump with kubectl exec into the pod and run kill -3 on the JVM process (which sends SIGQUIT and dumps threads to stdout), or use jstack if the JDK is in the container. Spring Actuator's /actuator/threaddump endpoint also provides a thread dump as JSON. I look for clusters of threads all blocked on the same lock or monitor — that identifies the contention point.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What is ZGC and when would you choose it over G1GC? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">ZGC is a low-latency garbage collector introduced in Java 11 and made production-ready in Java 15. Its design goal is to keep GC pause times below 1 millisecond regardless of heap size — even for heaps of several terabytes. G1GC targets pause times of around 200ms and generally achieves them, but for very large heaps or when consistent sub-millisecond latency is required, G1GC pauses can be too long. I would choose ZGC for a payment API where the SLA requires p99 < 50ms and GC pauses are causing occasional SLA violations. The trade-off: ZGC has slightly lower throughput than G1GC because it does more concurrent work with the application running. For most services where p99 is measured in hundreds of milliseconds, G1GC is the right default. ZGC is for services with strict latency requirements.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> How do you use JMeter or k6 to load test a service? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I define a test scenario that reflects realistic production traffic: a mix of operations (not just one endpoint), realistic request rates, and realistic think time between requests. For a payment service: 80% GET requests, 20% POST requests, ramping from 10 to 100 virtual users over 2 minutes to find where throughput plateaus. The metrics I look at: throughput (requests per second) to find the service capacity, p99 latency at different VU counts to find where latency degrades, and error rate. The pattern I look for: as VU increases, throughput goes up linearly, then plateaus and latency starts climbing — that plateau is the service capacity. If p99 climbs sharply before throughput plateaus, the bottleneck is a shared resource (DB connection pool, downstream service). I always run load tests against a staging environment that matches production sizing — a single instance test on a laptop gives misleading numbers.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is ObjectMapper reuse and why does creating a new one per request cause problems? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Jackson's ObjectMapper is expensive to create — it initialises module discovery, reflective access to types, and configuration. Creating a new ObjectMapper for every serialisation call adds significant CPU overhead and GC pressure from the short-lived objects. The correct approach is to create a single ObjectMapper bean in Spring (which Spring Boot does by default) and reuse it. ObjectMapper is thread-safe after configuration, so sharing it across threads is safe. The common mistake: new ObjectMapper() inside a method that is called thousands of times per second. A flame graph showing ObjectMapper initialisation code at the top of a CPU profile is the tell. The fix: inject @Autowired ObjectMapper or use a static final instance configured once.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> How do you find the cause of a high GC frequency? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">High GC frequency usually means too many objects are being created and garbage collected. I look at the GC log first: what generation is being collected (Young, Mixed, Full), how large the collection is, and what the allocation rate is. High Young GC frequency with small collections usually means a very high object allocation rate — lots of short-lived objects. I profile allocation using async-profiler in allocation mode, which shows which code paths are allocating the most memory. Common culprits: string concatenation in hot paths (creating intermediate String objects), creating DTOs in loops, logging at DEBUG level in production (format string parsing creates objects), or large byte arrays for serialisation. For payment services, one common fix is enabling Hibernate batch inserts which reduces the number of intermediate objects created per SQL operation.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> What is the leak-detection-threshold in HikariCP? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">It is a threshold in milliseconds. If a connection is held for longer than this value without being returned to the pool, HikariCP logs a warning including the stack trace of the thread that acquired the connection. This is invaluable for finding code paths that acquire a connection and then do slow work — a long computation, a sleep, an external HTTP call — while holding the DB connection open. That pattern starves the pool because other requests cannot get a connection while this thread is holding one unnecessarily. The connection should be acquired as late as possible and released as early as possible within a transaction. Setting leak-detection-threshold to 5000ms is a reasonable starting point for most services.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> How does the JVM heap relate to container memory limits? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Without UseContainerSupport, the JVM reads the host machine's total RAM to size the heap. On a 64GB host with a 1GB container, the JVM might allocate a 48GB heap target, which immediately exceeds the container limit and causes OOMKill before the app starts. With UseContainerSupport (the default from Java 10+), the JVM reads the cgroup memory limit and sizes the heap accordingly. MaxRAMPercentage=75 then means 75% of 1GB = 768MB for the heap. The remaining 25% covers non-heap: Metaspace, thread stacks (512KB per thread), direct memory (Netty, NIO), and JVM overhead. If you have 200 threads, that is 100MB for stacks alone. Sizing MaxRAMPercentage too high — say 90% — leaves insufficient room for non-heap and causes OOMKill at runtime rather than at startup.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is async-profiler and how does it differ from Java's built-in profiling tools? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">async-profiler is an open-source sampling profiler for JVM applications that uses Linux's perf_events API and AsyncGetCallTrace. Unlike JVMTI-based profilers, it does not suffer from the safepoint bias problem — traditional profilers can only sample at safepoints (where all threads are paused), which means they miss activity between safepoints. async-profiler samples at any point, giving accurate results for CPU-bound code. It can generate flame graphs directly and can profile CPU time, allocation rate, lock contention, and wall clock time. I use it in production by running it for 30-60 seconds against a live instance and then examining the flame graph. It adds minimal overhead — typically 1-5% CPU — making it safe for production use when you need to diagnose a live issue.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Self-Assessment</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Diagnosis workflow: symptom to root cause</h3>
+    <p>/5 |</p>
+    <h3>GC: G1GC vs ZGC, when each applies</h3>
+    <p>/5 |</p>
+    <h3>HikariCP: pool size formula, metrics</h3>
+    <p>/5 |</p>
+    <h3>N+1: detection and three fix approaches</h3>
+    <p>/5 |</p>
+    <h3>Flame graph: reading, what plateau means</h3>
+    <p>/5 |</p>
+    <h3>Memory leak: four common patterns</h3>
+    <p>/5 |</p>
+    <p>Day 47 complete:</p>
+    <p>Performance tuning interviews test structured thinking more than tool knowledge. The candidates who stand out describe the investigation as a sequence of hypotheses and evidence, not a list of profiler features.</p>
+    <p>Day 47 of 60 · Performance Tuning · Prepared for Md Zuber</p>
+    <p>"Profile first, optimise second, measure to confirm."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

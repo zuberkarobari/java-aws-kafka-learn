@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Multithreading & Concurrency — 30 Q&A</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#06080e;--surface:#0a0d16;--card:#0d1120;--border:#151f35;--acc:#e879f9;--acc2:#38bdf8;--acc3:#4ade80;--acc4:#f59e0b;--acc5:#f87171;--text:#dde8f5;--muted:#4a6080;--cb:#050810;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;line-height:1.78}
+.hdr{background:linear-gradient(135deg,#100618,#060a14);border-bottom:2px solid var(--border);padding:46px 44px 34px;position:relative;overflow:hidden}
+.hdr::before{content:'';position:absolute;top:-80px;right:-60px;width:460px;height:460px;background:radial-gradient(circle,rgba(232,121,249,0.08) 0%,transparent 65%);pointer-events:none}
+.eye{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:4px;color:var(--acc);text-transform:uppercase;margin-bottom:10px}
+.hdr h1{font-size:44px;font-weight:700;letter-spacing:-2px;line-height:1.1;margin-bottom:8px}
+.hdr h1 .m{color:var(--acc)}.hdr h1 .t{color:var(--acc2)}
+.hdesc{color:var(--muted);font-size:14px;margin-bottom:22px;max-width:660px}
+.chips{display:flex;flex-wrap:wrap;gap:9px}
+.chip{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 13px;border-radius:3px;text-transform:uppercase}
+.cp{background:rgba(232,121,249,0.08);border:1px solid rgba(232,121,249,0.2);color:var(--acc)}
+.cb{background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.18);color:var(--acc2)}
+.cg{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.18);color:var(--acc3)}
+.cy{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.18);color:var(--acc4)}
+.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 44px;display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--header-h,64px);z-index:100}
+.nav::-webkit-scrollbar{display:none}
+.nb{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;padding:13px 14px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.nb:hover,.nb.active{color:var(--acc);border-bottom-color:var(--acc)}
+.main{max-width:1040px;margin:0 auto;padding:38px 32px}
+.toolbar{display:flex;gap:14px;align-items:center;margin-bottom:28px}
+.sbox{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:11px 18px;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.sbox:focus{border-color:var(--acc)}.sbox::placeholder{color:var(--muted)}
+.pw{display:flex;align-items:center;gap:10px;min-width:190px}
+.pt{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.pf{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:3px;transition:width .4s}
+.pl{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.sh{display:flex;align-items:center;gap:12px;margin:38px 0 18px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.sh.hidden{display:none}
+.stag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:2.5px;color:var(--acc);background:rgba(232,121,249,0.08);border:1px solid rgba(232,121,249,0.18);padding:4px 10px;border-radius:3px;text-transform:uppercase}
+.stitle{font-size:17px;font-weight:700}.sc{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.qc{background:var(--card);border:1px solid var(--border);border-radius:9px;margin-bottom:14px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.qc:hover{border-color:rgba(232,121,249,0.22)}.qc.open{border-color:rgba(232,121,249,0.4);box-shadow:0 4px 36px rgba(232,121,249,0.07)}
+.qc.hidden{display:none}
+.qq{display:flex;align-items:flex-start;gap:14px;padding:17px 22px;cursor:pointer;user-select:none}
+.qn{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--acc);min-width:34px;margin-top:2px}
+.qb{flex:1}.qt{font-weight:600;font-size:15px;line-height:1.5;margin-bottom:6px}
+.qrow{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.8px;padding:2px 9px;border-radius:2px;text-transform:uppercase}
+.tp{background:rgba(232,121,249,0.08);border:1px solid rgba(232,121,249,0.18);color:var(--acc)}
+.tb{background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.16);color:var(--acc2)}
+.tg{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.16);color:var(--acc3)}
+.ty{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.16);color:var(--acc4)}
+.tr{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.16);color:var(--acc5)}
+.qa{color:var(--muted);font-size:16px;transition:transform .25s;min-width:18px;margin-top:3px}
+.qc.open .qa{transform:rotate(180deg);color:var(--acc)}.qc.open .qq{border-bottom:1px solid var(--border)}
+.ans{display:none;padding:20px 22px 24px}.qc.open .ans{display:block}
+.ai{font-size:13px;color:var(--muted);font-style:italic;padding:8px 14px;border-left:2px solid var(--acc);margin-bottom:18px;background:rgba(232,121,249,0.03);border-radius:0 4px 4px 0;line-height:1.65}
+.bl{list-style:none;display:flex;flex-direction:column;gap:13px}
+.bl li{display:flex;gap:12px;align-items:flex-start}
+.bi{width:22px;height:22px;min-width:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;margin-top:3px}
+.i1{background:rgba(232,121,249,0.12);color:var(--acc)}.i2{background:rgba(56,189,248,0.10);color:var(--acc2)}
+.i3{background:rgba(74,222,128,0.10);color:var(--acc3)}.i4{background:rgba(245,158,11,0.10);color:var(--acc4)}
+.i5{background:rgba(248,113,113,0.10);color:var(--acc5)}.i6{background:rgba(167,139,250,0.10);color:#a78bfa}
+.bc{flex:1;font-size:14px;line-height:1.78}.bc strong{color:var(--acc2);font-weight:600}
+pre{background:var(--cb);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin:9px 0;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7}
+.kw{color:#c792ea}.ty{color:#82aaff}.st{color:#c3e88d}.cm{color:#37516a;font-style:italic}.nm{color:#f78c6c}.an{color:#ffcb6b}
+.tip{background:rgba(56,189,248,0.04);border:1px solid rgba(56,189,248,0.18);border-radius:5px;padding:11px 15px;margin-top:13px;font-size:13px;color:var(--acc2)}
+.tip::before{content:'💡 Key Point: ';font-weight:700}
+.warn{background:rgba(248,113,113,0.04);border:1px solid rgba(248,113,113,0.18);border-radius:5px;padding:11px 15px;margin-top:13px;font-size:13px;color:var(--acc5)}
+.warn::before{content:'⚠ Common Trap: ';font-weight:700}
+.footer{border-top:1px solid var(--border);text-align:center;padding:26px;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px;margin-top:12px}
+@media(max-width:600px){.hdr{padding:26px 18px 20px}.hdr h1{font-size:28px}.main{padding:18px 14px}}
+</style>
+
+  <link rel="stylesheet" href="../../../css/styles.css" />
+  <link rel="stylesheet" href="../../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+<div class="hdr">
+  <div class="eye">Interview Preparation — Senior Backend Engineer</div>
+  <h1><span class="m">Multithreading</span> &amp; <span class="t">Concurrency 30 Q&amp;A</span></h1>
+  <div class="hdesc">Deep-dive coverage of Java Memory Model, thread lifecycle, synchronization primitives, locks, ExecutorService, CompletableFuture, and concurrent data structures — grounded in JP Morgan &amp; VISA production context.</div>
+  <div class="chips">
+    <span class="chip cp">Thread Safety</span><span class="chip cb">Locks &amp; Monitors</span>
+    <span class="chip cg">ExecutorService</span><span class="chip cy">CompletableFuture</span>
+    <span class="chip cp">Java Memory Model</span><span class="chip cb">Concurrent Collections</span>
+  </div>
+</div>
+<nav class="nav">
+  <button class="nb active" onclick="fcat('all',this)">All 30</button>
+  <button class="nb" onclick="fcat('fundamentals',this)">Fundamentals</button>
+  <button class="nb" onclick="fcat('synchronization',this)">Synchronization</button>
+  <button class="nb" onclick="fcat('locks',this)">Locks</button>
+  <button class="nb" onclick="fcat('executors',this)">Executors</button>
+  <button class="nb" onclick="fcat('completable',this)">CompletableFuture</button>
+  <button class="nb" onclick="fcat('collections',this)">Collections</button>
+  <button class="nb" onclick="fcat('patterns',this)">Patterns</button>
+</nav>
+<div class="main">
+  <div class="toolbar">
+    <input class="sbox" type="text" placeholder="🔍  Search questions..." oninput="search(this.value)"/>
+    <div class="pw"><div class="pt"><div class="pf" id="pF" style="width:0%"></div></div><span class="pl" id="pL">0 / 30</span></div>
+  </div>
+
+  <div class="sh" data-cat="fundamentals"><span class="stag">Section 01</span><span class="stitle">Thread Fundamentals &amp; Java Memory Model</span><span class="sc">Q1–Q6</span></div>
+
+  <div class="qc" data-cat="fundamentals"><div class="qq" onclick="tog(this)"><span class="qn">01</span><div class="qb"><div class="qt">What is the difference between a Process and a Thread? Explain Thread lifecycle states.</div><div class="qrow"><span class="tag tp">Fundamentals</span><span class="tag tb">Must Know</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Process vs Thread:</strong> A process is an independent program with its own memory space and OS resources. Threads are lightweight units of execution within a process, sharing the same heap, code, and file handles. Thread creation (~microseconds) is far cheaper than process creation (~milliseconds). At JP Morgan, our Spring Boot ECS containers are processes; Tomcat manages hundreds of threads within each.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Thread Lifecycle States:</strong><pre><span class="ty">NEW</span>           → created, Thread() called, not yet started
+<span class="ty">RUNNABLE</span>      → start() called, eligible to run (may or may not be on CPU)
+<span class="ty">BLOCKED</span>       → waiting to acquire a monitor lock (synchronized block)
+<span class="ty">WAITING</span>       → indefinitely waiting (wait(), join(), LockSupport.park())
+<span class="ty">TIMED_WAITING</span> → waiting with timeout (sleep(), wait(ms), join(ms))
+<span class="ty">TERMINATED</span>    → run() completed or exception thrown</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>BLOCKED vs WAITING — Critical Difference:</strong> BLOCKED = competing for a monitor lock held by another thread (auto re-enters RUNNABLE when lock released). WAITING = explicitly waiting for a signal (Object.notify() required). In thread dumps: BLOCKED threads = lock contention problem; WAITING threads = normal coordination pattern.</div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Daemon Threads:</strong> Background threads that don't prevent JVM shutdown. Set with <code>thread.setDaemon(true)</code> BEFORE start(). JVM exits when only daemons remain. Never use daemon threads for tasks that must complete — JVM won't wait for them.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="fundamentals"><div class="qq" onclick="tog(this)"><span class="qn">02</span><div class="qb"><div class="qt">Explain the Java Memory Model — visibility, atomicity, and happens-before relationship.</div><div class="qrow"><span class="tag tp">JMM</span><span class="tag tb">Senior Topic</span><span class="tag ty">Frequently Asked</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>The Problem the JMM Solves:</strong> CPUs have multi-level caches. Without rules, Thread A writing a variable might not be visible to Thread B reading from its CPU cache copy. The JMM defines when writes by one thread are guaranteed visible to another — the "happens-before" relationship.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Key Happens-Before Rules:</strong><pre><span class="cm">// 1. Program order: each statement hb next in same thread</span>
+<span class="cm">// 2. Monitor unlock hb next lock of same monitor</span>
+<span class="cm">// 3. volatile write hb any subsequent read of same variable</span>
+<span class="cm">// 4. Thread.start() hb any action in the started thread</span>
+<span class="cm">// 5. All thread actions hb Thread.join() returning</span>
+<span class="cm">// 6. Transitivity: A hb B and B hb C → A hb C</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Visibility Problem:</strong><pre><span class="kw">boolean</span> flag = <span class="kw">false</span>; <span class="cm">// not volatile</span>
+<span class="cm">// Thread A:</span>
+flag = <span class="kw">true</span>;          <span class="cm">// may stay in CPU register/cache</span>
+<span class="cm">// Thread B:</span>
+<span class="kw">while</span> (!flag) {}      <span class="cm">// may loop forever — sees stale cached value!</span>
+<span class="cm">// Fix: volatile boolean flag = false;</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Atomicity Problem:</strong> <code>count++</code> is NOT atomic — it's read + increment + write = 3 separate operations. Two threads can both read the same value, increment it, and write back the same result — losing one increment. Fix: <code>AtomicInteger.incrementAndGet()</code> or <code>synchronized</code>.</div></li>
+    <li><span class="bi i5">05</span><div class="bc"><strong>Reordering:</strong> JVM and CPU can reorder instructions for performance as long as the single-thread result is unchanged. But reordering CAN break multi-threaded programs. The JMM's happens-before rules tell the JVM which reorderings are forbidden.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="fundamentals"><div class="qq" onclick="tog(this)"><span class="qn">03</span><div class="qb"><div class="qt">What is volatile? When should you use it and when is it NOT enough?</div><div class="qrow"><span class="tag tp">volatile</span><span class="tag tb">JMM</span><span class="tag tg">Production Critical</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>What volatile Guarantees:</strong> (1) <strong>Visibility</strong>: every write flushed to main memory; every read fetches from main memory not cache. (2) <strong>Ordering</strong>: prevents instruction reordering around the access. Does NOT provide atomicity for compound operations like check-then-act.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Classic Use Case — Stop Flag:</strong><pre><span class="kw">private volatile boolean</span> running = <span class="kw">true</span>; <span class="cm">// volatile!</span>
+<span class="cm">// Thread worker:</span>
+<span class="kw">while</span> (running) processNextEvent(); <span class="cm">// reads from main memory every iteration</span>
+<span class="cm">// Main thread:</span>
+running = <span class="kw">false</span>; <span class="cm">// guaranteed visible to worker immediately</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>When volatile is NOT Enough — Check-Then-Act:</strong><pre><span class="kw">volatile int</span> count = <span class="nm">0</span>;
+<span class="cm">// UNSAFE — volatile guarantees visibility but NOT atomicity of compound op:</span>
+<span class="kw">if</span> (count &lt; <span class="nm">10</span>) count++; <span class="cm">// race condition! read and write not atomic</span>
+<span class="cm">// Fix: AtomicInteger or synchronized block</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Double-Checked Locking — volatile required:</strong><pre><span class="kw">private static volatile</span> <span class="ty">Singleton</span> instance; <span class="cm">// volatile MANDATORY</span>
+<span class="kw">public static</span> <span class="ty">Singleton</span> getInstance() {
+    <span class="kw">if</span> (instance == <span class="kw">null</span>) {
+        <span class="kw">synchronized</span> (<span class="ty">Singleton</span>.class) {
+            <span class="kw">if</span> (instance == <span class="kw">null</span>)
+                instance = <span class="kw">new</span> <span class="ty">Singleton</span>(); <span class="cm">// volatile prevents partial-init visibility</span>
+        }
+    }
+    <span class="kw">return</span> instance;
+}</pre></div></li>
+  </ul>
+  <div class="warn">volatile on a reference does NOT make the referenced object's fields volatile. Writes to list contents are not thread-safe even if the list reference is volatile.</div>
+  </div></div>
+
+  <div class="qc" data-cat="fundamentals"><div class="qq" onclick="tog(this)"><span class="qn">04</span><div class="qb"><div class="qt">What is a race condition and a deadlock? Show examples of each and how to fix them.</div><div class="qrow"><span class="tag tp">Race Condition</span><span class="tag tb">Deadlock</span><span class="tag tr">Critical</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Race Condition — VISA Example:</strong><pre><span class="kw">int</span> balance = <span class="nm">1000</span>;
+<span class="cm">// Thread A: withdraw 700  |  Thread B: withdraw 700</span>
+<span class="kw">if</span> (balance &gt;= <span class="nm">700</span>) {    <span class="cm">// A checks: true (1000≥700)</span>
+                           <span class="cm">// B executes: balance=1000-700=300</span>
+    balance -= <span class="nm">700</span>;       <span class="cm">// A: 300-700=-400 → OVERDRAFT!</span>
+}
+<span class="cm">// Fix: synchronize the check-and-update as one atomic operation</span></pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Deadlock — Circular Lock Acquisition:</strong><pre><span class="cm">// Thread A:                    Thread B:</span>
+<span class="kw">synchronized</span>(lockA) {         <span class="kw">synchronized</span>(lockB) {
+    <span class="kw">synchronized</span>(lockB) {         <span class="kw">synchronized</span>(lockA) {
+        <span class="cm">// DEADLOCK — A holds A, wants B</span>   <span class="cm">// B holds B, wants A</span>
+    }                             }
+}</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Deadlock Prevention — Consistent Lock Order:</strong><pre><span class="cm">// FIXED: BOTH threads acquire locks in the same order</span>
+<span class="kw">synchronized</span>(lockA) {
+    <span class="kw">synchronized</span>(lockB) { <span class="cm">/* no circular wait possible */</span> }
+}</pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Detect Deadlocks in Production:</strong><pre><span class="cm">// 1. jstack &lt;pid&gt; — look for "Found one Java-level deadlock"</span>
+<span class="cm">// 2. /actuator/threaddump — same info via HTTP (no SSH needed)</span>
+<span class="cm">// 3. Programmatic detection:</span>
+<span class="ty">ThreadMXBean</span> mx = <span class="ty">ManagementFactory</span>.getThreadMXBean();
+<span class="kw">long</span>[] deadlocked = mx.findDeadlockedThreads(); <span class="cm">// null if none</span>
+<span class="cm">// At JP Morgan: scheduled health check calls this, alerts on-call if non-null</span></pre></div></li>
+    <li><span class="bi i5">05</span><div class="bc"><strong>Livelock vs Starvation:</strong> Livelock: threads keep changing state in response to each other but make no progress (corridor stepping-aside problem). Starvation: a thread never gets CPU time because high-priority threads keep preempting it. Both are detectable in thread dumps — look for threads that are RUNNABLE but making no progress.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="fundamentals"><div class="qq" onclick="tog(this)"><span class="qn">05</span><div class="qb"><div class="qt">Explain AtomicInteger, AtomicReference, CAS, and LongAdder.</div><div class="qrow"><span class="tag tp">Atomics</span><span class="tag tb">Lock-Free</span><span class="tag tg">Performance</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Compare-And-Swap (CAS):</strong> CAS(variable, expected, newValue): atomically check if variable equals expected; if yes update and return true; if no return false. All Java atomic classes are built on CAS — a single hardware instruction, much faster than locking (no kernel entry).</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>AtomicInteger:</strong><pre><span class="ty">AtomicInteger</span> counter = <span class="kw">new</span> <span class="ty">AtomicInteger</span>(<span class="nm">0</span>);
+counter.incrementAndGet();             <span class="cm">// atomic read-increment-write</span>
+counter.compareAndSet(<span class="nm">5</span>, <span class="nm">10</span>);          <span class="cm">// set 10 only if current == 5</span>
+counter.getAndAdd(<span class="nm">3</span>);                  <span class="cm">// returns old, adds 3</span>
+<span class="cm">// At JP Morgan: events-processed counter for CloudWatch metrics</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>AtomicReference — Atomic Swap of Object:</strong><pre><span class="ty">AtomicReference</span>&lt;<span class="ty">Config</span>&gt; ref = <span class="kw">new</span> <span class="ty">AtomicReference</span>&lt;&gt;(currentConfig);
+<span class="cm">// Atomically swap entire config object — no locks needed:</span>
+ref.compareAndSet(currentConfig, newConfig);
+<span class="cm">// At VISA: atomic swap of cached counterparty reference on refresh</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>LongAdder vs AtomicLong:</strong> Under high contention, many threads spinning on one AtomicLong creates overhead. LongAdder maintains a per-thread cell array — each thread updates its own cell, sum() combines them. LongAdder wins under high contention; AtomicLong is better when you need exact real-time value.</div></li>
+    <li><span class="bi i5">05</span><div class="bc"><strong>ABA Problem:</strong> CAS checks value equality, not identity. If value goes A→B→A between your read and CAS attempt, CAS succeeds incorrectly. Fix: <code>AtomicStampedReference</code> pairs value with a version stamp that must also match.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="fundamentals"><div class="qq" onclick="tog(this)"><span class="qn">06</span><div class="qb"><div class="qt">What is ThreadLocal? Use cases, dangers, and MDC pattern.</div><div class="qrow"><span class="tag tp">ThreadLocal</span><span class="tag tb">Context Propagation</span><span class="tag ty">Memory Leak Risk</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>What It Does:</strong> Each thread has its own independent copy of the variable. No synchronization needed because there is no sharing. Classic uses: DB connection per thread, user context per request, SimpleDateFormat (not thread-safe — one per thread via ThreadLocal).</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>MDC Pattern (JP Morgan):</strong><pre><span class="cm">// In WebFilter — set at request entry:</span>
+<span class="ty">MDC</span>.put(<span class="st">"correlationId"</span>, correlationId);
+<span class="ty">MDC</span>.put(<span class="st">"eventId"</span>, eventId);
+<span class="cm">// Every log line in this thread now includes these fields automatically</span>
+log.info(<span class="st">"Processing event"</span>); <span class="cm">// → {"correlationId":"abc","eventId":"123","msg":"Processing event"}</span>
+<span class="cm">// In finally block — MANDATORY:</span>
+<span class="ty">MDC</span>.clear(); <span class="cm">// thread pool reuse leaks MDC values to next request!</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Memory Leak — The Biggest Danger:</strong> Thread pools REUSE threads. If you set a ThreadLocal value and never call remove(), the next request on the same thread sees the previous request's data. In Spring Security this can mean one user seeing another's auth context — a critical security leak. Always call remove() in a finally block.</div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>ThreadLocal vs Reactor Context:</strong> ThreadLocal is thread-bound — doesn't work with WebFlux's event-loop model (one request may switch threads). Spring WebFlux uses Reactor Context for per-request data propagation instead.</div></li>
+  </ul>
+  <div class="warn">ThreadLocal + thread pools = memory leak if remove() is not called. With 200 Tomcat threads handling 1,000 req/s, leaked ThreadLocals accumulate causing subtle bugs and OOM errors.</div>
+  </div></div>
+
+  <div class="sh" data-cat="synchronization"><span class="stag">Section 02</span><span class="stitle">Synchronization — synchronized, wait/notify, Semaphore</span><span class="sc">Q7–Q11</span></div>
+
+  <div class="qc" data-cat="synchronization"><div class="qq" onclick="tog(this)"><span class="qn">07</span><div class="qb"><div class="qt">Explain synchronized — method vs block, static vs instance, reentrancy.</div><div class="qrow"><span class="tag tp">synchronized</span><span class="tag tb">Monitor</span><span class="tag tg">Foundation</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Intrinsic Lock (Monitor):</strong> Every Java object has an intrinsic lock. synchronized acquires it — only one thread can hold a given object's intrinsic lock at a time. Others trying to acquire the same lock are BLOCKED until it is released.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Instance vs Static synchronized:</strong><pre><span class="kw">public synchronized void</span> deposit(<span class="kw">int</span> amount) { ... }  <span class="cm">// locks on 'this'</span>
+<span class="kw">public static synchronized void</span> log(<span class="ty">String</span> msg) { ... } <span class="cm">// locks on Class object</span>
+<span class="cm">// Instance lock ≠ class lock — both can be held simultaneously by different threads</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Prefer Private Lock Objects:</strong><pre><span class="kw">private final</span> <span class="ty">Object</span> balanceLock = <span class="kw">new</span> <span class="ty">Object</span>();
+<span class="kw">private final</span> <span class="ty">Object</span> logLock     = <span class="kw">new</span> <span class="ty">Object</span>();
+<span class="kw">public void</span> deposit(<span class="kw">int</span> amount) {
+    <span class="kw">synchronized</span>(balanceLock) { balance += amount; }  <span class="cm">// fine-grained</span>
+    <span class="kw">synchronized</span>(logLock)     { writeLog(amount); }   <span class="cm">// can run concurrently</span>
+}
+<span class="cm">// Private lock: external code cannot accidentally synchronize on your lock</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Reentrancy:</strong> Java intrinsic locks are reentrant — a thread that already holds a lock can acquire it again without deadlocking. This allows synchronized methods to call other synchronized methods on the same object safely.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="synchronization"><div class="qq" onclick="tog(this)"><span class="qn">08</span><div class="qb"><div class="qt">Explain wait(), notify(), notifyAll() — producer-consumer pattern with correct usage.</div><div class="qrow"><span class="tag tp">wait/notify</span><span class="tag tb">Producer-Consumer</span><span class="tag tg">Classic</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>The Rules:</strong> wait(), notify(), notifyAll() must be called inside a synchronized block on the same object. wait() releases the lock and suspends. notify() wakes one waiting thread. notifyAll() wakes all. Awakened thread must re-acquire the lock before proceeding.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Bounded Buffer — Producer-Consumer:</strong><pre><span class="kw">class</span> <span class="ty">BoundedBuffer</span>&lt;<span class="ty">T</span>&gt; {
+    <span class="kw">private final</span> <span class="ty">Queue</span>&lt;<span class="ty">T</span>&gt; q = <span class="kw">new</span> <span class="ty">LinkedList</span>&lt;&gt;();
+    <span class="kw">private final int</span> cap;
+
+    <span class="kw">synchronized void</span> put(<span class="ty">T</span> item) <span class="kw">throws</span> <span class="ty">InterruptedException</span> {
+        <span class="kw">while</span> (q.size() == cap) wait();  <span class="cm">// WHILE — not IF!</span>
+        q.add(item);
+        notifyAll();
+    }
+    <span class="kw">synchronized</span> <span class="ty">T</span> take() <span class="kw">throws</span> <span class="ty">InterruptedException</span> {
+        <span class="kw">while</span> (q.isEmpty()) wait();       <span class="cm">// WHILE — not IF!</span>
+        <span class="ty">T</span> item = q.poll();
+        notifyAll();
+        <span class="kw">return</span> item;
+    }
+}</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Why WHILE not IF — Spurious Wakeups:</strong> A thread can wake from wait() without being notified (JVM/OS behavior — "spurious wakeup"). If you use IF, the thread proceeds without re-checking the condition. WHILE re-checks after waking. This is the golden rule — always loop around wait().</div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Modern Alternative:</strong> Use java.util.concurrent classes instead of raw wait/notify. BlockingQueue handles all the synchronization correctly and is far harder to misuse. Only use wait/notify for custom coordination patterns not covered by standard concurrent utilities.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="synchronization"><div class="qq" onclick="tog(this)"><span class="qn">09</span><div class="qb"><div class="qt">What is a Semaphore? How does it differ from a mutex? Production use case.</div><div class="qrow"><span class="tag tp">Semaphore</span><span class="tag tb">Rate Limiting</span><span class="tag tg">Concurrency Control</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Semaphore vs Mutex:</strong> Mutex (binary semaphore): exactly 1 thread at a time. Counting semaphore: up to N threads simultaneously. Semaphore has no "owner" — one thread can acquire, a different thread can release. Maintain permit count: acquire() decrements (blocks if 0), release() increments.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>JP Morgan — Limit Concurrent Enrichment Calls:</strong><pre><span class="kw">private final</span> <span class="ty">Semaphore</span> sem = <span class="kw">new</span> <span class="ty">Semaphore</span>(<span class="nm">10</span>); <span class="cm">// max 10 concurrent</span>
+
+<span class="kw">public</span> <span class="ty">Enrichment</span> callEnrichmentApi(<span class="ty">String</span> id) <span class="kw">throws</span> <span class="ty">InterruptedException</span> {
+    sem.acquire();                   <span class="cm">// blocks if 10 already in-flight</span>
+    <span class="kw">try</span> {
+        <span class="kw">return</span> enrichmentClient.fetch(id);
+    } <span class="kw">finally</span> {
+        sem.release();               <span class="cm">// ALWAYS in finally</span>
+    }
+}</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>tryAcquire — Non-Blocking:</strong><pre>sem.tryAcquire()                           <span class="cm">// false if no permits available</span>
+sem.tryAcquire(<span class="nm">100</span>, <span class="ty">TimeUnit</span>.MILLISECONDS) <span class="cm">// wait up to 100ms</span>
+<span class="cm">// Circuit-breaker-like: return fallback instead of blocking when overloaded</span></pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="synchronization"><div class="qq" onclick="tog(this)"><span class="qn">10</span><div class="qb"><div class="qt">Explain CountDownLatch and CyclicBarrier — differences and when to use each.</div><div class="qrow"><span class="tag tp">Coordination</span><span class="tag tb">CountDownLatch</span><span class="tag tg">CyclicBarrier</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>CountDownLatch — One-Time Gate:</strong> Initialized with N. Threads call await() to block until count reaches 0. Any thread calls countDown() to decrement. Cannot be reset. Use for: "wait for N tasks to complete before proceeding."<pre><span class="ty">CountDownLatch</span> latch = <span class="kw">new</span> <span class="ty">CountDownLatch</span>(<span class="nm">3</span>);
+<span class="cm">// 3 worker threads each call latch.countDown() when done</span>
+latch.await(); <span class="cm">// main thread blocks until all 3 complete</span>
+<span class="cm">// At VISA: wait for all 3 settlement partitions to validate before committing</span></pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>CyclicBarrier — Reusable Meeting Point:</strong> N threads each call await() — all block until all N arrive, then released together. Can be reset and reused. Use for: repeated phases where all threads must complete phase N before any starts N+1.<pre><span class="ty">CyclicBarrier</span> barrier = <span class="kw">new</span> <span class="ty">CyclicBarrier</span>(<span class="nm">4</span>, () -&gt; mergeResults());
+<span class="cm">// 4 threads each process partition, await() at barrier</span>
+<span class="cm">// When all 4 arrive: mergeResults() runs, all continue to next phase</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Key Differences:</strong> CountDownLatch: one-time, counter decremented by any thread, waiting threads don't participate in count. CyclicBarrier: reusable, every participant calls await(), has optional barrier action. If one CyclicBarrier thread throws, the barrier is broken for all.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="synchronization"><div class="qq" onclick="tog(this)"><span class="qn">11</span><div class="qb"><div class="qt">What are the happens-before guarantees for synchronized, volatile, and final fields?</div><div class="qrow"><span class="tag tp">JMM</span><span class="tag tb">Happens-Before</span><span class="tag ty">Deep Dive</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>synchronized:</strong> Unlock of a monitor happens-before every subsequent lock of that same monitor. All writes done while holding a lock are visible to any thread that subsequently acquires the same lock. This is why synchronized works for visibility, not just atomicity.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>volatile:</strong> A write to a volatile variable happens-before every subsequent read of that variable. Additionally — all writes before a volatile write are visible after the volatile read (a "memory fence"). volatile flushes more than just one variable.</div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>final field safety — Safe Publication:</strong><pre><span class="kw">class</span> <span class="ty">ImmutablePoint</span> {
+    <span class="kw">final int</span> x, y;
+    <span class="ty">ImmutablePoint</span>(<span class="kw">int</span> x, <span class="kw">int</span> y) { this.x=x; this.y=y; }
+    <span class="cm">// After constructor completes, ANY thread reading x or y</span>
+    <span class="cm">// sees correctly initialized values — NO synchronization needed.</span>
+    <span class="cm">// This is the JMM guarantee for final fields.</span>
+}</pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>this Escape — Common Bug:</strong> Never let a reference to <code>this</code> escape the constructor. If another thread observes the reference before the constructor finishes, it may see uninitialized final fields — breaking the final field safety guarantee.</div></li>
+  </ul></div></div>
+
+  <div class="sh" data-cat="locks"><span class="stag">Section 03</span><span class="stitle">Locks — ReentrantLock, ReadWriteLock, StampedLock</span><span class="sc">Q12–Q15</span></div>
+
+  <div class="qc" data-cat="locks"><div class="qq" onclick="tog(this)"><span class="qn">12</span><div class="qb"><div class="qt">What is ReentrantLock? How does it improve on synchronized?</div><div class="qrow"><span class="tag tp">ReentrantLock</span><span class="tag tb">Locks</span><span class="tag tg">Advanced</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>ReentrantLock Advantages Over synchronized:</strong> tryLock() without blocking, tryLock(timeout), lockInterruptibly() (interruptible wait), fairness setting (FIFO), multiple Condition variables per lock, monitoring (getWaitQueueLength, isHeldByCurrentThread).</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Always Use try-finally:</strong><pre><span class="ty">ReentrantLock</span> lock = <span class="kw">new</span> <span class="ty">ReentrantLock</span>();
+lock.lock();
+<span class="kw">try</span> {
+    <span class="cm">// critical section</span>
+} <span class="kw">finally</span> {
+    lock.unlock(); <span class="cm">// MUST be in finally — exception will never release the lock</span>
+}</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Condition Variables — Two-Condition Producer-Consumer:</strong><pre><span class="ty">ReentrantLock</span> lock = <span class="kw">new</span> <span class="ty">ReentrantLock</span>();
+<span class="ty">Condition</span> notFull  = lock.newCondition();
+<span class="ty">Condition</span> notEmpty = lock.newCondition();
+<span class="cm">// notFull.signal() wakes ONLY producers — unlike notifyAll() which wakes everyone</span>
+<span class="cm">// More efficient: no spurious wakeups of wrong thread type</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>tryLock to Prevent Deadlock:</strong><pre><span class="kw">if</span> (lock1.tryLock()) {
+    <span class="kw">try</span> {
+        <span class="kw">if</span> (lock2.tryLock()) {
+            <span class="kw">try</span> { <span class="cm">/* both held */</span> } <span class="kw">finally</span> { lock2.unlock(); }
+        }
+    } <span class="kw">finally</span> { lock1.unlock(); }
+}
+<span class="cm">// Can't get lock2? Release lock1 and retry — eliminates circular wait</span></pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="locks"><div class="qq" onclick="tog(this)"><span class="qn">13</span><div class="qb"><div class="qt">Explain ReadWriteLock and StampedLock. When do they outperform ReentrantLock?</div><div class="qrow"><span class="tag tp">ReadWriteLock</span><span class="tag tb">StampedLock</span><span class="tag tg">Read-Heavy</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>ReadWriteLock — Concurrent Reads:</strong> Multiple readers allowed simultaneously; writer needs exclusive access. Perfect for read-heavy data (reads don't conflict).<pre><span class="cm">// At VISA: counterparty cache — 99% reads, 1% invalidations</span>
+<span class="ty">ReentrantReadWriteLock</span> rwl = <span class="kw">new</span> <span class="ty">ReentrantReadWriteLock</span>();
+<span class="kw">public</span> <span class="ty">Counterparty</span> get(<span class="ty">String</span> id) {
+    rwl.readLock().lock();
+    <span class="kw">try</span> { <span class="kw">return</span> cache.get(id); } <span class="kw">finally</span> { rwl.readLock().unlock(); }
+}
+<span class="kw">public void</span> invalidate(<span class="ty">String</span> id) {
+    rwl.writeLock().lock();
+    <span class="kw">try</span> { cache.remove(id); } <span class="kw">finally</span> { rwl.writeLock().unlock(); }
+}</pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>StampedLock — Optimistic Reads (Java 8):</strong><pre><span class="ty">StampedLock</span> sl = <span class="kw">new</span> <span class="ty">StampedLock</span>();
+<span class="kw">long</span> stamp = sl.tryOptimisticRead(); <span class="cm">// NO lock acquired</span>
+<span class="kw">double</span> x = this.x, y = this.y;
+<span class="kw">if</span> (!sl.validate(stamp)) {           <span class="cm">// did a write happen?</span>
+    stamp = sl.readLock();            <span class="cm">// fallback to proper read lock</span>
+    <span class="kw">try</span> { x=this.x; y=this.y; } <span class="kw">finally</span> { sl.unlockRead(stamp); }
+}
+<span class="cm">// Optimistic: zero lock overhead for reads when writes are rare</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Lock Downgrading:</strong> Can downgrade write→read (acquire read while holding write, then release write). Cannot upgrade read→write without releasing read first (someone else may have modified meanwhile).</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="locks"><div class="qq" onclick="tog(this)"><span class="qn">14</span><div class="qb"><div class="qt">How do you implement a thread-safe Singleton? Compare all approaches.</div><div class="qrow"><span class="tag tp">Singleton</span><span class="tag tb">Thread Safety</span><span class="tag tg">Design Pattern</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Enum Singleton — Best (Effective Java Item 3):</strong><pre><span class="kw">public enum</span> <span class="ty">EventProcessor</span> {
+    <span class="ty">INSTANCE</span>;
+    <span class="kw">public void</span> process(<span class="ty">Event</span> e) { ... }
+}
+<span class="cm">// JVM guarantees: once, thread-safe, serialization-safe, reflection-safe</span></pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Initialization-on-Demand Holder — Lazy + Thread-Safe:</strong><pre><span class="kw">public class</span> <span class="ty">ConnectionPool</span> {
+    <span class="kw">private static class</span> <span class="ty">Holder</span> {
+        <span class="kw">static final</span> <span class="ty">ConnectionPool</span> INSTANCE = <span class="kw">new</span> <span class="ty">ConnectionPool</span>();
+    }
+    <span class="kw">public static</span> <span class="ty">ConnectionPool</span> getInstance() { <span class="kw">return</span> <span class="ty">Holder</span>.INSTANCE; }
+    <span class="cm">// Lazy: Holder not loaded until getInstance() called</span>
+    <span class="cm">// Thread-safe: class loading is JVM-guaranteed thread-safe</span>
+}</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Double-Checked Locking — volatile required:</strong><pre><span class="kw">private static volatile</span> <span class="ty">Singleton</span> instance; <span class="cm">// volatile MANDATORY</span>
+<span class="kw">public static</span> <span class="ty">Singleton</span> getInstance() {
+    <span class="kw">if</span> (instance == <span class="kw">null</span>) {
+        <span class="kw">synchronized</span>(<span class="ty">Singleton</span>.class) {
+            <span class="kw">if</span> (instance == <span class="kw">null</span>)
+                instance = <span class="kw">new</span> <span class="ty">Singleton</span>(); <span class="cm">// volatile prevents partial-init read</span>
+        }
+    }
+    <span class="kw">return</span> instance;
+}</pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>In Spring Boot:</strong> Almost never implement Singleton yourself — the IoC container manages singleton beans. These patterns matter for utility classes, configuration holders, and non-Spring code.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="locks"><div class="qq" onclick="tog(this)"><span class="qn">15</span><div class="qb"><div class="qt">What causes thread contention? How do you diagnose and reduce it in production?</div><div class="qrow"><span class="tag tp">Contention</span><span class="tag tb">Performance</span><span class="tag ty">Production</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Common Blocking Causes:</strong> Lock contention (synchronized, ReentrantLock), blocking I/O (DB calls, HTTP in blocking mode), Thread.sleep(), wait(), blocking queue operations, class loading (static initializer blocks), GC stop-the-world pauses.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Diagnosis:</strong><pre><span class="cm">// 1. Thread dump: jstack &lt;pid&gt; — look for chains of BLOCKED threads</span>
+<span class="cm">// 2. /actuator/threaddump — same via HTTP (no SSH)</span>
+<span class="cm">// 3. JConsole: live blocked thread count chart</span>
+<span class="cm">// 4. Micrometer: executor.pool.size, executor.queue.size, executor.active</span>
+<span class="cm">// 5. AWS X-Ray: identify exact operation consuming wall-clock time</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Reducing Contention:</strong> Minimize critical section size (hold lock shortest time possible). Lock striping (N locks for N buckets — what ConcurrentHashMap does). Replace synchronized with lock-free atomics (AtomicInteger, ConcurrentHashMap). Use ReadWriteLock for read-heavy data.</div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>JP Morgan Fix:</strong> Found a static synchronized method generating correlation IDs — every incoming request competed for it. Replaced with <code>ThreadLocalRandom.current().nextLong()</code> — no locking, each thread has its own generator. Throughput improved 15% under peak load.</div></li>
+  </ul></div></div>
+
+  <div class="sh" data-cat="executors"><span class="stag">Section 04</span><span class="stitle">ExecutorService &amp; Thread Pools</span><span class="sc">Q16–Q20</span></div>
+
+  <div class="qc" data-cat="executors"><div class="qq" onclick="tog(this)"><span class="qn">16</span><div class="qb"><div class="qt">Explain ExecutorService — configure ThreadPoolExecutor correctly for production.</div><div class="qrow"><span class="tag tp">ExecutorService</span><span class="tag tb">Thread Pools</span><span class="tag tg">Must Know</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><div class="ai">Never use Executors.newCachedThreadPool() or newFixedThreadPool() in production — always configure your own ThreadPoolExecutor with bounded queue.</div><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>ThreadPoolExecutor Parameters:</strong><pre><span class="kw">new</span> <span class="ty">ThreadPoolExecutor</span>(
+    <span class="nm">10</span>,                               <span class="cm">// corePoolSize: always-alive threads</span>
+    <span class="nm">50</span>,                               <span class="cm">// maximumPoolSize: max threads</span>
+    <span class="nm">60</span>, <span class="ty">TimeUnit</span>.SECONDS,             <span class="cm">// keepAlive for threads above core</span>
+    <span class="kw">new</span> <span class="ty">ArrayBlockingQueue</span>&lt;&gt;(<span class="nm">1000</span>),   <span class="cm">// BOUNDED queue — CRITICAL!</span>
+    <span class="kw">new</span> <span class="ty">ThreadFactoryBuilder</span>().setNameFormat(<span class="st">"enrichment-%d"</span>).build(),
+    <span class="kw">new</span> <span class="ty">ThreadPoolExecutor</span>.<span class="ty">CallerRunsPolicy</span>() <span class="cm">// rejection: natural backpressure</span>
+);</pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Why NOT Executors.newFixedThreadPool():</strong> Uses LinkedBlockingQueue with UNBOUNDED capacity. Under sustained load, tasks queue indefinitely → OOM. At JP Morgan an unbounded queue during a traffic spike caused heap to fill with 4GB of queued tasks. Always use bounded queues.</div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Rejection Policies:</strong><pre><span class="ty">AbortPolicy</span>        <span class="cm">// throws RejectedExecutionException (default)</span>
+<span class="ty">CallerRunsPolicy</span>   <span class="cm">// caller thread runs the task — natural backpressure ✓</span>
+<span class="ty">DiscardPolicy</span>      <span class="cm">// silently drop — dangerous</span>
+<span class="ty">DiscardOldestPolicy</span> <span class="cm">// drop oldest, add new</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Thread Pool Sizing:</strong> CPU-bound: N_CPUs threads. I/O-bound (DB, HTTP): much more. Formula: <code>N_threads = N_CPUs × (1 + wait_time/service_time)</code>. At JP Morgan with 4 vCPUs, avg DB wait 20ms, service 5ms: 4×(1+4)=20 threads.</div></li>
+    <li><span class="bi i5">05</span><div class="bc"><strong>Spring @Async — Always Configure Custom Executor:</strong><pre><span class="an">@Bean</span>
+<span class="kw">public</span> <span class="ty">Executor</span> taskExecutor() {
+    <span class="ty">ThreadPoolTaskExecutor</span> e = <span class="kw">new</span> <span class="ty">ThreadPoolTaskExecutor</span>();
+    e.setCorePoolSize(<span class="nm">10</span>); e.setMaxPoolSize(<span class="nm">50</span>); e.setQueueCapacity(<span class="nm">500</span>);
+    e.setThreadNamePrefix(<span class="st">"async-"</span>);
+    e.setRejectedExecutionHandler(<span class="kw">new</span> <span class="ty">ThreadPoolExecutor</span>.<span class="ty">CallerRunsPolicy</span>());
+    e.initialize(); <span class="kw">return</span> e;
+}
+<span class="cm">// @Async without this uses SimpleAsyncTaskExecutor — creates thread per call!</span></pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="executors"><div class="qq" onclick="tog(this)"><span class="qn">17</span><div class="qb"><div class="qt">What is ForkJoinPool and work-stealing? When does it outperform a regular thread pool?</div><div class="qrow"><span class="tag tp">ForkJoinPool</span><span class="tag tb">Work-Stealing</span><span class="tag tg">Parallel Streams</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Work-Stealing Architecture:</strong> Each thread has its own deque. Threads push/pop from their own deque. When idle, a thread STEALS tasks from the tail of another thread's deque. Minimises contention — no single global queue bottleneck. Better CPU utilisation when tasks vary in size.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>RecursiveTask Pattern (Divide-and-Conquer):</strong><pre><span class="kw">class</span> <span class="ty">SumTask</span> <span class="kw">extends</span> <span class="ty">RecursiveTask</span>&lt;<span class="ty">Long</span>&gt; {
+    <span class="kw">protected</span> <span class="ty">Long</span> compute() {
+        <span class="kw">if</span> (size &lt;= THRESHOLD) <span class="kw">return</span> sumDirectly();
+        <span class="ty">SumTask</span> left  = <span class="kw">new</span> <span class="ty">SumTask</span>(lo, mid);
+        <span class="ty">SumTask</span> right = <span class="kw">new</span> <span class="ty">SumTask</span>(mid, hi);
+        left.fork();                        <span class="cm">// push to own deque async</span>
+        <span class="kw">return</span> right.compute() + left.join(); <span class="cm">// current thread handles right</span>
+    }
+}</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Parallel Streams Use commonPool — Be Careful:</strong><pre><span class="cm">// Uses ForkJoinPool.commonPool() — shared with everything!</span>
+list.parallelStream().map(this::expensiveOp).collect(toList());
+<span class="cm">// For I/O-bound parallel work, use a custom ForkJoinPool:</span>
+<span class="kw">new</span> <span class="ty">ForkJoinPool</span>(<span class="nm">20</span>).submit(
+    () -&gt; list.parallelStream().map(this::ioOp).collect(toList())).get();</pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>When to Use:</strong> CPU-bound divide-and-conquer (sorting, tree traversal, parallel stream processing). NOT for I/O-bound tasks — blocking prevents work-stealing benefit. Most business service code: use ThreadPoolExecutor.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="executors"><div class="qq" onclick="tog(this)"><span class="qn">18</span><div class="qb"><div class="qt">How does ScheduledExecutorService work? Production use cases.</div><div class="qrow"><span class="tag tp">Scheduling</span><span class="tag tb">ScheduledExecutor</span><span class="tag tg">Production</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>API:</strong><pre><span class="ty">ScheduledExecutorService</span> s = <span class="ty">Executors</span>.newScheduledThreadPool(<span class="nm">2</span>);
+s.schedule(task, <span class="nm">5</span>, <span class="ty">TimeUnit</span>.SECONDS);              <span class="cm">// once after 5s</span>
+s.scheduleAtFixedRate(task, <span class="nm">0</span>, <span class="nm">10</span>, <span class="ty">TimeUnit</span>.SECONDS);   <span class="cm">// every 10s (fixed clock)</span>
+s.scheduleWithFixedDelay(task, <span class="nm">0</span>, <span class="nm">10</span>, <span class="ty">TimeUnit</span>.SECONDS); <span class="cm">// 10s AFTER completion</span></pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>FixedRate vs FixedDelay:</strong> FixedRate: fires on a clock — if task takes 12s and period is 10s, next fires immediately (can overlap!). FixedDelay: fires 10s after previous completion — guarantees no overlap. For tasks that must not overlap (DB refresh, secret rotation): always use FixedDelay.</div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>JP Morgan Production Uses:</strong><pre><span class="cm">// AWS Secrets Manager refresh every 24h</span>
+s.scheduleWithFixedDelay(this::refreshSecrets, <span class="nm">24</span>, <span class="nm">24</span>, <span class="ty">TimeUnit</span>.HOURS);
+<span class="cm">// Kafka consumer lag metric push every 30s</span>
+s.scheduleAtFixedRate(this::publishLagMetrics, <span class="nm">0</span>, <span class="nm">30</span>, <span class="ty">TimeUnit</span>.SECONDS);
+<span class="cm">// Outbox relay: poll for unpublished events</span>
+s.scheduleWithFixedDelay(outboxRelay::run, <span class="nm">0</span>, <span class="nm">5</span>, <span class="ty">TimeUnit</span>.SECONDS);</pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Spring @Scheduled:</strong><pre><span class="an">@Scheduled</span>(fixedDelay = <span class="nm">30000</span>)         <span class="cm">// 30s after last completion</span>
+<span class="an">@Scheduled</span>(fixedRate = <span class="nm">60000</span>)          <span class="cm">// every 60s</span>
+<span class="an">@Scheduled</span>(cron = <span class="st">"0 0 2 * * *"</span>)      <span class="cm">// daily at 2 AM</span>
+<span class="kw">public void</span> refreshCache() { ... }      <span class="cm">// requires @EnableScheduling</span></pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="executors"><div class="qq" onclick="tog(this)"><span class="qn">19</span><div class="qb"><div class="qt">Future vs CompletableFuture — what problems does CompletableFuture solve?</div><div class="qrow"><span class="tag tp">CompletableFuture</span><span class="tag tb">Future</span><span class="tag ty">Java 8</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Future Limitations:</strong><pre><span class="ty">Future</span>&lt;<span class="ty">String</span>&gt; f = executor.submit(() -&gt; fetchData());
+<span class="kw">String</span> result = f.get(); <span class="cm">// BLOCKS caller thread — defeats async purpose</span>
+<span class="cm">// No chaining, no callbacks, no combine, no functional exception handling</span></pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>CompletableFuture — Non-Blocking Pipeline:</strong><pre><span class="ty">CompletableFuture</span>.supplyAsync(() -&gt; fetchData(), executor)
+    .thenApply(data -&gt; transform(data))
+    .thenApplyAsync(data -&gt; enrich(data), enrichExecutor)
+    .thenAccept(result -&gt; store(result))
+    .exceptionally(ex -&gt; { log.error(<span class="st">"Failed"</span>, ex); <span class="kw">return null</span>; });
+<span class="cm">// Caller thread never blocks — callbacks fire when ready</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Combining Multiple Futures (JP Morgan):</strong><pre><span class="ty">CompletableFuture</span>&lt;<span class="ty">A</span>&gt; a = <span class="ty">CompletableFuture</span>.supplyAsync(() -&gt; serviceA.get(), exec);
+<span class="ty">CompletableFuture</span>&lt;<span class="ty">B</span>&gt; b = <span class="ty">CompletableFuture</span>.supplyAsync(() -&gt; serviceB.get(), exec);
+<span class="ty">CompletableFuture</span>.allOf(a, b)
+    .thenRun(() -&gt; process(a.join(), b.join()));
+<span class="cm">// a and b run in parallel — latency = max(a,b) not a+b</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Always Specify an Executor:</strong> supplyAsync without executor uses commonForkJoinPool — shared, potentially starved. Always pass your own: <code>supplyAsync(task, myExecutor)</code>.</div></li>
+    <li><span class="bi i5">05</span><div class="bc"><strong>Exception Handling:</strong><pre>cf.exceptionally(ex -&gt; defaultValue)          <span class="cm">// recover</span>
+cf.handle((result, ex) -&gt; ex!=<span class="kw">null</span> ? fallback : process(result)) <span class="cm">// both cases</span>
+cf.whenComplete((r, ex) -&gt; logMetric(r, ex))  <span class="cm">// side-effect only</span></pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="executors"><div class="qq" onclick="tog(this)"><span class="qn">20</span><div class="qb"><div class="qt">How do you handle exceptions in thread pools and CompletableFuture chains?</div><div class="qrow"><span class="tag tp">Exception Handling</span><span class="tag tb">Async Errors</span><span class="tag tr">Production Critical</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Exceptions in Runnable Are Silently Swallowed:</strong><pre>executor.submit(() -&gt; { <span class="kw">throw new</span> <span class="ty">RuntimeException</span>(<span class="st">"error"</span>); });
+<span class="cm">// Exception DISAPPEARS unless you call future.get()</span>
+<span class="cm">// future.get() wraps it in ExecutionException</span></pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>UncaughtExceptionHandler — Safety Net:</strong><pre><span class="ty">ThreadFactory</span> factory = r -&gt; {
+    <span class="ty">Thread</span> t = <span class="kw">new</span> <span class="ty">Thread</span>(r);
+    t.setUncaughtExceptionHandler((thread, ex) -&gt; {
+        log.error(<span class="st">"Uncaught in thread {}"</span>, thread.getName(), ex);
+        metrics.increment(<span class="st">"thread.uncaught.exceptions"</span>);
+    });
+    <span class="kw">return</span> t;
+};</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>CompletableFuture Exception Propagation:</strong><pre>cf.supplyAsync(() -&gt; fetch())
+  .thenApply(r -&gt; transform(r))   <span class="cm">// exception skips remaining stages</span>
+  .exceptionally(ex -&gt; {
+      log.error(<span class="st">"Failed"</span>, ex.getCause()); <span class="cm">// getCause() unwraps CompletionException</span>
+      <span class="kw">return</span> defaultValue;
+  });</pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Production Error Boundary Pattern:</strong><pre><span class="kw">private</span> &lt;<span class="ty">T</span>&gt; <span class="ty">CompletableFuture</span>&lt;<span class="ty">T</span>&gt; withBoundary(<span class="ty">Supplier</span>&lt;<span class="ty">T</span>&gt; task, <span class="ty">T</span> fallback, <span class="ty">String</span> op) {
+    <span class="kw">return</span> <span class="ty">CompletableFuture</span>.supplyAsync(task, executor)
+        .exceptionally(ex -&gt; {
+            metrics.increment(<span class="st">"async.errors"</span>, Tags.of(<span class="st">"op"</span>, op));
+            log.error(<span class="st">"Async op {} failed"</span>, op, ex.getCause());
+            <span class="kw">return</span> fallback;
+        });
+}</pre></div></li>
+  </ul></div></div>
+
+  <div class="sh" data-cat="completable"><span class="stag">Section 05</span><span class="stitle">CompletableFuture — Advanced Patterns</span><span class="sc">Q21–Q23</span></div>
+
+  <div class="qc" data-cat="completable"><div class="qq" onclick="tog(this)"><span class="qn">21</span><div class="qb"><div class="qt">allOf vs anyOf — parallel fan-out patterns with real JP Morgan examples.</div><div class="qrow"><span class="tag tp">CompletableFuture</span><span class="tag tb">Parallel</span><span class="tag tg">JP Morgan</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>allOf — Parallel Enrichment (the 25% p99 pattern):</strong><pre><span class="ty">CompletableFuture</span>&lt;<span class="ty">TypeData</span>&gt;   type   = fetchTypeAsync(event.getTypeId(), exec);
+<span class="ty">CompletableFuture</span>&lt;<span class="ty">RegionData</span>&gt; region = fetchRegionAsync(event.getRegion(), exec);
+<span class="ty">CompletableFuture</span>&lt;<span class="ty">CounterData</span>&gt; ctr    = fetchCounterAsync(event.getId(), exec);
+
+<span class="kw">return</span> <span class="ty">CompletableFuture</span>.allOf(type, region, ctr)
+    .thenApply(v -&gt; <span class="kw">new</span> <span class="ty">EnrichedEvent</span>(event, type.join(), region.join(), ctr.join()));
+<span class="cm">// All 3 in parallel — latency = max(t,r,c) not t+r+c</span></pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>allOf with Dynamic List:</strong><pre><span class="ty">List</span>&lt;<span class="ty">CompletableFuture</span>&lt;<span class="ty">Result</span>&gt;&gt; futures = ids.stream()
+    .map(id -&gt; <span class="ty">CompletableFuture</span>.supplyAsync(() -&gt; process(id), exec))
+    .collect(toList());
+<span class="ty">CompletableFuture</span>.allOf(futures.toArray(<span class="kw">new</span> <span class="ty">CompletableFuture</span>[<span class="nm">0</span>]))
+    .thenApply(v -&gt; futures.stream().map(<span class="ty">CompletableFuture</span>::join).collect(toList()));</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>anyOf — First Response Wins:</strong><pre><span class="ty">CompletableFuture</span>&lt;<span class="ty">Data</span>&gt; primary  = fetchFromPrimary(id);
+<span class="ty">CompletableFuture</span>&lt;<span class="ty">Data</span>&gt; fallback = fetchFromCache(id);
+<span class="kw">return</span> (<span class="ty">CompletableFuture</span>&lt;<span class="ty">Data</span>&gt;) <span class="ty">CompletableFuture</span>.anyOf(primary, fallback);
+<span class="cm">// Hedged requests: return whichever arrives first</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Timeout (Java 9+):</strong><pre>future.orTimeout(<span class="nm">500</span>, <span class="ty">TimeUnit</span>.MILLISECONDS)                    <span class="cm">// fail on timeout</span>
+future.completeOnTimeout(defaultVal, <span class="nm">500</span>, <span class="ty">TimeUnit</span>.MILLISECONDS) <span class="cm">// default on timeout</span></pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="completable"><div class="qq" onclick="tog(this)"><span class="qn">22</span><div class="qb"><div class="qt">thenApply vs thenCompose vs thenCombine — when to use each.</div><div class="qrow"><span class="tag tp">CompletableFuture</span><span class="tag tb">Operators</span><span class="tag tg">Java 8</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>thenApply — Transform (like map):</strong><pre>cf.thenApply(s -&gt; s.toUpperCase()).thenApply(s -&gt; s + "!");
+<span class="cm">// Synchronous transformation — function returns T not CompletableFuture&lt;T&gt;</span></pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>thenCompose — Flatten Nested Futures (like flatMap):</strong><pre>fetchUserId()                          <span class="cm">// CF&lt;String&gt;</span>
+    .thenCompose(id -&gt; fetchProfile(id)); <span class="cm">// CF&lt;Profile&gt; — NOT CF&lt;CF&lt;Profile&gt;&gt;</span>
+<span class="cm">// Use thenCompose when your function RETURNS a CompletableFuture</span>
+<span class="cm">// thenApply would give CF&lt;CF&lt;Profile&gt;&gt; — nested and unusable</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>thenCombine — Combine Two Independent Futures:</strong><pre><span class="ty">CompletableFuture</span>&lt;<span class="ty">String</span>&gt;  name  = fetchName(userId);
+<span class="ty">CompletableFuture</span>&lt;<span class="ty">Integer</span>&gt; score = fetchScore(userId);
+name.thenCombine(score, (n, s) -&gt; <span class="kw">new</span> <span class="ty">UserDisplay</span>(n, s));
+<span class="cm">// Both run in parallel, combined when both complete</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Async Variants:</strong> Without Async suffix: callback runs in the completing thread. With Async: callback submitted to executor. Always use Async variant with custom executor in production for predictable thread pool behaviour.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="completable"><div class="qq" onclick="tog(this)"><span class="qn">23</span><div class="qb"><div class="qt">Implement non-blocking retry with exponential backoff using CompletableFuture.</div><div class="qrow"><span class="tag tp">CompletableFuture</span><span class="tag tb">Retry</span><span class="tag tg">Production Pattern</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Non-Blocking Retry:</strong><pre><span class="kw">public</span> &lt;<span class="ty">T</span>&gt; <span class="ty">CompletableFuture</span>&lt;<span class="ty">T</span>&gt; retryAsync(
+        <span class="ty">Supplier</span>&lt;<span class="ty">CompletableFuture</span>&lt;<span class="ty">T</span>&gt;&gt; supplier, <span class="kw">int</span> retries, <span class="kw">long</span> delayMs) {
+    <span class="kw">return</span> supplier.get().exceptionallyCompose(ex -&gt; {
+        <span class="kw">if</span> (retries == <span class="nm">0</span>) <span class="kw">return</span> <span class="ty">CompletableFuture</span>.failedFuture(ex);
+        <span class="ty">CompletableFuture</span>&lt;<span class="ty">T</span>&gt; result = <span class="kw">new</span> <span class="ty">CompletableFuture</span>&lt;&gt;();
+        scheduler.schedule(
+            () -&gt; retryAsync(supplier, retries - <span class="nm">1</span>, delayMs * <span class="nm">2</span>)
+                    .whenComplete((v, e) -&gt; { <span class="kw">if</span> (e!=<span class="kw">null</span>) result.completeExceptionally(e); <span class="kw">else</span> result.complete(v); }),
+            delayMs, <span class="ty">TimeUnit</span>.MILLISECONDS);
+        <span class="kw">return</span> result;
+    });
+}</pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>In Practice — Use Resilience4j:</strong> Building retry from scratch is instructive for interviews but in production always use Resilience4j — handles jitter, exception classification, metrics, and circuit breaker integration out of the box.</div></li>
+  </ul></div></div>
+
+  <div class="sh" data-cat="collections"><span class="stag">Section 06</span><span class="stitle">Concurrent Collections</span><span class="sc">Q24–Q27</span></div>
+
+  <div class="qc" data-cat="collections"><div class="qq" onclick="tog(this)"><span class="qn">24</span><div class="qb"><div class="qt">How does ConcurrentHashMap work? How is it different from HashMap and Hashtable?</div><div class="qrow"><span class="tag tp">ConcurrentHashMap</span><span class="tag tb">Internals</span><span class="tag tg">Must Know</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Three Generations:</strong> HashMap: not thread-safe, null keys/values. Hashtable: synchronized on every method — one global lock, terrible performance. ConcurrentHashMap: fine-grained locking — only the affected bucket is locked; all other buckets fully concurrent.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Java 8 Internals:</strong> Array of Node buckets. ≤8 entries: linked list. >8: TreeNode (red-black tree, O(log n)). Writes use CAS + synchronized on bucket head only. Reads are lock-free. Resize is incremental and concurrent.</div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Atomic Compound Operations:</strong><pre>map.computeIfAbsent(<span class="st">"key"</span>, k -&gt; <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;()).add(event); <span class="cm">// atomic</span>
+map.merge(<span class="st">"eventType"</span>, <span class="nm">1L</span>, <span class="ty">Long</span>::sum);                         <span class="cm">// atomic counter</span>
+map.computeIfPresent(<span class="st">"key"</span>, (k, v) -&gt; updateValue(v));           <span class="cm">// atomic update</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>What It Does NOT Guarantee:</strong> Compound operations ACROSS multiple keys are not atomic. <code>if(map.contains(k)) map.put(k,v)</code> — race condition. Use putIfAbsent() or computeIfAbsent() for atomic check-and-insert.</div></li>
+    <li><span class="bi i5">05</span><div class="bc"><strong>JP Morgan — Per-Event-Type Frequency Counter:</strong><pre><span class="kw">private final</span> <span class="ty">ConcurrentHashMap</span>&lt;<span class="ty">String</span>, <span class="ty">AtomicLong</span>&gt; counts = <span class="kw">new</span> <span class="ty">ConcurrentHashMap</span>&lt;&gt;();
+<span class="kw">public void</span> record(<span class="ty">String</span> type) {
+    counts.computeIfAbsent(type, k -&gt; <span class="kw">new</span> <span class="ty">AtomicLong</span>()).incrementAndGet();
+}</pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="collections"><div class="qq" onclick="tog(this)"><span class="qn">25</span><div class="qb"><div class="qt">BlockingQueue variants — ArrayBlockingQueue, LinkedBlockingQueue, PriorityBlockingQueue.</div><div class="qrow"><span class="tag tp">BlockingQueue</span><span class="tag tb">Producer-Consumer</span><span class="tag tg">Thread Pools</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Contract:</strong> put() blocks when full. take() blocks when empty. offer(timeout) and poll(timeout) wait up to timeout. Built-in producer-consumer sync — no explicit wait/notify needed. Foundation of every thread pool's task queue.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>ArrayBlockingQueue — Bounded, Single Lock:</strong><pre><span class="kw">new</span> <span class="ty">ArrayBlockingQueue</span>&lt;&gt;(<span class="nm">1000</span>)        <span class="cm">// hard cap — provides backpressure ✓</span>
+<span class="kw">new</span> <span class="ty">ArrayBlockingQueue</span>&lt;&gt;(<span class="nm">1000</span>, <span class="kw">true</span>) <span class="cm">// fair: FIFO for waiting threads</span>
+<span class="cm">// Use when you need a hard memory cap — safest for thread pools</span></pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>LinkedBlockingQueue — Optionally Bounded (DANGER by default):</strong><pre><span class="kw">new</span> <span class="ty">LinkedBlockingQueue</span>&lt;&gt;()        <span class="cm">// UNBOUNDED — OOM risk!</span>
+<span class="kw">new</span> <span class="ty">LinkedBlockingQueue</span>&lt;&gt;(<span class="nm">10000</span>) <span class="cm">// always specify capacity!</span>
+<span class="cm">// Separate locks for head and tail — higher throughput under concurrent load</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>PriorityBlockingQueue — Priority Ordering:</strong><pre><span class="cm">// JP Morgan: HIGH priority alerts processed before analytics events</span>
+<span class="ty">PriorityBlockingQueue</span>&lt;<span class="ty">Event</span>&gt; q = <span class="kw">new</span> <span class="ty">PriorityBlockingQueue</span>&lt;&gt;(
+    <span class="nm">100</span>, <span class="ty">Comparator</span>.comparing(<span class="ty">Event</span>::getPriority).reversed());
+<span class="cm">// Unbounded — monitor size in production</span></pre></div></li>
+    <li><span class="bi i5">05</span><div class="bc"><strong>SynchronousQueue — Zero Capacity, Direct Handoff:</strong> No buffering — put() blocks until take() is ready. Used as work queue in <code>Executors.newCachedThreadPool()</code> — direct handoff to a thread. Useful when you want immediate feedback on whether task was accepted.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="collections"><div class="qq" onclick="tog(this)"><span class="qn">26</span><div class="qb"><div class="qt">CopyOnWriteArrayList — ideal use case and when it becomes a performance trap.</div><div class="qrow"><span class="tag tp">CopyOnWrite</span><span class="tag tb">Read-Heavy</span><span class="tag ty">Trade-Offs</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>How It Works:</strong> Every write creates a complete copy of the underlying array, makes the change, atomically swaps the reference. Reads operate on the old snapshot — never blocked, no ConcurrentModificationException during iteration.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Ideal Use — Spring ApplicationEventMulticaster:</strong> Listener lists registered once at startup, iterated thousands of times per second during event processing. Write once (or rarely), read many — perfect fit for CopyOnWrite.</div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>When It's a Performance Trap:</strong><pre><span class="cm">// BAD: high-frequency writes</span>
+<span class="ty">CopyOnWriteArrayList</span>&lt;<span class="ty">Event</span>&gt; events = <span class="kw">new</span> <span class="ty">CopyOnWriteArrayList</span>&lt;&gt;();
+<span class="kw">for</span> (<span class="ty">Event</span> e : stream) events.add(e); <span class="cm">// copies entire array every add! O(n) per write</span>
+<span class="cm">// Frequent writes + large lists = massive GC pressure</span>
+<span class="cm">// Fix: use ArrayBlockingQueue or ConcurrentLinkedQueue instead</span></pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="collections"><div class="qq" onclick="tog(this)"><span class="qn">27</span><div class="qb"><div class="qt">ConcurrentLinkedQueue — lock-free thread safety via CAS.</div><div class="qrow"><span class="tag tp">Lock-Free</span><span class="tag tb">CAS Queue</span><span class="tag tg">Non-Blocking</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Lock-Free via CAS:</strong> Linked-node structure. head and tail are AtomicReference fields. Enqueue: CAS on tail.next. Dequeue: CAS on head. No locks — threads retry CAS if they lose the race. Non-blocking: a thread that fails CAS simply retries, never suspends.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Key Properties:</strong> Unbounded. FIFO. <code>size()</code> is O(n) — use isEmpty() instead. No blocking operations — use BlockingQueue if you need waiting producers/consumers. Best for: multi-producer multi-consumer event buses where blocking is unacceptable.</div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>CLQ vs BlockingQueue Decision:</strong> ConcurrentLinkedQueue: producers must never block (fire-and-forget, event logging). BlockingQueue: producers should apply backpressure when consumers are slow (thread pool work queues). CLQ grows unboundedly — always monitor size in production.</div></li>
+  </ul></div></div>
+
+  <div class="sh" data-cat="patterns"><span class="stag">Section 07</span><span class="stitle">Concurrency Patterns &amp; Production Problems</span><span class="sc">Q28–Q30</span></div>
+
+  <div class="qc" data-cat="patterns"><div class="qq" onclick="tog(this)"><span class="qn">28</span><div class="qb"><div class="qt">Implement a thread-safe bounded blocking queue from scratch.</div><div class="qrow"><span class="tag tp">Coding</span><span class="tag tb">Design</span><span class="tag tr">Live Coding Q</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><div class="ai">Live-coding question asked at PhonePe and Razorpay. Tests deep understanding of ReentrantLock and Condition variables.</div><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>ReentrantLock + Two Conditions:</strong><pre><span class="kw">public class</span> <span class="ty">BoundedBlockingQueue</span>&lt;<span class="ty">T</span>&gt; {
+    <span class="kw">private final</span> <span class="ty">Object</span>[] items;
+    <span class="kw">private int</span> head = <span class="nm">0</span>, tail = <span class="nm">0</span>, count = <span class="nm">0</span>;
+    <span class="kw">private final</span> <span class="ty">ReentrantLock</span> lock = <span class="kw">new</span> <span class="ty">ReentrantLock</span>();
+    <span class="kw">private final</span> <span class="ty">Condition</span> notFull  = lock.newCondition();
+    <span class="kw">private final</span> <span class="ty">Condition</span> notEmpty = lock.newCondition();
+
+    <span class="kw">public</span> <span class="ty">BoundedBlockingQueue</span>(<span class="kw">int</span> cap) { items = <span class="kw">new</span> <span class="ty">Object</span>[cap]; }
+
+    <span class="kw">public void</span> put(<span class="ty">T</span> item) <span class="kw">throws</span> <span class="ty">InterruptedException</span> {
+        lock.lock();
+        <span class="kw">try</span> {
+            <span class="kw">while</span> (count == items.length) notFull.await(); <span class="cm">// WHILE!</span>
+            items[tail] = item;
+            tail = (tail + <span class="nm">1</span>) % items.length;
+            count++;
+            notEmpty.signal(); <span class="cm">// wake one consumer only</span>
+        } <span class="kw">finally</span> { lock.unlock(); }
+    }
+
+    <span class="an">@SuppressWarnings</span>(<span class="st">"unchecked"</span>)
+    <span class="kw">public</span> <span class="ty">T</span> take() <span class="kw">throws</span> <span class="ty">InterruptedException</span> {
+        lock.lock();
+        <span class="kw">try</span> {
+            <span class="kw">while</span> (count == <span class="nm">0</span>) notEmpty.await();        <span class="cm">// WHILE!</span>
+            <span class="ty">T</span> item = (<span class="ty">T</span>) items[head];
+            items[head] = <span class="kw">null</span>;                        <span class="cm">// prevent GC leak</span>
+            head = (head + <span class="nm">1</span>) % items.length;
+            count--;
+            notFull.signal();  <span class="cm">// wake one producer only</span>
+            <span class="kw">return</span> item;
+        } <span class="kw">finally</span> { lock.unlock(); }
+    }
+}</pre></div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Why signal() not signalAll():</strong> Separate Condition variables mean notEmpty.signal() wakes ONLY consumers, notFull.signal() wakes ONLY producers. No spurious wakeups of wrong thread type. More efficient than synchronized+notifyAll() which wakes everyone.</div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="patterns"><div class="qq" onclick="tog(this)"><span class="qn">29</span><div class="qb"><div class="qt">Immutable object pattern — why it is the safest form of thread safety.</div><div class="qrow"><span class="tag tp">Immutability</span><span class="tag tb">Thread Safety</span><span class="tag tg">Best Practice</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><ul class="bl">
+    <li><span class="bi i1">01</span><div class="bc"><strong>Immutable = No Synchronization Needed:</strong> If state cannot change after construction, there is nothing to synchronize. No race conditions, no visibility problems, no deadlocks. Concurrent reads from any number of threads are always safe. This is the gold standard — eliminate the need for synchronization entirely.</div></li>
+    <li><span class="bi i2">02</span><div class="bc"><strong>Rules for Immutability:</strong><pre><span class="kw">public final class</span> <span class="ty">ImmutableEvent</span> {  <span class="cm">// final class</span>
+    <span class="kw">private final</span> <span class="ty">String</span>  id;        <span class="cm">// all fields final</span>
+    <span class="kw">private final</span> <span class="ty">Instant</span> timestamp;
+    <span class="kw">private final</span> <span class="ty">List</span>&lt;<span class="ty">String</span>&gt; tags;  <span class="cm">// mutable — must defensive copy!</span>
+
+    <span class="kw">public</span> <span class="ty">ImmutableEvent</span>(<span class="ty">String</span> id, <span class="ty">Instant</span> ts, <span class="ty">List</span>&lt;<span class="ty">String</span>&gt; tags) {
+        this.id=id; this.timestamp=ts;
+        this.tags = <span class="ty">List</span>.copyOf(tags); <span class="cm">// defensive copy — don't trust caller</span>
+    }                                   <span class="cm">// No setters. No mutation.</span>
+}</pre></div></li>
+    <li><span class="bi i3">03</span><div class="bc"><strong>Java Records (Java 16+):</strong><pre><span class="kw">public record</span> <span class="ty">EventRecord</span>(<span class="ty">String</span> id, <span class="ty">Instant</span> timestamp, <span class="ty">List</span>&lt;<span class="ty">String</span>&gt; tags) {
+    <span class="kw">public</span> <span class="ty">EventRecord</span> { tags = <span class="ty">List</span>.copyOf(tags); } <span class="cm">// compact constructor</span>
+}
+<span class="cm">// At JP Morgan: all event DTOs are records — zero synchronization overhead</span></pre></div></li>
+    <li><span class="bi i4">04</span><div class="bc"><strong>Defensive Copy Pitfall:</strong><pre><span class="kw">private final</span> <span class="ty">Date</span> createdAt; <span class="cm">// Date is MUTABLE!</span>
+<span class="kw">public</span> <span class="ty">Date</span> getCreatedAt() { <span class="kw">return</span> createdAt; } <span class="cm">// BAD: caller can mutate it</span>
+<span class="cm">// Fix: return new Date(createdAt.getTime())  OR  use Instant (truly immutable)</span></pre></div></li>
+  </ul></div></div>
+
+  <div class="qc" data-cat="patterns"><div class="qq" onclick="tog(this)"><span class="qn">30</span><div class="qb"><div class="qt">10 concurrency quick-fire answers for closing interview rounds.</div><div class="qrow"><span class="tag tp">Quick Fire</span><span class="tag tb">Closing Round</span><span class="tag tg">Memorize</span></div></div><span class="qa">▾</span></div>
+  <div class="ans"><div class="ai">20–30 seconds each — memorize these. They appear as rapid-fire questions at the end of every concurrency round.</div><ul class="bl">
+    <li><span class="bi i1">Q1</span><div class="bc"><strong>sleep() vs wait():</strong> sleep() pauses thread, does NOT release locks. wait() pauses thread AND releases the intrinsic lock. wait() must be called inside synchronized; sleep() can be called anywhere.</div></li>
+    <li><span class="bi i2">Q2</span><div class="bc"><strong>Can you start a thread twice?</strong> No — calling start() twice throws IllegalThreadStateException. Create a new Thread instance if you need to run the task again.</div></li>
+    <li><span class="bi i3">Q3</span><div class="bc"><strong>Exception in run():</strong> Thread terminates. Exception goes to UncaughtExceptionHandler if set, otherwise default handler prints it. Does NOT propagate to the thread that called start(). Use Future.get() to receive exceptions from submitted tasks.</div></li>
+    <li><span class="bi i4">Q4</span><div class="bc"><strong>Thread.yield():</strong> Hints to scheduler that current thread is willing to yield CPU. Scheduler may ignore it. Doesn't release locks. Rarely useful in production — don't use it.</div></li>
+    <li><span class="bi i5">Q5</span><div class="bc"><strong>Thread.join() happens-before:</strong> All actions in thread T happen-before Thread.join(T) returns. After join(), you can safely read any value written by that thread without additional synchronization.</div></li>
+    <li><span class="bi i6">Q6</span><div class="bc"><strong>synchronized vs Lock:</strong> synchronized: simpler, JVM-managed, can't interrupt while waiting, no tryLock. Lock: explicit unlock, tryLock with timeout, interruptible waiting, fairness, multiple Conditions. synchronized for simple cases; Lock for advanced control.</div></li>
+    <li><span class="bi i1">Q7</span><div class="bc"><strong>Memory barrier:</strong> CPU instruction preventing reordering of memory operations. volatile read/write and lock acquire/release insert memory barriers. Ensures all prior writes are visible after the barrier.</div></li>
+    <li><span class="bi i2">Q8</span><div class="bc"><strong>synchronized inheritance:</strong> synchronized is NOT inherited. Overriding method does not automatically get the lock — must explicitly declare synchronized. Common source of subtle thread-safety breaks in subclasses.</div></li>
+    <li><span class="bi i3">Q9</span><div class="bc"><strong>What is Exchanger?</strong> Synchronization point where exactly two threads swap objects. Each presents an object and receives the other's. Used for pipeline buffer swapping. Rare in typical backend services.</div></li>
+    <li><span class="bi i4">Q10</span><div class="bc"><strong>Three rules for thread-safe code:</strong> (1) Don't share mutable state — use immutable objects or ThreadLocal. (2) When you must share, synchronize ALL accesses — both reads AND writes. (3) Prefer java.util.concurrent over hand-rolled synchronization — BlockingQueue, ConcurrentHashMap, AtomicInteger cover 95% of needs.</div></li>
+  </ul></div></div>
+
+</div>
+<div class="footer">MULTITHREADING &amp; CONCURRENCY · 30 Q&A · JMM · LOCKS · EXECUTORS · COMPLETABLEFUTURE · CONCURRENT COLLECTIONS · JP MORGAN &amp; VISA · 2025</div>
+<script>
+let reviewed = new Set();
+function tog(btn) {
+  const card = btn.closest('.qc');
+  card.classList.toggle('open');
+  if (card.classList.contains('open')) reviewed.add(card.querySelector('.qn').textContent);
+  const pct = Math.round((reviewed.size / 30) * 100);
+  document.getElementById('pF').style.width = pct + '%';
+  document.getElementById('pL').textContent = reviewed.size + ' / 30';
+}
+function fcat(cat, btn) {
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.qc').forEach(c => {
+    c.classList.toggle('hidden', cat !== 'all' && c.dataset.cat !== cat);
+  });
+  document.querySelectorAll('.sh').forEach(h => {
+    h.classList.toggle('hidden', cat !== 'all' && h.dataset.cat !== cat);
+  });
+}
+function search(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.qc').forEach(c => {
+    c.classList.toggle('hidden', q.length > 0 && !c.textContent.toLowerCase().includes(q));
+  });
+}
+</script>
+
+  </main>
+  <script type="module" src="../../../js/topic.js"></script>
+  </body>
+</html>

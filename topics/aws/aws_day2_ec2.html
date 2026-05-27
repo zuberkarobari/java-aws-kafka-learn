@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AWS EC2 Virtual Machines - Day 2 Session." />
+  <title>EC2 Virtual Machines — Java Learn</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.wrap{padding:1rem 0}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:500;padding:3px 10px;border-radius:var(--border-radius-md);background:#E1F5EE;color:#085041;border:0.5px solid #5DCAA5}
+.tag{font-size:11px;padding:3px 9px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary)}
+.pdots{display:flex;gap:5px;margin-left:auto;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--color-border-secondary)}
+.dot.done{background:#1D9E75}.dot.on{background:#185FA5}
+
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:6px 14px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);font-size:13px;cursor:pointer;transition:all .15s;font-family:var(--font-sans)}
+.ntab.active,.ntab:hover{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-primary)}
+.ntab.active{font-weight:500}
+.panel{display:none}.panel.active{display:block}
+
+.lede{background:var(--color-background-secondary);border-left:3px solid #1D9E75;padding:1rem 1.25rem;border-radius:0 var(--border-radius-lg) var(--border-radius-lg) 0;margin-bottom:1.2rem;font-size:13px;color:var(--color-text-secondary);line-height:1.7}
+.lede strong{font-weight:500;color:var(--color-text-primary)}
+
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);color:var(--color-text-secondary);font-size:12px;cursor:pointer;font-family:var(--font-sans);transition:all .15s}
+.cbtn.active{background:#E1F5EE;color:#085041;border-color:#5DCAA5;font-weight:500}
+.cpanel{display:none}.cpanel.active{display:block}
+
+.ch{font-size:16px;font-weight:500;margin-bottom:6px}
+.cs{font-size:12px;color:var(--color-text-secondary);margin-bottom:12px}
+.cb{font-size:13px;color:var(--color-text-secondary);line-height:1.75}
+.cb p{margin-bottom:10px}.cb p:last-child{margin-bottom:0}
+.hbox{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 14px;margin:10px 0;font-size:13px;color:var(--color-text-secondary);line-height:1.65}
+.hbox strong{font-weight:500;color:var(--color-text-primary)}
+.mono{font-family:var(--font-mono);font-size:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:3px 7px;display:inline-block;color:var(--color-text-primary)}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:var(--border-radius-md);margin-top:8px;font-weight:500;margin-right:4px}
+.p-green{background:#E1F5EE;color:#085041}.p-blue{background:#E6F1FB;color:#0C447C}
+.p-amber{background:#FAEEDA;color:#633806}.p-coral{background:#FAECE7;color:#712B13}
+.p-purple{background:#EEEDFE;color:#3C3489}.p-gray{background:var(--color-background-secondary);color:var(--color-text-secondary);border:0.5px solid var(--color-border-tertiary)}
+.divider{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:1.2rem 0}
+
+.it-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:1rem}
+.it-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:10px 12px;cursor:pointer;transition:border-color .15s}
+.it-card:hover{border-color:var(--color-border-secondary)}
+.it-card.selected{border-color:#185FA5;background:#E6F1FB}
+.it-name{font-size:13px;font-weight:500;margin-bottom:3px}
+.it-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:6px}
+.it-price{font-size:12px;font-weight:500;color:#0F6E56}
+.it-detail{font-size:12px;color:var(--color-text-secondary);margin-top:8px;padding:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);display:none;line-height:1.6}
+.it-detail.show{display:block}
+
+.lc-wrap{margin-bottom:1rem}
+.lc-stages{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-bottom:10px}
+.lc-stage{padding:8px 14px;border-radius:var(--border-radius-md);font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-secondary);margin:3px;transition:all .15s}
+.lc-stage.active-s{background:#E6F1FB;color:#0C447C;border-color:#378ADD}
+.lc-stage.running{background:#E1F5EE;color:#085041;border-color:#1D9E75}
+.lc-stage.stopped{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.lc-stage.terminated{background:#FAECE7;color:#712B13;border-color:#D85A30}
+.lc-info{font-size:13px;color:var(--color-text-secondary);line-height:1.65;padding:10px 14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)}
+
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;cursor:pointer}
+.iq:hover{border-color:var(--color-border-secondary)}
+.iq.open{border-color:var(--color-border-primary)}
+.iq-top{display:flex;align-items:center;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:500;color:var(--color-text-tertiary);min-width:22px}
+.iq-q{font-size:13px;font-weight:500;flex:1;line-height:1.4}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:var(--border-radius-md);font-weight:500;flex-shrink:0}
+.d-e{background:#E1F5EE;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:var(--color-text-tertiary);transition:transform .2s;flex-shrink:0}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:0.5px solid var(--color-border-tertiary);padding:1rem 1.25rem;background:var(--color-background-secondary)}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:var(--color-text-secondary);line-height:1.75;margin-bottom:9px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:500;color:var(--color-text-primary)}
+.tip{font-size:12px;color:#0F6E56;padding:7px 11px;background:#E1F5EE;border-radius:var(--border-radius-md);margin-top:10px;display:block;line-height:1.55}
+.tip strong{font-weight:500;color:#085041}
+.star{font-size:10px;background:#FAEEDA;color:#633806;padding:2px 6px;border-radius:var(--border-radius-md);font-weight:500;margin-left:5px}
+
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--color-border-secondary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--color-text-secondary);background:var(--color-background-primary);cursor:pointer;flex-shrink:0;transition:all .2s;font-family:var(--font-sans)}
+.sc.done{background:#E1F5EE;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:var(--color-border-tertiary);flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:500;margin-bottom:4px}
+.sb{font-size:13px;color:var(--color-text-secondary);line-height:1.65}
+.cmd{font-family:var(--font-mono);font-size:12px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:7px 10px;margin-top:6px;display:block;color:var(--color-text-primary);white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:var(--color-text-tertiary);margin-top:4px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:4px 12px;cursor:pointer;border-radius:var(--border-radius-md);background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);font-family:var(--font-sans)}
+.mbtn:hover{border-color:var(--color-border-primary);color:var(--color-text-primary)}
+
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px;margin-bottom:1.2rem}
+.cs-item{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:10px 12px}
+.cs-t{font-size:13px;font-weight:500;margin-bottom:4px}
+.cs-d{font-size:12px;color:var(--color-text-secondary);line-height:1.55}
+.cmd-list{display:flex;flex-direction:column;gap:5px}
+
+.next-btn{width:100%;padding:10px 14px;border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);cursor:pointer;font-size:13px;font-weight:500;color:var(--color-text-primary);margin-top:1.2rem;font-family:var(--font-sans)}
+.next-btn:hover{border-color:var(--color-border-primary)}
+</style>
+
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 2 of 30</span>
+    <span class="tag">EC2 — Elastic Compute Cloud</span>
+    <span class="tag">~1.5 hrs</span>
+    <span class="tag">5 concepts</span>
+    <span class="tag">9 interview Qs</span>
+    <div class="pdots">
+      <span class="dot done"></span><span class="dot on"></span><span class="dot"></span>
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:2px">2/30</span>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('concepts',this)">Concepts</button>
+    <button class="ntab" onclick="show('instance-types',this)">Instance types</button>
+    <button class="ntab" onclick="show('lifecycle',this)">EC2 lifecycle</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Hands-on lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- CONCEPTS -->
+  <div id="p-concepts" class="panel active">
+    <div class="lede"><strong>What EC2 actually is:</strong> EC2 (Elastic Compute Cloud) is AWS's virtual machine service. You rent a slice of a physical server in Amazon's data centre — choosing the OS, CPU, RAM, and storage — and SSH into it just like any Linux box. Your Spring Boot app runs on EC2 exactly like it would on any Linux server, except you provision it in 60 seconds instead of waiting weeks for hardware.</div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC(0,this)">1 · What is EC2?</button>
+      <button class="cbtn" onclick="showC(1,this)">2 · AMI</button>
+      <button class="cbtn" onclick="showC(2,this)">3 · Key pairs</button>
+      <button class="cbtn" onclick="showC(3,this)">4 · Security Groups</button>
+      <button class="cbtn" onclick="showC(4,this)">5 · Elastic IP</button>
+    </div>
+
+    <div id="c0" class="cpanel active">
+      <div class="ch">What is EC2?</div>
+      <div class="cs">Elastic Compute Cloud — rented virtual machines on AWS infrastructure</div>
+      <div class="cb">
+        <p>EC2 is the foundation of most AWS deployments. When you launch an EC2 instance, AWS spins up a virtual machine on physical hardware in the data centre of your chosen AZ. You get root-level access over SSH, install whatever you want, and run any application — exactly like a rented VPS (Virtual Private Server), but with far more flexibility and integrations.</p>
+        <p>The "Elastic" in EC2 means two things: you can resize it (change instance type) and you can add or remove instances programmatically. You start with one t2.micro for development, and your Auto Scaling Group adds ten m5.large instances during peak traffic — then removes them when load drops. You pay per second of running time.</p>
+        <div class="hbox"><strong>Your Spring Boot app on EC2:</strong> You SSH into the instance, install Java 17 with <span class="mono">sudo yum install java-17</span>, upload your JAR via SCP or CodeDeploy, and run it with <span class="mono">java -jar app.jar</span>. From there, it behaves exactly like running on your Deloitte office server — except AWS handles the physical hardware, power, cooling, and network.</div>
+        <p>EC2 instances live inside a VPC (Virtual Private Cloud — Day 4 topic). They can have a public IP (reachable from the internet) or private IP only (reachable only within the VPC). A Security Group acts as a firewall controlling which traffic reaches the instance.</p>
+      </div>
+      <span class="pill p-green">IaaS — you manage the OS upwards</span>
+      <span class="pill p-blue">Pay per second of running time</span>
+    </div>
+
+    <div id="c1" class="cpanel">
+      <div class="ch">AMI — Amazon Machine Image</div>
+      <div class="cs">Your server's blueprint — OS + pre-installed software snapshot</div>
+      <div class="cb">
+        <p>An AMI is a template that defines what your EC2 instance starts with. It contains the operating system, any pre-installed software, configuration, and storage volume snapshots. When you launch an EC2 instance, you always pick an AMI — it's the first thing the wizard asks you.</p>
+        <p>AWS provides hundreds of public AMIs: Amazon Linux 2023, Ubuntu 22.04 LTS, Windows Server, Red Hat, etc. The AWS Marketplace offers pre-configured AMIs with software like Jenkins, Nginx, or Java already installed. And you can create your own custom AMI from a running instance — capturing everything you've installed and configured.</p>
+        <div class="hbox"><strong>Why custom AMIs matter for you:</strong> Imagine you've set up an EC2 with Java 17, your app's environment variables, and your Spring Boot JAR. Instead of repeating this setup every time you launch a new instance, create an AMI from it. Now every new instance in your Auto Scaling Group launches pre-configured in 60 seconds — no setup scripts needed. This is exactly how production deployments scale.</div>
+        <p>AMI IDs are region-specific. The same Amazon Linux 2023 AMI has a different ID in ap-south-1 vs us-east-1. When scripting deployments with Terraform (which you already know), always reference the correct region's AMI ID.</p>
+      </div>
+      <span class="pill p-green">Custom AMI = your golden server image</span>
+      <span class="pill p-amber">AMI IDs are region-specific</span>
+    </div>
+
+    <div id="c2" class="cpanel">
+      <div class="ch">Key pairs — SSH access to your instance</div>
+      <div class="cs">Public/private key authentication — the only way in</div>
+      <div class="cb">
+        <p>EC2 instances don't have passwords by default. Access is via SSH key pairs. AWS stores the public key on the instance; you keep the private key (.pem file) on your machine. When you SSH in, your private key proves your identity without transmitting a password.</p>
+        <p>You create a key pair in the EC2 console before launching an instance, or import your existing SSH public key. AWS injects the public key into the instance's <span class="mono">~/.ssh/authorized_keys</span> file at launch. The private .pem file is downloaded once — if you lose it, you cannot SSH into the instance again.</p>
+        <div class="hbox">
+          <strong>How to SSH into your EC2 instance:</strong><br>
+          <span class="mono">chmod 400 my-key.pem</span> — fix permissions (SSH rejects world-readable keys)<br>
+          <span class="mono">ssh -i my-key.pem ec2-user@&lt;public-ip&gt;</span> — connect (Amazon Linux uses ec2-user, Ubuntu uses ubuntu)<br>
+          The default username depends on the AMI: Amazon Linux = <span class="mono">ec2-user</span>, Ubuntu = <span class="mono">ubuntu</span>, RHEL = <span class="mono">ec2-user</span>
+        </div>
+        <p>In production, you often don't SSH directly — you use AWS Systems Manager Session Manager instead (no open port 22, no key pair needed). But for learning, key pair SSH is the standard approach and something every interviewer will ask about.</p>
+      </div>
+      <span class="pill p-coral">Never lose your .pem file</span>
+      <span class="pill p-blue">chmod 400 before every SSH</span>
+    </div>
+
+    <div id="c3" class="cpanel">
+      <div class="ch">Security Groups</div>
+      <div class="cs">EC2's virtual firewall — stateful, inbound + outbound rules</div>
+      <div class="cb">
+        <p>A Security Group is a virtual firewall attached to your EC2 instance (and other resources like RDS, ELB). It controls inbound and outbound traffic using rules. Each rule specifies: protocol (TCP/UDP/ICMP), port range, and source/destination (IP CIDR or another Security Group).</p>
+        <p>Security Groups are <strong>stateful</strong>: if you allow inbound TCP port 8080, the corresponding outbound response is automatically allowed — you don't need a separate outbound rule for the response traffic. This is different from Network ACLs (Day 4) which are stateless.</p>
+        <div class="hbox">
+          <strong>Typical Security Group for a Spring Boot API server:</strong><br>
+          Inbound: port 22 (SSH) from your IP only — <span class="mono">115.246.x.x/32</span><br>
+          Inbound: port 8080 (Spring Boot) from the ALB's Security Group<br>
+          Inbound: port 443 (HTTPS) from 0.0.0.0/0 (all internet)<br>
+          Outbound: all traffic to 0.0.0.0/0 (allow all outbound — this is the default)<br>
+          <strong>Never open port 22 to 0.0.0.0/0 in production.</strong> That's inviting brute-force attacks.
+        </div>
+        <p>Security Groups reference each other — your RDS instance's Security Group can allow inbound port 3306 only from your EC2's Security Group ID. This means only your EC2 can reach your database, not the public internet. This is one of the most important security patterns in AWS.</p>
+      </div>
+      <span class="pill p-coral">Stateful firewall — response traffic auto-allowed</span>
+      <span class="pill p-green">SGs reference each other — key security pattern</span>
+    </div>
+
+    <div id="c4" class="cpanel">
+      <div class="ch">Elastic IP</div>
+      <div class="cs">A static public IP address that survives instance stop/start</div>
+      <div class="cb">
+        <p>By default, an EC2 instance gets a new public IP every time it starts. If you stop and start your instance overnight, its public IP changes — breaking any DNS records, Postman collections, or firewall rules pointing to the old IP. An Elastic IP (EIP) solves this: it's a static public IP you allocate from AWS and associate with your instance. The IP stays the same even if you stop/start or even replace the instance.</p>
+        <p>EIPs are free as long as they're attached to a running instance. If you allocate an EIP but don't attach it, AWS charges a small fee (~$0.005/hr) — this discourages hoarding IPs. When you're done with a lab, always release your EIP to avoid surprise charges.</p>
+        <div class="hbox"><strong>When do you actually need an EIP?</strong> In production, you usually put a Load Balancer in front of EC2 — the ALB has its own DNS name (not an IP), so EIPs become unnecessary for web traffic. EIPs are most useful for: a dev/test EC2 you SSH into regularly, a NAT Gateway (Day 4), or a legacy system that requires a fixed IP for third-party firewall whitelisting.</div>
+        <p>For your GetWork app or personal projects: allocate an EIP to your dev EC2 on Day 2 so your SSH alias works every session without updating the IP.</p>
+      </div>
+      <span class="pill p-blue">Free when attached to running instance</span>
+      <span class="pill p-amber">Release when not in use — or get charged</span>
+    </div>
+
+    <button class="next-btn" onclick="show('instance-types', document.querySelector('.ntab:nth-child(2)'))">Explore EC2 instance types →</button>
+  </div>
+
+  <!-- INSTANCE TYPES -->
+  <div id="p-instance-types" class="panel">
+    <div class="lede"><strong>Choosing the right instance type</strong> is one of the most common interview topics and a real day-to-day decision. Instance types are named by family (what they're optimised for) + generation (hardware version) + size (how much resource). Click any card to see full details.</div>
+
+    <div style="font-size:13px;font-weight:500;margin-bottom:10px">General purpose — balanced CPU + RAM (most common)</div>
+    <div class="it-grid">
+      <div class="it-card" onclick="selectIT(this,'t2-detail')">
+        <div class="it-name">t2 / t3 / t4g</div>
+        <div class="it-desc">Burstable performance</div>
+        <div class="it-price">t2.micro: Free tier</div>
+      </div>
+      <div class="it-card" onclick="selectIT(this,'m5-detail')">
+        <div class="it-name">m5 / m6i / m7i</div>
+        <div class="it-desc">Steady-state workloads</div>
+        <div class="it-price">m5.large: ~$0.096/hr</div>
+      </div>
+    </div>
+    <div id="t2-detail" class="it-detail">
+      <strong>t-family (burstable):</strong> These instances have a baseline CPU performance and earn CPU credits when idle. They can burst above baseline using those credits. Perfect for: dev/test servers, low-traffic APIs, learning labs. Your Spring Boot app running at 5% CPU earns credits, then can burst to 100% CPU for a short period when a batch job runs. t3 is the current gen (preferred over t2). t4g uses ARM Graviton2 chips — 20% cheaper for same performance. Use t3.micro or t3.small for most of your 30-day labs.
+    </div>
+    <div id="m5-detail" class="it-detail">
+      <strong>m-family (general purpose):</strong> Consistent CPU performance with no bursting — guaranteed CPU at all times. Use for production APIs, application servers, and any workload that needs predictable performance. m5.large = 2 vCPU + 8GB RAM. m5.xlarge = 4 vCPU + 16GB RAM. Your Hotel Microservices system in production would likely use m5.large or m5.xlarge per service. The "i" suffix (m6i, m7i) = Intel. "a" suffix (m6a) = AMD (slightly cheaper). "g" suffix = ARM Graviton (best price/performance).
+    </div>
+
+    <div style="font-size:13px;font-weight:500;margin:14px 0 10px">Compute optimised — high CPU:RAM ratio</div>
+    <div class="it-grid">
+      <div class="it-card" onclick="selectIT(this,'c5-detail')">
+        <div class="it-name">c5 / c6i / c7g</div>
+        <div class="it-desc">CPU-intensive workloads</div>
+        <div class="it-price">c5.large: ~$0.085/hr</div>
+      </div>
+    </div>
+    <div id="c5-detail" class="it-detail">
+      <strong>c-family (compute optimised):</strong> Higher CPU:RAM ratio than m-family. Same price but more CPU, less RAM. Use for: batch processing, media transcoding, high-performance web servers, CPU-heavy microservices. In your Kafka work at Infosys — a stream processing consumer that does heavy message transformation would benefit from c-family over m-family. For typical Spring Boot CRUD APIs, m-family is usually the right choice.
+    </div>
+
+    <div style="font-size:13px;font-weight:500;margin:14px 0 10px">Memory optimised — high RAM for in-memory workloads</div>
+    <div class="it-grid">
+      <div class="it-card" onclick="selectIT(this,'r5-detail')">
+        <div class="it-name">r5 / r6i / r7g</div>
+        <div class="it-desc">Memory-intensive apps</div>
+        <div class="it-price">r5.large: ~$0.126/hr</div>
+      </div>
+      <div class="it-card" onclick="selectIT(this,'x1-detail')">
+        <div class="it-name">x1e / x2idn</div>
+        <div class="it-desc">Massive in-memory DBs</div>
+        <div class="it-price">x1e.xlarge: ~$3.34/hr</div>
+      </div>
+    </div>
+    <div id="r5-detail" class="it-detail">
+      <strong>r-family (memory optimised):</strong> More RAM per vCPU. Use for: large in-memory caches (Redis if self-hosted), real-time big data analytics, memory-intensive databases. If you were running an ElastiCache Redis cluster on EC2 (instead of AWS managed ElastiCache), r-family is what you'd use. Also good for JVM-heavy applications with large heap sizes — a Spring Boot app with a 12GB heap would want an r5.large or r5.xlarge.
+    </div>
+    <div id="x1-detail" class="it-detail">
+      <strong>x-family (extreme memory):</strong> Designed for in-memory databases like SAP HANA. Up to 24TB RAM. These are specialty instances — you'll rarely touch them unless working on enterprise SAP workloads. Good to know they exist for interview conversations about very large scale systems.
+    </div>
+
+    <div style="font-size:13px;font-weight:500;margin:14px 0 10px">Which to use — quick decision guide</div>
+    <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);padding:1rem;font-size:13px;color:var(--color-text-secondary);line-height:1.8">
+      Labs / dev / learning → <strong style="color:var(--color-text-primary)">t3.micro or t3.small</strong> (free tier or ~$0.02/hr)<br>
+      Spring Boot API (prod) → <strong style="color:var(--color-text-primary)">m5.large or m5.xlarge</strong> (predictable performance)<br>
+      Kafka / stream processing → <strong style="color:var(--color-text-primary)">c5.xlarge</strong> (CPU-heavy)<br>
+      Redis / JVM large heap → <strong style="color:var(--color-text-primary)">r5.large</strong> (RAM-heavy)<br>
+      GetWork backend (launch) → <strong style="color:var(--color-text-primary)">t3.small</strong> (cost-efficient for low traffic, burstable)
+    </div>
+
+    <button class="next-btn" onclick="show('lifecycle', document.querySelector('.ntab:nth-child(3)'))">Learn the EC2 instance lifecycle →</button>
+  </div>
+
+  <!-- LIFECYCLE -->
+  <div id="p-lifecycle" class="panel">
+    <div class="lede"><strong>The EC2 lifecycle is a critical interview topic.</strong> Knowing when data is lost, when you're still billed, and the difference between stop vs terminate has saved engineers from both data loss and surprise AWS bills. Click each state to understand it fully.</div>
+
+    <div class="lc-wrap">
+      <div class="lc-stages">
+        <div class="lc-stage" onclick="showLC('pending')">Pending</div>
+        <div class="lc-stage running" onclick="showLC('running')">Running</div>
+        <div class="lc-stage stopped" onclick="showLC('stopped')">Stopped</div>
+        <div class="lc-stage" onclick="showLC('stopping')">Stopping</div>
+        <div class="lc-stage terminated" onclick="showLC('terminated')">Terminated</div>
+        <div class="lc-stage" onclick="showLC('rebooting')">Rebooting</div>
+      </div>
+      <div id="lc-info" class="lc-info">Click a lifecycle state above to understand it.</div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:13px;font-weight:500;margin-bottom:10px">Stop vs Terminate — the most important distinction</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
+      <div style="background:var(--color-background-primary);border:0.5px solid #5DCAA5;border-radius:var(--border-radius-lg);padding:1rem">
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:#085041">Stop</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.65">
+          Instance shuts down — like turning off a PC.<br><br>
+          EBS root volume is <strong style="color:var(--color-text-primary)">preserved</strong>. Your OS, files, app, everything on disk survives.<br><br>
+          RAM (in-memory state) is lost.<br><br>
+          Gets a new public IP on restart (unless EIP).<br><br>
+          You are <strong style="color:var(--color-text-primary)">not billed</strong> for compute while stopped. You still pay for EBS storage.<br><br>
+          Can be restarted. Safe for dev instances you don't use overnight.
+        </div>
+      </div>
+      <div style="background:var(--color-background-primary);border:0.5px solid #D85A30;border-radius:var(--border-radius-lg);padding:1rem">
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:#712B13">Terminate</div>
+        <div style="font-size:12px;color:var(--color-text-secondary);line-height:1.65">
+          Instance is deleted permanently.<br><br>
+          EBS root volume is <strong style="color:var(--color-text-primary)">deleted by default</strong> (unless you set DeleteOnTermination=false).<br><br>
+          Additional EBS volumes: you choose — keep or delete.<br><br>
+          Cannot be recovered. Gone forever.<br><br>
+          Billing stops immediately.<br><br>
+          Use terminate at end of labs to avoid ongoing EBS charges. Never terminate production instances without a snapshot.
+        </div>
+      </div>
+    </div>
+
+    <div class="hbox" style="border-left:3px solid #D85A30;border-radius:0 var(--border-radius-md) var(--border-radius-md) 0">
+      <strong>Real-world horror story pattern:</strong> Engineer stops an instance thinking it's safe. Two weeks later, terminates it thinking "it's already off, nothing to lose." The EBS volume with 6 months of app logs and config gets deleted. No snapshot. This is why good engineers always: (1) create a snapshot before any potentially destructive action, (2) set up automated EBS snapshots via AWS Backup, and (3) separate persistent data onto a separate EBS volume with DeleteOnTermination=false.
+    </div>
+
+    <button class="next-btn" onclick="show('interview', document.querySelector('.ntab:nth-child(4)'))">Ready for interview questions →</button>
+  </div>
+
+  <!-- INTERVIEW -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>EC2 is asked in every AWS interview.</strong> Questions range from basic definition to deep operational questions about networking, storage, and failure scenarios. Every answer below ties back to your Deloitte/JP Morgan/GetWork experience.</div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">What is EC2 and how does it differ from a traditional server? <span class="star">Always asked</span></span>
+          <span class="iq-d d-e">Easy</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>EC2 (Elastic Compute Cloud) is AWS's virtual machine service. It provides resizable compute capacity — you pick an OS, CPU, RAM, and storage configuration and get a fully functional Linux or Windows server running in a specific AWS Availability Zone within minutes. You have root-level SSH access and can install any software.</p>
+          <p>Key differences from traditional servers: <strong>Speed</strong> — a new server in 60 seconds vs weeks for physical hardware procurement. <strong>Elasticity</strong> — resize from 1 vCPU to 96 vCPUs with a stop/start. Add 10 instances in minutes with Auto Scaling, remove them when load drops. <strong>Billing</strong> — pay per second of running time; stop an instance and billing stops. <strong>No maintenance</strong> — AWS handles hardware failures; if a physical host degrades, AWS migrates your instance to healthy hardware. You do still manage the OS and everything above it.</p>
+          <p>In my current Deloitte project, our Spring Boot microservices run on EC2 instances within a VPC, fronted by an Application Load Balancer. We use EC2 over Lambda because our services are long-running processes with persistent TCP connections to Kafka — not suitable for the stateless, short-lived Lambda execution model.</p>
+          <span class="tip"><strong>Tip:</strong> The last paragraph is gold — explaining WHY you chose EC2 over Lambda shows architectural thinking. Interviewers love candidates who can articulate trade-offs, not just define services.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">What is an AMI and why would you create a custom one?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>An AMI (Amazon Machine Image) is a snapshot-based template that defines the starting state of an EC2 instance. It contains the OS, pre-installed software, configuration files, and the root EBS volume snapshot. Every EC2 launch requires choosing an AMI — AWS provides hundreds of public ones (Amazon Linux, Ubuntu, Windows), and you can also create your own.</p>
+          <p>You'd create a custom AMI when you want a "golden image" — a pre-configured server that every new instance in your fleet starts from. Example: you configure an EC2 with Java 17, your Spring Boot JAR, your Prometheus agent, your CloudWatch agent, and all environment variables. You create an AMI from it. Now your Auto Scaling Group launches new instances from this AMI — fully configured in 60 seconds, no bootstrap scripts needed. When you update your app, you bake a new AMI and roll it out.</p>
+          <p>This is the "immutable infrastructure" pattern — instead of patching running servers, you build a new AMI and replace instances. Netflix pioneered this. It eliminates configuration drift (instances diverging from their intended state over time) and makes rollbacks trivial — just point the ASG at the previous AMI.</p>
+          <span class="tip"><strong>Tip:</strong> Mentioning "immutable infrastructure" and "configuration drift" signals you think like a senior engineer or DevOps practitioner. These are concepts that appear in Deloitte-level consulting discussions about cloud architecture.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">What is the difference between stopping and terminating an EC2 instance? <span class="star">Tricky</span></span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p><strong>Stop</strong> is like shutting down a PC — the instance powers off, EBS root volume is preserved, RAM state is lost, and you are not billed for compute time while stopped. You still pay for EBS storage. The instance retains its instance ID, IAM role, security groups, and private IP address. It gets a new public IP when restarted unless you've assigned an Elastic IP. It can be restarted at any time.</p>
+          <p><strong>Terminate</strong> is permanent deletion. The instance is destroyed. By default, the root EBS volume is also deleted (controlled by the DeleteOnTermination attribute, which defaults to true). Any additional EBS volumes you've attached are preserved by default (their own DeleteOnTermination is false by default). The instance cannot be recovered — it disappears from your console within minutes. Billing stops immediately upon termination.</p>
+          <p>The practical implication: stop your dev instance at night to save compute costs, but your EBS data survives. Terminate at the end of a project when you've confirmed nothing valuable remains. Before terminating any instance in production, always: create an EBS snapshot, verify the AMI is up to date, and confirm no unreplicable data exists on instance storage (ephemeral storage is always deleted on stop/terminate).</p>
+          <span class="tip"><strong>Tip:</strong> The instance store vs EBS distinction is a follow-up trap. Instance store (ephemeral storage) is physically attached to the host — data is lost on stop, hibernate, OR terminate. EBS survives stop. Knowing this earns points in senior-level interviews.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">What is a Security Group and how is it different from a Network ACL?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>A Security Group is a virtual firewall at the instance level. It controls inbound and outbound traffic using allow rules only (you cannot write deny rules). Security Groups are <strong>stateful</strong> — if an inbound connection is allowed, the response traffic is automatically allowed outbound without a separate rule. Security Groups are associated with EC2 instances, RDS instances, and load balancers. A single instance can have multiple Security Groups.</p>
+          <p>A Network ACL (NACL) is a firewall at the subnet level — it applies to all resources in a subnet. NACLs are <strong>stateless</strong> — you must explicitly allow both inbound AND outbound for every connection, including the response. NACLs support both allow and deny rules, evaluated in order by rule number.</p>
+          <p>Key differences: Security Groups operate at instance level (fine-grained), NACLs at subnet level (broad). SGs are stateful (easier to manage), NACLs are stateless (more complex). SGs allow-only, NACLs allow + deny. In practice, most security is implemented via Security Groups. NACLs are used for broader subnet-level controls — blocking a range of IPs, or as a secondary defence layer. For your Spring Boot EC2: you always configure a Security Group. NACLs are usually left at default unless you have specific subnet-level requirements.</p>
+          <span class="tip"><strong>Tip:</strong> The stateful vs stateless distinction is the key thing interviewers want to hear. Draw it out: "If port 8080 is allowed inbound in a SG, the TCP ACK back to the client is automatically allowed — I don't need an outbound rule. With a NACL, I need both an inbound rule for port 8080 AND an outbound rule for ephemeral ports 1024-65535 for the response." That level of detail is impressive.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q5</span>
+          <span class="iq-q">What are the different EC2 purchasing options and when would you use each?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p><strong>On-Demand</strong> — pay per second, no commitment. Most expensive per hour but maximum flexibility. Use for: unpredictable workloads, development/testing, short-lived jobs. Default choice when you're unsure.</p>
+          <p><strong>Reserved Instances (RI)</strong> — 1 or 3-year commitment for a specific instance type and region. Up to 72% cheaper than on-demand. Standard RIs are locked to instance type; Convertible RIs allow changing instance family. Use for: steady-state production workloads — your always-on Spring Boot API servers. At JP Morgan scale, RIs save millions annually on compute.</p>
+          <p><strong>Spot Instances</strong> — bid on unused EC2 capacity. Up to 90% cheaper than on-demand. AWS can reclaim with 2-minute warning when capacity is needed elsewhere. Use for: fault-tolerant batch jobs, data processing, CI/CD build agents, stateless workers. Never for primary database servers or stateful applications. AWS Spot Fleet manages a pool of Spot instances, automatically replacing reclaimed ones.</p>
+          <p><strong>Savings Plans</strong> — flexible discount model. Commit to a dollar amount per hour (e.g. $10/hr) for 1 or 3 years. Applies across any instance type, region, and even Lambda/Fargate. More flexible than RIs. Preferred by AWS now over Reserved Instances for most use cases.</p>
+          <p><strong>Dedicated Hosts</strong> — physical server entirely dedicated to you. Required for some software licences tied to physical cores (Oracle, Windows Server). Most expensive. JP Morgan and other regulated institutions sometimes use these for compliance/isolation requirements.</p>
+          <span class="tip"><strong>Tip:</strong> A complete answer covers at least on-demand + reserved + spot and when to use each. Mentioning Savings Plans shows you keep up with AWS updates (introduced 2019). Mentioning Dedicated Hosts in the context of compliance is a senior-level touch that resonates in fintech interviews.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q6</span>
+          <span class="iq-q">How would you deploy a Spring Boot application on EC2 from scratch?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Full end-to-end deployment of a Spring Boot app on EC2 involves these steps:</p>
+          <p><strong>1. Launch instance:</strong> Choose Amazon Linux 2023 AMI, t3.small instance type, place in a public subnet with a Security Group allowing port 22 (SSH from your IP) and port 8080 (app traffic from ALB or all internet for dev). Create or select a key pair.</p>
+          <p><strong>2. Connect and configure:</strong> <span class="mono">ssh -i key.pem ec2-user@&lt;public-ip&gt;</span>. Install Java: <span class="mono">sudo dnf install java-17-amazon-corretto -y</span>. Verify: <span class="mono">java -version</span>.</p>
+          <p><strong>3. Deploy the JAR:</strong> From your local machine: <span class="mono">scp -i key.pem target/app.jar ec2-user@&lt;ip&gt;:~/</span>. Back on EC2: <span class="mono">java -jar app.jar --server.port=8080 &</span>. The & runs it in background.</p>
+          <p><strong>4. Make it a service:</strong> Create a systemd unit file so the app restarts on reboot and on crash. This is production-grade. <span class="mono">sudo vim /etc/systemd/system/myapp.service</span> with ExecStart pointing to the JAR.</p>
+          <p><strong>5. Verify:</strong> <span class="mono">curl http://localhost:8080/actuator/health</span> — should return UP. Then from your browser: <span class="mono">http://&lt;ec2-public-ip&gt;:8080/actuator/health</span>.</p>
+          <p>For production, this manual process would be replaced by CodeDeploy (automating the SCP + service restart) or a container deployed via ECS (Day 12).</p>
+          <span class="tip"><strong>Tip:</strong> Mentioning systemd service configuration is what separates a senior from junior answer. Anyone can run <span class="mono">java -jar &</span>. Knowing it needs to be a managed service that restarts on failure shows production experience.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q7</span>
+          <span class="iq-q">What is an Elastic IP and when do you need one?</span>
+          <span class="iq-d d-e">Easy</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>An Elastic IP is a static, public IPv4 address you allocate from AWS and assign to an EC2 instance. Unlike a default public IP (which changes every time the instance stops and starts), an Elastic IP remains the same — it stays associated with your account until you explicitly release it.</p>
+          <p>You need an EIP when: your EC2's IP must remain stable across stop/restart cycles (for DNS records, firewall whitelisting, or SSH configuration); when you need to quickly remap traffic from a failed instance to a standby by moving the EIP; or when a NAT Gateway needs a fixed outbound IP (for SaaS vendors that whitelist by IP).</p>
+          <p>When you don't need an EIP: if your EC2 is behind a Load Balancer (the ALB has a DNS hostname, not an IP — EIP irrelevant). If you're using Route 53 with health checks and automatic failover. Most modern production architectures use ALB + Route 53 and don't use EIPs on individual EC2 instances at all.</p>
+          <p>Cost note: EIPs are free when attached to a running instance. AWS charges ~$0.005/hr for an EIP that's allocated but not attached — to discourage hoarding public IPs. Always release EIPs after lab sessions.</p>
+          <span class="tip"><strong>Tip:</strong> The "when you don't need it" part of the answer shows maturity. Knowing that ALB+Route53 makes EIPs irrelevant for web traffic is a real-world insight that junior engineers often miss.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q8</span>
+          <span class="iq-q">What is user data in EC2 and how does it work?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>User data is a script that EC2 runs automatically on an instance's first boot. You provide it at launch time in the "Advanced details" section of the EC2 wizard, or in your Terraform/CloudFormation config. It runs as root, once, during the very first start-up — not on subsequent reboots (by default).</p>
+          <p>User data is a bash script (on Linux) or PowerShell (on Windows) that bootstraps the instance: installing packages, configuring the OS, downloading and starting your application. This is how you automate the manual steps from Q6 — the SSH + install + deploy flow.</p>
+          <p>Example user data for a Spring Boot server: update packages, install Java 17, download your JAR from S3, create a systemd service, and start it. Every time Auto Scaling launches a new instance from your AMI, this script runs and your app is live within 2–3 minutes — no manual intervention.</p>
+          <p>Important: user data runs as root. Failures in user data scripts are silent unless you check the logs at <span class="mono">/var/log/cloud-init-output.log</span>. If your instance launches but your app isn't running, that's the first place to look. This is a real debugging skill interviewers sometimes probe with "my EC2 launched but my app isn't running — how do you debug it?"</p>
+          <span class="tip"><strong>Tip:</strong> Knowing the log path <span class="mono">/var/log/cloud-init-output.log</span> for debugging user data is a concrete detail that signals hands-on experience. Also mention that you can force user data to run again on reboot by adding <span class="mono">--reboot</span> to cloud-init — sometimes asked in advanced interviews.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q9</span>
+          <span class="iq-q">EC2 vs Lambda — how do you decide which to use for a backend service?<span class="star">Senior</span></span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is an architectural trade-off question with no single right answer — the correct answer depends on the workload characteristics.</p>
+          <p><strong>Use EC2 when:</strong> the workload is long-running (> 15 minutes per request — Lambda's hard limit). The service maintains persistent connections — WebSockets, persistent Kafka consumers, database connection pools. The app needs custom OS-level configuration. You have predictable, steady-state traffic where Reserved Instance pricing makes EC2 cheaper. The team is more comfortable with traditional server operations.</p>
+          <p><strong>Use Lambda when:</strong> the workload is event-driven and short-lived — process an S3 file upload, respond to an API request, handle a queue message. Traffic is spiky or unpredictable — Lambda scales from 0 to thousands of concurrent executions automatically. You want zero server management — no OS patching, no capacity planning. Cost model favours it: Lambda's free tier is 1M requests/month — a lightly used API costs essentially nothing.</p>
+          <p>For my current JP Morgan project: we use EC2 for our Spring Boot microservices because they run persistent Kafka consumers with connection pools, require WebFlux reactive streams, and have steady predictable load — making Reserved Instances cost-effective. We use Lambda for lightweight event-driven tasks like processing Bitbucket webhook events and triggering Jira ticket updates — these are infrequent, short-lived, and perfect for serverless.</p>
+          <span class="tip"><strong>Tip:</strong> This is a favourite senior/architect-level question. The key is knowing the 15-minute Lambda limit, the connection pool issue (Lambda is stateless — no persistent DB connection), and the cost break-even point. Your JP Morgan Kafka context is a perfect real-world justification for EC2 — use it every time.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab', document.querySelector('.ntab:nth-child(5)'))">Start the hands-on lab →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Today's lab goal:</strong> Launch your first real EC2 instance in ap-south-1, SSH into it, install Java 17, and run a Spring Boot JAR on it. By the end, you'll have a live application accessible from your browser via the instance's public IP.</div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Launch a t2.micro EC2 instance</div>
+          <div class="sb">Go to EC2 console → Launch instance. Name it "day2-lab". Choose Amazon Linux 2023 AMI (free tier eligible). Instance type: t2.micro (free tier). Create a new key pair — name it "day2-key", RSA, .pem format. Download it. Network settings: allow SSH from My IP, allow HTTP (port 80) and Custom TCP port 8080 from anywhere (for today's lab). Storage: 8GB gp3 (default). Launch.</div>
+          <code class="cmd">EC2 Console → Launch instance
+Name: day2-lab
+AMI: Amazon Linux 2023
+Type: t2.micro (free tier)
+Key pair: create new → day2-key.pem (download it)
+SG: SSH from My IP, port 8080 from 0.0.0.0/0
+Storage: 8GB gp3 → Launch instance</code>
+          <div class="snote">Wait ~1 minute for the instance to reach "Running" state and pass status checks before trying to SSH.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">SSH into the instance</div>
+          <div class="sb">Go to your EC2 instance in the console, note the Public IPv4 address. Open a terminal. Navigate to where you downloaded day2-key.pem. Fix the key permissions (SSH will refuse to connect otherwise). Then connect.</div>
+          <code class="cmd">chmod 400 ~/Downloads/day2-key.pem
+ssh -i ~/Downloads/day2-key.pem ec2-user@&lt;PUBLIC-IP&gt;
+
+# You should see:
+# Amazon Linux 2023
+# [ec2-user@ip-172-xx-xx-xx ~]$</code>
+          <div class="snote">If you see "Permission denied (publickey)" — your key permissions are wrong. Run chmod 400 again. If "Connection timed out" — the Security Group doesn't allow port 22 from your IP.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Install Java 17 on the instance</div>
+          <div class="sb">Once inside the EC2, update the package manager and install Amazon Corretto 17 (AWS's free, production-grade OpenJDK distribution — the same one you'd use in production at Deloitte).</div>
+          <code class="cmd">sudo dnf update -y
+sudo dnf install java-17-amazon-corretto -y
+java -version
+# Expected: openjdk version "17.x.x"</code>
+          <div class="snote">Amazon Corretto is what AWS recommends for Java on EC2. It's fully compatible with OpenJDK and used heavily in enterprise deployments.</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Upload and run a Spring Boot JAR</div>
+          <div class="sb">From your local machine, SCP your Spring Boot JAR (use your Task Manager or any existing project — or create a quick demo). Then back on EC2, run it on port 8080.</div>
+          <code class="cmd"># On LOCAL machine — upload the JAR:
+scp -i ~/Downloads/day2-key.pem \
+  target/myapp.jar \
+  ec2-user@&lt;PUBLIC-IP&gt;:~/
+
+# On EC2 — run the app:
+java -jar ~/myapp.jar --server.port=8080 &
+
+# Verify it's running:
+curl http://localhost:8080/actuator/health</code>
+          <div class="snote">If you don't have a JAR ready, create a minimal Spring Boot app with Spring Initializr (start.spring.io) — just add Spring Web and Actuator, build it locally with mvn package, and upload the JAR.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Test from your browser</div>
+          <div class="sb">Open your browser and hit the EC2's public IP on port 8080. You should see your Spring Boot app responding from an actual AWS server in Mumbai.</div>
+          <code class="cmd">http://&lt;EC2-PUBLIC-IP&gt;:8080/actuator/health
+# Should return: {"status":"UP"}</code>
+          <div class="snote">This is your first live app on AWS. Screenshot this — it's worth saving. The instance is running in ap-south-1 (Mumbai), serving requests from Amazon's data centre.</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Make the app a systemd service (production practice)</div>
+          <div class="sb">Running the JAR with & means it dies if you close the SSH session and won't restart on reboot. Make it a proper Linux service with systemd — this is how production Spring Boot deployments work on EC2.</div>
+          <code class="cmd">sudo tee /etc/systemd/system/myapp.service &lt;&lt;EOF
+[Unit]
+Description=My Spring Boot App
+After=network.target
+
+[Service]
+User=ec2-user
+ExecStart=/usr/bin/java -jar /home/ec2-user/myapp.jar
+SuccessExitStatus=143
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable myapp
+sudo systemctl start myapp
+sudo systemctl status myapp</code>
+          <div class="snote">Now the app starts automatically on reboot and restarts if it crashes. This is production-grade EC2 deployment without containers.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s7" onclick="done('s7')">7</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Stop the instance (do NOT terminate — we'll use it tomorrow)</div>
+          <div class="sb">When you're done, stop the instance (not terminate) to avoid compute charges overnight. The EBS volume and your app setup survive. Tomorrow's labs may reference this instance.</div>
+          <code class="cmd"># Option 1: From console
+EC2 → Instances → select day2-lab → Instance state → Stop
+
+# Option 2: From CLI
+aws ec2 stop-instances \
+  --instance-ids &lt;your-instance-id&gt; \
+  --region ap-south-1</code>
+          <div class="snote">Stopped instances don't incur compute charges. You still pay ~$0.0008/hr for the 8GB EBS volume — less than a rupee per day. Safe to leave for 30 days.</div>
+          <button class="mbtn" onclick="done('s7')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet', document.querySelector('.ntab:nth-child(6)'))">See Day 2 cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:500;margin-bottom:10px">Day 2 key terms</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">EC2</div><div class="cs-d">Elastic Compute Cloud. Rented virtual machines. IaaS — you manage OS upwards. Pay per second.</div></div>
+      <div class="cs-item"><div class="cs-t">AMI</div><div class="cs-d">Amazon Machine Image. OS + software snapshot. Blueprint for EC2 launch. Custom AMI = golden image. Region-specific IDs.</div></div>
+      <div class="cs-item"><div class="cs-t">t3 family</div><div class="cs-d">Burstable CPU. Use for dev/test/labs. Earns CPU credits when idle, bursts when needed. t3.micro = free tier.</div></div>
+      <div class="cs-item"><div class="cs-t">m5 family</div><div class="cs-d">General purpose. Steady-state production. No bursting. Predictable performance. m5.large = 2 vCPU + 8GB.</div></div>
+      <div class="cs-item"><div class="cs-t">Security Group</div><div class="cs-d">Instance-level virtual firewall. Stateful. Allow rules only. SGs reference each other — DB allows only from app SG.</div></div>
+      <div class="cs-item"><div class="cs-t">Key pair</div><div class="cs-d">SSH public/private key. AWS holds public, you keep .pem. chmod 400 before use. Default user: ec2-user (Amazon Linux).</div></div>
+      <div class="cs-item"><div class="cs-t">Stop vs Terminate</div><div class="cs-d">Stop = EBS survives, compute billing pauses, new IP on restart. Terminate = everything deleted, cannot recover.</div></div>
+      <div class="cs-item"><div class="cs-t">Elastic IP</div><div class="cs-d">Static public IP. Survives stop/start. Free when attached to running instance. Release after labs to avoid charges.</div></div>
+      <div class="cs-item"><div class="cs-t">User data</div><div class="cs-d">Bootstrap script on first boot. Runs as root once. Debug: /var/log/cloud-init-output.log. Powers auto-scaling.</div></div>
+      <div class="cs-item"><div class="cs-t">On-demand vs RI vs Spot</div><div class="cs-d">On-demand = flexible, most expensive. RI = 1-3yr commit, 72% cheaper. Spot = 90% cheaper, can be reclaimed.</div></div>
+      <div class="cs-item"><div class="cs-t">Instance store</div><div class="cs-d">Ephemeral physical storage. Lost on stop/terminate. Not EBS. Only for temp files / scratch space.</div></div>
+      <div class="cs-item"><div class="cs-t">systemd service</div><div class="cs-d">Run Spring Boot as a Linux service. Survives reboot, auto-restarts on crash. Production-grade EC2 deployment.</div></div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:500;margin-bottom:8px">Essential CLI commands — EC2</div>
+    <div class="cmd-list">
+      <code class="cmd">aws ec2 describe-instances --region ap-south-1</code>
+      <code class="cmd">aws ec2 start-instances --instance-ids i-xxxxx --region ap-south-1</code>
+      <code class="cmd">aws ec2 stop-instances --instance-ids i-xxxxx --region ap-south-1</code>
+      <code class="cmd">aws ec2 describe-instance-status --instance-ids i-xxxxx</code>
+      <code class="cmd">aws ec2 describe-images --owners amazon --filters "Name=name,Values=al2023*" --region ap-south-1</code>
+      <code class="cmd">aws ec2 create-key-pair --key-name my-key --query 'KeyMaterial' --output text > my-key.pem</code>
+    </div>
+
+    <button class="next-btn" onclick="sendPrompt('I have completed Day 2 of the AWS plan. Take me to Day 3: S3 deep dive — explain everything about S3, bucket policies, storage classes, versioning, and how a Spring Boot app uses S3, with full interview prep and hands-on lab')">Day 2 complete — start Day 3: S3 ↗</button>
+  </div>
+</div>
+
+<script>
+const lcData = {
+  pending: {label:'Pending', info:'The instance is being prepared — AWS is allocating hardware, copying the AMI, and performing pre-launch checks. The instance is not yet available. You are NOT billed during this state. Typically lasts 30–60 seconds.'},
+  running: {label:'Running', info:'The instance is live and consuming compute. You ARE billed per second. Your app should be running. Two sub-states exist: 1/2 checks = system reachability (AWS hardware); 2/2 checks = OS reachability (your OS responding). Always wait for 2/2 before SSH.'},
+  stopping: {label:'Stopping', info:'Transitional state — the OS is shutting down gracefully. In-flight processes are being cleaned up. You are NOT billed during stopping. Typically takes 10–30 seconds.'},
+  stopped: {label:'Stopped', info:'Instance is off. EBS root volume is preserved with all your data, installed software, and configuration intact. RAM state is lost. You are NOT billed for compute — but you ARE billed for EBS storage (~$0.0008/GB/hr for gp3). Private IP is retained. Public IP changes on next start unless you have an Elastic IP.'},
+  terminated: {label:'Terminated', info:'PERMANENT. The instance is deleted. By default, the root EBS volume is also deleted (DeleteOnTermination=true). Additional attached volumes survive by default. The instance disappears from your console within minutes. Cannot be recovered. Billing stops immediately. Always create a snapshot before terminating anything important.'},
+  rebooting: {label:'Rebooting', info:'The OS restarts without stopping the underlying VM. EBS data is preserved. RAM is cleared. Public IP is RETAINED (unlike stop/start). You ARE billed continuously during a reboot — billing does not pause. Use reboot when you need to apply OS-level changes (kernel updates) without changing the IP address.'}
+};
+function showLC(key) {
+  const d = lcData[key];
+  document.getElementById('lc-info').innerHTML = '<strong style="color:var(--color-text-primary)">' + d.label + ':</strong> ' + d.info;
+  document.querySelectorAll('.lc-stage').forEach(s => s.style.fontWeight = '');
+  event.target.style.fontWeight = '500';
+}
+function show(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t => t.classList.remove('active'));
+  document.getElementById('p-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+function showC(i, btn) {
+  document.querySelectorAll('.cpanel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.cbtn').forEach(b => b.classList.remove('active'));
+  document.getElementById('c' + i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el) { el.classList.toggle('open'); }
+function done(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('done'); el.textContent = '✓'; }
+}
+function selectIT(card, detailId) {
+  document.querySelectorAll('.it-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.it-detail').forEach(d => d.classList.remove('show'));
+  card.classList.add('selected');
+  document.getElementById(detailId).classList.add('show');
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

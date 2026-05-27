@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Exceptions - Aurora Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --bg-color: #020617; /* Dark Slate */
+        --neon-cyan: #2dd4bf; /* Teal */
+        --neon-pink: #f472b6; /* Pink */
+        --neon-purple: #818cf8; /* Indigo */
+        --neon-red: #f43f5e; /* Rose */
+        --neon-green: #34d399; /* Emerald */
+        --neon-orange: #fb923c; /* Orange */
+        --panel-bg: rgba(255, 255, 255, 0.03);
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Flex Layout ensures no overlapping */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-color); position: relative;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255,255,255,0.1);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 16px;
+    }
+
+    /* Vibrant Aurora Background */
+    .aurora-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        overflow: hidden; z-index: 0; background: var(--bg-color);
+    }
+    
+    .orb {
+        position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.45;
+        animation: float 15s infinite ease-in-out alternate;
+    }
+    .orb-1 { width: 300px; height: 300px; background: #f43f5e; top: -50px; left: -100px; }
+    .orb-2 { width: 350px; height: 350px; background: #8b5cf6; bottom: -50px; right: -100px; animation-delay: -5s; }
+    .orb-3 { width: 250px; height: 250px; background: #2dd4bf; top: 40%; left: 20%; animation-delay: -10s; }
+
+    @keyframes float {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(30px, -30px) scale(1.1); }
+    }
+
+    /* Header - Fixed Top */
+    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
+        background: linear-gradient(135deg, #ffffff, #94a3b8);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 4px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--neon-cyan); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Visual Canvas Area - Top Half */
+    .canvas {
+        flex: 1.2; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 15px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scrollable Data Containers in Canvas (Frosted Glass) */
+    .scroll-container {
+        width: 90%; max-height: 95%; overflow-y: auto; overflow-x: hidden;
+        background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px; padding: 15px; backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .scroll-container::-webkit-scrollbar { width: 4px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    /* Scene 1: Hierarchy Tree */
+    .tree-node {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2);
+        padding: 8px 15px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; font-weight: bold; text-align: center; position: absolute;
+        transition: all 0.5s ease; opacity: 0; transform: translateY(20px);
+    }
+    .node-red { border-color: var(--neon-red); color: var(--neon-red); box-shadow: 0 0 15px rgba(244,63,94,0.2);}
+    .node-orange { border-color: var(--neon-orange); color: var(--neon-orange); box-shadow: 0 0 15px rgba(251,146,60,0.2);}
+    .node-green { border-color: var(--neon-green); color: var(--neon-green); box-shadow: 0 0 15px rgba(52,211,153,0.2);}
+    
+    .tree-line {
+        position: absolute; background: rgba(255,255,255,0.2); width: 2px;
+        transform-origin: top center; opacity: 0; transition: opacity 0.5s ease;
+    }
+
+    /* Scene 2 & 3: Checked vs Unchecked Visuals */
+    .compiler-box {
+        border: 2px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 20px;
+        text-align: center; width: 100%; position: relative; background: rgba(0,0,0,0.4);
+    }
+    .c-badge {
+        position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+        background: #1e1b4b; padding: 2px 10px; border-radius: 6px; font-size: 10px;
+        font-weight: bold; font-family: monospace; letter-spacing: 1px;
+    }
+    .squiqgly {
+        text-decoration: underline; text-decoration-style: wavy; text-decoration-color: var(--neon-red); text-underline-offset: 4px;
+    }
+    .comp-error { font-size: 10px; color: var(--neon-red); margin-top: 15px; font-family: monospace; opacity: 0; transition: opacity 0.3s;}
+    
+    .bomb-icon { font-size: 40px; margin-top: 10px; filter: drop-shadow(0 0 10px red); opacity: 0; transition: all 0.3s;}
+    @keyframes shake { 0% {transform: rotate(-10deg);} 50% {transform: rotate(10deg);} 100% {transform: rotate(0deg);} }
+
+    /* Scene 4: Catch vs Throws */
+    .decision-split { display: flex; justify-content: space-between; width: 100%; margin-top: 15px;}
+    .dec-path { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: 1;}
+    .dec-icon { font-size: 30px; }
+    .dec-label { font-family: monospace; font-size: 10px; color: #cbd5e1; text-align: center;}
+
+    /* Scene 5: Lambda Stream Crisis */
+    .stream-pipe { display: flex; gap: 5px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; align-items: center;}
+    .s-op { z-index: 2; background: rgba(255,255,255,0.05); border: 1px solid var(--neon-cyan); padding: 5px 8px; border-radius: 12px; font-family: monospace; font-size: 10px; color: var(--neon-cyan); font-weight: bold;}
+    .s-broken { border-color: var(--neon-red); color: var(--neon-red); animation: shake 0.5s infinite;}
+
+    /* Scene 6: Spring Boot Wrapper */
+    .factory-wrap { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 20px;}
+    .f-in { padding: 10px; border: 1px dashed var(--neon-red); border-radius: 6px; color: var(--neon-red); font-family: monospace; font-size: 10px; text-align: center;}
+    .f-machine { padding: 15px; background: rgba(139,92,246,0.2); border: 2px solid var(--neon-purple); border-radius: 8px; font-size: 24px; box-shadow: 0 0 20px rgba(139,92,246,0.3);}
+    .f-out { padding: 10px; border: 1px solid var(--neon-green); background: rgba(52,211,153,0.1); border-radius: 6px; color: var(--neon-green); font-family: monospace; font-size: 10px; text-align: center; box-shadow: 0 0 15px rgba(52,211,153,0.2);}
+
+    /* Explainer Panel at Bottom - Bottom Half (Frosted Glass) */
+    .explainer-panel {
+        background: rgba(15, 23, 42, 0.6);
+        padding: 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(24px);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(255, 255, 255, 0.1); color: #fff;
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;
+        border: 1px solid rgba(255, 255, 255, 0.2); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+        margin-bottom: 8px; letter-spacing: -0.5px;
+    }
+
+    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #2dd4bf; } 
+    .c-fn { color: #818cf8; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-an { color: #fb923c; } 
+    .c-hi { background: rgba(45, 212, 191, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white; border: none; padding: 14px 24px; border-radius: 12px;
+        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4); }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="aurora-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Java Exceptions</h1>
+        <p>Checked vs Unchecked</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        
+        <!-- Scene 1: Hierarchy -->
+        <div class="scene-container active" id="scene-1">
+            <div style="position: relative; width: 100%; height: 200px;">
+                <div class="tree-node" id="n-throw" style="top: 10px; left: 50%; transform: translateX(-50%); border-color:#fff; color:#fff;">Throwable</div>
+                
+                <div class="tree-line" id="l-1" style="top: 40px; left: 50%; height: 20px;"></div>
+                <div class="tree-line" id="l-2" style="top: 60px; left: 30%; width: 40%; height: 2px;"></div>
+                <div class="tree-line" id="l-3" style="top: 60px; left: 30%; height: 20px;"></div>
+                <div class="tree-line" id="l-4" style="top: 60px; left: 70%; height: 20px;"></div>
+
+                <div class="tree-node node-red" id="n-error" style="top: 80px; left: 30%; transform: translateX(-50%);">Error</div>
+                <div class="tree-node node-orange" id="n-exc" style="top: 80px; left: 70%; transform: translateX(-50%);">Exception<br><span style="font-size:8px; color:#cbd5e1;">(Checked)</span></div>
+
+                <div class="tree-line" id="l-5" style="top: 120px; left: 70%; height: 20px;"></div>
+                
+                <div class="tree-node node-green" id="n-runt" style="top: 140px; left: 70%; transform: translateX(-50%);">RuntimeException<br><span style="font-size:8px; color:#cbd5e1;">(Unchecked)</span></div>
+            </div>
+        </div>
+
+        <!-- Scene 2: Checked -->
+        <div class="scene-container" id="scene-2">
+            <div class="scroll-container" style="border-color: rgba(251,146,60,0.4);">
+                <div class="compiler-box" style="border-color: var(--neon-orange);">
+                    <div class="c-badge" style="color: var(--neon-orange);">CHECKED</div>
+                    <div style="font-family: monospace; font-size: 11px; text-align: left; color:#e2e8f0; line-height: 1.8;">
+                        <span class="c-kw">public void</span> <span class="c-fn">readFile</span>() { <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="c-ty">File</span> f = <span class="c-kw">new</span> File(<span class="c-st">"data.txt"</span>);<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span id="err-line">f.read();</span> <span class="c-cm">// Outside world failure</span><br>
+                        }
+                    </div>
+                    <div class="comp-error" id="c-error">❌ Compiler Error: Unhandled IOException</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 3: Unchecked -->
+        <div class="scene-container" id="scene-3">
+            <div class="scroll-container" style="border-color: rgba(52,211,153,0.4);">
+                <div class="compiler-box" style="border-color: var(--neon-green);">
+                    <div class="c-badge" style="color: var(--neon-green);">UNCHECKED</div>
+                    <div style="font-family: monospace; font-size: 11px; text-align: left; color:#e2e8f0; line-height: 1.8;">
+                        <span class="c-kw">public void</span> <span class="c-fn">process</span>(<span class="c-ty">String</span> s) { <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="c-cm">// Compiler ignores this.</span><br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;System.out.println(s.length());<br>
+                        }
+                    </div>
+                    <div class="bomb-icon" id="bomb">💣 NPE!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 4: Catch vs Throws -->
+        <div class="scene-container" id="scene-4">
+            <div class="scroll-container" style="border-color: rgba(129,140,248,0.4);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-purple); margin-bottom: 10px; text-align:center;">The Two Paths</div>
+                
+                <div class="decision-split">
+                    <div class="dec-path">
+                        <div class="dec-icon" style="color: var(--neon-cyan);">🛡️</div>
+                        <div class="dec-label"><span style="color: var(--neon-cyan); font-weight:bold;">try-catch</span><br>You act as a shield and handle it immediately.</div>
+                    </div>
+                    <div style="width: 2px; background: rgba(255,255,255,0.2);"></div>
+                    <div class="dec-path">
+                        <div class="dec-icon" style="color: var(--neon-orange);">🥔</div>
+                        <div class="dec-label"><span style="color: var(--neon-orange); font-weight:bold;">throws</span><br>Hot potato. You pass the buck up the stack.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 5: Lambda Crisis -->
+        <div class="scene-container" id="scene-5">
+            <div class="scroll-container" style="border-color: rgba(244,63,94,0.4);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-red); margin-bottom: 15px; text-align:center;">The Lambda Dilemma</div>
+                
+                <div class="stream-pipe" style="flex-direction: column; align-items: flex-start; background: rgba(244,63,94,0.05); border-color: var(--neon-red);">
+                    <div class="s-op" style="border-color: var(--neon-cyan); color: var(--neon-cyan);">list.stream()</div>
+                    <div class="s-op s-broken" style="margin-left: 20px;">.map(url -> { <br>&nbsp;&nbsp;<span style="color:white">try</span> { fetch(url); } <br>&nbsp;&nbsp;<span style="color:white">catch</span>(IOException e) { ... } <br>})</div>
+                    <div class="s-op" style="border-color: var(--neon-cyan); color: var(--neon-cyan); margin-left: 40px;">.collect()</div>
+                </div>
+                <div style="text-align: center; font-size: 10px; color: var(--neon-red); margin-top: 10px;">Checked exceptions completely break functional programming readability.</div>
+            </div>
+        </div>
+
+        <!-- Scene 6: Spring Translation -->
+        <div class="scene-container" id="scene-6">
+            <div class="scroll-container" style="border-color: rgba(45,212,191,0.4);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-cyan); margin-bottom: 10px; text-align:center;">Exception Translation (Spring)</div>
+                
+                <div class="factory-wrap">
+                    <div class="f-in" id="f-in">SQLException<br><span style="color:#94a3b8">(Checked)</span></div>
+                    <div class="f-machine" id="f-mach">🔄</div>
+                    <div class="f-out" id="f-out" style="opacity:0;">DataAccessException<br><span style="color:#94a3b8">(Unchecked)</span></div>
+                </div>
+                <div style="text-align: center; font-size: 10px; color: #cbd5e1; margin-top: 15px;">Spring Data wraps ugly checked exceptions into RuntimeExceptions to keep business logic clean.</div>
+            </div>
+        </div>
+
+        <!-- Scene 7: Custom Exceptions -->
+        <div class="scene-container" id="scene-7">
+            <div class="scroll-container" style="border-color: rgba(168,85,247,0.4);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--neon-purple); margin-bottom: 10px; text-align:center;">Best Practice: Custom Exceptions</div>
+                <div style="font-size:10px; color:#cbd5e1; text-align:center; margin-bottom:10px;">Always extend <code>RuntimeException</code>!</div>
+                
+                <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid rgba(168,85,247,0.3); font-family: monospace; font-size: 10px; color: #e2e8f0;">
+                    <span class="c-kw">public class</span> <span class="c-ty">UserNotFoundException</span> <br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="c-kw">extends</span> <span style="color:var(--neon-green); font-weight:bold;">RuntimeException</span> {<br><br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span class="c-kw">public</span> <span class="c-fn">UserNotFoundException</span>(<span class="c-ty">String</span> msg) {<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-kw">super</span>(msg);<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[CORE_JAVA_ERRORS]</div>
+            <h2 id="explainer-title" class="explainer-title">The Two Universes</h2>
+            <p id="explainer-text" class="explainer-text">Java handles errors differently than almost any other language. It splits them into two universes: Checked and Unchecked. Once considered Java's greatest feature, it is now highly controversial.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initialize Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setScene(index) {
+        document.querySelectorAll('.scene-container').forEach((el, i) => {
+            if(i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+    }
+
+    const steps = [
+        {
+            badge: "Hierarchy 1/7",
+            title: "The Throwable Tree",
+            text: "Every error object stems from <code>Throwable</code>. It splits into <code>Error</code> (JVM crash, OutOfMemory—let it die, don't catch it) and <code>Exception</code> (recoverable). The <code>Exception</code> branch is where the great divide happens.",
+            code: ``,
+            action: async () => {
+                setScene(0);
+                codeContainer.style.display = 'none';
+                
+                const nodes = ['n-throw', 'l-1', 'l-2', 'l-3', 'l-4', 'n-error', 'n-exc', 'l-5', 'n-runt'];
+                for (let id of nodes) {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.style.opacity = '1';
+                        if (el.classList.contains('tree-node')) {
+                            el.style.transform = 'translate(-50%, 0)';
+                        }
+                    }
+                    await sleep(150);
+                }
+            }
+        },
+        {
+            badge: "Enforcement 2/7",
+            title: "Checked Exceptions",
+            text: "Checked exceptions (e.g., <code>IOException</code>) represent external failures out of your control (Network, DB). The Java Compiler acts like a strict parent: it <strong>refuses to compile</strong> your code unless you explicitly acknowledge the risk with a try-catch or throws.",
+            code: `
+<span class="c-cm">// Fails to compile! Must handle IOException.</span>
+<span class="c-kw">public void</span> <span class="c-fn">read</span>() {
+<span class="c-err">    <span class="c-ty">Files</span>.readString(Path.of(<span class="c-st">"file.txt"</span>));</span>
+}
+
+<span class="c-cm">// Fix: Add 'throws IOException' to signature</span>
+            `,
+            action: async () => {
+                setScene(1);
+                codeContainer.style.display = 'block';
+                
+                await sleep(500);
+                document.getElementById('err-line').classList.add('squiqgly');
+                
+                await sleep(400);
+                document.getElementById('c-error').style.opacity = '1';
+            }
+        },
+        {
+            badge: "Bugs 3/7",
+            title: "Unchecked Exceptions",
+            text: "Anything inheriting from <code>RuntimeException</code> is Unchecked (e.g., <code>NullPointerException</code>). The compiler ignores them. Why? Because they represent <strong>programmer bugs</strong>. If forced to catch every possible NPE, code would be unreadable. They mean: 'Fix your logic.'",
+            code: `
+<span class="c-cm">// Valid compile. But throws NPE at runtime!</span>
+<span class="c-kw">public void</span> <span class="c-fn">print</span>(<span class="c-ty">String</span> name) {
+<span class="c-hi">    System.out.println(name.length());</span>
+}
+
+<span class="c-cm">// If name is null, the app crashes.</span>
+            `,
+            action: async () => {
+                setScene(2);
+                codeContainer.style.display = 'block';
+                
+                await sleep(800);
+                const bomb = document.getElementById('bomb');
+                bomb.style.opacity = '1';
+                bomb.style.animation = 'shake 0.3s infinite';
+            }
+        },
+        {
+            badge: "Resolution 4/7",
+            title: "Catch vs Throws",
+            text: "When faced with a Checked Exception, you have two choices. <strong>Try-Catch</strong>: Wrap the code, act as a shield, and handle the failure right now. <strong>Throws</strong>: Play hot potato. Append it to your method signature and force whoever called you to deal with it.",
+            code: ``,
+            action: async () => {
+                setScene(3);
+                codeContainer.style.display = 'none';
+            }
+        },
+        {
+            badge: "Modern Shift 5/7",
+            title: "The Lambda Dilemma",
+            text: "Why does the industry hate Checked Exceptions now? Because of Java 8 Lambdas. Functional interfaces like <code>Function</code> or <code>Consumer</code> don't declare checked exceptions. So, if an I/O operation occurs inside a stream, you are forced to write ugly, bloated try-catch blocks inside the lambda.",
+            code: `
+<span class="c-cm">// Streams + Checked Exceptions = Nightmare</span>
+urls.stream().map(url -> {
+<span class="c-err">    <span class="c-kw">try</span> {</span>
+        <span class="c-kw">return</span> httpClient.send(url);
+<span class="c-err">    } <span class="c-kw">catch</span> (<span class="c-ty">IOException</span> e) {</span>
+        <span class="c-kw">throw new</span> RuntimeException(e);
+<span class="c-err">    }</span>
+}).collect(toList());
+            `,
+            action: async () => {
+                setScene(4);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Architecture 6/7",
+            title: "Framework Translation",
+            text: "Modern frameworks like Spring Boot fix this via <strong>Exception Translation</strong>. When Spring Data talks to the database, it catches the checked <code>SQLException</code> and wraps it in a <code>DataAccessException</code> (which is an UNCHECKED <code>RuntimeException</code>). This keeps business logic completely clean.",
+            code: `
+<span class="c-cm">// Standard practice to escape checked constraints:</span>
+<span class="c-kw">try</span> {
+    <span class="c-kw">return</span> repository.save(entity);
+} <span class="c-kw">catch</span> (<span class="c-ty">SQLException</span> ex) {
+<span class="c-hi">    <span class="c-cm">// Wrap checked inside an unchecked!</span></span>
+<span class="c-hi">    <span class="c-kw">throw new</span> <span class="c-ty">CustomDataException</span>(ex);</span>
+}
+            `,
+            action: async () => {
+                setScene(5);
+                codeContainer.style.display = 'block';
+                
+                await sleep(500);
+                document.getElementById('f-in').style.transform = 'translateX(20px)';
+                document.getElementById('f-in').style.opacity = '0';
+                
+                await sleep(400);
+                document.getElementById('f-mach').style.transform = 'rotate(180deg)';
+                document.getElementById('f-mach').style.transition = 'all 0.5s';
+                
+                await sleep(500);
+                document.getElementById('f-out').style.opacity = '1';
+                document.getElementById('f-out').style.transform = 'translateX(10px)';
+            }
+        },
+        {
+            badge: "Best Practice 7/7",
+            title: "Custom Exceptions",
+            text: "When building modern APIs, you will write custom exceptions. <strong>Golden Rule: Always extend RuntimeException.</strong> This prevents you from polluting your interface signatures with <code>throws</code>, allowing Spring's <code>@ControllerAdvice</code> to intercept them effortlessly at the top level.",
+            code: `
+<span class="c-cm">// Business Logic is clean. No 'throws' needed.</span>
+<span class="c-kw">public</span> <span class="c-ty">User</span> <span class="c-fn">getUser</span>(<span class="c-ty">Long</span> id) {
+    <span class="c-kw">return</span> db.findById(id)
+<span class="c-hi">        .orElseThrow(() -> </span>
+<span class="c-hi">            <span class="c-kw">new</span> <span class="c-ty">UserNotFoundException</span>(<span class="c-st">"Missing"</span>)</span>
+        );
+}
+            `,
+            action: async () => {
+                setScene(6);
+                codeContainer.style.display = 'block';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            setScene(-1); // Hide all
+            codeContainer.style.display = 'none';
+
+            // Reset visuals
+            const nodes = ['n-throw', 'l-1', 'l-2', 'l-3', 'l-4', 'n-error', 'n-exc', 'l-5', 'n-runt'];
+            nodes.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.opacity = '0';
+                    if (el.classList.contains('tree-node')) {
+                        el.style.transform = 'translateX(-50%) translateY(20px)';
+                    }
+                }
+            });
+            
+            document.getElementById('err-line').classList.remove('squiqgly');
+            document.getElementById('c-error').style.opacity = '0';
+            
+            const bomb = document.getElementById('bomb');
+            bomb.style.opacity = '0';
+            bomb.style.animation = 'none';
+
+            document.getElementById('f-in').style.transform = 'none';
+            document.getElementById('f-in').style.opacity = '1';
+            document.getElementById('f-mach').style.transform = 'none';
+            document.getElementById('f-out').style.opacity = '0';
+            document.getElementById('f-out').style.transform = 'none';
+
+            badge.innerText = "[CORE_JAVA_ERRORS]";
+            title.innerText = "The Two Universes";
+            text.innerHTML = "Java handles errors differently than almost any other language. It splits them into two universes: Checked and Unchecked. Once considered Java's greatest feature, it is now highly controversial.";
+            btnNext.innerText = "Initialize Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

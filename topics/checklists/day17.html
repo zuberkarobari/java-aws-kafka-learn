@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 17  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 17  ·  STUDY CHECKLIST — Spring Boot Testing — Slices, Mocking, Testcontainers, WireMock & Testing Async/Transactional Code</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 17 Checklist</div>
+    <h1 style="margin-top: 0;">Spring Boot Testing — Slices, Mocking, Testcontainers, WireMock & Testing Async/Transactional Code</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 17 · STUDY CHECKLIST</h3>
+    <h3>Spring Boot Testing — Slices, Mocking, Testcontainers, WireMock & Testing Async/Transactional Code</h3>
+    <h3>Test Slices</h3>
+    <p>@SpringBootTest, @WebMvcTest, @DataJpaTest — when each</p>
+    <h3>Mocking</h3>
+    <p>@MockBean vs @SpyBean, Mockito patterns, argument captors</p>
+    <h3>Integration Tests</h3>
+    <p>Testcontainers (Postgres, Kafka, Redis), WireMock</p>
+    <h3>Async & Tx</h3>
+    <p>Testing @Async, @Transactional rollback, @Cacheable</p>
+    <p>Note:</p>
+    <p>Testing questions at senior interviews are not about knowing that Mockito exists. They test whether you understand what you are actually testing, whether your tests give you real confidence, and whether you know when a unit test is not enough. The patterns here — test slices, Testcontainers, WireMock — are the same ones used in production-grade Spring Boot codebases.</p>
+    <h3>Day 17 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Test slice annotations: when @SpringBootTest, @WebMvcTest, @DataJpaTest, @JsonTest each apply</span></li>
+      <li><span class="checkbox-label">@SpringBootTest webEnvironment modes: MOCK vs RANDOM_PORT vs DEFINED_PORT</span></li>
+      <li><span class="checkbox-label">MockMvc: perform(), andExpect(), andDo() — HTTP assertions in full</span></li>
+      <li><span class="checkbox-label">@MockBean vs @SpyBean — what each does to the Spring context</span></li>
+      <li><span class="checkbox-label">Mockito: when().thenReturn(), verify(), ArgumentCaptor, doThrow() on void methods</span></li>
+      <li><span class="checkbox-label">Testcontainers: PostgreSQL, Kafka, Redis containers — lifecycle and Spring integration</span></li>
+      <li><span class="checkbox-label">@DynamicPropertySource — how to wire Testcontainer ports into Spring config</span></li>
+      <li><span class="checkbox-label">WireMock: stub HTTP calls to external APIs, verify call counts</span></li>
+      <li><span class="checkbox-label">Testing @Transactional: rollback behaviour in tests, @Commit when you need persistence</span></li>
+      <li><span class="checkbox-label">Testing @Async: how to await CompletableFuture in tests, synchronous test executor</span></li>
+      <li><span class="checkbox-label">Testing @Cacheable: verify cache hit/miss, eviction</span></li>
+      <li><span class="checkbox-label">Test data builders and the Object Mother pattern</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Test Slices and Context Loading</h2>
+    <h3>Choosing the Right Test Annotation</h3>
+    <h3>Annotation</h3>
+    <h3>What it loads | What it excludes | Use for</h3>
+    <h3>@SpringBootTest</h3>
+    <p>Full ApplicationContext — all beans, all auto-config | Nothing | End-to-end integration tests, smoke tests</p>
+    <h3>@WebMvcTest</h3>
+    <p>MVC layer only: controllers, filters, @ControllerAdvice, MockMvc | @Service, @Repository, JPA | Controller logic, request mapping, validation, security filter chain</p>
+    <h3>@DataJpaTest</h3>
+    <p>JPA layer: repositories, entity scanning, embedded DB (H2) | Web layer, services, non-JPA beans | Repository queries, derived query correctness, custom JPQL</p>
+    <h3>@JsonTest</h3>
+    <p>Jackson ObjectMapper config only | Everything else | JSON serialisation and deserialisation correctness</p>
+    <h3>@DataRedisTest</h3>
+    <p>Redis repositories and RedisTemplate | Web layer, JPA, services | Redis data access layer</p>
+    <h3>@RestClientTest</h3>
+    <p>@RestClient / RestTemplate + MockRestServiceServer | Everything else | Testing HTTP clients against mock servers</p>
+    <p>The rule:</p>
+    <h3>@SpringBootTest — webEnvironment Modes</h3>
+    <h3>Mode</h3>
+    <h3>Behaviour | Use with</h3>
+    <h3>MOCK (default)</h3>
+    <p>Creates a mock servlet environment. No real HTTP port. Use MockMvc. | Controller tests without a real server</p>
+    <h3>RANDOM_PORT</h3>
+    <h3>DEFINED_PORT</h3>
+    <h3>NONE</h3>
+    <p>Loads context but no web environment at all. | Background jobs, Kafka consumers, non-web components</p>
+    <pre><code class="language-java">// @WebMvcTest — fast, isolated controller test
+@WebMvcTest(PaymentController.class)
+class PaymentControllerTest {
+    @Autowired MockMvc mockMvc;
+    @Autowired ObjectMapper objectMapper;
+    // @WebMvcTest does NOT load @Service — you must mock them
+    @MockBean PaymentService paymentService;
+    @MockBean PaymentValidator validator;
+    @Test
+    void processPayment_validRequest_returns201() throws Exception {
+        // Arrange
+        PaymentRequest req = PaymentRequest.builder()
+            .amount(new BigDecimal("500.00"))
+            .currency("INR")
+            .accountId("ACC-001")
+            .build();
+        PaymentResult result = PaymentResult.success("TXN-123", req.getAmount());
+        given(paymentService.process(any(PaymentRequest.class))).willReturn(result);
+        // Act + Assert
+        mockMvc.perform(post("/api/payments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(req))
+                .header("X-API-Key", "valid-key"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.transactionId").value("TXN-123"))
+            .andExpect(jsonPath("$.amount").value(500.00))
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andDo(print());
+    }
+    @Test
+    void processPayment_missingAmount_returns400() throws Exception {
+        // Bean Validation on @RequestBody — no service call needed
+        String invalidBody = "{\"currency\":\"INR\",\"accountId\":\"ACC-001\"}";
+        mockMvc.perform(post("/api/payments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(invalidBody))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errors[0].field").value("amount"));
+    }
+    @Test
+    void processPayment_serviceThrows_returns503() throws Exception {
+        given(paymentService.process(any())).willThrow(new PaymentGatewayException("Gateway down"));
+        mockMvc.perform(post("/api/payments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(validRequest())))
+            .andExpect(status().isServiceUnavailable())
+            .andExpect(jsonPath("$.message").value("Gateway down"));
+    }
+}
+// @SpringBootTest with RANDOM_PORT — real HTTP
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class PaymentIntegrationTest {
+    @Autowired TestRestTemplate restTemplate;
+    @LocalServerPort  int port;
+    @Test
+    void fullFlow_processAndRetrievePayment() {
+        PaymentRequest req = validRequest();
+        ResponseEntity&lt;PaymentResult&gt; response = restTemplate
+            .postForEntity("/api/payments", req, PaymentResult.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().getStatus()).isEqualTo("SUCCESS");
+        // Retrieve it
+        String txnId = response.getBody().getTransactionId();
+        ResponseEntity&lt;PaymentResult&gt; get = restTemplate
+            .getForEntity("/api/payments/" + txnId, PaymentResult.class);
+        assertThat(get.getBody().getTransactionId()).isEqualTo(txnId);
+    }
+}</code></pre>
+    <h3>@DataJpaTest — Repository Layer</h3>
+    <pre><code class="language-java">// @DataJpaTest: H2 in-memory DB by default, @Transactional on each test (auto-rollback)
+@DataJpaTest
+class PaymentRepositoryTest {
+    @Autowired PaymentRepository repository;
+    @Autowired TestEntityManager entityManager;
+    @Test
+    void findByAccountId_returnsOnlyMatchingPayments() {
+        // Use TestEntityManager for test data setup — bypasses repo layer
+        entityManager.persistAndFlush(Payment.builder()
+            .accountId("ACC-001").amount(new BigDecimal("100")).status(COMPLETED).build());
+        entityManager.persistAndFlush(Payment.builder()
+            .accountId("ACC-001").amount(new BigDecimal("200")).status(PENDING).build());
+        entityManager.persistAndFlush(Payment.builder()
+            .accountId("ACC-999").amount(new BigDecimal("50")).status(COMPLETED).build());
+        List&lt;Payment&gt; results = repository.findByAccountId("ACC-001");
+        assertThat(results).hasSize(2)
+            .allSatisfy(p -&gt; assertThat(p.getAccountId()).isEqualTo("ACC-001"));
+    }
+    @Test
+    void findPendingOlderThan_returnsExpiredPayments() {
+        Instant cutoff = Instant.now().minus(Duration.ofHours(1));
+        entityManager.persistAndFlush(Payment.builder()
+            .accountId("ACC-001").status(PENDING)
+            .createdAt(Instant.now().minus(Duration.ofHours(2))).build());  // old
+        entityManager.persistAndFlush(Payment.builder()
+            .accountId("ACC-002").status(PENDING)
+            .createdAt(Instant.now()).build());  // new — should NOT be returned
+        List&lt;Payment&gt; expired = repository.findByStatusAndCreatedAtBefore(PENDING, cutoff);
+        assertThat(expired).hasSize(1)
+            .first().satisfies(p -&gt; assertThat(p.getAccountId()).isEqualTo("ACC-001"));
+    }
+    // Testing with real PostgreSQL? Use @AutoConfigureTestDatabase(replace=NONE)
+    // + Testcontainers (Section 3)
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> When would you use @WebMvcTest vs @SpringBootTest and why does it matter? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@WebMvcTest loads only the web layer — the controller, filters, @ControllerAdvice, and MockMvc — and excludes services, repositories, and JPA. It is fast because the context is small, and focused because it only tests what a controller should be tested for: request mapping, input validation, response serialisation, and exception handling. @SpringBootTest loads the full context and is appropriate for end-to-end integration tests where you want to verify that all layers work together. The cost is speed — full context startup can take seconds. The other reason to care about the distinction: with @WebMvcTest your service is a @MockBean, so you are testing the controller in complete isolation. If the service has a bug, the controller test still passes. That is the point — each layer is tested independently. Mixing them by using @SpringBootTest for controller tests that should be @WebMvcTest gives you a slower test suite and tests that fail for the wrong reasons.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — @MockBean, @SpyBean and Mockito Patterns</h2>
+    <h3>@MockBean vs @SpyBean</h3>
+    <h3>@MockBean | @SpyBean</h3>
+    <h3>What it creates</h3>
+    <p>A full Mockito mock — all methods return null/0/false by default | A Mockito spy wrapping the real Spring bean</p>
+    <h3>Real method execution</h3>
+    <p>Never — all calls are stubbed or return defaults | Yes — unstubbed calls execute real code</p>
+    <h3>Effect on context</h3>
+    <p>Replaces the bean in the ApplicationContext | Wraps the existing bean in the context</p>
+    <h3>Use when</h3>
+    <p>Isolating the layer under test from dependencies | Verifying calls to a real dependency without replacing its behaviour</p>
+    <h3>Risk</h3>
+    <p>Over-mocking — tests that pass even when integration is broken | Real methods run — test can fail for reasons unrelated to the unit under test</p>
+    <h3>Common use</h3>
+    <p>@MockBean PaymentService in @WebMvcTest | @SpyBean EmailService to verify send() was called but still execute it</p>
+    <pre><code class="language-java">// Mockito patterns you must know
+// 1. Basic stubbing
+given(paymentService.process(any(PaymentRequest.class)))
+    .willReturn(PaymentResult.success("TXN-123", new BigDecimal("500")));
+// 2. Stubbing with argument matching
+given(paymentService.findById(eq("TXN-123"))).willReturn(Optional.of(payment));
+given(paymentService.findById(argThat(id -&gt; id.startsWith("TXN-"))))
+    .willReturn(Optional.of(payment));
+// 3. Throwing exceptions
+given(paymentService.process(any())).willThrow(new PaymentGatewayException("timeout"));
+// For void methods:
+doThrow(new NotificationException("SMS failed"))
+    .when(notificationService).sendSms(anyString(), anyString());
+// 4. Verify interactions
+verify(paymentService, times(1)).process(any(PaymentRequest.class));
+verify(notificationService, never()).sendEmail(anyString());
+verifyNoMoreInteractions(paymentService);
+verifyNoInteractions(fraudService);  // assert zero calls
+// 5. ArgumentCaptor — capture what was actually passed
+@Test
+void processPayment_capturesCorrectAuditRecord() {
+    ArgumentCaptor&lt;AuditRecord&gt; captor = ArgumentCaptor.forClass(AuditRecord.class);
+    paymentService.process(validRequest());
+    verify(auditService).record(captor.capture());
+    AuditRecord captured = captor.getValue();
+    assertThat(captured.getAmount()).isEqualTo(new BigDecimal("500.00"));
+    assertThat(captured.getStatus()).isEqualTo("COMPLETED");
+    assertThat(captured.getTimestamp()).isCloseTo(Instant.now(), within(5, SECONDS));
+}
+// 6. Stubbing sequential calls — first call succeeds, second throws
+given(gatewayClient.submit(any()))
+    .willReturn(SubmitResponse.success("TXN-123"))
+    .willThrow(new GatewayException("rate limited"));
+// 7. Answer — compute return value from the actual argument
+given(paymentRepository.save(any(Payment.class)))
+    .willAnswer(invocation -&gt; {
+        Payment p = invocation.getArgument(0);
+        p.setId(UUID.randomUUID().toString()); // simulate DB-assigned ID
+        return p;
+    });
+// 8. @SpyBean — real bean, verifiable calls
+@SpyBean NotificationService notificationService;
+@Test
+void processPayment_notifiesUserOnSuccess() {
+    paymentService.process(validRequest()); // calls real NotificationService
+    // Verify the real method was called with the right args
+    verify(notificationService).sendEmail(eq("user@example.com"), contains("SUCCESS"));
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What is the difference between @MockBean and @SpyBean, and when would you reach for @SpyBean? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@MockBean replaces a bean in the Spring context with a full Mockito mock — all methods return null or zero by default and nothing real executes. @SpyBean wraps the real Spring bean in a Mockito spy — unstubbed calls execute the real code, but you can verify calls and stub specific methods. I reach for @SpyBean when I want to assert that a method was called with specific arguments, but I still want the real behaviour to execute. The most common case in production code: I have a @SpyBean on an audit or notification service where I want to verify that it was called with the right parameters, but I also want the actual email or record to be created so the test catches any downstream failures. The risk with @SpyBean is that real code runs — if the real code has external dependencies, the test can fail for reasons unrelated to what you are testing. In those cases, @MockBean with explicit verification is cleaner.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Testcontainers</h2>
+    <h3>Why Testcontainers</h3>
+    <p>The problem with H2:</p>
+    <pre><code class="language-java">// pom.xml dependencies
+// testcontainers-bom (import), testcontainers junit-jupiter,
+// postgresql, kafka, redis modules
+// ── PostgreSQL Testcontainer ──
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Testcontainers
+class PaymentRepositoryIntegrationTest {
+    @Container
+    static PostgreSQLContainer&lt;?&gt; postgres = new PostgreSQLContainer&lt;&gt;("postgres:16-alpine")
+        .withDatabaseName("payments_test")
+        .withUsername("test")
+        .withPassword("test");
+    // Wire the container's dynamic port into Spring DataSource config
+    @DynamicPropertySource
+    static void configureDataSource(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url",     postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+    }
+    @Autowired PaymentRepository repository;
+    @Autowired TestEntityManager   em;
+    @Test
+    void jsonbQuery_worksWithRealPostgres() {
+        // Test a JSONB query that would fail silently on H2
+        em.persistAndFlush(Payment.builder()
+            .metadata("{\"channel\": \"mobile\", \"country\": \"IN\"}")
+            .amount(new BigDecimal("500")).build());
+        List&lt;Payment&gt; mobile = repository.findByMetadataChannel("mobile");
+        assertThat(mobile).hasSize(1);
+    }
+}
+// ── Kafka Testcontainer ──
+@SpringBootTest
+@Testcontainers
+class PaymentKafkaIntegrationTest {
+    @Container
+    static KafkaContainer kafka = new KafkaContainer(
+        DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
+    @DynamicPropertySource
+    static void kafkaProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
+    }
+    @Autowired KafkaTemplate&lt;String, String&gt; kafkaTemplate;
+    // Use @EmbeddedKafka for unit tests — Testcontainers for full integration
+    @Test
+    void publishAndConsume_paymentEvent() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference&lt;String&gt; received = new AtomicReference&lt;&gt;();
+        // Register a one-shot listener to capture the message
+        kafkaListenerRegistry.startListenerContainer("paymentListener");
+        kafkaTemplate.send("payment.completed",
+            "{\"transactionId\":\"TXN-123\",\"status\":\"SUCCESS\"}");
+        assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
+        assertThat(received.get()).contains("TXN-123");
+    }
+}
+// ── Redis Testcontainer ──
+@SpringBootTest
+@Testcontainers
+class RateLimiterIntegrationTest {
+    @Container
+    static GenericContainer&lt;?&gt; redis = new GenericContainer&lt;&gt;("redis:7-alpine")
+        .withExposedPorts(6379);
+    @DynamicPropertySource
+    static void redisProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.redis.host", redis::getHost);
+        registry.add("spring.redis.port", () -&gt; redis.getMappedPort(6379));
+    }
+    @Autowired RateLimiterService rateLimiter;
+    @Test
+    void rateLimiter_blocksAfterLimit() {
+        String userId = "user-001";
+        for (int i = 0; i &lt; 100; i++) {
+            assertThat(rateLimiter.isAllowed(userId)).isTrue();
+        }
+        // 101st request should be blocked
+        assertThat(rateLimiter.isAllowed(userId)).isFalse();
+    }
+}
+// ── Shared container for performance (start once per test suite) ──
+// Create a base class that all integration tests extend:
+// @Testcontainers
+// public abstract class AbstractIntegrationTest {
+//     @Container
+//     static PostgreSQLContainer&lt;?&gt; postgres = new PostgreSQLContainer&lt;&gt;("postgres:16-alpine")
+//         .withReuse(true);  // reuse across test runs if image unchanged
+// }</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> Why use Testcontainers instead of H2 for repository tests? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">H2 is not PostgreSQL. It has different SQL dialect rules, it does not support PostgreSQL-specific features like JSONB columns, array types, or pg_trgm full-text search, and its query planner behaviour is completely different. A suite that passes on H2 can fail against real PostgreSQL in a way that is very hard to debug — the test gave you false confidence. Testcontainers starts a real Docker container of the actual database version you deploy. The tests run against the same engine, same extensions, and same behaviour as production. The cost is speed — Docker startup adds a few seconds per test class. The fix is to share a single container across the test suite with a static @Container field. I always use Testcontainers for anything that touches the database, Kafka, or Redis. H2 is acceptable for pure unit tests of domain logic that does not involve any database-specific queries.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — WireMock for External API Testing</h2>
+    <h3>Why WireMock</h3>
+    <p>The problem:</p>
+    <pre><code class="language-java">// pom.xml: wiremock-spring-boot (or wiremock-standalone)
+// ── WireMock with @SpringBootTest ──
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+@WireMockTest(httpPort = 9090)          // starts WireMock on port 9090
+class PaymentGatewayClientTest {
+    // Point your client at WireMock instead of the real gateway
+    // application-test.properties: payment.gateway.url=http://localhost:9090
+    @Autowired PaymentGatewayClient gatewayClient;
+    @Test
+    void submitPayment_success_returnsTransactionId() {
+        // Stub: when POST /v1/charge is called, return success JSON
+        stubFor(post(urlEqualTo("/v1/charge"))
+            .withHeader("Authorization", matching("Bearer .*"))
+            .withRequestBody(matchingJsonPath("$.amount", equalTo("500.00")))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader("Content-Type", "application/json")
+                .withBody("{\"id\":\"ch_123\",\"status\":\"succeeded\"}")));
+        PaymentResult result = gatewayClient.submit(PaymentRequest.of("500.00", "INR"));
+        assertThat(result.getTransactionId()).isEqualTo("ch_123");
+        assertThat(result.getStatus()).isEqualTo("succeeded");
+        // Verify WireMock received exactly one request
+        verify(1, postRequestedFor(urlEqualTo("/v1/charge")));
+    }
+    @Test
+    void submitPayment_gatewayTimeout_triggersCircuitBreaker() {
+        // Simulate a timeout
+        stubFor(post(urlEqualTo("/v1/charge"))
+            .willReturn(aResponse()
+                .withFixedDelay(5000)   // 5 second delay — exceeds client timeout
+                .withStatus(200)));
+        // Client has a 2-second timeout — should fall back
+        assertThatThrownBy(() -&gt; gatewayClient.submit(PaymentRequest.of("500", "INR")))
+            .isInstanceOf(GatewayTimeoutException.class);
+    }
+    @Test
+    void submitPayment_gateway500_retriesThreeTimes() {
+        // First two calls fail, third succeeds
+        stubFor(post(urlEqualTo("/v1/charge"))
+            .inScenario("retry-scenario")
+            .whenScenarioStateIs(STARTED)
+            .willReturn(serverError())
+            .willSetStateTo("attempt-2"));
+        stubFor(post(urlEqualTo("/v1/charge"))
+            .inScenario("retry-scenario")
+            .whenScenarioStateIs("attempt-2")
+            .willReturn(serverError())
+            .willSetStateTo("attempt-3"));
+        stubFor(post(urlEqualTo("/v1/charge"))
+            .inScenario("retry-scenario")
+            .whenScenarioStateIs("attempt-3")
+            .willReturn(okJson("{\"id\":\"ch_retry\",\"status\":\"succeeded\"}")));
+        PaymentResult result = gatewayClient.submit(PaymentRequest.of("500", "INR"));
+        assertThat(result.getTransactionId()).isEqualTo("ch_retry");
+        verify(3, postRequestedFor(urlEqualTo("/v1/charge")));
+    }
+}</code></pre>
+    <hr class="section-divider" />
+    <h2>Section 5 — Testing @Async, @Transactional and @Cacheable</h2>
+    <h3>Testing @Async Code</h3>
+    <p>The challenge:</p>
+    <p>@Async methods run on a different thread. If your test asserts immediately after calling the async method, the async work may not have completed yet. The test will either fail intermittently or require Thread.sleep() — both are bad.</p>
+    <pre><code class="language-java">// ── Option 1: CompletableFuture.get() — blocks until result is available ──
+@Test
+void sendNotification_completesSuccessfully() throws Exception {
+    CompletableFuture&lt;Boolean&gt; future = notificationService.sendEmail(
+        "user@example.com", "Your payment succeeded");
+    // get() with timeout — test fails fast if async work hangs
+    Boolean result = future.get(5, TimeUnit.SECONDS);
+    assertThat(result).isTrue();
+    verify(emailClient, times(1)).send(eq("user@example.com"), anyString());
+}
+// ── Option 2: Awaitility — poll until condition is true ──
+// Best for void @Async methods with side effects (DB write, Kafka publish)
+@Test
+void processEventAsync_persistsToDatabase() {
+    eventService.processAsync(new PaymentEvent("TXN-123", "COMPLETED"));
+    // Poll every 100ms, timeout after 5s
+    await().atMost(5, SECONDS)
+           .pollInterval(100, MILLISECONDS)
+           .untilAsserted(() -&gt;
+               assertThat(eventRepository.findByTransactionId("TXN-123")).isPresent());
+}
+// ── Option 3: SyncTaskExecutor — replace async executor in tests ──
+// All @Async methods run synchronously on the calling thread
+@TestConfiguration
+public class SynchronousAsyncConfig {
+    @Bean
+    @Primary
+    public TaskExecutor taskExecutor() {
+        return new SyncTaskExecutor(); // executes immediately on calling thread
+    }
+}
+@SpringBootTest
+@Import(SynchronousAsyncConfig.class)
+class NotificationServiceTest {
+    // All @Async methods are now synchronous — no waiting needed
+    @Test
+    void asyncNotification_isCalledSynchronously() {
+        notificationService.sendEmail("user@example.com", "message");
+        verify(emailClient, times(1)).send(any(), any());
+    }
+}</code></pre>
+    <h3>Testing @Transactional — Rollback Behaviour</h3>
+    <p>Default behaviour in @DataJpaTest and @SpringBootTest:</p>
+    <p>@DataJpaTest wraps each test in a transaction and rolls it back after. This means test data does not persist between tests — clean isolation. @SpringBootTest does NOT add transaction management by default — test data persists unless you add @Transactional yourself.</p>
+    <pre><code class="language-java">// @DataJpaTest: auto-rollback by default
+@DataJpaTest
+class PaymentRepositoryTest {
+    // Each @Test runs in a transaction that rolls back after.
+    // Data written in one test is NOT visible to the next test.
+    @Test
+    @Rollback(false)  // or @Commit — force commit for tests that verify DB state externally
+    void payment_isPersistedToDatabaseForInspection() {
+        repository.save(Payment.builder().accountId("ACC-001").amount(new BigDecimal("100")).build());
+        // NOT rolled back — useful for debugging, not for regular test suites
+    }
+}
+// Testing @Transactional service behaviour — verify rollback happens
+@SpringBootTest
+@Transactional  // each test rolls back
+class TransferServiceTransactionTest {
+    @Autowired TransferService transferService;
+    @Autowired AccountRepository accountRepository;
+    @Test
+    void transfer_failsOnInsufficientFunds_rollsBackDebit() {
+        Account from = accountRepository.save(Account.withBalance(new BigDecimal("100")));
+        Account to   = accountRepository.save(Account.withBalance(new BigDecimal("0")));
+        assertThatThrownBy(() -&gt;
+            transferService.transfer(from.getId(), to.getId(), new BigDecimal("200")))
+            .isInstanceOf(InsufficientFundsException.class);
+        // Verify debit was rolled back — from account balance unchanged
+        Account reloaded = accountRepository.findById(from.getId()).orElseThrow();
+        assertThat(reloaded.getBalance()).isEqualByComparingTo(new BigDecimal("100"));
+    }
+    @Test
+    void transfer_successPath_bothAccountsUpdated() {
+        Account from = accountRepository.save(Account.withBalance(new BigDecimal("500")));
+        Account to   = accountRepository.save(Account.withBalance(new BigDecimal("100")));
+        transferService.transfer(from.getId(), to.getId(), new BigDecimal("200"));
+        assertThat(accountRepository.findById(from.getId()).get().getBalance())
+            .isEqualByComparingTo(new BigDecimal("300"));
+        assertThat(accountRepository.findById(to.getId()).get().getBalance())
+            .isEqualByComparingTo(new BigDecimal("300"));
+    }
+}
+// WARNING: testing REQUIRES_NEW propagation requires NO @Transactional on the test
+// because @Transactional on the test wraps everything — the REQUIRES_NEW inner
+// transaction cannot start independently inside the test transaction.
+// Use @Commit or run without @Transactional and clean up manually.</code></pre>
+    <h3>Testing @Cacheable</h3>
+    <pre><code class="language-java">// Testing cache behaviour — verify hits, misses, and eviction
+@SpringBootTest
+class PaymentCacheTest {
+    @Autowired PaymentService  paymentService;
+    @Autowired CacheManager    cacheManager;
+    @MockBean  PaymentRepository repository; // count actual DB calls
+    @BeforeEach
+    void clearCache() {
+        cacheManager.getCache("payments").clear();
+    }
+    @Test
+    void getPayment_secondCall_hitsCache_notRepository() {
+        Payment payment = Payment.builder().id("TXN-123").build();
+        given(repository.findById("TXN-123")).willReturn(Optional.of(payment));
+        // First call — cache miss, hits repository
+        Payment first = paymentService.getById("TXN-123");
+        // Second call — cache hit, repository NOT called again
+        Payment second = paymentService.getById("TXN-123");
+        assertThat(first).isEqualTo(second);
+        // Repository called exactly once despite two service calls
+        verify(repository, times(1)).findById("TXN-123");
+    }
+    @Test
+    void updatePayment_evictsCache_nextCallHitsRepository() {
+        Payment original = Payment.builder().id("TXN-123").status("PENDING").build();
+        Payment updated  = Payment.builder().id("TXN-123").status("COMPLETED").build();
+        given(repository.findById("TXN-123"))
+            .willReturn(Optional.of(original))
+            .willReturn(Optional.of(updated));
+        paymentService.getById("TXN-123");        // populate cache
+        paymentService.updateStatus("TXN-123", "COMPLETED"); // @CacheEvict
+        Payment afterEvict = paymentService.getById("TXN-123"); // must hit DB again
+        assertThat(afterEvict.getStatus()).isEqualTo("COMPLETED");
+        verify(repository, times(2)).findById("TXN-123"); // called twice
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> How do you test a void @Async method that writes to the database? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Void @Async methods do not return a future you can await, so you cannot use .get(). The right approach is Awaitility — a library specifically for testing asynchronous code. Call the async method, then use await().atMost(5, SECONDS).pollInterval(100, MILLISECONDS).untilAsserted(() -> assertThat(repository.findById(id)).isPresent()). Awaitility polls your assertion every 100ms until it passes or the timeout is reached. This avoids Thread.sleep() which is flaky (too short = false fail, too long = slow suite). The other option for unit tests where you do not need real async behaviour is to replace the TaskExecutor with SyncTaskExecutor in a @TestConfiguration — then @Async methods run synchronously on the calling thread and you can assert immediately. I use SyncTaskExecutor for unit-level tests and Awaitility for integration tests where the real async threading matters.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — Test Data Builders and Object Mother</h2>
+    <h3>The Problem with Inline Test Data</h3>
+    <p>Why test data management matters:</p>
+    <p>When every test creates its own data with 20-field constructors, test files become unreadable and changing a field requires updating dozens of tests. The Object Mother and Builder patterns centralise test data creation so tests express intent, not construction noise.</p>
+    <pre><code class="language-java">// ── Object Mother: factory for common test objects ──
+public class PaymentMother {
+    // Named factory methods — self-documenting
+    public static Payment pendingPayment() {
+        return Payment.builder()
+            .id(UUID.randomUUID().toString())
+            .accountId("ACC-001")
+            .amount(new BigDecimal("500.00"))
+            .currency("INR")
+            .status(PaymentStatus.PENDING)
+            .createdAt(Instant.now())
+            .build();
+    }
+    public static Payment completedPayment() {
+        return pendingPayment().toBuilder()
+            .status(PaymentStatus.COMPLETED)
+            .completedAt(Instant.now())
+            .build();
+    }
+    public static Payment failedPayment(String reason) {
+        return pendingPayment().toBuilder()
+            .status(PaymentStatus.FAILED)
+            .failureReason(reason)
+            .build();
+    }
+    // Overridable factory — tests customise only the fields they care about
+    public static Payment.PaymentBuilder aPayment() {
+        return Payment.builder()
+            .id(UUID.randomUUID().toString())
+            .accountId("ACC-DEFAULT")
+            .amount(new BigDecimal("100.00"))
+            .currency("INR")
+            .status(PaymentStatus.PENDING)
+            .createdAt(Instant.now());
+    }
+}
+// ── Using Object Mother in tests ──
+@Test
+void refund_failedPayment_throwsInvalidStateException() {
+    // Intent is clear — no construction noise
+    Payment failed = PaymentMother.failedPayment("INSUFFICIENT_FUNDS");
+    assertThatThrownBy(() -&gt; paymentService.refund(failed))
+        .isInstanceOf(InvalidPaymentStateException.class)
+        .hasMessageContaining("Cannot refund a failed payment");
+}
+@Test
+void findHighValuePayments_returnsOnlyAboveThreshold() {
+    // Customise only the field this test cares about
+    Payment highValue = PaymentMother.aPayment()
+        .amount(new BigDecimal("10000.00")).build();
+    Payment lowValue  = PaymentMother.aPayment()
+        .amount(new BigDecimal("50.00")).build();
+    repository.saveAll(List.of(highValue, lowValue));
+    List&lt;Payment&gt; results = repository.findByAmountGreaterThan(new BigDecimal("1000"));
+    assertThat(results).hasSize(1)
+        .first().satisfies(p -&gt;
+            assertThat(p.getAmount()).isEqualByComparingTo(new BigDecimal("10000.00")));
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How do you structure test data in a large Spring Boot codebase? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I use the Object Mother pattern combined with builder overrides. The Object Mother class has named factory methods for each meaningful state — pendingPayment(), completedPayment(), failedPayment(reason). It also has a generic builder method aPayment() that returns a preconfigured builder so individual tests can customise only the fields relevant to what they are testing. This means a test for high-value payment filtering only sets the amount field, and the test reads like documentation. Without this, tests are 30 lines of constructor noise before getting to the assertion. For database integration tests, I pair this with a @BeforeEach that uses the test entity manager to persist the Mother objects, and I rely on the auto-rollback from @DataJpaTest or @Transactional to clean up. For Kafka integration tests, I use a shared Testcontainer and explicitly produce and consume messages with a unique test-run identifier to avoid cross-test contamination.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory. After each exercise, write the name of one real bug this test would catch that a less thorough test would miss.</p>
+    <h3>Exercise 1 — @WebMvcTest: Full Controller Coverage</h3>
+    <p>Task:</p>
+    <p>Write three @WebMvcTest tests for POST /api/payments:</p>
+    <p>Test 1: valid request → 201 Created with correct JSON body (transactionId, amount, status).</p>
+    <p>Test 2: missing required field (amount) → 400 Bad Request with field-level error in response.</p>
+    <p>Test 3: service throws PaymentGatewayException → 503 Service Unavailable with error message.</p>
+    <p>Use ArgumentCaptor to verify the exact PaymentRequest object that was passed to the service.</p>
+    <p>Test the Authorization header validation — missing header → 401 Unauthorized.</p>
+    <h3>Exercise 2 — @DataJpaTest: Repository Layer</h3>
+    <p>Task:</p>
+    <p>Write repository tests using TestEntityManager for data setup.</p>
+    <p>Test 1: findByAccountIdAndStatus() — set up 3 payments, verify only matching ones are returned.</p>
+    <p>Test 2: findByCreatedAtBetween() — verify date range query boundaries are inclusive.</p>
+    <p>Test 3: a custom @Query JPQL — findTotalAmountByAccountId() — verify aggregation is correct.</p>
+    <p>Switch from H2 to Testcontainers PostgreSQL with @DynamicPropertySource — show the config change.</p>
+    <p>Show what happens when a unique constraint is violated — verify the exception type and message.</p>
+    <h3>Exercise 3 — Mockito: ArgumentCaptor and Interaction Verification</h3>
+    <p>Task:</p>
+    <p>Write a test for PaymentService.process() using @MockBean on PaymentRepository and NotificationService.</p>
+    <p>Use ArgumentCaptor to capture the Payment object saved to the repository — verify all fields.</p>
+    <p>Verify NotificationService.sendEmail() was called with the correct email and a message containing the transaction ID.</p>
+    <p>Test the failure path: repository.save() throws DataIntegrityViolationException — verify NotificationService is NOT called.</p>
+    <p>Test retry logic: gateway client throws on first call, succeeds on second — verify exactly 2 calls with verify(times(2)).</p>
+    <h3>Exercise 4 — WireMock: Gateway Client Tests</h3>
+    <p>Task:</p>
+    <p>Write WireMock tests for PaymentGatewayClient:</p>
+    <p>Test 1: successful charge → verify correct request body, headers, and response mapping.</p>
+    <p>Test 2: gateway returns 429 Too Many Requests → verify client throws RateLimitException.</p>
+    <p>Test 3: stateful scenario — first two calls return 500, third succeeds — verify 3 requests made.</p>
+    <p>Test 4: 5-second delay stub → verify client throws GatewayTimeoutException within 3 seconds.</p>
+    <p>Add WireMock request journal assertions: verify Authorization header was present on all calls.</p>
+    <h3>Exercise 5 — Testcontainers: Full Integration</h3>
+    <p>Task:</p>
+    <p>Write a full integration test using Testcontainers PostgreSQL and Kafka.</p>
+    <p>Test: POST /api/payments → payment saved to DB AND PaymentCompletedEvent published to Kafka.</p>
+    <p>Use Awaitility to wait for the Kafka consumer to process the event and update the read model.</p>
+    <p>Verify the read model in the DB reflects the completed payment after event processing.</p>
+    <h3>Exercise 6 — Testing @Transactional Propagation</h3>
+    <p>Task:</p>
+    <p>Test TransferService.transfer() — verify atomic debit+credit.</p>
+    <p>Test rollback on InsufficientFundsException: verify from-account balance unchanged.</p>
+    <p>Test REQUIRES_NEW audit log: even when main transaction rolls back, audit record persists.</p>
+    <p>Show why you CANNOT use @Transactional on the test method when testing REQUIRES_NEW — demonstrate the problem and fix.</p>
+    <p>Test isolation level READ_COMMITTED: two concurrent threads, verify no dirty reads.</p>
+    <h3>Exercise 7 — BOSS: Full Test Suite for PaymentService</h3>
+    <p>Build a complete, production-quality test suite for PaymentService covering all layers:</p>
+    <p>Layer 1: Unit tests — pure domain logic for Payment aggregate (balance rules, state transitions). No Spring context. Layer 2: @WebMvcTest — controller input validation, HTTP response codes, security header checking. Layer 3: @DataJpaTest with Testcontainers PostgreSQL — all repository queries. Layer 4: Service integration test with @MockBean on external dependencies — business logic, rollback behaviour, cache behaviour. Layer 5: Full E2E test with Testcontainers (Postgres + Kafka) + WireMock (payment gateway) — the complete payment flow from HTTP POST to Kafka event to read model update. Write one test per layer. For each, state what it tests that the layer above it cannot.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Focus on the reasoning — why, not just what.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What is the difference between @MockBean and @Mock? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@Mock is a pure Mockito annotation — it creates a mock but does not involve Spring at all. It is used in unit tests with @ExtendWith(MockitoExtension.class) where you are testing a single class with no Spring context. @MockBean is a Spring Test annotation — it creates a Mockito mock AND registers it as a bean in the Spring ApplicationContext, replacing any existing bean of that type. Use @Mock for fast unit tests with no Spring context startup. Use @MockBean in @WebMvcTest or @SpringBootTest when you need the mock to be injected into a real Spring-managed bean.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> Why does @Transactional on a test method cause problems when testing REQUIRES_NEW? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When you put @Transactional on a test method, the entire test runs inside a transaction that Spring creates for the test. When your service code calls a method with REQUIRES_NEW propagation, Spring is supposed to suspend the existing transaction and start a new independent one. But the new transaction cannot see data committed by the suspended test transaction, and the test transaction's rollback at the end undoes everything — including what the REQUIRES_NEW transaction committed. The test gives you incorrect results. The fix: remove @Transactional from the test and manage cleanup manually (delete test data in @AfterEach), or use a separate DataSource transaction in your assertion. This is one of the subtler testing gotchas because the test still passes — it just does not test the right thing.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What does @DynamicPropertySource do and why is it needed with Testcontainers? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Testcontainers starts a Docker container on a random available port — you cannot know the port ahead of time to put in application.properties. @DynamicPropertySource is a Spring Test mechanism that lets you add or override properties after the container starts but before the ApplicationContext loads. You point it at the container's actual port and host. Without it, Spring would try to connect to the database URL from your static application-test.properties, which points to the wrong port, and context startup would fail. The static method annotated with @DynamicPropertySource receives a DynamicPropertyRegistry and you call registry.add() with lambdas that read from the container object at context-load time.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> How do you test that a @KafkaListener processes a message correctly? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I write a @SpringBootTest with a Testcontainers Kafka container, wired via @DynamicPropertySource. Then I use KafkaTemplate to produce a test message to the topic and use Awaitility to poll until the expected side effect appears — a DB record, a counter increment, or an outbox entry. Awaitility.await().atMost(10, SECONDS).untilAsserted(() -> assertThat(repository.findByTransactionId(id)).isPresent()). For unit testing the listener method in isolation — without Kafka infrastructure — I call the listener method directly with a constructed message object, since it is just a regular method. The distinction matters: unit test the logic, integration test the Kafka plumbing.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> How do you assert JSON response bodies in MockMvc tests? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">MockMvc has built-in JSON path support via andExpect(jsonPath()). For simple values: .andExpect(jsonPath('$.transactionId').value('TXN-123')). For array size: .andExpect(jsonPath('$.errors', hasSize(2))). For nested paths: .andExpect(jsonPath('$.payment.amount').value(500.00)). For complex assertions I use .andExpect(content().json(expectedJson)) with JSONAssert's lenient or strict mode. For response body capture I use .andReturn().getResponse().getContentAsString() and then deserialise with ObjectMapper and use AssertJ for full object equality. The andDo(print()) is invaluable during development — it logs the full request and response to console so you can see exactly what was sent and received.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> What is the Object Mother pattern and why does it matter for test maintainability? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Object Mother is a class (or set of factory methods) that creates common test objects in meaningful named states — pendingPayment(), completedPayment(), failedPayment(reason). It is the test data equivalent of the Builder pattern. Without it, every test constructs its own objects inline with 20-field constructors, and when a new required field is added to the domain object, you update it in 50 test files. With Object Mother, you update one factory method. It also makes tests readable — assertThatThrownBy(() -> paymentService.refund(PaymentMother.failedPayment())) reads as a specification, not construction code. I combine it with a builder method like aPayment() that returns a partially-built builder so individual tests can customise only the fields they care about.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> How do you prevent test pollution when using Testcontainers with a shared database? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Test pollution happens when one test leaves data that affects another. Three strategies. First: @Transactional on each test method — rolls back all changes after each test, cheapest option, works for most cases. Second: @BeforeEach cleanup — delete test-specific data using a known prefix or ID range. This is necessary when testing REQUIRES_NEW or when rollback would hide the actual DB state you want to assert on. Third: create test-specific unique identifiers — every test generates a UUID prefix for its data so even if cleanup fails, tests do not interfere. For Kafka, I use unique topic names or consumer group IDs per test to avoid consuming messages from other tests. The shared container pattern makes startup fast; the cleanup strategy makes tests reliable.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> When would you use @SpringBootTest over @WebMvcTest? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@WebMvcTest is for controller tests where you want to verify HTTP behaviour in isolation from the service layer. Everything below the controller is a @MockBean. @SpringBootTest is for integration tests where you want all layers working together — real service, real repository, real database (via Testcontainers). The cost of @SpringBootTest is startup time and test complexity. I use @WebMvcTest for the majority of controller tests — they run fast and test exactly what a controller should be responsible for: request validation, response serialisation, HTTP status codes, and exception handling. I use @SpringBootTest for a smaller number of end-to-end integration tests that verify the full flow from HTTP to database, including transaction behaviour and event publishing.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> How do you verify an email was sent with specific content in a Spring Boot test? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">If the email client is a @MockBean, I use ArgumentCaptor to capture the arguments passed to the send method and assert on them — captor.getValue().getSubject().contains('TXN-123'). If I need to verify the actual email content with a template rendered, I use a test email server like GreenMail or Fake SMTP, which runs in-process and captures sent emails. GreenMail integrates with JavaMail and lets you assert on received messages: assertThat(greenMail.getReceivedMessages()).hasSize(1) and then inspect the message body. For notification services that call an external API, WireMock captures the exact HTTP request body, so I can verify the rendered content in the stub's request body matching.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What does @TestPropertySource do and when do you use it? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@TestPropertySource overrides properties for a specific test class — without it, you would have to modify application.properties or create a separate test profile. I use it when: a test needs to override a single property without affecting other tests (different rate limit threshold, feature flag on/off), when testing @ConditionalOnProperty auto-configurations (test that the bean IS created when the property is present and is NOT created when absent), and when pointing at a different external service URL. It can load a properties file or specify inline properties. For Testcontainers, @DynamicPropertySource is better because properties are computed after container startup; @TestPropertySource is static and evaluated before the context loads.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> How do you test a Spring Security filter or authentication in a @WebMvcTest? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@WebMvcTest includes the full security filter chain by default if Spring Security is on the classpath. For tests that need an authenticated user I use @WithMockUser(username='user', roles='USER') — Spring Security's test support. For JWT-based auth I either use @WithMockUser with the same roles the JWT would grant, or I configure a test SecurityFilterChain that accepts a test-specific header. To test that an unauthenticated request is rejected: perform the request without credentials and andExpect(status().isUnauthorized()). For testing the JWT validation logic itself — token expiry, invalid signature, missing claims — I write a unit test for the JwtValidator class directly without involving MockMvc.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What is @SpyBean and when should you not use it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">@SpyBean wraps a real Spring bean in a Mockito spy so you can verify calls and selectively stub methods while the real code still runs. You should not use it when: the real code makes external network calls (tests become environment-dependent and slow), the real code has non-deterministic behaviour (random IDs, timestamps), or when the real code has complex setup that the spy tears through. The right use is for in-process side effects where you want both real execution and call verification — an internal event publisher, an in-memory cache, or a service that writes to the database and you want to verify it was called with correct arguments while also asserting the DB state.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> How do you test a Testcontainers-based test suite in a CI pipeline without Docker? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Testcontainers requires Docker. In CI pipelines (GitHub Actions, Jenkins, GitLab CI) Docker is available by default — Testcontainers detects it automatically through the DOCKER_HOST environment variable or the Docker socket. For environments without Docker (some restrictive CI environments), there are two options: Testcontainers Cloud, which runs containers remotely; or using conditional test tags so Testcontainers tests are only run in environments where Docker is available via JUnit 5's @EnabledIfEnvironmentVariable or a custom @EnabledIfDockerAvailable annotation. The other common issue is the Ryuk container that Testcontainers uses for cleanup — some CI environments restrict it, and you disable it with TESTCONTAINERS_RYUK_DISABLED=true and handle cleanup yourself.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What makes a good unit test vs a bad one? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A good unit test: tests one specific behaviour, has a clear arrange-act-assert structure, fails for exactly one reason (the behaviour it tests), runs fast (milliseconds), does not depend on external resources, and has a name that reads as a specification (processPayment_insufficientFunds_throwsException). A bad unit test: tests implementation rather than behaviour (asserting that a specific private method was called), has setup so complex you cannot understand the intent, is order-dependent (passes only when run after another test), uses Thread.sleep(), mocks everything including the class under test (you are testing the mock), or has assertions so broad that unrelated bugs would pass. The question I ask before writing a test: if this test passes, what exactly do I know? If the answer is vague, the test is bad.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 17 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">@WebMvcTest vs @DataJpaTest vs @SpringBootTest — can you pick without hesitation?</span></li>
+      <li><span class="checkbox-label">@MockBean vs @SpyBean vs @Mock — can you explain the Spring context difference?</span></li>
+      <li><span class="checkbox-label">Can you write a MockMvc test with status, jsonPath, and ArgumentCaptor assertions?</span></li>
+      <li><span class="checkbox-label">Can you wire a Testcontainers PostgreSQL container with @DynamicPropertySource from memory?</span></li>
+      <li><span class="checkbox-label">Can you write a WireMock stub for a gateway timeout scenario?</span></li>
+      <li><span class="checkbox-label">Awaitility vs CompletableFuture.get() — when each?</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises — Boss exercise (layered test suite) done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Test slice selection: when each annotation applies</h3>
+    <p>/5 |</p>
+    <h3>MockMvc: perform/andExpect/jsonPath assertions</h3>
+    <p>/5 |</p>
+    <h3>@MockBean vs @SpyBean vs @Mock distinctions</h3>
+    <p>/5 |</p>
+    <h3>ArgumentCaptor: capturing and asserting on arguments</h3>
+    <p>/5 |</p>
+    <h3>Testcontainers + @DynamicPropertySource wiring</h3>
+    <p>/5 |</p>
+    <h3>WireMock: stubs, scenarios, request verification</h3>
+    <p>/5 |</p>
+    <h3>Testing @Transactional rollback and REQUIRES_NEW</h3>
+    <p>/5 |</p>
+    <h3>Awaitility for async test assertions</h3>
+    <p>/5 |</p>
+    <h3>Object Mother pattern for test data</h3>
+    <p>/5 |</p>
+    <p>Day 17 complete:</p>
+    <p>Testing depth is one of the clearest signals of seniority. Knowing that Mockito exists is table stakes. Knowing when to use @WebMvcTest vs @SpringBootTest, why Testcontainers beats H2, and how to test async and transactional code correctly — those are what separate senior candidates. Every exercise today maps to a class of production bug it would have caught.</p>
+    <h3>Preview: Day 18 — REST API Design and HTTP Fundamentals</h3>
+    <p>REST constraints, HTTP method semantics, idempotency, status code selection, versioning strategies, pagination patterns, HATEOAS, API error response standards, and OpenAPI/Swagger. The interview questions that catch candidates who have written APIs without thinking about the contract.</p>
+    <p>Day 17 of 60 · Spring Boot Testing · Prepared for Md Zuber</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

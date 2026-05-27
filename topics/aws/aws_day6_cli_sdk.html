@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Day 6 — CLI & SDK Deep Dive</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f9f9f7;color:#1a1a18;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:1.5rem}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:1.4rem}
+.badge{font-size:11px;font-weight:600;padding:4px 11px;border-radius:8px;background:#E1F5EE;color:#085041;border:1px solid #5DCAA5}
+.tag{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid #ddd;color:#666}
+.nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.2rem}
+.ntab{padding:7px 15px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit}
+.ntab.active{background:#f0f0ee;color:#1a1a18;border-color:#999;font-weight:600}
+.panel{display:none}.panel.active{display:block}
+.lede{background:#f5f5f2;border-left:3px solid #0F6E56;padding:1rem 1.25rem;border-radius:0 8px 8px 0;margin-bottom:1.2rem;font-size:13px;color:#444;line-height:1.75}
+.lede strong{font-weight:600;color:#1a1a18}
+.cstep-nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cbtn{padding:5px 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.cbtn.active{background:#E1F5EE;color:#085041;border-color:#5DCAA5;font-weight:600}
+.cpanel{display:none}.cpanel.active{display:block}
+.ch{font-size:16px;font-weight:600;margin-bottom:4px}
+.csub{font-size:12px;color:#888;margin-bottom:12px;font-style:italic}
+.cb{font-size:13px;color:#444;line-height:1.8}
+.cb p{margin-bottom:12px}.cb p:last-child{margin-bottom:0}
+.cb strong{font-weight:600;color:#1a1a18}
+.mechbox{background:#f5f5f2;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.mechbox strong{font-weight:600;color:#1a1a18}
+.failbox{background:#fff8f8;border-left:3px solid #A32D2D;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.failbox strong{font-weight:600;color:#A32D2D}
+.prodbox{background:#f0faf5;border-left:3px solid #0F6E56;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.prodbox strong{font-weight:600;color:#0F6E56}
+.warnbox{background:#fffaf0;border-left:3px solid #BA7517;padding:12px 14px;margin:12px 0;font-size:13px;color:#444;line-height:1.75;border-radius:0 8px 8px 0}
+.warnbox strong{font-weight:600;color:#BA7517}
+.mono{font-family:monospace;font-size:12px;background:#f0f0ee;border:1px solid #ddd;border-radius:4px;padding:2px 6px;display:inline;color:#1a1a18}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:8px;font-weight:600;margin-right:4px}
+.p-green{background:#E1F5EE;color:#085041}.p-blue{background:#e6f1fb;color:#0C447C}
+.p-amber{background:#FAEEDA;color:#633806}.p-coral{background:#FAECE7;color:#712B13}
+.p-purple{background:#EEEDFE;color:#3C3489}
+.divider{border:none;border-top:1px solid #eee;margin:1.2rem 0}
+
+/* code blocks */
+.code-block{background:#1a1a18;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.code-block code{font-family:monospace;font-size:12px;line-height:1.7;color:#e8e6e0;display:block;white-space:pre}
+.k{color:#9FE1CB}.v{color:#FAC775}.s{color:#F0997B}.c{color:#666;font-style:italic}.cmd-g{color:#97C459}.cmd-b{color:#85B7EB}
+
+/* terminal block */
+.term{background:#111;border-radius:10px;padding:1rem;margin:12px 0;overflow-x:auto}
+.term code{font-family:monospace;font-size:12px;line-height:1.7;color:#c8c6c0;display:block;white-space:pre}
+.term .p{color:#5DCAA5}.term .out{color:#e8e6e0}.term .err{color:#F0997B}.term .comment{color:#555}
+
+/* interview */
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:#fff;border:1px solid #eee;border-radius:10px;overflow:hidden;cursor:pointer}
+.iq:hover{border-color:#ccc}.iq.open{border-color:#999}
+.iq-top{display:flex;align-items:flex-start;gap:10px;padding:11px 1.25rem}
+.iq-n{font-size:11px;font-weight:600;color:#999;min-width:22px;padding-top:1px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45}
+.iq-d{font-size:10px;padding:2px 7px;border-radius:6px;font-weight:600;flex-shrink:0;margin-top:1px}
+.d-e{background:#e0f5ee;color:#085041}.d-m{background:#FAEEDA;color:#633806}.d-h{background:#FAECE7;color:#712B13}
+.iq-ch{font-size:11px;color:#999;transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-ch{transform:rotate(180deg)}
+.iq-ans{display:none;border-top:1px solid #eee;padding:1rem 1.25rem;background:#f9f9f7}
+.iq.open .iq-ans{display:block}
+.iq-ans p{font-size:13px;color:#444;line-height:1.8;margin-bottom:10px}
+.iq-ans p:last-child{margin-bottom:0}
+.iq-ans strong{font-weight:600;color:#1a1a18}
+.tip{font-size:12px;color:#0F6E56;padding:8px 12px;background:#e0f5ee;border-radius:8px;margin-top:10px;display:block;line-height:1.6;font-weight:500}
+
+/* lab */
+.lab-list{display:flex;flex-direction:column;gap:0}
+.ls{display:flex;gap:0}
+.ls-l{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0}
+.sc{width:28px;height:28px;border-radius:50%;border:2px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#888;background:#fff;cursor:pointer;flex-shrink:0;transition:all .2s;font-family:inherit}
+.sc.done{background:#e0f5ee;border-color:#5DCAA5;color:#085041}
+.sl{width:1.5px;background:#eee;flex:1;min-height:10px}
+.ls-r{padding:0 0 1.4rem 14px;flex:1}
+.st{font-size:13px;font-weight:600;margin-bottom:5px}
+.sb{font-size:13px;color:#444;line-height:1.7}
+.cmd{font-family:monospace;font-size:12px;background:#f5f5f2;border:1px solid #ddd;border-radius:8px;padding:8px 10px;margin-top:6px;display:block;color:#1a1a18;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+.snote{font-size:11px;color:#888;margin-top:5px;font-style:italic;line-height:1.5}
+.mbtn{margin-top:6px;font-size:12px;padding:5px 13px;cursor:pointer;border-radius:8px;background:#f5f5f2;border:1px solid #ddd;color:#666;font-family:inherit}
+.mbtn:hover{border-color:#999;color:#1a1a18}
+
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:1rem}
+.cs-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:10px 12px}
+.cs-t{font-size:13px;font-weight:600;margin-bottom:4px}
+.cs-d{font-size:12px;color:#666;line-height:1.55}
+.next-btn{width:100%;padding:11px 14px;border-radius:10px;border:1px solid #ddd;background:#f5f5f2;cursor:pointer;font-size:13px;font-weight:600;color:#1a1a18;margin-top:1.2rem;font-family:inherit}
+.next-btn:hover{border-color:#999}
+</style>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <div class="topbar">
+    <span class="badge">Day 6 of 30</span>
+    <span class="tag">AWS CLI & SDK</span>
+    <span class="tag">Credential chain mechanics</span>
+    <span class="tag">SDK internals</span>
+    <span class="tag">Phase 1 complete</span>
+  </div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="show('cli',this)">CLI internals</button>
+    <button class="ntab" onclick="show('credentials',this)">Credential chain</button>
+    <button class="ntab" onclick="show('sdk',this)">SDK deep dive</button>
+    <button class="ntab" onclick="show('jmespath',this)">JMESPath & filtering</button>
+    <button class="ntab" onclick="show('automation',this)">Automation patterns</button>
+    <button class="ntab" onclick="show('interview',this)">Interview prep</button>
+    <button class="ntab" onclick="show('lab',this)">Lab</button>
+    <button class="ntab" onclick="show('cheatsheet',this)">Cheatsheet</button>
+  </div>
+
+  <!-- CLI INTERNALS -->
+  <div id="p-cli" class="panel active">
+    <div class="lede"><strong>The AWS CLI is not a GUI wrapper. It is a complete Python application that constructs HTTP requests, signs them with AWS Signature Version 4, sends them to AWS service endpoints, and deserialises the JSON responses. Understanding what the CLI does at each step explains every authentication error, every rate limit, and every unexpected behaviour you will encounter running it in production scripts.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('c',0,this)">1 · What happens on every CLI call</button>
+      <button class="cbtn" onclick="showC('c',1,this)">2 · SigV4 request signing</button>
+      <button class="cbtn" onclick="showC('c',2,this)">3 · Endpoint resolution</button>
+      <button class="cbtn" onclick="showC('c',3,this)">4 · Pagination mechanics</button>
+      <button class="cbtn" onclick="showC('c',4,this)">5 · Retries and throttling</button>
+    </div>
+
+    <div id="c0" class="cpanel active">
+      <div class="ch">What actually happens on every AWS CLI call</div>
+      <div class="csub">The six-step sequence from your terminal to AWS and back</div>
+      <div class="cb">
+        <p>When you run <span class="mono">aws s3 ls</span>, the CLI executes a precise sequence. Understanding this sequence is what makes you able to debug authentication errors, construct equivalent HTTP calls for testing, and understand why certain operations are slow or fail under specific conditions.</p>
+        <p><strong>Step 1 — Command parsing.</strong> The CLI parses your command into a service (<span class="mono">s3</span>), operation (<span class="mono">ls</span>, mapped internally to <span class="mono">ListBuckets</span>), and parameters. The CLI uses a service model — a JSON file describing every API operation for every service — to validate your input and know what API to call.</p>
+        <p><strong>Step 2 — Credential resolution.</strong> The CLI runs the DefaultCredentialsProvider chain (covered in detail on the next tab). It resolves which credentials to use: environment variables, profile from config files, IAM role from EC2 metadata service, etc. If no credentials are found, the command fails before any HTTP request is made.</p>
+        <p><strong>Step 3 — Request construction.</strong> The CLI serialises your command into an HTTP request: URL, headers, and optionally a body. For <span class="mono">aws s3 ls</span> this becomes a GET request to <span class="mono">https://s3.ap-south-1.amazonaws.com/</span> with specific headers and query parameters.</p>
+        <p><strong>Step 4 — SigV4 signing.</strong> The CLI signs the request using AWS Signature Version 4 (SigV4). This adds an <span class="mono">Authorization</span> header containing a cryptographic signature of the request, the credentials used, the timestamp, and the service. AWS uses this signature to authenticate the request and verify it hasn't been tampered with in transit.</p>
+        <p><strong>Step 5 — HTTP request and response.</strong> The signed HTTP request is sent to AWS. AWS validates the signature, evaluates IAM policies, and returns a response — typically JSON. Error responses also come as JSON with a specific error code and message.</p>
+        <p><strong>Step 6 — Response formatting.</strong> The CLI parses the JSON response and formats it per your <span class="mono">--output</span> setting: JSON (raw), text (tab-separated), table (ASCII table), or YAML. The default is JSON for most commands.</p>
+        <div class="mechbox"><strong>Why this matters for debugging:</strong> When you get "An error occurred (InvalidClientTokenId) when calling the ListBuckets operation: The security token included in the request is invalid" — the problem is at Step 2 or Step 4. The token is missing, expired, or wrong. When you get "An error occurred (AccessDenied)" — the request reached AWS, authentication succeeded (Step 4 passed), but IAM denied the operation (Step 5). When you get "Could not connect to the endpoint URL" — DNS resolution or network connectivity failed at Step 5. Each error maps to a specific step in the sequence.</div>
+        <div class="prodbox"><strong>The --debug flag — your most powerful CLI diagnostic tool:</strong> Add <span class="mono">--debug</span> to any failing CLI command and the CLI prints every step: credential source, the constructed HTTP request, the exact URL and headers (with the Authorization header), the response headers, and the full response body. This is the first tool to reach for when a CLI command fails unexpectedly. <span class="mono">aws s3 ls --debug 2>&1 | head -100</span> — the 2>&1 redirects debug output (which goes to stderr) to stdout so you can pipe it.</div>
+      </div>
+      <span class="pill p-green">--debug shows every step — use it first when debugging</span>
+      <span class="pill p-blue">AccessDenied = authenticated but IAM said no</span>
+    </div>
+
+    <div id="c1" class="cpanel">
+      <div class="ch">AWS Signature Version 4 — how every request is authenticated</div>
+      <div class="csub">The cryptographic protocol that proves every API call came from a valid identity and wasn't tampered with</div>
+      <div class="cb">
+        <p>AWS Signature Version 4 (SigV4) is the authentication protocol used by every AWS SDK and CLI. Every HTTP request to AWS must be signed. The signature is a HMAC-SHA256 hash computed from the request contents — if any part of the request changes in transit, the signature becomes invalid and AWS rejects the request. This is both authentication (who sent this) and integrity protection (was this modified in transit).</p>
+        <p><strong>The four components of SigV4:</strong></p>
+        <p><strong>1. Canonical request.</strong> The request is normalised — URL-encoded path, sorted query parameters, lowercase header names, and a SHA256 hash of the request body (even if empty). This normalisation ensures the same request always produces the same canonical form regardless of how the HTTP client formats it.</p>
+        <p><strong>2. String to sign.</strong> A string is constructed from: the algorithm name (AWS4-HMAC-SHA256), the timestamp (format: YYYYMMDDTHHMMSSZ), the credential scope (date/region/service/aws4_request), and the SHA256 hash of the canonical request.</p>
+        <p><strong>3. Signing key derivation.</strong> A derived signing key is computed by chaining four HMAC operations: HMAC(HMAC(HMAC(HMAC("AWS4" + secret_key, date), region), service), "aws4_request"). This means the signing key is specific to the date, region, and service — a key derived for ap-south-1/s3 on 2024-03-15 cannot be used to sign requests for us-east-1/ec2 or for a different date.</p>
+        <p><strong>4. Authorization header.</strong> The signature is computed as HMAC(signing_key, string_to_sign). The Authorization header is constructed with the algorithm, credentials, signed headers list, and the signature.</p>
+        <div class="mechbox"><strong>Why the timestamp matters — and the clock skew error:</strong> The canonical request includes the current timestamp. AWS validates that the timestamp in the request is within ±15 minutes of AWS's authoritative time. If your system clock is more than 15 minutes off, every API call fails with "Signature not yet current" or "Signature expired" — even with perfectly valid credentials. This is the cause of mysterious authentication failures in containers and VMs where the system clock drifts. Fix: sync the system clock with NTP. In containers: ensure the host's clock is synced; container clocks inherit from the host.</div>
+        <div class="failbox"><strong>The SigV4 pre-signed URL expiry trap:</strong> Pre-signed S3 URLs use a query-parameter version of SigV4 where the expiry time is baked into the URL as <span class="mono">X-Amz-Expires</span>. The signature covers the expiry time — you cannot extend a pre-signed URL's expiry by editing the URL parameter. An attacker who intercepts a pre-signed URL cannot extend its validity. But there is a subtlety: the URL is valid from the signing time, not from when it's first used. A URL signed at 2PM with 1-hour expiry expires at 3PM — even if the recipient doesn't use it until 2:58PM. If generation and delivery takes time (email, async queue), the recipient may have a URL that's almost expired before they use it. Always generate pre-signed URLs with sufficient expiry for the delivery chain, but not so long they become a security risk.</div>
+      </div>
+    </div>
+
+    <div id="c2" class="cpanel">
+      <div class="ch">Endpoint resolution — how the CLI knows where to send requests</div>
+      <div class="csub">Regional vs global endpoints, VPC endpoints, and the FIPS endpoint requirement</div>
+      <div class="cb">
+        <p>The CLI must resolve the correct HTTPS endpoint for each service and region before constructing a request. The endpoint format is typically <span class="mono">service.region.amazonaws.com</span>. This seems simple but has several important nuances.</p>
+        <p><strong>Regional vs global services:</strong> Most services have regional endpoints: <span class="mono">ec2.ap-south-1.amazonaws.com</span>, <span class="mono">s3.ap-south-1.amazonaws.com</span>, <span class="mono">rds.ap-south-1.amazonaws.com</span>. Global services — IAM, STS (when using global endpoint), Route 53, CloudFront — use endpoints without a region component: <span class="mono">iam.amazonaws.com</span>, <span class="mono">route53.amazonaws.com</span>. Calling a regional endpoint with the wrong region returns resources for that region only — a common confusion when an engineer creates an EC2 in ap-south-1 but has their CLI configured for us-east-1 and can't find the instance.</p>
+        <p><strong>S3 endpoint duality:</strong> S3 has two endpoint styles. Path-style: <span class="mono">s3.ap-south-1.amazonaws.com/bucket-name/key</span>. Virtual-hosted style: <span class="mono">bucket-name.s3.ap-south-1.amazonaws.com/key</span>. Virtual-hosted is the modern default and required for many features. Path-style was deprecated by AWS in 2019 (though still works for existing buckets). The CLI uses virtual-hosted style by default. If you have a bucket name with dots (e.g. my.bucket.name), virtual-hosted style breaks SSL certificate validation because <span class="mono">my.bucket.name.s3.amazonaws.com</span> doesn't match the wildcard cert <span class="mono">*.s3.amazonaws.com</span>. Avoid dots in bucket names.</p>
+        <div class="mechbox"><strong>VPC Endpoint DNS override:</strong> When an Interface VPC Endpoint is created for a service, it registers private DNS names that override the public endpoint within the VPC. From an EC2 inside the VPC, <span class="mono">s3.ap-south-1.amazonaws.com</span> resolves to the VPC Endpoint's private IP instead of S3's public IP. The CLI doesn't need any special configuration — DNS resolution handles the routing transparently. This requires <span class="mono">enableDnsHostnames</span> and <span class="mono">enableDnsSupport</span> to be true on the VPC (Day 4 topic). If DNS-based VPC Endpoint routing isn't working, check these VPC settings first.</div>
+        <p><strong>The --endpoint-url override:</strong> Any CLI command accepts <span class="mono">--endpoint-url https://custom-endpoint.com</span> to override the default endpoint. Use cases: LocalStack (local AWS emulation for testing), MinIO (S3-compatible storage), AWS API Gateway custom endpoints, and testing against specific regional endpoints. In automated scripts, be wary of hardcoded endpoint URLs — they break when switching between environments. Use environment variables or config profiles instead.</p>
+        <div class="failbox"><strong>The dual-stack endpoint and IPv6:</strong> AWS services increasingly support dual-stack endpoints (both IPv4 and IPv6): <span class="mono">s3.dualstack.ap-south-1.amazonaws.com</span>. If you enable IPv6 on your VPC and EC2 but your CLI or SDK uses IPv4-only endpoints, traffic still goes via IPv4. If your security group or NACL only allows IPv6 outbound (rare but possible), IPv4 API calls will fail. Check your endpoint configuration if you're in a dual-stack environment with unexpected connectivity issues.</div>
+      </div>
+    </div>
+
+    <div id="c3" class="cpanel">
+      <div class="ch">Pagination — the silent data truncation problem</div>
+      <div class="csub">Why AWS APIs return partial results and how to get everything — the bug in almost every AWS script</div>
+      <div class="cb">
+        <p>Most AWS list/describe APIs return paginated results. If you have 1,000 EC2 instances and call <span class="mono">aws ec2 describe-instances</span>, you might get only 100. The response includes a <span class="mono">NextToken</span> (or <span class="mono">Marker</span> for older APIs, or <span class="mono">NextPageToken</span>) — a cursor pointing to the next page of results. To get all results, you must follow the pagination chain.</p>
+        <p><strong>Why APIs paginate:</strong> Returning 10,000 EC2 instances in one HTTP response would be a 10MB+ JSON payload. API Gateway and service quotas would reject it. Client memory consumption would spike. Pagination lets clients receive manageable chunks. The page size varies by service and operation — typically 100-1000 items per page.</p>
+        <div class="mechbox"><strong>The --no-paginate flag vs --paginate (default):</strong> The AWS CLI v2 automatically handles pagination for you with <span class="mono">--paginate</span> (the default). When you run <span class="mono">aws ec2 describe-instances</span>, the CLI makes multiple API calls behind the scenes, following the NextToken chain, and returns all results concatenated into one response. This is convenient but dangerous for very large result sets — you might be waiting for 50 sequential API calls and don't know it. Add <span class="mono">--no-paginate</span> to get only the first page, or use <span class="mono">--page-size N</span> to control page size, or use <span class="mono">--max-items N</span> to limit the total number of items returned across all pages.</div>
+        <div class="failbox"><strong>The most common bug in AWS scripts — incomplete data:</strong> A script runs <span class="mono">aws ec2 describe-instances --query 'Reservations[*].Instances[*].InstanceId'</span> and processes the results. It works perfectly in dev (5 instances). In production (1,200 instances), it silently processes only the first 1,000. Nobody notices because the script doesn't fail — it just misses 200 instances. The fix: use the default pagination (no --no-paginate) or explicitly use <span class="mono">aws ec2 describe-instances --no-paginate | ...</span> only when you know the result set is small. Better: use <span class="mono">--output json | jq</span> or the SDK's paginator APIs which handle pagination correctly by default.</div>
+        <div class="prodbox"><strong>The correct way to paginate in scripts:</strong>
+          <br>Option 1 — Let the CLI auto-paginate (default, sufficient for most cases):<br>
+          <span class="mono">aws ec2 describe-instances --query 'Reservations[*].Instances[*].InstanceId' --output text</span><br><br>
+          Option 2 — SDK Paginator (correct for production code in Spring Boot):<br>
+          The AWS SDK v2 for Java has Paginator classes: <span class="mono">DescribeInstancesIterable</span>. These return lazy iterators — they fetch the next page only when you iterate past the last item of the current page. Memory-efficient, automatically handles token chaining, and throws exceptions on individual page failures rather than silently truncating.
+        </div>
+      </div>
+    </div>
+
+    <div id="c4" class="cpanel">
+      <div class="ch">Retries, throttling, and exponential backoff</div>
+      <div class="csub">Why AWS throttles you and how the SDK's retry logic works — and when it doesn't save you</div>
+      <div class="cb">
+        <p>AWS services have API rate limits — maximum calls per second per account per region per API. When you exceed a rate limit, the service returns an HTTP 429 (Too Many Requests) with error code <span class="mono">ThrottlingException</span> or <span class="mono">RequestLimitExceeded</span>. The limits vary by service and operation. EC2 DescribeInstances: ~100 calls/second. IAM API calls: much lower, around 1-10/second for write operations. S3 PUT/GET: very high (5,500 GET/s and 3,500 PUT/s per prefix).</p>
+        <p><strong>The AWS SDK v2 retry behaviour:</strong> By default, AWS SDK v2 retries throttled requests (429s) and transient errors (500s, 503s) using <strong>exponential backoff with jitter</strong>. The retry delay doubles with each attempt (1s, 2s, 4s, 8s...) and adds a random jitter to prevent the "thundering herd" problem — where many clients retry simultaneously at the same backoff interval and all hit the service at once. Default: 3 retry attempts. The maximum retry count and base delay are configurable.</p>
+        <div class="mechbox"><strong>Why jitter is essential — not just exponential backoff:</strong> Without jitter: 100 Lambda functions all hit a rate limit at the same time. They all wait 1 second and retry simultaneously — hitting the rate limit again. They wait 2 seconds and retry — hitting it again. The service remains overwhelmed because all clients are in lockstep. With jitter: each client waits base_delay × 2^attempt × random(0,1). The randomness spreads the retries across the backoff window. The service sees a distributed retry pattern instead of synchronized waves. The AWS SDK implements "full jitter" which distributes retries uniformly across the entire backoff window. Understanding this is what makes you dangerous in distributed systems interviews.</div>
+        <p><strong>Retry budgets and when retries hurt:</strong> Retries work for transient throttling but make things worse in some scenarios. If you're making 100 API calls in a Lambda function and all are throttled due to sustained overload, retrying within the same Lambda invocation ties up execution time and memory. Lambda has a maximum execution time of 15 minutes — a function retrying aggressively across many operations can exhaust this limit. Better pattern for high-volume operations: use SQS as a buffer. Put jobs into SQS, process via Lambda with reserved concurrency limits. If Lambda is throttled, SQS holds the messages and Lambda processes them when capacity is available. This is the correct cloud-native pattern — queuing absorbs bursts rather than relying on in-process retries.</p>
+        <div class="failbox"><strong>The adaptive retry mode and why you should enable it:</strong> AWS SDK v2 introduced "adaptive" retry mode (in addition to "standard" and "legacy"). Adaptive mode uses a token bucket algorithm — each successful API call earns tokens, each retry costs tokens. When the token bucket is empty, the SDK slows down requests rather than retrying aggressively. This effectively implements client-side rate limiting that prevents the SDK from overwhelming a throttled service. Enable it via <span class="mono">AWS_RETRY_MODE=adaptive</span> environment variable or in the SDK configuration. For applications making many concurrent AWS API calls (your Spring Boot WebFlux app with reactive S3 calls), adaptive mode prevents cascading throttling failures that standard retry mode can cause.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('credentials',document.querySelectorAll('.ntab')[1])">Credential chain — the complete resolution order →</button>
+  </div>
+
+  <!-- CREDENTIAL CHAIN -->
+  <div id="p-credentials" class="panel">
+    <div class="lede"><strong>The DefaultCredentialsProvider chain is the mechanism that makes your Spring Boot app work on your laptop with ~/.aws/credentials, on EC2 with an instance role, in Lambda with an execution role, and in GitHub Actions with OIDC — all without changing a single line of application code. Understanding exactly what it checks and in what order prevents credential bugs that take hours to debug.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('cr',0,this)">1 · The full chain</button>
+      <button class="cbtn" onclick="showC('cr',1,this)">2 · Config file internals</button>
+      <button class="cbtn" onclick="showC('cr',2,this)">3 · Named profiles</button>
+      <button class="cbtn" onclick="showC('cr',3,this)">4 · Environment variables</button>
+    </div>
+
+    <div id="cr0" class="cpanel active">
+      <div class="ch">The DefaultCredentialsProvider chain — complete resolution order</div>
+      <div class="csub">Eight locations checked in strict order — the first one found wins</div>
+      <div class="cb">
+        <p>The AWS SDK's DefaultCredentialsProvider checks credential sources in a specific order. The first source that returns valid credentials wins — no further sources are checked. Understanding this order explains every "why is my app using the wrong credentials" mystery.</p>
+
+        <div style="display:flex;flex-direction:column;gap:6px;margin:12px 0">
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:flex-start">
+            <div style="background:#E1F5EE;color:#085041;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">1</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Java system properties (SDK only)</strong> — <span class="mono">aws.accessKeyId</span>, <span class="mono">aws.secretAccessKey</span>, optionally <span class="mono">aws.sessionToken</span>. Set via JVM flags: <span class="mono">-Daws.accessKeyId=AKIA...</span>. Almost never used in production — system properties are visible in process listings. Useful for testing.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:flex-start">
+            <div style="background:#E1F5EE;color:#085041;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">2</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Environment variables</strong> — <span class="mono">AWS_ACCESS_KEY_ID</span>, <span class="mono">AWS_SECRET_ACCESS_KEY</span>, optionally <span class="mono">AWS_SESSION_TOKEN</span>. The most common mechanism for CI/CD pipelines, Docker containers, and ECS task definitions. Checked before config files — environment variables override everything below them.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:flex-start">
+            <div style="background:#E1F5EE;color:#085041;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">3</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">AWS_PROFILE environment variable or default profile in ~/.aws/credentials</strong> — The credentials file at <span class="mono">~/.aws/credentials</span> contains named profiles in INI format. If <span class="mono">AWS_PROFILE</span> is set, that named profile is loaded. Otherwise the <span class="mono">[default]</span> profile is used. This is the "developer laptop" credential source.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:flex-start">
+            <div style="background:#E1F5EE;color:#085041;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">4</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">~/.aws/config file (config, not credentials)</strong> — The config file contains additional profile settings including role assumption configurations: <span class="mono">role_arn</span>, <span class="mono">source_profile</span>, <span class="mono">mfa_serial</span>. When a profile in config has a <span class="mono">role_arn</span>, the SDK automatically assumes that role using the source profile's credentials. This is how developers assume production roles from their laptop.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:flex-start">
+            <div style="background:#E1F5EE;color:#085041;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">5</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">Container credentials (ECS)</strong> — When running inside an ECS task, the <span class="mono">AWS_CONTAINER_CREDENTIALS_RELATIVE_URI</span> environment variable is set by ECS. The SDK fetches credentials from <span class="mono">http://169.254.170.2${AWS_CONTAINER_CREDENTIALS_RELATIVE_URI}</span>. This is how ECS tasks assume their task role — the ECS agent serves the role's credentials at this internal endpoint.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:flex-start">
+            <div style="background:#E1F5EE;color:#085041;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0">6</div>
+            <div style="font-size:13px;color:#444;line-height:1.65"><strong style="color:#1a1a18">EC2 Instance Metadata Service (IMDS)</strong> — The SDK queries <span class="mono">http://169.254.169.254/latest/meta-data/iam/security-credentials/ROLE-NAME</span>. This is how EC2 instances use their attached IAM instance profile. The SDK caches credentials and refreshes them 5 minutes before expiry. This step only applies when running on an EC2 instance — on a laptop or in a container without an instance profile, the IMDS endpoint doesn't exist.</div>
+          </div>
+        </div>
+
+        <div class="failbox"><strong>The most common credential chain bug — environment variable bleed:</strong> A developer sets <span class="mono">AWS_ACCESS_KEY_ID</span> in their shell for a one-time test. Three weeks later, that environment variable is still set (persisted in their .bashrc or tmux session). Their Spring Boot app starts locally, the SDK finds environment variables at step 2, and uses those old credentials — never reaching the config file profile they intended. The app seems to work but is hitting the wrong account/role. <span class="mono">aws sts get-caller-identity</span> is the fastest diagnostic — always run this to confirm which identity your code is actually using. Also run <span class="mono">aws configure list</span> to see which source each configuration value came from.</div>
+      </div>
+    </div>
+
+    <div id="cr1" class="cpanel">
+      <div class="ch">Config file internals — the two files engineers confuse</div>
+      <div class="csub">~/.aws/credentials vs ~/.aws/config — different formats, different purposes, different behaviour</div>
+      <div class="cb">
+        <p>AWS CLI uses two separate files. They have overlapping functionality that causes constant confusion.</p>
+        <p><strong>~/.aws/credentials</strong> — contains only authentication credentials (access keys). INI format. Profile headers have no prefix. Credentials here are for static IAM user keys:</p>
+        <div class="code-block"><code><span class="c"># ~/.aws/credentials</span>
+<span class="k">[default]</span>
+<span class="v">aws_access_key_id</span> = AKIAIOSFODNN7EXAMPLE
+<span class="v">aws_secret_access_key</span> = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+<span class="k">[deloitte-dev]</span>
+<span class="v">aws_access_key_id</span> = AKIAI44QH8DHBEXAMPLE
+<span class="v">aws_secret_access_key</span> = je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY</code></div>
+
+        <p><strong>~/.aws/config</strong> — contains configuration settings AND can contain credentials. INI format but profile headers are prefixed with "profile " (except [default]). Can contain role assumption, region, output format, MFA, and credential settings:</p>
+        <div class="code-block"><code><span class="c"># ~/.aws/config</span>
+<span class="k">[default]</span>
+<span class="v">region</span> = ap-south-1
+<span class="v">output</span> = json
+
+<span class="k">[profile deloitte-prod]</span>           <span class="c"># "profile" prefix required for non-default</span>
+<span class="v">role_arn</span> = arn:aws:iam::123456789:role/prod-deploy-role
+<span class="v">source_profile</span> = deloitte-dev     <span class="c"># uses credentials from [deloitte-dev] in ~/.aws/credentials</span>
+<span class="v">region</span> = ap-south-1
+<span class="v">mfa_serial</span> = arn:aws:iam::111222333:mfa/zuber  <span class="c"># require MFA to assume this role</span>
+<span class="v">duration_seconds</span> = 3600
+
+<span class="k">[profile jp-morgan-sandbox]</span>
+<span class="v">role_arn</span> = arn:aws:iam::987654321:role/consultant-role
+<span class="v">source_profile</span> = deloitte-dev
+<span class="v">external_id</span> = deloitte-engagement-12345   <span class="c"># required by JP Morgan's trust policy</span>
+<span class="v">region</span> = ap-south-1</code></div>
+
+        <div class="mechbox"><strong>The external_id in cross-account role assumption:</strong> JP Morgan's IAM role trust policy likely requires an <span class="mono">external_id</span> condition. This is a secret value that Deloitte and JP Morgan agreed on — it prevents the "confused deputy" attack. Without external_id: any AWS account could potentially configure a role to assume JP Morgan's role (if they knew the role ARN). With external_id: even knowing the role ARN, you can't assume the role without also knowing the external_id that JP Morgan requires. This is a standard pattern in cross-account consulting engagements. The external_id goes in your <span class="mono">~/.aws/config</span> profile under the client's role.</div>
+
+        <div class="failbox"><strong>The "profile " prefix mistake:</strong> In ~/.aws/config, all non-default profiles must have the prefix "profile " in the section header: <span class="mono">[profile my-profile]</span>. In ~/.aws/credentials, profiles have no prefix: <span class="mono">[my-profile]</span>. If you write <span class="mono">[my-profile]</span> in ~/.aws/config (missing the "profile " prefix), the CLI doesn't recognise it as a profile. Running <span class="mono">aws --profile my-profile s3 ls</span> fails with "The config profile (my-profile) could not be found." This is one of the most common CLI setup mistakes because the format is inconsistent between the two files — a historical quirk of the CLI design.</div>
+      </div>
+    </div>
+
+    <div id="cr2" class="cpanel">
+      <div class="ch">Named profiles — managing multiple AWS accounts and roles</div>
+      <div class="csub">The correct way to handle dev/staging/prod, multiple clients, and cross-account access from one machine</div>
+      <div class="cb">
+        <p>Most engineers working at consultancies or with multiple AWS accounts need to switch between them constantly. Named profiles let you maintain multiple credential sets and switch between them per-command or per-session.</p>
+        <div class="code-block"><code><span class="c"># Switch for a single command</span>
+<span class="cmd-g">aws s3 ls --profile deloitte-prod</span>
+
+<span class="c"># Switch for an entire shell session</span>
+<span class="cmd-g">export AWS_PROFILE=deloitte-prod</span>
+<span class="cmd-g">aws s3 ls</span>   <span class="c"># uses deloitte-prod profile automatically</span>
+
+<span class="c"># Override region for a specific command</span>
+<span class="cmd-g">aws ec2 describe-instances --profile deloitte-prod --region us-east-1</span>
+
+<span class="c"># See which profile and credentials are currently active</span>
+<span class="cmd-g">aws configure list</span>
+<span class="c"># Output shows: Name | Value | Type | Location for each setting</span>
+<span class="c"># Type tells you: env, config-file, credentials-file, or None</span>
+
+<span class="c"># Verify the identity for the current profile</span>
+<span class="cmd-g">aws sts get-caller-identity</span>
+<span class="c"># Returns: UserId, Account, Arn — always run this first to confirm you're in the right account</span></code></div>
+
+        <div class="prodbox"><strong>Profile setup for a consulting engineer at Deloitte:</strong><br>
+          <span class="mono">~/.aws/credentials</span>: one entry — your personal Deloitte IAM user credentials (long-lived, used only as the source for role assumption).<br>
+          <span class="mono">~/.aws/config</span>: one entry per client/environment — each with role_arn pointing to the client account's role, source_profile pointing to your Deloitte user, and the external_id JP Morgan gave Deloitte. You never directly use long-lived credentials for client work — you always assume the client's role via STS. All client API calls use temporary credentials that expire and don't persist in logs or history.
+        </div>
+
+        <div class="mechbox"><strong>aws-vault — the secure alternative to plaintext config files:</strong> ~/.aws/credentials stores access keys as plaintext on your disk. If your laptop is stolen or your filesystem is compromised, all your AWS credentials are exposed. <span class="mono">aws-vault</span> is an open-source tool that stores credentials in your OS keychain (macOS Keychain, Linux secret service, Windows Credential Manager) — encrypted at rest. You run <span class="mono">aws-vault exec deloitte-dev -- aws s3 ls</span>; aws-vault retrieves the credentials from the keychain, sets them as environment variables for that subprocess, then clears them. Credentials never exist on the filesystem. For anyone working on client AWS accounts with sensitive data, aws-vault is the professional-grade credential management tool.</div>
+      </div>
+    </div>
+
+    <div id="cr3" class="cpanel">
+      <div class="ch">Environment variables — the complete set and their precedence</div>
+      <div class="csub">Every AWS-related environment variable, what it does, and when you'd set it</div>
+      <div class="cb">
+        <p>AWS CLI and SDK respect a comprehensive set of environment variables. These override config file settings and are the primary mechanism for credential injection in CI/CD systems, containers, and serverless environments.</p>
+        <div class="code-block"><code><span class="c"># Core credentials — all three required for assumed role credentials</span>
+<span class="cmd-g">AWS_ACCESS_KEY_ID</span>=AKIA...           <span class="c"># or ASIA... for temporary credentials</span>
+<span class="cmd-g">AWS_SECRET_ACCESS_KEY</span>=...
+<span class="cmd-g">AWS_SESSION_TOKEN</span>=...              <span class="c"># REQUIRED when using ASIA temporary credentials</span>
+
+<span class="c"># Region and output configuration</span>
+<span class="cmd-g">AWS_DEFAULT_REGION</span>=ap-south-1      <span class="c"># Overrides config file region</span>
+<span class="cmd-g">AWS_DEFAULT_OUTPUT</span>=json            <span class="c"># json | text | table | yaml</span>
+
+<span class="c"># Profile selection</span>
+<span class="cmd-g">AWS_PROFILE</span>=deloitte-prod          <span class="c"># Selects named profile from config/credentials</span>
+<span class="cmd-g">AWS_CONFIG_FILE</span>=/path/to/config    <span class="c"># Override default ~/.aws/config location</span>
+<span class="cmd-g">AWS_SHARED_CREDENTIALS_FILE</span>=/path  <span class="c"># Override default ~/.aws/credentials location</span>
+
+<span class="c"># Endpoint overrides</span>
+<span class="cmd-g">AWS_ENDPOINT_URL</span>=http://localhost:4566  <span class="c"># Override all service endpoints (LocalStack)</span>
+<span class="cmd-g">AWS_ENDPOINT_URL_S3</span>=http://minio:9000  <span class="c"># Override specific service endpoint</span>
+
+<span class="c"># SDK behaviour</span>
+<span class="cmd-g">AWS_RETRY_MODE</span>=adaptive            <span class="c"># legacy | standard | adaptive</span>
+<span class="cmd-g">AWS_MAX_ATTEMPTS</span>=5                 <span class="c"># Maximum retry attempts</span>
+<span class="cmd-g">AWS_CA_BUNDLE</span>=/path/to/cert.pem    <span class="c"># Custom CA bundle for HTTPS (corporate proxies)</span>
+
+<span class="c"># Container/ECS credential injection (set by ECS agent automatically)</span>
+<span class="cmd-g">AWS_CONTAINER_CREDENTIALS_RELATIVE_URI</span>=...  <span class="c"># ECS task role endpoint path</span>
+
+<span class="c"># Disable credential chain steps (useful for debugging)</span>
+<span class="cmd-g">AWS_EC2_METADATA_DISABLED</span>=true     <span class="c"># Skip IMDS check (useful on non-EC2 to avoid timeout)</span></code></div>
+
+        <div class="mechbox"><strong>AWS_EC2_METADATA_DISABLED for faster startup on non-EC2:</strong> When running locally or in Docker, the SDK still tries to query <span class="mono">http://169.254.169.254</span> as step 6 of the credential chain. On non-EC2 systems, this address isn't reachable and the connection times out — adding 1-2 seconds to the credential resolution time. Set <span class="mono">AWS_EC2_METADATA_DISABLED=true</span> in local development environments to skip this step and speed up SDK initialisation. In your Spring Boot application's local dev profile (application-dev.properties), set this to prevent slow startup when running locally.</div>
+        <div class="warnbox"><strong>AWS_CA_BUNDLE for corporate proxy environments:</strong> At Deloitte, your network traffic may go through a corporate proxy with SSL inspection. This proxy terminates and re-signs HTTPS connections with the corporate CA certificate. The AWS SDK doesn't trust the corporate CA by default — every AWS API call fails with "SSL certificate verification error." Solution: export the corporate CA certificate bundle and set <span class="mono">AWS_CA_BUNDLE=/path/to/corporate-ca-bundle.pem</span>. This tells the SDK to trust that CA for all HTTPS connections. This is an extremely common issue in enterprise environments and a complete mystery to engineers who don't know about it.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('sdk',document.querySelectorAll('.ntab')[2])">SDK deep dive — Spring Boot integration →</button>
+  </div>
+
+  <!-- SDK DEEP DIVE -->
+  <div id="p-sdk" class="panel">
+    <div class="lede"><strong>The AWS SDK v2 for Java is not just a REST client wrapper. It has a sophisticated architecture: pluggable credential providers, HTTP client abstraction (Netty or Apache), request interceptors, response handlers, waiters, paginators, and async execution models. Using it correctly with Spring Boot WebFlux requires understanding this architecture — using it incorrectly causes thread pool exhaustion, connection pool starvation, and silent data truncation.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('sdk',0,this)">1 · SDK v2 architecture</button>
+      <button class="cbtn" onclick="showC('sdk',1,this)">2 · Sync vs async clients</button>
+      <button class="cbtn" onclick="showC('sdk',2,this)">3 · Spring Boot integration</button>
+      <button class="cbtn" onclick="showC('sdk',3,this)">4 · Connection pooling</button>
+    </div>
+
+    <div id="sdk0" class="cpanel active">
+      <div class="ch">AWS SDK v2 architecture — the major components</div>
+      <div class="csub">Understanding the layers that sit between your code and the AWS API</div>
+      <div class="cb">
+        <p>The AWS SDK v2 for Java was a complete rewrite from v1, designed around immutability, non-blocking I/O, and modular architecture. Every client in SDK v2 is immutable after construction — you create the client once at application startup and share it across all requests.</p>
+        <p><strong>Service clients:</strong> Each AWS service has a dedicated client: <span class="mono">S3Client</span>, <span class="mono">DynamoDbClient</span>, <span class="mono">SqsClient</span>, etc. Each client manages: credential resolution, endpoint determination, request serialisation, HTTP transport, response deserialisation, retries, and error handling. Service clients are thread-safe and expensive to create — always create them as singletons (in Spring, as @Bean).</p>
+        <p><strong>HTTP client:</strong> SDK v2 has a pluggable HTTP layer. By default it uses the URLConnection-based synchronous client. For production applications: use <span class="mono">software.amazon.awssdk:netty-nio-client</span> for async clients (S3AsyncClient, DynamoDbAsyncClient) and <span class="mono">software.amazon.awssdk:apache-client</span> for sync clients when you need connection pooling configuration. The default HTTP client has very limited connection pool size — a production high-throughput application will exhaust it and see connection timeouts.</p>
+        <div class="mechbox"><strong>The SDK request execution pipeline:</strong> Every SDK API call goes through a pipeline of execution interceptors before and after the HTTP call. You can add custom interceptors to: add headers to every request (correlation IDs, tracing headers), log request/response metadata, implement custom retry logic, add circuit breaker behaviour. This is how you integrate AWS SDK calls with your existing Spring Boot interceptors and observability stack without modifying every call site.</div>
+        <div class="prodbox"><strong>Creating SDK clients correctly in Spring Boot:</strong><br>
+          Never create SDK clients per-request — they're expensive (establish connection pools, load service models). Create once as Spring Beans:<br>
+          Inject AwsCredentialsProvider (DefaultCredentialsProvider.create()) — don't hardcode credentials.<br>
+          Inject the region from configuration: Region.of(awsRegion) where awsRegion comes from @Value("${aws.region}").<br>
+          Configure the HTTP client with appropriate connection pool size for your traffic volume.<br>
+          Use @Bean with @Scope("singleton") — this is Spring's default for @Bean but be explicit.<br>
+          Shutdown the client in @PreDestroy: <span class="mono">s3Client.close()</span> — SDK clients hold resources (thread pools, connections) that must be released on application shutdown.
+        </div>
+      </div>
+    </div>
+
+    <div id="sdk1" class="cpanel">
+      <div class="ch">Sync vs async SDK clients — the critical choice for WebFlux</div>
+      <div class="csub">Why using the wrong client type in a reactive application causes performance catastrophe</div>
+      <div class="cb">
+        <p>AWS SDK v2 provides synchronous and asynchronous variants of every service client. <span class="mono">S3Client</span> (sync) blocks the calling thread until the response arrives. <span class="mono">S3AsyncClient</span> (async) returns a <span class="mono">CompletableFuture</span> immediately and completes it when the response arrives, without blocking any thread.</p>
+        <div class="failbox"><strong>The WebFlux + blocking SDK client catastrophe:</strong> Your Spring Boot WebFlux application uses Netty as the server. Netty runs on a small pool of event loop threads (typically 2×CPU cores — 4-8 threads on a typical EC2). When a request arrives, a Netty event loop thread handles it. If you call <span class="mono">S3Client.getObject()</span> (blocking) inside a WebFlux handler, that event loop thread blocks waiting for S3 to respond (say, 200ms). During those 200ms, that thread cannot process any other requests. With 4 event loop threads and 200ms S3 latency, your maximum throughput is 4/0.2 = 20 requests/second — regardless of how many CPU cores or how much RAM you have. Under load, all event loop threads are blocked on S3, new requests queue up, latency spikes, the application appears hung. This does not throw an exception or log a warning — it silently destroys performance.</div>
+        <div class="prodbox"><strong>The correct pattern — S3AsyncClient with WebFlux:</strong></div>
+        <div class="code-block"><code><span class="c">// WRONG — blocks the Netty event loop thread</span>
+<span class="cmd-b">@GetMapping</span>("/file/{key}")
+<span class="v">Mono</span>&lt;<span class="v">byte[]</span>&gt; getFile(<span class="v">@PathVariable</span> <span class="k">String</span> key) {
+    <span class="c">// This blocks! The S3Client.getObject() call parks this thread until S3 responds</span>
+    <span class="v">ResponseBytes</span>&lt;<span class="v">GetObjectResponse</span>&gt; response = s3Client.getObjectAsBytes(
+        r -> r.bucket(bucket).key(key));
+    <span class="k">return</span> <span class="v">Mono</span>.just(response.asByteArray());
+}
+
+<span class="c">// CORRECT — non-blocking, uses S3AsyncClient</span>
+<span class="cmd-b">@GetMapping</span>("/file/{key}")
+<span class="v">Mono</span>&lt;<span class="v">byte[]</span>&gt; getFile(<span class="v">@PathVariable</span> <span class="k">String</span> key) {
+    <span class="k">return</span> <span class="v">Mono</span>.fromFuture(
+        s3AsyncClient.getObjectAsBytes(r -> r.bucket(bucket).key(key))
+    ).map(<span class="v">ResponseBytes</span>::asByteArray);
+    <span class="c">// Returns immediately, Mono completes when S3 responds</span>
+    <span class="c">// No thread blocked during the wait</span>
+}
+
+<span class="c">// If you must use sync S3Client in WebFlux, offload to a bounded scheduler:</span>
+<span class="cmd-b">@GetMapping</span>("/file/{key}")
+<span class="v">Mono</span>&lt;<span class="v">byte[]</span>&gt; getFileSafe(<span class="v">@PathVariable</span> <span class="k">String</span> key) {
+    <span class="k">return</span> <span class="v">Mono</span>.fromCallable(
+        () -> s3Client.getObjectAsBytes(r -> r.bucket(bucket).key(key)).asByteArray()
+    ).subscribeOn(<span class="v">Schedulers</span>.boundedElastic());
+    <span class="c">// Offloads blocking call to a dedicated thread pool, not event loop</span>
+}</code></div>
+      </div>
+    </div>
+
+    <div id="sdk2" class="cpanel">
+      <div class="ch">Spring Boot + AWS SDK v2 — the complete correct integration</div>
+      <div class="csub">Maven dependencies, Bean configuration, and the patterns your Deloitte project should use</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">&lt;!-- pom.xml — use BOM to manage all SDK version conflicts --&gt;</span>
+<span class="k">&lt;dependencyManagement&gt;</span>
+    <span class="k">&lt;dependencies&gt;</span>
+        <span class="k">&lt;dependency&gt;</span>
+            <span class="v">&lt;groupId&gt;</span>software.amazon.awssdk<span class="v">&lt;/groupId&gt;</span>
+            <span class="v">&lt;artifactId&gt;</span>bom<span class="v">&lt;/artifactId&gt;</span>
+            <span class="v">&lt;version&gt;</span>2.25.0<span class="v">&lt;/version&gt;</span>
+            <span class="v">&lt;type&gt;</span>pom<span class="v">&lt;/type&gt;</span>
+            <span class="v">&lt;scope&gt;</span>import<span class="v">&lt;/scope&gt;</span>
+        <span class="k">&lt;/dependency&gt;</span>
+    <span class="k">&lt;/dependencies&gt;</span>
+<span class="k">&lt;/dependencyManagement&gt;</span>
+
+<span class="k">&lt;dependencies&gt;</span>
+    <span class="k">&lt;dependency&gt;</span><span class="v">&lt;groupId&gt;</span>software.amazon.awssdk<span class="v">&lt;/groupId&gt;&lt;artifactId&gt;</span>s3<span class="v">&lt;/artifactId&gt;&lt;/dependency&gt;</span>
+    <span class="k">&lt;dependency&gt;</span><span class="v">&lt;groupId&gt;</span>software.amazon.awssdk<span class="v">&lt;/groupId&gt;&lt;artifactId&gt;</span>sqs<span class="v">&lt;/artifactId&gt;&lt;/dependency&gt;</span>
+    <span class="k">&lt;dependency&gt;</span><span class="v">&lt;groupId&gt;</span>software.amazon.awssdk<span class="v">&lt;/groupId&gt;&lt;artifactId&gt;</span>secretsmanager<span class="v">&lt;/artifactId&gt;&lt;/dependency&gt;</span>
+    <span class="k">&lt;dependency&gt;</span><span class="v">&lt;groupId&gt;</span>software.amazon.awssdk<span class="v">&lt;/groupId&gt;&lt;artifactId&gt;</span>netty-nio-client<span class="v">&lt;/artifactId&gt;&lt;/dependency&gt;</span>
+<span class="k">&lt;/dependencies&gt;</span></code></div>
+
+        <div class="code-block"><code><span class="c">// AwsConfig.java — all SDK beans in one configuration class</span>
+<span class="cmd-b">@Configuration</span>
+<span class="k">public class</span> AwsConfig {
+
+    <span class="cmd-b">@Value</span>("${aws.region:ap-south-1}")  <span class="c">// Default to Mumbai, override via env</span>
+    <span class="k">private</span> String region;
+
+    <span class="cmd-b">@Value</span>("${aws.s3.bucket}")
+    <span class="k">private</span> String bucket;
+
+    <span class="c">// Async client for WebFlux — uses Netty NIO under the hood</span>
+    <span class="cmd-b">@Bean</span>
+    <span class="cmd-b">@ConditionalOnMissingBean</span>
+    <span class="k">public</span> S3AsyncClient s3AsyncClient() {
+        <span class="k">return</span> S3AsyncClient.builder()
+            .region(Region.of(region))
+            .credentialsProvider(DefaultCredentialsProvider.create()) <span class="c">// Chain: env → file → IMDS</span>
+            .httpClient(NettyNioAsyncHttpClient.builder()
+                .maxConcurrency(100)        <span class="c">// Max concurrent S3 connections</span>
+                .connectionTimeout(Duration.ofSeconds(10))
+                .readTimeout(Duration.ofSeconds(30))
+                .build())
+            .build();
+    }
+
+    <span class="c">// Sync client for non-reactive code paths, on boundedElastic scheduler</span>
+    <span class="cmd-b">@Bean</span>
+    <span class="k">public</span> S3Client s3Client() {
+        <span class="k">return</span> S3Client.builder()
+            .region(Region.of(region))
+            .credentialsProvider(DefaultCredentialsProvider.create())
+            .httpClient(ApacheHttpClient.builder()
+                .maxConnections(50)
+                .connectionTimeout(Duration.ofSeconds(10))
+                .socketTimeout(Duration.ofSeconds(30))
+                .build())
+            .build();
+    }
+
+    <span class="c">// Lifecycle: release connection pool on shutdown</span>
+    <span class="cmd-b">@PreDestroy</span>
+    <span class="k">public void</span> destroy() {
+        s3AsyncClient().close();
+        s3Client().close();
+    }
+}</code></div>
+
+        <div class="failbox"><strong>The SDK v1 vs v2 dependency conflict:</strong> Many Spring Boot starters (including some older spring-cloud-aws versions) pull in AWS SDK v1 as a transitive dependency. If you have both v1 and v2 on the classpath, they share no classes — they have completely different package names (v1: com.amazonaws, v2: software.amazon.awssdk). However, they may have conflicting dependencies (Jackson, Netty, HTTP client libraries). Use the SDK v2 BOM to manage all SDK module versions as a group, and explicitly exclude SDK v1 transitive dependencies from any Spring starters that include them.</div>
+      </div>
+    </div>
+
+    <div id="sdk3" class="cpanel">
+      <div class="ch">Connection pooling — the invisible bottleneck</div>
+      <div class="csub">Why default connection pool settings cause production failures under load</div>
+      <div class="cb">
+        <p>Every AWS SDK client maintains a pool of HTTPS connections to AWS service endpoints. Creating a new HTTPS connection requires a TCP handshake + TLS handshake — typically 50-200ms. For an application making thousands of S3 calls per second, connection reuse is essential. The SDK's connection pool handles this: connections are reused across requests, reducing per-request latency to the actual API call time.</p>
+        <p><strong>Default connection pool sizes:</strong> The AWS SDK v2's default Apache HTTP client: 50 connections. Default Netty NIO client: 50 connections per hostname. For high-throughput applications these defaults are too small. A Spring Boot API handling 500 concurrent requests, each making one S3 call, needs 500 connections to S3 simultaneously. With 50 connections, 450 requests wait for a connection to become available — adding queuing latency on top of the actual S3 latency.</p>
+        <div class="mechbox"><strong>How to size the connection pool:</strong> Formula: pool_size = (peak_concurrent_requests × avg_s3_latency_ms) / 1000. If your app handles 500 concurrent requests, each S3 call takes 50ms: 500 × 0.05 = 25 connections minimum. Double for safety: 50. This matches the default — fine for moderate traffic. For high-traffic apps: profile your actual S3 call concurrency under peak load, measure connection wait time in the HTTP client metrics, and increase maxConcurrency (Netty) or maxConnections (Apache) until connection wait time is negligible.</div>
+        <div class="failbox"><strong>Connection pool exhaustion failure pattern:</strong> Application works fine at low traffic. Under load, response times gradually increase. Logs show no errors. CloudWatch shows S3 latency is normal (10-20ms). But application latency is 500ms+. Why? The connection pool is saturated — requests queue waiting for a connection. The 500ms is mostly wait time in the connection pool, not S3 latency. Diagnosis: enable HTTP client metrics, look for connection wait time or pool exhaustion metrics. Fix: increase connection pool size, or reduce concurrency at the application level (rate limiting, request queuing), or switch to S3AsyncClient with larger Netty concurrency which is more efficient with connections under high load.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('jmespath',document.querySelectorAll('.ntab')[3])">JMESPath filtering — querying CLI output →</button>
+  </div>
+
+  <!-- JMESPATH -->
+  <div id="p-jmespath" class="panel">
+    <div class="lede"><strong>JMESPath is the query language used by the AWS CLI --query flag. Every AWS engineer who writes automation scripts uses it, and almost all of them use only 10% of its capability — resulting in scripts that pipe through grep, awk, and sed when a single --query expression would be cleaner, faster, and more portable. Mastering JMESPath is the difference between a 20-line shell script and a 2-line CLI command.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('j',0,this)">1 · JMESPath fundamentals</button>
+      <button class="cbtn" onclick="showC('j',1,this)">2 · Filtering and conditions</button>
+      <button class="cbtn" onclick="showC('j',2,this)">3 · Multi-select and functions</button>
+      <button class="cbtn" onclick="showC('j',3,this)">4 · Real-world patterns</button>
+    </div>
+
+    <div id="j0" class="cpanel active">
+      <div class="ch">JMESPath fundamentals — navigating nested JSON</div>
+      <div class="csub">Dot notation, array indexing, wildcards, and flattening</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># Basic dot notation — navigate nested structure</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> <span class="s">'Reservations[0].Instances[0].InstanceId'</span>
+<span class="c"># Gets InstanceId of the first instance in the first reservation</span>
+
+<span class="c"># Array wildcard — get a field from every element</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> <span class="s">'Reservations[*].Instances[*].InstanceId'</span>
+<span class="c"># Returns [[id1, id2], [id3]] — nested arrays (one per Reservation)</span>
+
+<span class="c"># Flatten with [] — collapse nested arrays into a single list</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> <span class="s">'Reservations[*].Instances[*].InstanceId | []'</span>
+<span class="c"># Returns [id1, id2, id3] — flat list</span>
+<span class="c"># The | [] at the end is the flatten operator</span>
+
+<span class="c"># Navigate deeper structures</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> <span class="s">'Reservations[*].Instances[*].{
+  ID: InstanceId,
+  Type: InstanceType,
+  State: State.Name,
+  IP: PublicIpAddress,
+  AZ: Placement.AvailabilityZone
+} | []'</span>
+<span class="c"># Returns a list of objects with renamed fields — much cleaner than full JSON</span></code></div>
+
+        <div class="mechbox"><strong>The output format and JMESPath interaction:</strong> <span class="mono">--output json</span> with <span class="mono">--query</span> returns JSON. <span class="mono">--output text</span> with <span class="mono">--query</span> returns tab-separated values — perfect for piping into bash variables or awk. <span class="mono">--output table</span> with <span class="mono">--query</span> returns an ASCII table — readable but not machine-parseable. For scripts: always use <span class="mono">--output text</span> when extracting a single value into a shell variable. <span class="mono">INSTANCE_ID=$(aws ec2 describe-instances --query 'Reservations[0].Instances[0].InstanceId' --output text)</span></div>
+      </div>
+    </div>
+
+    <div id="j1" class="cpanel">
+      <div class="ch">Filtering with conditions — the most powerful JMESPath feature</div>
+      <div class="csub">Filter arrays by field values using [?condition] syntax</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># Filter instances by state — only running instances</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> \
+  <span class="s">'Reservations[*].Instances[?State.Name==`running`].InstanceId | []'</span>
+<span class="c"># [?condition] filters the array to elements matching the condition</span>
+<span class="c"># Note: string values in conditions use backticks `running`, not quotes</span>
+
+<span class="c"># Filter by tag value — find instances tagged Environment=production</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> \
+  <span class="s">'Reservations[*].Instances[?Tags[?Key==`Environment`&&Value==`production`]].{ID: InstanceId, Type: InstanceType} | []'</span>
+
+<span class="c"># Filter S3 buckets created after a date</span>
+<span class="cmd-g">aws s3api list-buckets --query</span> \
+  <span class="s">'Buckets[?CreationDate>`2024-01-01`].Name'</span>
+
+<span class="c"># Find IAM users with no MFA device</span>
+<span class="cmd-g">aws iam get-account-summary --query</span> <span class="s">'SummaryMap.AccountMFAEnabled'</span>
+<span class="c"># For per-user MFA check, use list-virtual-mfa-devices and join with list-users</span>
+
+<span class="c"># Find security groups with 0.0.0.0/0 on port 22 (dangerous open SSH)</span>
+<span class="cmd-g">aws ec2 describe-security-groups --query</span> \
+  <span class="s">'SecurityGroups[?IpPermissions[?FromPort==`22`&&IpRanges[?CidrIp==`0.0.0.0/0`]]].{Name: GroupName, ID: GroupId}'</span>
+<span class="c"># This is a real security audit query — finds every SG with public SSH open</span></code></div>
+
+        <div class="failbox"><strong>The backtick vs quote confusion in JMESPath conditions:</strong> In JMESPath, string literals in filter conditions must use backticks: <span class="mono">[?State.Name==`running`]</span>. Quotes (<span class="mono">==`"running"`</span>) produce a JSON string with literal quotes inside the JMESPath expression — it doesn't match anything. Numbers do NOT use backticks: <span class="mono">[?Port==`22`]</span> — wait, ports ARE backtick-wrapped because they're JSON literals in JMESPath. This is confusing: JSON numbers in JMESPath conditions also use backticks. The rule: anything that is a JSON literal value (string, number, boolean, null) in a JMESPath condition uses backtick notation. Only identifiers (field names, function names) are unquoted.</div>
+      </div>
+    </div>
+
+    <div id="j2" class="cpanel">
+      <div class="ch">Multi-select, functions, and sorting</div>
+      <div class="csub">Reshaping output, sorting results, and using built-in JMESPath functions</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># Multi-select hash — create custom objects from nested data</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> \
+  <span class="s">'Reservations[*].Instances[*].{
+    InstanceId: InstanceId,
+    Type: InstanceType,
+    State: State.Name,
+    LaunchTime: LaunchTime,
+    PrivateIP: PrivateIpAddress,
+    AZ: Placement.AvailabilityZone,
+    Name: Tags[?Key==`Name`].Value | [0]
+  } | []'</span> \
+  --output table
+<span class="c"># Tags[?Key==`Name`].Value | [0] extracts the Name tag value safely</span>
+
+<span class="c"># Sort results — find the most recently launched instances</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> \
+  <span class="s">'sort_by(Reservations[*].Instances[*] | [], &LaunchTime)[-5:]
+   .{ID: InstanceId, Launched: LaunchTime}'</span>
+<span class="c"># sort_by(array, &field) sorts ascending. [-5:] takes the last 5 (most recent)</span>
+
+<span class="c"># Count matching resources</span>
+<span class="cmd-g">aws ec2 describe-instances --query</span> \
+  <span class="s">'length(Reservations[*].Instances[?State.Name==`running`] | [])'</span>
+
+<span class="c"># Find max/min values</span>
+<span class="cmd-g">aws cloudwatch get-metric-statistics \</span>
+  --namespace AWS/EC2 --metric-name CPUUtilization \
+  --start-time 2024-01-01T00:00:00 --end-time 2024-01-02T00:00:00 \
+  --period 3600 --statistics Maximum --dimensions Name=InstanceId,Value=i-xxx \
+  --query <span class="s">'max_by(Datapoints, &Maximum).{Peak: Maximum, Time: Timestamp}'</span></code></div>
+
+        <div class="prodbox"><strong>Extracting a tag value — the pattern you'll use constantly:</strong> AWS resources have tags as an array of {Key, Value} objects. Getting a specific tag's value requires: <span class="mono">Tags[?Key==`Name`].Value | [0]</span>. This filters Tags to entries where Key is "Name", gets the Value array, and takes the first element. If the tag doesn't exist, this returns null rather than erroring. This pattern appears in almost every real-world AWS automation script — memorise it.</div>
+      </div>
+    </div>
+
+    <div id="j3" class="cpanel">
+      <div class="ch">Real-world automation patterns using JMESPath</div>
+      <div class="csub">Production scripts you can use immediately in your Deloitte work and GetWork infrastructure</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># Get the AMI ID of the latest Amazon Linux 2023 in ap-south-1</span>
+<span class="cmd-g">aws ec2 describe-images \</span>
+  --owners amazon \
+  --filters "Name=name,Values=al2023-ami-*" \
+             "Name=architecture,Values=x86_64" \
+             "Name=state,Values=available" \
+  --query <span class="s">'sort_by(Images, &CreationDate)[-1].ImageId'</span> \
+  --output text
+<span class="c"># Returns the single most recent AL2023 AMI ID — use in Terraform aws_ami data source</span>
+
+<span class="c"># Get all instance IDs for an Auto Scaling Group</span>
+<span class="cmd-g">aws autoscaling describe-auto-scaling-groups \</span>
+  --auto-scaling-group-names my-asg \
+  --query <span class="s">'AutoScalingGroups[0].Instances[?HealthStatus==`Healthy`].InstanceId'</span> \
+  --output text
+
+<span class="c"># Find all EBS volumes NOT attached to any instance (orphaned — you're paying for them)</span>
+<span class="cmd-g">aws ec2 describe-volumes \</span>
+  --query <span class="s">'Volumes[?State==`available`].{ID: VolumeId, Size: Size, AZ: AvailabilityZone}'</span> \
+  --output table
+<span class="c"># Every "available" volume is unattached and costing money. Delete them.</span>
+
+<span class="c"># List all IAM roles sorted by last used date — find zombie roles</span>
+<span class="cmd-g">aws iam list-roles \</span>
+  --query <span class="s">'sort_by(Roles, &RoleLastUsed.LastUsedDate)[*].{
+    Name: RoleName,
+    Created: CreateDate,
+    LastUsed: RoleLastUsed.LastUsedDate
+  }'</span> \
+  --output table
+
+<span class="c"># Get all CloudWatch alarms in ALARM state — your monitoring health check</span>
+<span class="cmd-g">aws cloudwatch describe-alarms \</span>
+  --state-value ALARM \
+  --query <span class="s">'MetricAlarms[*].{Name: AlarmName, Reason: StateReason, Updated: StateUpdatedTimestamp}'</span> \
+  --output table</code></div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('automation',document.querySelectorAll('.ntab')[4])">Automation patterns — real scripts →</button>
+  </div>
+
+  <!-- AUTOMATION PATTERNS -->
+  <div id="p-automation" class="panel">
+    <div class="lede"><strong>Knowing the CLI syntax is table stakes. Knowing how to compose it into robust, production-grade automation scripts — with error handling, idempotency, parallel execution, and observability — is what makes you dangerous. These patterns are directly applicable to your Bitbucket Event Processing System at Deloitte and your GetWork deployment automation.</strong></div>
+
+    <div class="cstep-nav">
+      <button class="cbtn active" onclick="showC('auto',0,this)">1 · Robust scripting patterns</button>
+      <button class="cbtn" onclick="showC('auto',1,this)">2 · Waiters and polling</button>
+      <button class="cbtn" onclick="showC('auto',2,this)">3 · Parallel execution</button>
+      <button class="cbtn" onclick="showC('auto',3,this)">4 · LocalStack for testing</button>
+    </div>
+
+    <div id="auto0" class="cpanel active">
+      <div class="ch">Robust scripting patterns — the difference between scripts that break production and scripts that don't</div>
+      <div class="csub">Error handling, idempotency, and --cli-input-json for complex commands</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c">#!/bin/bash
+# Production-grade AWS script template</span>
+<span class="cmd-g">set -euo pipefail</span>    <span class="c"># -e: exit on error  -u: error on undefined var  -o pipefail: pipe failures caught</span>
+
+<span class="c"># Constants — never hardcode in script body</span>
+<span class="cmd-g">REGION</span>=<span class="s">"ap-south-1"</span>
+<span class="cmd-g">BUCKET</span>=<span class="s">"${APP_BUCKET:-my-default-bucket}"</span>  <span class="c"># Use env var with default</span>
+
+<span class="c"># Logging function — timestamps every line</span>
+<span class="k">log</span>() { echo <span class="s">"[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"</span> >&2; }
+
+<span class="c"># Error handler — prints line number on failure</span>
+<span class="k">trap</span> <span class="s">'log "ERROR: Script failed at line $LINENO"'</span> ERR
+
+<span class="c"># Idempotent S3 bucket creation — safe to run multiple times</span>
+<span class="k">create_bucket_if_not_exists</span>() {
+    <span class="k">local</span> bucket=$1
+    <span class="k">if</span> aws s3api head-bucket --bucket "$bucket" --region "$REGION" 2>/dev/null; then
+        log "Bucket $bucket already exists — skipping"
+    <span class="k">else</span>
+        log "Creating bucket $bucket"
+        aws s3api create-bucket \
+            --bucket "$bucket" \
+            --region "$REGION" \
+            --create-bucket-configuration LocationConstraint="$REGION"
+        log "Bucket $bucket created"
+    <span class="k">fi</span>
+}
+
+<span class="c"># Safe: handles "already exists" instead of failing</span>
+create_bucket_if_not_exists "$BUCKET"
+
+<span class="c"># --cli-input-json for complex commands — avoids shell quoting hell</span>
+cat > /tmp/launch-params.json << 'EOF'
+{
+  "ImageId": "ami-0abcdef1234567890",
+  "InstanceType": "t3.micro",
+  "KeyName": "my-key",
+  "SecurityGroupIds": ["sg-12345678"],
+  "SubnetId": "subnet-12345678",
+  "TagSpecifications": [{
+    "ResourceType": "instance",
+    "Tags": [{"Key": "Name", "Value": "app-server"},
+              {"Key": "Environment", "Value": "production"}]
+  }]
+}
+EOF
+aws ec2 run-instances --cli-input-json file:///tmp/launch-params.json</code></div>
+
+        <div class="mechbox"><strong>set -euo pipefail — why every AWS script must start with this:</strong> Without <span class="mono">set -e</span>: if <span class="mono">aws ec2 stop-instances</span> fails, the script continues to the next line and deletes the EC2 snapshot you were about to create as a backup. Without <span class="mono">set -u</span>: a typo in a variable name (<span class="mono">$BUCKET_NAEM</span> instead of <span class="mono">$BUCKET_NAME</span>) silently becomes an empty string — you run <span class="mono">aws s3 rm s3:///critical-file.zip</span> which might succeed and delete something unexpected. Without <span class="mono">pipefail</span>: <span class="mono">aws ec2 describe-instances | grep "running"</span> — if the aws command fails, grep sees empty input, finds no matches, exits 1, but because the pipe's exit code is the last command (grep), the overall exit is 1 — but the error from aws is silently lost. Always use <span class="mono">set -euo pipefail</span>.</div>
+      </div>
+    </div>
+
+    <div id="auto1" class="cpanel">
+      <div class="ch">Waiters and polling — waiting for AWS state transitions correctly</div>
+      <div class="csub">The right way to wait for EC2 to start, S3 buckets to exist, and deployments to complete</div>
+      <div class="cb">
+        <p>AWS operations are asynchronous. You call <span class="mono">aws ec2 run-instances</span> and get an instance ID back — but the instance is in "pending" state, not "running". You cannot SSH in yet. You need to wait. The naive approach — sleeping for 60 seconds — is fragile (sometimes it's faster, sometimes slower). The correct approach is using waiters.</p>
+        <div class="code-block"><code><span class="c"># CLI waiters — poll with intelligent backoff until condition is met</span>
+INSTANCE_ID=$(aws ec2 run-instances \
+  --image-id ami-xxx --instance-type t3.micro \
+  --query 'Instances[0].InstanceId' --output text)
+
+log "Waiting for instance $INSTANCE_ID to pass status checks..."
+aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID"
+log "Instance is ready for SSH"
+
+<span class="c"># Common waiters you'll use constantly</span>
+aws ec2 wait instance-running --instance-ids i-xxx          <span class="c"># State = running</span>
+aws ec2 wait instance-stopped --instance-ids i-xxx          <span class="c"># State = stopped</span>
+aws ec2 wait instance-terminated --instance-ids i-xxx       <span class="c"># State = terminated</span>
+aws s3api wait bucket-exists --bucket my-bucket             <span class="c"># Bucket is accessible</span>
+aws rds wait db-instance-available --db-instance-id my-db   <span class="c"># RDS is available</span>
+aws elbv2 wait load-balancer-available --load-balancer-arns arn:xxx
+aws cloudformation wait stack-create-complete --stack-name my-stack
+aws ecr wait image-scan-complete --repository-name my-repo --image-id imageTag=latest
+
+<span class="c"># Waiter timeout: default 600 seconds (10 minutes), then fails with error</span>
+<span class="c"># For longer operations (RDS restore from snapshot): use custom polling loop</span>
+<span class="k">wait_for_rds</span>() {
+    <span class="k">local</span> db_id=$1
+    <span class="k">local</span> max_attempts=60  <span class="c"># 60 × 30s = 30 minutes max</span>
+    <span class="k">local</span> attempt=0
+    <span class="k">while</span> [ $attempt -lt $max_attempts ]; do
+        status=$(aws rds describe-db-instances \
+          --db-instance-identifier "$db_id" \
+          --query 'DBInstances[0].DBInstanceStatus' --output text)
+        [ "$status" = "available" ] && { log "RDS ready"; return 0; }
+        log "RDS status: $status (attempt $((attempt+1))/$max_attempts)"
+        sleep 30
+        ((attempt++))
+    done
+    log "ERROR: Timed out waiting for RDS"
+    return 1
+}</code></div>
+      </div>
+    </div>
+
+    <div id="auto2" class="cpanel">
+      <div class="ch">Parallel execution — processing 100 instances in 10 seconds instead of 100</div>
+      <div class="csub">GNU parallel and xargs for concurrent AWS operations with rate limiting</div>
+      <div class="cb">
+        <div class="code-block"><code><span class="c"># Process many resources in parallel with xargs</span>
+<span class="c"># Stop all running instances in parallel (instead of sequential loop)</span>
+aws ec2 describe-instances \
+  --filters "Name=instance-state-name,Values=running" \
+            "Name=tag:Environment,Values=dev" \
+  --query 'Reservations[*].Instances[*].InstanceId | []' \
+  --output text | \
+xargs -P 10 -I {} aws ec2 stop-instances --instance-ids {}
+<span class="c"># -P 10: up to 10 parallel processes  -I {}: replace {} with each input line</span>
+
+<span class="c"># GNU parallel — more control over rate limiting</span>
+<span class="c"># Install: brew install parallel (Mac) or apt-get install parallel (Linux)</span>
+aws ec2 describe-instances \
+  --query 'Reservations[*].Instances[*].InstanceId | []' \
+  --output text | tr '\t' '\n' | \
+parallel --jobs 5 --delay 0.2 \
+  aws ssm send-command \
+    --instance-ids {} \
+    --document-name "AWS-RunShellScript" \
+    --parameters commands=["sudo yum update -y"]
+<span class="c"># --jobs 5: max 5 concurrent  --delay 0.2: 200ms between job launches (avoid throttling)</span>
+
+<span class="c"># Bulk tag resources — add tags to many resources efficiently</span>
+<span class="c"># EC2 allows up to 1000 resource IDs per create-tags call</span>
+INSTANCE_IDS=$(aws ec2 describe-instances \
+  --query 'Reservations[*].Instances[*].InstanceId | []' \
+  --output text | tr '\t' ' ')
+
+aws ec2 create-tags \
+  --resources $INSTANCE_IDS \
+  --tags Key=CostCenter,Value=Engineering Key=ManagedBy,Value=Terraform</code></div>
+
+        <div class="warnbox"><strong>Rate limiting awareness in parallel scripts:</strong> Running 100 parallel AWS CLI processes simultaneously means 100 simultaneous API calls. EC2 DescribeInstances allows ~100 calls/second — 100 parallel calls is fine. But IAM write operations are limited to ~1-10/second. Running 100 parallel <span class="mono">aws iam attach-role-policy</span> calls triggers throttling and retries that slow the script down more than sequential execution would have. Match parallelism to the API's actual rate limit. Use <span class="mono">--delay</span> in parallel or <span class="mono">sleep</span> between xargs batches for throttle-prone APIs.</div>
+      </div>
+    </div>
+
+    <div id="auto3" class="cpanel">
+      <div class="ch">LocalStack — testing AWS integrations without hitting the real AWS</div>
+      <div class="csub">Run a local AWS emulator in Docker for development and integration testing</div>
+      <div class="cb">
+        <p>LocalStack is an open-source tool that emulates AWS services locally in Docker. You run it on your laptop, point your CLI or SDK at <span class="mono">http://localhost:4566</span>, and it behaves like real AWS for most operations — without making real API calls, incurring real costs, or requiring network access. Ideal for development, integration tests, and CI pipelines.</p>
+        <div class="code-block"><code><span class="c"># Start LocalStack with Docker Compose</span>
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+services:
+  localstack:
+    image: localstack/localstack:3.0
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,sqs,dynamodb,secretsmanager,iam
+      - AWS_DEFAULT_REGION=ap-south-1
+      - DEBUG=1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+EOF
+docker-compose up -d
+
+<span class="c"># Configure AWS CLI to use LocalStack</span>
+<span class="c"># Option 1: --endpoint-url on every command</span>
+aws s3 mb s3://test-bucket --endpoint-url http://localhost:4566
+
+<span class="c"># Option 2: dedicated CLI profile for LocalStack</span>
+<span class="c">## Add to ~/.aws/config:</span>
+<span class="c">[profile localstack]</span>
+<span class="c">region = ap-south-1</span>
+<span class="c">endpoint_url = http://localhost:4566  # AWS CLI v2 supports this per-profile</span>
+
+<span class="c">## Use the profile</span>
+aws s3 mb s3://test-bucket --profile localstack
+aws s3 cp file.txt s3://test-bucket/ --profile localstack
+aws sqs create-queue --queue-name test-queue --profile localstack
+
+<span class="c"># In Spring Boot tests — override endpoint URL via application-test.properties</span>
+<span class="c">## application-test.properties:</span>
+<span class="c">## spring.cloud.aws.s3.endpoint=http://localhost:4566</span>
+<span class="c">## spring.cloud.aws.sqs.endpoint=http://localhost:4566</span>
+<span class="c">## AWS_ACCESS_KEY_ID=test  AWS_SECRET_ACCESS_KEY=test  (LocalStack accepts any credentials)</span></code></div>
+
+        <div class="prodbox"><strong>LocalStack in CI/CD for your Deloitte project:</strong> In your Bitbucket pipeline, add a LocalStack service container to your CI definition. Your integration tests run against LocalStack — testing S3 uploads, SQS message processing, and DynamoDB queries without any real AWS calls. Tests are fast (local network, no auth overhead), free, and don't require AWS credentials in your CI environment for development branches. Only production deployments use real AWS credentials. This is the professional pattern for AWS integration testing.</div>
+        <div class="mechbox"><strong>LocalStack Pro vs Community — what's emulated vs not:</strong> LocalStack Community (free) emulates: S3, SQS, SNS, DynamoDB, Lambda (basic), IAM (basic), Secrets Manager, KMS, CloudWatch, and several others. LocalStack Pro adds: ECS, EKS, RDS, Aurora, Kinesis, ElasticSearch, Step Functions with full fidelity, VPC networking simulation, and realistic IAM policy evaluation. For your typical Spring Boot + S3 + SQS + DynamoDB integration tests, Community edition is sufficient. For more complex infrastructure testing, Pro is worth the cost.</div>
+      </div>
+    </div>
+
+    <button class="next-btn" onclick="show('interview',document.querySelectorAll('.ntab')[5])">Interview prep →</button>
+  </div>
+
+  <!-- INTERVIEW PREP -->
+  <div id="p-interview" class="panel">
+    <div class="lede"><strong>CLI and SDK questions in interviews test whether you actually use these tools in production — not whether you've memorised the documentation. Every answer below is grounded in real operational scenarios.</strong></div>
+
+    <div class="iq-list">
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q1</span>
+          <span class="iq-q">Your Spring Boot application on EC2 suddenly cannot call S3. The IAM role hasn't changed. What do you check?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>This is a systematic debugging question. The symptom — working before, broken now, no IAM changes — points to several possible causes that I'd check in order.</p>
+          <p><strong>First: verify the identity and credentials.</strong> SSH into the EC2 and run <span class="mono">aws sts get-caller-identity</span>. This tells me: are there valid credentials? Is it using the expected role? If this fails with "Unable to locate credentials", the instance profile is detached or IMDS is unreachable. If it returns the wrong role, there's an environment variable override in effect (AWS_ACCESS_KEY_ID set somewhere).</p>
+          <p><strong>Second: verify IMDS is accessible.</strong> <span class="mono">curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/</span>. If this returns nothing or 401 (if IMDSv2 was just enforced), the instance can't get credentials. Check if IMDSv2 was recently enforced but the application's SDK version doesn't support it.</p>
+          <p><strong>Third: test S3 connectivity directly from the instance.</strong> <span class="mono">aws s3 ls s3://bucket-name</span>. If this works from CLI but fails from the application, the issue is the application's SDK configuration — likely it's using hardcoded credentials or a different credential source than the instance role.</p>
+          <p><strong>Fourth: check for a bucket policy change.</strong> A change to the S3 bucket policy could have added an explicit Deny or removed an allow for this role. <span class="mono">aws s3api get-bucket-policy --bucket bucket-name</span>. Even though the IAM role didn't change, the bucket policy (resource policy) is the other half of the access evaluation — and it may have changed.</p>
+          <p><strong>Fifth: check VPC network connectivity.</strong> Did someone add a NACL rule or modify a Security Group outbound rule? If the EC2 can't reach S3's IP addresses (or the S3 VPC Endpoint if one exists), API calls time out before IAM even evaluates them. VPC Flow Logs would show REJECT entries for outbound traffic to S3's IP range.</p>
+          <p><strong>Sixth: check if a KMS key policy changed.</strong> If the S3 bucket uses SSE-KMS encryption, the EC2 role also needs kms:GenerateDataKey and kms:Decrypt on the KMS key. A KMS key policy change could have removed these permissions — manifesting as an S3 access failure even though the IAM role hasn't changed.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It covers the full diagnostic chain — credentials, IMDS, direct testing, bucket policy, network, and KMS. The KMS key policy point is the one most engineers miss — it's a real production scenario where S3 access breaks due to KMS changes, not IAM or S3 changes directly.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q2</span>
+          <span class="iq-q">Explain the AWS SDK credential chain and how you'd configure it differently for local development vs EC2 production.</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>The DefaultCredentialsProvider checks credential sources in order, returning on the first one found: Java system properties → environment variables → ~/.aws/credentials (default or AWS_PROFILE named profile) → ~/.aws/config with role_arn → ECS container credentials endpoint → EC2 IMDS.</p>
+          <p><strong>Local development configuration:</strong> I use named profiles in ~/.aws/config that assume the appropriate IAM role. My base credentials (IAM user for my Deloitte account) are in ~/.aws/credentials. The config file has profiles for each environment — dev, staging, prod — each with a role_arn pointing to the account and external_id for client accounts. When I run the application locally, I set AWS_PROFILE=dev-environment. The SDK finds the config profile, sees a role_arn, calls STS AssumeRole using my base credentials, and gets temporary role credentials. My application uses the same code path as production — just different credentials.</p>
+          <p><strong>EC2 production configuration:</strong> The EC2 instance has an IAM instance profile attached — the least-privilege role for that service. No environment variables are set for credentials. No credentials files exist on the EC2. The SDK's credential chain eventually reaches IMDS at step 6, fetches the role's temporary credentials, and caches them. The application code is identical to local — the DefaultCredentialsProvider handles the difference transparently. I set AWS_EC2_METADATA_DISABLED=false explicitly in production to be clear, and AWS_EC2_METADATA_DISABLED=true in local development profiles to skip the IMDS timeout on non-EC2 machines.</p>
+          <p>The key principle: application code should never have any credential configuration hardcoded. The environment provides credentials through the chain. This makes the same JAR deployable to local, CI, staging, and production without modification.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It explains the chain mechanically, then shows you understand that the same credential chain is used differently in different environments — and that good SDK usage means the application is completely environment-agnostic. The AWS_EC2_METADATA_DISABLED detail shows operational depth.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q3</span>
+          <span class="iq-q">What is AWS SigV4 and why does it matter beyond "it signs requests"?</span>
+          <span class="iq-d d-m">Medium</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>SigV4 is AWS's request authentication and integrity protocol. Every API call to AWS is signed using HMAC-SHA256 with a key derived from the caller's secret access key, the date, the target region, and the target service. The signature covers the full request — method, URI, headers, and body hash.</p>
+          <p>Beyond authentication, SigV4 provides three important security properties. First, <strong>request integrity</strong> — if any part of the request is modified in transit (man-in-the-middle attack), the signature becomes invalid and AWS rejects it. An attacker cannot change the action you're requesting, the resource you're targeting, or any parameter without invalidating the signature. Second, <strong>replay attack prevention</strong> — the signature includes a timestamp and AWS requires it to be within 15 minutes of current time. A captured valid request cannot be replayed after 15 minutes. Third, <strong>scope restriction</strong> — the derived signing key is specific to the date, region, and service. A key used to sign an S3 request in ap-south-1 cannot be used to sign an EC2 request in us-east-1. Even if an attacker captures a signed request, they cannot use the signature to call different services or regions.</p>
+          <p>The practical implications: the 15-minute clock skew limit means systems with drifted clocks break mysteriously. The region-scoped signing means the region must be configured correctly before any API call — the signature will fail if you sign for us-east-1 but send to ap-south-1. Pre-signed URLs include all signature components in the URL itself, making them self-authenticating but also meaning any modification to the URL invalidates it.</p>
+          <span class="tip"><strong>Why this answer works:</strong> It goes beyond "it authenticates requests" to explain the three security properties (integrity, replay prevention, scope restriction). The practical implications — clock skew, region configuration, pre-signed URL immutability — show you've worked with this in real systems, not just read the documentation.</span>
+        </div>
+      </div>
+
+      <div class="iq" onclick="tog(this)">
+        <div class="iq-top">
+          <span class="iq-n">Q4</span>
+          <span class="iq-q">Why would you use AWS SDK v2 AsyncClient instead of the sync client in a Spring Boot WebFlux application? What goes wrong if you use the sync client?</span>
+          <span class="iq-d d-h">Hard</span><span class="iq-ch">▼</span>
+        </div>
+        <div class="iq-ans">
+          <p>Spring Boot WebFlux uses Netty as its HTTP server, running on a small pool of event loop threads — typically 2×CPU cores, so 4-8 threads on a standard EC2 instance. Event loop threads are designed for non-blocking work: they receive requests, execute fast synchronous logic, return Mono/Flux to be scheduled, and move on. They must never block.</p>
+          <p>If you use S3Client (sync) inside a WebFlux handler, the call blocks the event loop thread while waiting for S3 to respond — typically 10-200ms. During that time, the thread cannot accept or process any other requests. With 4 event loop threads and 100ms average S3 latency: maximum throughput is 4/0.1 = 40 requests/second before threads are exhausted. All subsequent requests queue up, timeout, or fail. The application appears completely hung under moderate load. This produces no exception, no warning, no obvious error — just gradually increasing latency until the application stops responding. It is one of the hardest performance bugs to diagnose because everything appears correct when looking at individual requests.</p>
+          <p>S3AsyncClient returns CompletableFuture immediately without blocking any thread. The response is handled by Netty's IO threads when the response arrives from S3. Bridging to Reactor: <span class="mono">Mono.fromFuture(s3AsyncClient.getObjectAsBytes(r -> ...))</span>. The event loop thread schedules this and immediately continues to the next request. When S3 responds, the Mono completes and the continuation runs on a Reactor scheduler. Thread utilisation is proportional to actual computation, not waiting.</p>
+          <p>If you must use the sync S3Client in WebFlux (e.g., for a library that doesn't support async), offload to <span class="mono">Schedulers.boundedElastic()</span>: <span class="mono">Mono.fromCallable(() -> s3Client.getObjectAsBytes(...)).subscribeOn(Schedulers.boundedElastic())</span>. This runs the blocking call on a dedicated elastic thread pool, not the event loop. The event loop is never blocked. The elastic pool grows to handle concurrency. This is the escape hatch but not the ideal solution — S3AsyncClient with proper concurrency configuration is always preferred.</p>
+          <span class="tip"><strong>Why this answer works:</strong> The arithmetic (4 threads × 100ms latency = 40 req/s maximum) makes the performance impact concrete and memorable. The diagnosis difficulty point shows you understand why this class of bug is dangerous. The boundedElastic escape hatch shows you know the workaround when you can't change the client type.</span>
+        </div>
+      </div>
+
+    </div>
+    <button class="next-btn" onclick="show('lab',document.querySelectorAll('.ntab')[6])">Start the lab — Phase 1 capstone →</button>
+  </div>
+
+  <!-- LAB -->
+  <div id="p-lab" class="panel">
+    <div class="lede"><strong>Day 6 lab is the Phase 1 capstone — you combine everything from Days 1-5 using the CLI and SDK. By the end of this lab you'll have: verified your full credential chain, written production-grade CLI queries against your infrastructure, profiled your SDK connection behaviour, and set up LocalStack for offline development.</strong></div>
+
+    <div class="lab-list">
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s1" onclick="done('s1')">1</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Verify your complete setup with aws configure list and sts get-caller-identity</div>
+          <div class="sb">Run these two commands every time you start a new CLI session. They confirm which credentials are active, which region is configured, and which identity you're operating as.</div>
+          <code class="cmd">aws configure list
+# Shows: name, value, type (env/config-file), location for each setting
+# Verify: region = ap-south-1, credentials from profile or env vars
+
+aws sts get-caller-identity
+# Shows: Account ID, UserID, ARN
+# Verify: it's YOUR account, not a client's account
+
+# Enable CLI auto-complete (one-time setup)
+complete -C aws_completer aws
+echo 'complete -C aws_completer aws' >> ~/.bashrc
+
+# Set default output and region for this session
+export AWS_DEFAULT_REGION=ap-south-1
+export AWS_DEFAULT_OUTPUT=json</code>
+          <div class="snote">These two commands are your "am I pointing at the right account?" check. Run them before any destructive operation. The --debug flag on sts get-caller-identity shows you the full SigV4 signing process if you want to see it.</div>
+          <button class="mbtn" onclick="done('s1')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s2" onclick="done('s2')">2</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">JMESPath queries against your real infrastructure</div>
+          <div class="sb">Run these queries against your Day 4 VPC and Day 2 EC2 instance. Observe how JMESPath transforms raw AWS JSON into exactly the data you need. These exact queries will appear in your daily work.</div>
+          <code class="cmd"># List all VPCs with their CIDR and name
+aws ec2 describe-vpcs --query \
+  'Vpcs[*].{ID: VpcId, CIDR: CidrBlock, Default: IsDefault,
+   Name: Tags[?Key==`Name`].Value | [0]}' \
+  --output table
+
+# List all subnets with type (public/private) and AZ
+aws ec2 describe-subnets --query \
+  'Subnets[*].{ID: SubnetId, CIDR: CidrBlock, AZ: AvailabilityZone,
+   Public: MapPublicIpOnLaunch,
+   Name: Tags[?Key==`Name`].Value | [0]}' \
+  --output table
+
+# Find all EC2 instances with their state, type, and IPs
+aws ec2 describe-instances --query \
+  'Reservations[*].Instances[*].{
+   ID: InstanceId, Type: InstanceType, State: State.Name,
+   PrivateIP: PrivateIpAddress, PublicIP: PublicIpAddress,
+   Name: Tags[?Key==`Name`].Value | [0]} | []' \
+  --output table
+
+# List all security groups with inbound rule count
+aws ec2 describe-security-groups --query \
+  'SecurityGroups[*].{Name: GroupName, ID: GroupId,
+   VPC: VpcId, Rules: length(IpPermissions)}' \
+  --output table
+
+# SECURITY AUDIT: Find any security group with 0.0.0.0/0 on SSH
+aws ec2 describe-security-groups --query \
+  'SecurityGroups[?IpPermissions[?ToPort==`22`
+   && IpRanges[?CidrIp==`0.0.0.0/0`]]]
+   .{Name: GroupName, ID: GroupId}' \
+  --output table</code>
+          <div class="snote">Save the security audit query as a shell alias — run it regularly against your accounts. Any result means you have port 22 exposed to the internet. That's a finding you should fix immediately.</div>
+          <button class="mbtn" onclick="done('s2')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s3" onclick="done('s3')">3</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Debug the credential chain with --debug</div>
+          <div class="sb">Use --debug on a real command to see the full SigV4 signing process, credential source, and HTTP request. This is what you'll do when a command fails unexpectedly.</div>
+          <code class="cmd"># See the full request pipeline for a simple command
+aws s3 ls --debug 2>&1 | head -80
+# Look for:
+# - "Found credentials in..." — which chain step found credentials
+# - "Calculating signature using..." — SigV4 signing happening
+# - "http request: GET https://..." — the actual HTTP request
+# - The Authorization header with the signature
+
+# Deliberately cause a credential error to see what it looks like
+AWS_ACCESS_KEY_ID=FAKEKEYID123 \
+AWS_SECRET_ACCESS_KEY=fakeSecretKey \
+aws s3 ls --debug 2>&1 | tail -20
+# See: "InvalidClientTokenId" error, observe at what step it fails
+
+# Test the clock skew error (simulated)
+# On your EC2, if you've never seen this:
+# sudo date -s "$(date -d '20 minutes ago' +%Y-%m-%d\ %H:%M:%S)"
+# aws s3 ls  -- will fail with "Signature not yet current"
+# sudo ntpdate pool.ntp.org  -- fix clock
+# aws s3 ls  -- works again</code>
+          <div class="snote">The --debug output is verbose but invaluable. The line "Found credentials in..." tells you exactly which credential source is being used. Redirect to a file for complex debugging: aws s3 ls --debug 2>debug.log && grep "Found credentials" debug.log</div>
+          <button class="mbtn" onclick="done('s3')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s4" onclick="done('s4')">4</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Observe pagination — verify the CLI auto-paginates correctly</div>
+          <div class="sb">Create enough S3 objects to trigger pagination. Observe the difference between paginated and non-paginated results. This makes the pagination mechanics visceral.</div>
+          <code class="cmd"># Create 5 test objects in your Day 3 bucket
+for i in $(seq 1 5); do
+  echo "Object $i content" | aws s3 cp - s3://YOUR-BUCKET/pagination-test/obj-$i.txt
+done
+
+# List with auto-pagination (default) -- gets all objects
+aws s3api list-objects-v2 \
+  --bucket YOUR-BUCKET \
+  --prefix pagination-test/ \
+  --query 'Contents[*].Key'
+
+# List with page size 2 -- forces multiple API calls behind the scenes
+aws s3api list-objects-v2 \
+  --bucket YOUR-BUCKET \
+  --prefix pagination-test/ \
+  --page-size 2 \
+  --query 'Contents[*].Key'
+# Still returns all 5 -- CLI auto-paginates across 3 pages of 2 items each
+
+# List with --no-paginate and --page-size 2 -- only first page
+aws s3api list-objects-v2 \
+  --bucket YOUR-BUCKET \
+  --prefix pagination-test/ \
+  --page-size 2 \
+  --no-paginate \
+  --query 'Contents[*].Key'
+# Returns only 2 items -- THIS is the truncation bug in scripts
+
+# Clean up test objects
+aws s3 rm s3://YOUR-BUCKET/pagination-test/ --recursive</code>
+          <div class="snote">The last command demonstrates exactly how pagination bugs manifest in scripts — you get partial data with no error. If this were a production script processing S3 object keys, 3 out of 5 objects would be silently skipped.</div>
+          <button class="mbtn" onclick="done('s4')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s5" onclick="done('s5')">5</div><div class="sl"></div></div>
+        <div class="ls-r">
+          <div class="st">Set up LocalStack for offline AWS development</div>
+          <div class="sb">Install and start LocalStack. Run basic S3 and SQS operations against it. This sets up your offline development environment for all future days.</div>
+          <code class="cmd"># Install LocalStack CLI
+pip install localstack --break-system-packages
+
+# Start LocalStack (requires Docker running)
+localstack start -d
+# Or with Docker directly:
+docker run -d \
+  --name localstack \
+  -p 4566:4566 \
+  -e SERVICES=s3,sqs,dynamodb,secretsmanager \
+  localstack/localstack:3.0
+
+# Wait for it to be ready
+localstack wait
+
+# Add localstack profile to AWS config
+aws configure --profile localstack set region ap-south-1
+aws configure --profile localstack set output json
+
+# Test: create a bucket in LocalStack
+aws s3 mb s3://local-test-bucket \
+  --endpoint-url http://localhost:4566 \
+  --profile localstack
+
+# Or configure endpoint_url in your profile (AWS CLI v2):
+# Add to ~/.aws/config under [profile localstack]:
+# endpoint_url = http://localhost:4566
+# Then: aws s3 ls --profile localstack (no --endpoint-url needed)
+
+# Upload, list, download
+echo "LocalStack test" | aws s3 cp - s3://local-test-bucket/test.txt \
+  --endpoint-url http://localhost:4566
+aws s3 ls s3://local-test-bucket --endpoint-url http://localhost:4566
+
+# Create SQS queue and send a message
+aws sqs create-queue --queue-name test-queue \
+  --endpoint-url http://localhost:4566
+aws sqs send-message \
+  --queue-url http://localhost:4566/000000000000/test-queue \
+  --message-body "Hello from LocalStack"
+aws sqs receive-message \
+  --queue-url http://localhost:4566/000000000000/test-queue</code>
+          <div class="snote">LocalStack is now your development AWS environment. You can run all future lab exercises against it before trying on real AWS, eliminating costs and the risk of misconfiguring real resources during learning.</div>
+          <button class="mbtn" onclick="done('s5')">Mark complete</button>
+        </div>
+      </div>
+
+      <div class="ls">
+        <div class="ls-l"><div class="sc" id="s6" onclick="done('s6')">6</div></div>
+        <div class="ls-r">
+          <div class="st">Write a Phase 1 infrastructure audit script</div>
+          <div class="sb">Combine everything from Days 1-5 into one audit script that gives you a complete picture of your AWS account's state. This is something you'll run at the start of every project and every security review.</div>
+          <code class="cmd">cat > aws-audit.sh << 'SCRIPT'
+#!/bin/bash
+set -euo pipefail
+REGION="${AWS_DEFAULT_REGION:-ap-south-1}"
+echo "=== AWS Account Audit: $(date -u) ==="
+echo "Account: $(aws sts get-caller-identity --query Account --output text)"
+echo "Region: $REGION"
+echo ""
+
+echo "--- VPCs ---"
+aws ec2 describe-vpcs --query \
+  'Vpcs[*].{ID:VpcId,CIDR:CidrBlock,Default:IsDefault}' \
+  --output table
+
+echo "--- Running EC2 Instances ---"
+aws ec2 describe-instances \
+  --filters "Name=instance-state-name,Values=running" \
+  --query 'Reservations[*].Instances[*].{ID:InstanceId,Type:InstanceType,AZ:Placement.AvailabilityZone,IP:PrivateIpAddress} | []' \
+  --output table
+
+echo "--- S3 Buckets ---"
+aws s3api list-buckets --query 'Buckets[*].{Name:Name,Created:CreationDate}' --output table
+
+echo "--- SECURITY: Open SSH (0.0.0.0/0 on port 22) ---"
+aws ec2 describe-security-groups --query \
+  'SecurityGroups[?IpPermissions[?ToPort==`22`&&IpRanges[?CidrIp==`0.0.0.0/0`]]].{Name:GroupName,ID:GroupId}' \
+  --output table
+
+echo "--- Unattached EBS Volumes (you are paying for these) ---"
+aws ec2 describe-volumes \
+  --query 'Volumes[?State==`available`].{ID:VolumeId,Size:Size,AZ:AvailabilityZone}' \
+  --output table
+
+echo "--- NAT Gateways (check costs) ---"
+aws ec2 describe-nat-gateways \
+  --filter "Name=state,Values=available" \
+  --query 'NatGateways[*].{ID:NatGatewayId,State:State,Subnet:SubnetId}' \
+  --output table
+SCRIPT
+
+chmod +x aws-audit.sh
+./aws-audit.sh</code>
+          <div class="snote">Save this script. Run it at the start of every lab session to see what's running and what's costing money. The unattached EBS volumes and NAT Gateways sections will save you from surprise AWS bills.</div>
+          <button class="mbtn" onclick="done('s6')">Mark complete</button>
+        </div>
+      </div>
+    </div>
+    <button class="next-btn" onclick="show('cheatsheet',document.querySelectorAll('.ntab')[7])">Phase 1 complete — cheatsheet →</button>
+  </div>
+
+  <!-- CHEATSHEET -->
+  <div id="p-cheatsheet" class="panel">
+    <div style="font-size:14px;font-weight:600;margin-bottom:4px">Day 6 — CLI & SDK mechanics</div>
+    <div style="font-size:12px;color:#666;margin-bottom:12px">Phase 1 complete: Cloud Foundations. Days 7–13 begin application deployment.</div>
+    <div class="cs-grid">
+      <div class="cs-item"><div class="cs-t">CLI request pipeline</div><div class="cs-d">Parse → credential resolution → construct request → SigV4 sign → HTTP → format response. --debug shows every step.</div></div>
+      <div class="cs-item"><div class="cs-t">SigV4 signing</div><div class="cs-d">HMAC-SHA256 over canonical request. Covers full request — modification invalidates signature. 15-min clock skew limit. Region+service scoped.</div></div>
+      <div class="cs-item"><div class="cs-t">Credential chain (order)</div><div class="cs-d">1. Java props → 2. Env vars → 3. ~/.aws/credentials → 4. ~/.aws/config role_arn → 5. ECS endpoint → 6. EC2 IMDS</div></div>
+      <div class="cs-item"><div class="cs-t">Config file quirk</div><div class="cs-d">~/.aws/credentials: [profile-name]. ~/.aws/config: [profile profile-name]. Missing "profile " prefix = profile not found error.</div></div>
+      <div class="cs-item"><div class="cs-t">Pagination default</div><div class="cs-d">CLI auto-paginates by default. --no-paginate gives first page only. --page-size controls page size. SDK paginators do this correctly in Java.</div></div>
+      <div class="cs-item"><div class="cs-t">Exponential backoff + jitter</div><div class="cs-d">SDK retries throttled (429) and transient (5xx) errors. Jitter prevents thundering herd. Use adaptive retry mode for high-concurrency apps.</div></div>
+      <div class="cs-item"><div class="cs-t">S3AsyncClient in WebFlux</div><div class="cs-d">Never use blocking S3Client on Netty event loop threads. S3AsyncClient returns CompletableFuture → bridge with Mono.fromFuture(). Or offload blocking to Schedulers.boundedElastic().</div></div>
+      <div class="cs-item"><div class="cs-t">SDK clients are singletons</div><div class="cs-d">Expensive to create (pools, service models). Create once as @Bean. Close in @PreDestroy. Thread-safe. Never create per-request.</div></div>
+      <div class="cs-item"><div class="cs-t">JMESPath tags pattern</div><div class="cs-d">Tags[?Key==`Name`].Value | [0] — extracts a specific tag value. Returns null if tag absent rather than erroring.</div></div>
+      <div class="cs-item"><div class="cs-t">LocalStack</div><div class="cs-d">Docker-based AWS emulator. Community: S3, SQS, DynamoDB, Lambda. Configure with --endpoint-url or per-profile endpoint_url in ~/.aws/config.</div></div>
+      <div class="cs-item"><div class="cs-t">set -euo pipefail</div><div class="cs-d">Every AWS script must start here. -e: exit on error. -u: fail on undefined vars. -o pipefail: pipe errors caught. Prevents silent data corruption.</div></div>
+      <div class="cs-item"><div class="cs-t">AWS_EC2_METADATA_DISABLED</div><div class="cs-d">Set to true in local dev to skip IMDS timeout (saves 1-2s startup). False/unset on EC2. Speeds up SDK initialisation outside AWS.</div></div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px">Phase 1 summary — what you now understand at depth</div>
+    <div style="background:#f5f5f2;border-radius:10px;border:1px solid #eee;padding:1rem;font-size:13px;color:#444;line-height:2">
+      Day 1: AWS global infrastructure — Regions, AZs, Edge Locations, Nitro hardware, Shared Responsibility at infrastructure depth.<br>
+      Day 2: EC2 — Xen to Nitro migration, instance families, SigV4 at the hypervisor level, EBS vs instance store, systemd services.<br>
+      Day 3: S3 — Flat keyspace, erasure coding, consistency model history, durability vs availability, presigned URL mechanics, security model depth.<br>
+      Day 4: VPC — SDN overlay on Nitro, CIDR planning permanence, longest prefix match, NAT Gateway SNAT, VPC Endpoint Gateway vs Interface, Security Group chaining.<br>
+      Day 5: IAM — Six-layer evaluation algorithm, cross-account AND logic, IMDS and Capital One breach, OIDC for CI/CD, privilege escalation paths, incident response.<br>
+      Day 6: CLI & SDK — SigV4 mechanics, credential chain order, pagination truncation bug, async vs sync clients in WebFlux, JMESPath depth, LocalStack setup.
+    </div>
+
+    <div class="prodbox" style="margin-top:1rem"><strong>Phase 2 begins: Application Deployment (Days 7–13)</strong><br>
+    Day 7: EC2 deep-dive — user data, AMIs, launch templates. Day 8: ALB + Auto Scaling. Day 9: RDS deep-dive. Day 10: Full end-to-end Spring Boot deployment. Day 11: Route 53 + CloudFront. Day 12: ECS + Docker. Day 13: ElastiCache + DynamoDB. Every day at the same depth as Phase 1.</div>
+  </div>
+</div>
+
+<script>
+function show(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+function showC(prefix,i,btn){
+  const parent=btn.closest('.panel');
+  parent.querySelectorAll('.cpanel').forEach(p=>p.classList.remove('active'));
+  parent.querySelectorAll('.cbtn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+i).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function done(id){
+  const el=document.getElementById(id);
+  if(el){el.classList.add('done');el.textContent='✓'}
+}
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

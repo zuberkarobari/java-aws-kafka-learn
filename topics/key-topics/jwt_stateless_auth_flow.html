@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JWT & Stateless Authentication</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06090e;
+    --surface: #0f141e;
+    --surface2: #1a212e;
+    --surface3: #263040;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #E6EDF3;
+    --muted: #8b9eb3;
+    --muted2: #5b6b7d;
+    --blue: #3b82f6;
+    --blue-bg: rgba(59, 130, 246, 0.1);
+    --green: #10b981;
+    --green-bg: rgba(16, 185, 129, 0.1);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245, 158, 11, 0.1);
+    --red: #ef4444;
+    --red-bg: rgba(239, 68, 68, 0.1);
+    --purple: #8b5cf6;
+    --purple-bg: rgba(139, 92, 246, 0.1);
+    --pink: #ec4899;
+    --cyan: #06b6d4;
+    
+    /* JWT Specific Colors */
+    --jwt-header: #ef4444;
+    --jwt-payload: #a855f7;
+    --jwt-sig: #06b6d4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh; overflow-x: hidden;
+  }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ─── TOP BAR ─── */
+  #topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(6, 9, 14, 0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px; display: flex; align-items: center; height: 52px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px; margin-right: 32px;
+    font-size: 13px; font-weight: 700; color: var(--text); white-space: nowrap;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 10px var(--purple); }
+  .step-tabs { display: flex; gap: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .step-tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 0 16px; height: 52px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; 
+    border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; user-select: none;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+  .tab.done { color: var(--green); }
+  .tab-num {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--surface2); 
+    border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: var(--muted); transition: all 0.2s; flex-shrink: 0;
+  }
+  .tab.active .tab-num { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .tab.done .tab-num { background: var(--green); border-color: var(--green); color: #fff; }
+  
+  .nav-btns { display: flex; gap: 8px; margin-left: 16px; }
+  .nav-btn {
+    height: 32px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+    font-family: 'Space Grotesk', sans-serif; text-transform: uppercase;
+  }
+  .nav-btn:hover { background: var(--surface3); border-color: rgba(255,255,255,0.2); }
+  .nav-btn.primary { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .nav-btn.primary:hover { opacity: 0.85; box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);}
+  .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ─── MAIN LAYOUT ─── */
+  #main {
+    display: grid; grid-template-columns: 280px 1fr 300px;
+    height: calc(100vh - 52px); overflow: hidden;
+  }
+
+  /* ─── LEFT PANEL ─── */
+  #left {
+    border-right: 1px solid var(--border); overflow-y: auto; padding: 20px 0;
+    background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .left-section-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: var(--muted2); text-transform: uppercase; padding: 8px 20px 6px;
+  }
+  .request-block {
+    margin: 0 12px 16px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; transition: all 0.3s;
+  }
+  .req-header {
+    padding: 10px 12px 8px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .method-badge { font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 2px 7px; border-radius: 4px; }
+  .method-post { background: var(--purple-bg); color: var(--purple); }
+  .method-get  { background: var(--blue-bg); color: var(--blue); }
+  .req-path { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text); font-weight: 600;}
+  .req-body { padding: 10px 12px; font-size: 10px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; word-break: break-all;}
+  .json-key { color: var(--pink); }
+  .json-str { color: var(--cyan); }
+  .divider { height: 1px; background: var(--border); margin: 4px 20px 12px; }
+
+  .phase-list { padding: 0 12px; display: flex; flex-direction: column; gap: 3px; }
+  .phase-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; font-weight: 500;
+  }
+  .phase-item:hover { background: var(--surface2); }
+  .phase-item.active { background: var(--purple-bg); border-color: rgba(139, 92, 246, 0.2); color: var(--purple); }
+  .phase-item.done { color: var(--green); }
+  .phase-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted2); flex-shrink: 0; transition: all 0.2s; }
+  .phase-item.active .phase-dot { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+  .phase-item.done .phase-dot { background: var(--green); }
+
+  /* ─── CENTER PANEL ─── */
+  #center {
+    overflow-y: auto; padding: 28px 32px; background: var(--bg);
+    scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .scene { display: none; }
+  .scene.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+
+  .scene-header { margin-bottom: 24px; }
+  .scene-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 20px; margin-bottom: 12px;
+  }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(59, 130, 246, 0.3);}
+  .badge-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(139, 92, 246, 0.3);}
+  .badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.3);}
+  .badge-red { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.3);}
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.3);}
+
+  .scene-title { font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 10px; color: #fff;}
+  .scene-sub { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 600px; }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 30px 24px; margin: 24px 0; position: relative; overflow: hidden; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+  }
+  .arch-row { display: flex; align-items: center; justify-content: center; position: relative; margin: 10px 0; gap: 15px;}
+  .arch-box {
+    border-radius: 8px; border: 1px solid; padding: 12px 16px; font-size: 13px; font-weight: 600;
+    text-align: center; position: relative; z-index: 1; min-width: 120px; transition: all 0.3s;
+    background: var(--surface2); color: var(--text);
+  }
+  .arch-arrow { display: flex; flex-direction: column; align-items: center; color: var(--muted2); font-size: 11px; font-family: monospace; font-weight: bold;}
+  .arch-arrow.animated { color: var(--purple); animation: pulse-arrow 1.5s ease-in-out infinite; }
+  @keyframes pulse-arrow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; filter: drop-shadow(0 0 5px var(--purple));} }
+  
+  .box-client { border-color: rgba(59, 130, 246, 0.5); border-left: 4px solid var(--blue); }
+  .box-auth { border-color: rgba(139, 92, 246, 0.5); border-left: 4px solid var(--purple); background: var(--purple-bg); box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);}
+  .box-db { border-color: rgba(16, 185, 129, 0.5); border-left: 4px solid var(--green); }
+  .box-db-crossed { border-color: rgba(239, 68, 68, 0.5); border-left: 4px solid var(--red); opacity: 0.5; text-decoration: line-through;}
+  .box-gateway { border-color: rgba(6, 182, 212, 0.5); border-left: 4px solid var(--cyan); background: rgba(6, 182, 212, 0.1);}
+
+  /* Info cards */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; transition: all 0.2s; }
+  .info-card:hover { border-color: var(--purple); background: var(--surface2); }
+  .info-card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .info-card-val { font-size: 15px; font-weight: 700; color: var(--text); }
+  .info-card-sub { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+  /* Code blocks */
+  .code-block { background: #020617; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin: 16px 0; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);}
+  .code-header { padding: 8px 14px; border-bottom: 1px solid var(--surface2); display: flex; align-items: center; gap: 8px; background: var(--surface); }
+  .code-lang { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  .code-desc { font-size: 11px; color: var(--muted); margin-left: auto; font-family: monospace;}
+  .code-body { padding: 14px 16px; font-size: 11px; font-family: 'JetBrains Mono', monospace; line-height: 1.7; overflow-x: auto; color: #e2e8f0;}
+  .kw { color: #f472b6; font-weight: bold;}
+  .fn { color: var(--blue); }
+  .str { color: var(--green); }
+  .num { color: var(--amber); }
+  .cm { color: var(--muted); font-style: italic; }
+  
+  .hl-purple { background: rgba(139, 92, 246, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--purple); }
+  .hl-red { background: rgba(239, 68, 68, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--red); }
+  .hl-green { background: rgba(16, 185, 129, 0.15); display: block; margin: 0 -16px; padding: 0 16px; border-left: 2px solid var(--green); }
+
+  /* JWT String Visualization */
+  .jwt-string-container { background: #000; padding: 20px; border-radius: 12px; border: 1px solid var(--border2); text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 14px; word-break: break-all; line-height: 1.8; margin: 20px 0; font-weight: bold;}
+  .jwt-h { color: var(--jwt-header); text-shadow: 0 0 10px rgba(239,68,68,0.4);}
+  .jwt-p { color: var(--jwt-payload); text-shadow: 0 0 10px rgba(168,85,247,0.4);}
+  .jwt-s { color: var(--jwt-sig); text-shadow: 0 0 10px rgba(6,182,212,0.4);}
+  .jwt-dot { color: var(--muted2); margin: 0 4px;}
+
+  .jwt-decode-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px;}
+  .jwt-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 10px;}
+  .jwt-box pre { margin: 0; color: #e2e8f0; }
+  .box-h { border-top: 3px solid var(--jwt-header); }
+  .box-p { border-top: 3px solid var(--jwt-payload); }
+  .box-s { border-top: 3px solid var(--jwt-sig); }
+  .jwt-label { font-size: 9px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px;}
+
+  /* Decision tree */
+  .decision-tree { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 20px 0; }
+  .decision-node { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; position: relative; }
+  .decision-node:not(:last-child)::before { content: ''; position: absolute; left: 14px; top: 38px; width: 1px; height: calc(100% - 10px); background: var(--border2); }
+  .d-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; margin-top: 2px; font-weight: bold;}
+  .d-content { flex: 1; }
+  .d-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .d-desc { font-size: 12px; color: var(--muted); line-height: 1.55; }
+  .d-pass { background: var(--green-bg); color: var(--green); border: 1px solid var(--green);}
+  .d-fail { background: var(--red-bg); color: var(--red); border: 1px solid var(--red);}
+  .d-check { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple);}
+
+  /* ─── RIGHT PANEL ─── */
+  #right {
+    border-left: 1px solid var(--border); overflow-y: auto; padding: 20px 16px;
+    background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .right-section { margin-bottom: 24px; }
+  .right-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted2); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .metric-card {
+    background: var(--surface2); border-radius: 8px; padding: 12px 14px;
+    margin-bottom: 8px; border: 1px solid var(--border); transition: all 0.3s;
+  }
+  .metric-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 4px; text-transform: uppercase;}
+  .metric-val { font-size: 22px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .metric-sub { font-size: 10px; color: var(--muted2); margin-top: 4px; }
+  
+  .metric-green { color: var(--green); text-shadow: 0 0 10px rgba(16,185,129,0.3);}
+  .metric-purple { color: var(--purple); text-shadow: 0 0 10px rgba(139,92,246,0.3);}
+  .metric-cyan { color: var(--cyan); text-shadow: 0 0 10px rgba(6,182,212,0.3);}
+
+  /* Dynamic Decoded JWT Panel */
+  .decoded-panel { background: #000; border: 1px solid var(--border2); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 9px; line-height: 1.5; margin-bottom: 15px; color: var(--muted);}
+  .dp-key { color: var(--pink); }
+  .dp-val-str { color: var(--cyan); }
+  .dp-val-num { color: var(--amber); }
+
+  /* ─── FOOTER ─── */
+  #footer {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 36px;
+    background: rgba(6, 9, 14, 0.95); border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; gap: 16px;
+    font-size: 11px; font-weight: 600; color: var(--muted); backdrop-filter: blur(8px); z-index: 99;
+  }
+  .footer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .footer-dot.pulse { animation: blink 1s ease-in-out infinite; box-shadow: 0 0 8px var(--green);}
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .kbd {
+    display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; border-radius: 4px;
+    background: var(--surface2); border: 1px solid var(--border2); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #fff;
+  }
+  .separator { color: var(--surface3); }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <a href="../../index.html?pathway=keytopics" style="text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-right: 20px; flex-shrink: 0; transition: opacity 0.2s;">
+    <span>←</span> Back
+  </a>
+  <div class="brand">
+    <div class="brand-dot"></div>
+    Stateless Auth Masterclass
+  </div>
+  <div class="step-tabs" id="tabs"></div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
+    <button class="nav-btn primary" id="nextBtn" onclick="navigate(1)">Next →</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT -->
+  <div id="left">
+    <div class="left-section-title">Active Request</div>
+    
+    <!-- Dynamic Request Block -->
+    <div class="request-block" id="req-block">
+      <!-- Injected by JS based on Scene -->
+    </div>
+
+    <div class="divider"></div>
+    <div class="left-section-title">Execution Pipeline</div>
+    <div class="phase-list" id="phaseList"></div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center" id="scenes">
+
+    <!-- SCENE 0: Overview -->
+    <div class="scene active" id="scene0">
+      <div class="scene-header">
+        <div class="scene-badge badge-blue">Architecture</div>
+        <div class="scene-title">Stateful vs Stateless Auth</div>
+        <div class="scene-sub">In traditional monolithic apps, the server remembers you using a "Session ID" stored in a database or Redis. In modern Microservices, checking the database for every single API request creates a massive bottleneck. Enter JWT.</div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title">🗄️ Stateful (Session / Cookies)</div>
+          <div class="info-card-sub" style="margin-bottom: 10px;">Client sends <code>session_id=123</code>. Server must query Redis: "Who is 123?".</div>
+          <div class="arch-row" style="gap: 5px;">
+            <div class="arch-box box-client" style="font-size:10px; padding: 6px;">Client</div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-box box-auth" style="font-size:10px; padding: 6px;">Server</div>
+            <div class="arch-arrow" style="color:var(--red); font-weight:bold;">→ Read →</div>
+            <div class="arch-box box-db" style="font-size:10px; padding: 6px; border-color:var(--red); color:var(--red);">Redis DB</div>
+          </div>
+          <div style="font-size: 9px; color: var(--red); margin-top: 8px; font-weight: bold; text-align: center;">O(1) Database Lookup Required</div>
+        </div>
+        
+        <div class="info-card" style="border-color: var(--purple); background: var(--surface2);">
+          <div class="info-card-title" style="color: var(--purple);">🚀 Stateless (JWT)</div>
+          <div class="info-card-sub" style="margin-bottom: 10px; color: #fff;">Client sends a Token. The token ITSELF contains the user data. No DB needed!</div>
+          <div class="arch-row" style="gap: 5px;">
+            <div class="arch-box box-client" style="font-size:10px; padding: 6px;">Client</div>
+            <div class="arch-arrow" style="color:var(--purple); font-weight:bold;">→ Token →</div>
+            <div class="arch-box box-auth" style="font-size:10px; padding: 6px; border-color:var(--purple);">Gateway</div>
+            <div class="arch-arrow" style="color:var(--muted2); font-weight:bold;">→ ❌</div>
+            <div class="arch-box box-db-crossed" style="font-size:10px; padding: 6px;">Database</div>
+          </div>
+          <div style="font-size: 9px; color: var(--green); margin-top: 8px; font-weight: bold; text-align: center;">O(1) CPU Math Operation. Zero DB!</div>
+        </div>
+      </div>
+      
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">CONCEPT</span><span class="code-desc">JSON Web Token (JWT)</span></div>
+        <div class="code-body">
+<span class="cm">/* A JWT is like a digital passport. 
+   It contains your name, roles, and expiry date.
+   It is mathematically SIGNED by the issuer (Auth Server).
+   Anyone can read the passport, but no one can forge it.
+*/</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 1: Issuance (Login) -->
+    <div class="scene" id="scene1">
+      <div class="scene-header">
+        <div class="scene-badge badge-purple">Step 1</div>
+        <div class="scene-title">Token Issuance (Login)</div>
+        <div class="scene-sub">The user provides credentials. This is the ONLY time the Authentication service checks the database. If valid, the server generates and mathematically signs a JWT.</div>
+      </div>
+
+      <div class="arch-diagram">
+        <div class="arch-row">
+          <div class="arch-box box-client">Client<br><span style="font-size:10px;color:var(--muted);font-weight:400">Credentials</span></div>
+          <div class="arch-arrow animated">── POST /login ──→</div>
+          <div class="arch-box box-auth">Auth Service<br><span style="font-size:10px;font-weight:400">Verifies Hash</span></div>
+          <div class="arch-arrow">── Query ──→</div>
+          <div class="arch-box box-db">Users DB<br><span style="font-size:10px;color:var(--muted);font-weight:400">Postgres</span></div>
+        </div>
+        <div class="arch-row" style="margin-top: 20px;">
+          <div class="arch-box box-auth" style="border-style: dashed;">Signs JWT with<br>Private Key (RS256)</div>
+          <div class="arch-arrow animated" style="color:var(--green);">←── Returns JWT ──</div>
+          <div class="arch-box box-client" style="border-color:var(--green);">Client<br><span style="font-size:10px;color:var(--green);font-weight:400">Stores Token</span></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JAVA</span><span class="code-desc">Spring Boot Token Generation</span></div>
+        <div class="code-body">
+<span class="kw">public</span> <span class="ty">String</span> <span class="fn">generateToken</span>(<span class="ty">User</span> user) {
+    <span class="kw">long</span> nowMillis = System.currentTimeMillis();
+    <span class="ty">Date</span> now = <span class="kw">new</span> Date(nowMillis);
+    <span class="ty">Date</span> exp = <span class="kw">new</span> Date(nowMillis + <span class="num">900000</span>); <span class="cm">// 15 mins</span>
+
+<span class="hl-purple">    <span class="kw">return</span> Jwts.builder()
+        .setSubject(user.getId().toString())
+        .claim(<span class="str">"role"</span>, user.getRole())
+        .setIssuedAt(now)
+        .setExpiration(exp)
+        .signWith(privateKey, SignatureAlgorithm.RS256)
+        .compact();</span>
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 2: Token Anatomy -->
+    <div class="scene" id="scene2">
+      <div class="scene-header">
+        <div class="scene-badge badge-amber">Step 2</div>
+        <div class="scene-title">The Anatomy of a JWT</div>
+        <div class="scene-sub">A JWT is just three Base64Url encoded JSON strings, separated by dots. It is encoded, <strong>NOT encrypted</strong>. Anyone who intercepts the token can read the payload.</div>
+      </div>
+
+      <div class="jwt-string-container">
+        <span class="jwt-h">eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9</span><span class="jwt-dot">.</span><wbr><span class="jwt-p">eyJzdWIiOiJ1c2VyXzk4MjEiLCJyb2xlIjoiQURNSU4iLCJleHAiOjE3MTQwNjAyMDB9</span><span class="jwt-dot">.</span><wbr><span class="jwt-s">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</span>
+      </div>
+
+      <div class="jwt-decode-grid">
+        <div class="jwt-box box-h">
+          <div class="jwt-label" style="color:var(--jwt-header);">Header (Algorithm)</div>
+          <pre>{
+  <span class="json-key">"alg"</span>: <span class="str">"RS256"</span>,
+  <span class="json-key">"typ"</span>: <span class="str">"JWT"</span>
+}</pre>
+        </div>
+        <div class="jwt-box box-p">
+          <div class="jwt-label" style="color:var(--jwt-payload);">Payload (Claims)</div>
+          <pre>{
+  <span class="json-key">"sub"</span>: <span class="str">"user_9821"</span>,
+  <span class="json-key">"role"</span>: <span class="str">"ADMIN"</span>,
+  <span class="json-key">"exp"</span>: <span class="num">1714060200</span>
+}</pre>
+        </div>
+        <div class="jwt-box box-s">
+          <div class="jwt-label" style="color:var(--jwt-sig);">Signature (The Lock)</div>
+          <pre style="color:var(--jwt-sig); white-space: normal; font-size: 8px;">
+RSASHA256(
+  base64UrlEncode(header) + "." +
+  base64UrlEncode(payload),
+  PrivateKey
+)</pre>
+        </div>
+      </div>
+      <div style="font-size: 11px; color: var(--muted); text-align: center; margin-top: 15px; border: 1px dashed var(--border2); padding: 10px; border-radius: 8px;">
+        <strong>Security Rule:</strong> Never put passwords, SSNs, or highly sensitive PII in the JWT payload. It is readable by anyone who finds it in the browser's local storage or network logs.
+      </div>
+    </div>
+
+    <!-- SCENE 3: Tampering -->
+    <div class="scene" id="scene3">
+      <div class="scene-header">
+        <div class="scene-badge badge-red">Step 3</div>
+        <div class="scene-title">The Trust Model (Signatures)</div>
+        <div class="scene-sub">If anyone can decode and read the token, what stops a hacker from changing their role from "USER" to "ADMIN"? The Cryptographic Signature.</div>
+      </div>
+
+      <div class="decision-tree">
+        <div class="decision-node">
+          <div class="d-icon d-fail">🥷</div>
+          <div class="d-content">
+            <div class="d-title">1. The Hacker Alters the Payload</div>
+            <div class="d-desc">Hacker decodes the payload, changes <code>"role":"USER"</code> to <code>"role":"ADMIN"</code>, re-encodes it to Base64, and sends the manipulated token to the server.</div>
+            <div style="background: rgba(239, 68, 68, 0.1); border: 1px dashed var(--red); padding: 5px; border-radius: 4px; margin-top: 5px; font-family: monospace; font-size: 10px; color: #fff;">
+              <span class="jwt-h">eyJhbGciOi...</span>.<span style="color:var(--red); font-weight:bold;">eyJzdWIiOiJ1c2VyIiwi<u style="text-decoration-style: wavy;">cm9sZSI6IkFETUlOIg</u>...</span>.<span class="jwt-s">SflKxwR...</span>
+            </div>
+          </div>
+        </div>
+        <div class="decision-node">
+          <div class="d-icon d-check" style="background: var(--blue-bg); color: var(--blue); border-color: var(--blue);">🛡️</div>
+          <div class="d-content">
+            <div class="d-title">2. Server Calculates the Expected Signature</div>
+            <div class="d-desc">The server takes the Header and the <em>tampered</em> Payload, and runs the HMAC/RSA hashing algorithm using its secret key.</div>
+          </div>
+        </div>
+        <div class="decision-node">
+          <div class="d-icon d-fail" style="border-width: 2px;">❌</div>
+          <div class="d-content">
+            <div class="d-title">3. Signature Mismatch!</div>
+            <div class="d-desc">Because the payload changed, the calculated hash is entirely different from the signature attached to the end of the token. The server instantly knows it was tampered with and throws a <span class="kw" style="color:var(--red);">401 Unauthorized</span>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 4: Verification -->
+    <div class="scene" id="scene4">
+      <div class="scene-header">
+        <div class="scene-badge badge-green">Step 4</div>
+        <div class="scene-title">Stateless Verification (O(1))</div>
+        <div class="scene-sub">When the client makes a request to a protected API, the API Gateway verifies the token using pure CPU math. It does not touch the database. This is why JWTs scale infinitely.</div>
+      </div>
+
+      <div class="arch-diagram">
+        <div class="arch-row">
+          <div class="arch-box box-client">Client<br><span style="font-size:10px;color:var(--muted);font-weight:400">Bearer Token</span></div>
+          <div class="arch-arrow animated">── GET /orders ──→</div>
+          <div class="arch-box box-gateway">API Gateway<br><span style="font-size:10px;color:var(--muted);font-weight:400">Validates Signature</span></div>
+          <div class="arch-arrow">── Passes Claims ──→</div>
+          <div class="arch-box box-db">Order Service</div>
+        </div>
+        <div class="arch-row" style="margin-top: 15px; opacity: 0.4;">
+          <div style="flex:1;"></div>
+          <div class="arch-arrow" style="transform: rotate(90deg); margin-right: 15px;">→</div>
+          <div class="arch-box box-db-crossed" style="font-size: 10px; padding: 6px;">Database (Bypassed)</div>
+          <div style="flex:1;"></div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">JAVA</span><span class="code-desc">Gateway Verification Filter</span></div>
+        <div class="code-body">
+<span class="kw">public boolean</span> <span class="fn">validateToken</span>(<span class="ty">String</span> token) {
+    <span class="kw">try</span> {
+<span class="hl-green">        <span class="cm">// Parses and verifies signature mathematically in < 1ms</span>
+        Jwts.parserBuilder()
+            .setSigningKey(publicKey) <span class="cm">// Trust anchor</span>
+            .build()
+            .parseClaimsJws(token);</span>
+        <span class="kw">return true</span>;
+    } <span class="kw">catch</span> (<span class="ty">ExpiredJwtException</span> e) {
+        <span class="kw">throw new</span> Exception(<span class="str">"Token Expired"</span>);
+    } <span class="kw">catch</span> (<span class="ty">SignatureException</span> e) {
+        <span class="kw">throw new</span> Exception(<span class="str">"Tampered Token!"</span>);
+    }
+}
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 5: Security Storage -->
+    <div class="scene" id="scene5">
+      <div class="scene-header">
+        <div class="scene-badge badge-amber">Step 5</div>
+        <div class="scene-title">Storage Security: XSS vs CSRF</div>
+        <div class="scene-sub">Where do you store the JWT on the frontend? This is the most debated topic in web security. You must choose between mitigating XSS (Cross-Site Scripting) or CSRF (Cross-Site Request Forgery).</div>
+      </div>
+
+      <div class="info-grid" style="grid-template-columns: 1fr;">
+        <div class="info-card" style="border-color: var(--red); background: rgba(239, 68, 68, 0.05);">
+          <div class="info-card-title" style="color:var(--red);">⚠️ Local Storage (Vulnerable to XSS)</div>
+          <div class="info-card-sub" style="color: #fff;">Easy to use for SPAs (React/Vue). But if a hacker injects malicious JavaScript into your site, they can run <code>localStorage.getItem('token')</code> and steal it perfectly.</div>
+        </div>
+
+        <div class="info-card" style="border-color: var(--green); background: rgba(16, 185, 129, 0.05);">
+          <div class="info-card-title" style="color:var(--green);">✅ HttpOnly Cookies (Preferred)</div>
+          <div class="info-card-sub" style="color: #fff;">The server sets the JWT inside a cookie with the <code>HttpOnly</code> flag. JavaScript cannot read it, making it immune to XSS. The browser automatically attaches it to API requests.</div>
+          <div style="font-family: monospace; font-size: 10px; color: var(--muted); margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+            *Note: Cookies are vulnerable to CSRF. You must use <code>SameSite=Strict</code> attribute to mitigate this.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 6: Refresh Tokens -->
+    <div class="scene" id="scene6">
+      <div class="scene-header">
+        <div class="scene-badge badge-blue">Step 6</div>
+        <div class="scene-title">The Flaw: Revocation & Refresh Tokens</div>
+        <div class="scene-sub">Because verification is stateless, the server cannot invalidate a JWT before it expires. If a hacker steals an active JWT, they have access. To minimize risk, Access Tokens must be short-lived (15 mins).</div>
+      </div>
+
+      <div class="decision-tree">
+        <div class="decision-node">
+          <div class="d-icon d-check">1</div>
+          <div class="d-content">
+            <div class="d-title">Access Token Expires</div>
+            <div class="d-desc">After 15 minutes, API requests return <span class="kw" style="color:var(--red);">401 Expired</span>.</div>
+          </div>
+        </div>
+        <div class="decision-node">
+          <div class="d-icon d-pass" style="background:var(--blue-bg); color:var(--blue); border-color:var(--blue);">2</div>
+          <div class="d-content">
+            <div class="d-title">Client sends Refresh Token</div>
+            <div class="d-desc">A long-lived (7 days) <code>refresh_token</code> was given at login. The client sends it to a special <code>/refresh</code> endpoint.</div>
+          </div>
+        </div>
+        <div class="decision-node">
+          <div class="d-icon d-check" style="background:var(--amber-bg); color:var(--amber); border-color:var(--amber);">3</div>
+          <div class="d-content">
+            <div class="d-title">Stateful Verification (The Database Hit)</div>
+            <div class="d-desc">The Auth Server checks the Refresh Token against the Database. Is the user banned? Did they click "Log out of all devices"? If valid, generate a fresh 15-min Access Token.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="highlight-row" style="border-color:rgba(59, 130, 246, 0.3);background:rgba(59, 130, 246, 0.05);">
+        <div class="hl-icon" style="background:var(--blue-bg);color:var(--blue);">⚖️</div>
+        <div>
+          <div class="hl-title" style="color:var(--blue);">The Perfect Balance</div>
+          <div class="hl-desc">By using this architecture, 99.9% of your API requests are verified statelessly (blazing fast). Only 0.1% (the refresh calls every 15 mins) hit the database, preserving your ability to revoke access.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCENE 7: Summary -->
+    <div class="scene" id="scene7">
+      <div class="scene-header">
+        <div class="scene-badge badge-green">Complete</div>
+        <div class="scene-title">Stateless Auth Architecture Summary</div>
+        <div class="scene-sub">You have transitioned from monolithic session memory to a fully scalable, stateless token architecture.</div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-card-title" style="color:var(--purple);">🔑 Tokens, not Sessions</div>
+          <div class="info-card-sub">The state lives on the client, inside the token's payload.</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title" style="color:var(--cyan);">🛡️ Cryptographic Signatures</div>
+          <div class="info-card-sub">Integrity is mathematically verified. Tampering is impossible.</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title" style="color:var(--green);">⚡ O(1) Verification</div>
+          <div class="info-card-sub">Gateways decode math, bypassing database lookups entirely.</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title" style="color:var(--amber);">♻️ Refresh Rotation</div>
+          <div class="info-card-sub">Access tokens die quickly to limit blast radius of theft.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end center -->
+
+  <!-- RIGHT -->
+  <div id="right">
+    <div class="right-section">
+      <div class="right-title">⚡ Live Auth Metrics</div>
+      <div class="metric-card" id="mc-latency">
+        <div class="metric-label">Verification Latency</div>
+        <div class="metric-val metric-cyan" id="mv-latency">--</div>
+        <div class="metric-sub" id="ms-latency">Waiting for request</div>
+      </div>
+      <div class="metric-card" id="mc-db">
+        <div class="metric-label">Database Lookups</div>
+        <div class="metric-val metric-green" id="mv-db">0</div>
+        <div class="metric-sub" id="ms-db">Queries executed</div>
+      </div>
+      <div class="metric-card" id="mc-size">
+        <div class="metric-label">Token Size</div>
+        <div class="metric-val metric-purple" id="mv-size">~640 B</div>
+        <div class="metric-sub">Base64Url Encoded</div>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <div class="right-title">🔍 Decoded JWT Context</div>
+      <div class="decoded-panel" id="decoded-context">
+        <span style="color: var(--muted2);">[No Active Token]</span>
+      </div>
+    </div>
+
+    <div class="right-section">
+      <div class="right-title">📶 Pipeline Flow</div>
+      <div class="phase-list" id="r-phaseList" style="padding:0;">
+          <!-- Cloned phases will go here visually -->
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- FOOTER -->
+<div id="footer">
+  <div class="footer-dot pulse"></div>
+  <span>JWT Flow Simulation</span>
+  <span class="separator">|</span>
+  <span>Use <span class="kbd">←</span> <span class="kbd">→</span> to navigate</span>
+  <span class="separator">|</span>
+  <span id="footerStage">Stage: Overview</span>
+</div>
+
+<script>
+  const STAGES = [
+    { id: 'scene0', short: 'Overview',  phase: 'Architecture Overview' },
+    { id: 'scene1', short: 'Issuance',  phase: '1 · Login & Sign' },
+    { id: 'scene2', short: 'Anatomy',   phase: '2 · Token Structure' },
+    { id: 'scene3', short: 'Tampering', phase: '3 · Trust Model' },
+    { id: 'scene4', short: 'Verify',    phase: '4 · Stateless O(1) Check' },
+    { id: 'scene5', short: 'Storage',   phase: '5 · XSS vs CSRF' },
+    { id: 'scene6', short: 'Refresh',   phase: '6 · Token Rotation' },
+    { id: 'scene7', short: 'Summary ✓', phase: 'Complete' }
+  ];
+
+  const PHASES = [
+    { label: 'Client Request',    id: 'p-req' },
+    { label: 'Database Auth',     id: 'p-db' },
+    { label: 'Token Generation',  id: 'p-gen' },
+    { label: 'API Gateway Verify',id: 'p-ver' },
+    { label: 'Service Execution', id: 'p-exec' }
+  ];
+
+  let current = 0;
+
+  function buildUI() {
+    // Tabs
+    const tabContainer = document.getElementById('tabs');
+    STAGES.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'tab' + (i === 0 ? ' active' : '');
+      div.innerHTML = `<span class="tab-num">${i}</span>${s.short}`;
+      div.onclick = () => goTo(i);
+      tabContainer.appendChild(div);
+    });
+
+    // Left Pipeline
+    const pContainer = document.getElementById('phaseList');
+    const rContainer = document.getElementById('r-phaseList');
+    PHASES.forEach((p, i) => {
+      // Left
+      const div = document.createElement('div');
+      div.className = 'phase-item';
+      div.id = 'l-phase-' + i;
+      div.innerHTML = `<div class="phase-dot"></div><span class="phase-label">${p.label}</span>`;
+      pContainer.appendChild(div);
+
+      // Right
+      const rdiv = document.createElement('div');
+      rdiv.className = 'phase-item';
+      rdiv.id = 'r-phase-' + i;
+      rdiv.innerHTML = `<div class="phase-dot"></div><span class="phase-label">${p.label}</span>`;
+      rContainer.appendChild(rdiv);
+    });
+  }
+
+  function updateDynamicContent(idx) {
+    const reqBlock = document.getElementById('req-block');
+    const mvLat = document.getElementById('mv-latency');
+    const msLat = document.getElementById('ms-latency');
+    const mvDb = document.getElementById('mv-db');
+    const msDb = document.getElementById('ms-db');
+    const decodedCtx = document.getElementById('decoded-context');
+    
+    // Reset Pipeline
+    for(let i=0; i<5; i++) {
+        document.getElementById('l-phase-'+i).className = 'phase-item';
+        document.getElementById('r-phase-'+i).className = 'phase-item';
+    }
+
+    if(idx <= 1) {
+        // Login Request
+        reqBlock.innerHTML = `
+          <div class="req-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="req-path">/api/v1/auth/login</span>
+          </div>
+          <div class="req-body">
+            <span class="json-key">"username"</span>: <span class="json-str">"user_9821"</span>,<br>
+            <span class="json-key">"password"</span>: <span class="json-str">"********"</span>
+          </div>
+        `;
+        mvLat.innerText = "45.0 ms"; msLat.innerText = "Bcrypt Hashing"; mvLat.className = "metric-val metric-purple";
+        mvDb.innerText = "1"; msDb.innerText = "SELECT * FROM users"; mvDb.className = "metric-val metric-purple";
+        decodedCtx.innerHTML = `<span style="color: var(--muted2);">[No Active Token]</span>`;
+        
+        if(idx === 1) {
+            document.getElementById('l-phase-0').classList.add('done'); document.getElementById('r-phase-0').classList.add('done');
+            document.getElementById('l-phase-1').classList.add('active'); document.getElementById('r-phase-1').classList.add('active');
+            document.getElementById('l-phase-2').classList.add('active'); document.getElementById('r-phase-2').classList.add('active');
+        }
+    } else if (idx === 6) {
+        // Refresh Request
+        reqBlock.innerHTML = `
+          <div class="req-header">
+            <span class="method-badge method-post">POST</span>
+            <span class="req-path">/api/v1/auth/refresh</span>
+          </div>
+          <div class="req-body" style="color: var(--text);">
+            Cookie: refresh_token=abc123xyz...
+          </div>
+        `;
+        mvLat.innerText = "12.0 ms"; msLat.innerText = "DB Validation"; mvLat.className = "metric-val metric-amber";
+        mvDb.innerText = "1"; msDb.innerText = "Check revokation status"; mvDb.className = "metric-val metric-amber";
+        decodedCtx.innerHTML = `<span style="color: var(--amber);">[Refresh Token Flow]</span>`;
+    } else {
+        // API Request with Token
+        reqBlock.innerHTML = `
+          <div class="req-header">
+            <span class="method-badge method-get">GET</span>
+            <span class="req-path">/api/v1/orders</span>
+          </div>
+          <div class="req-body" style="color: var(--text);">
+            Authorization: Bearer <span class="json-str">eyJhbG...</span>
+          </div>
+        `;
+        mvLat.innerText = "0.4 ms"; msLat.innerText = "CPU Math Only"; mvLat.className = "metric-val metric-cyan";
+        mvDb.innerText = "0"; msDb.innerText = "Bypassed entirely"; mvDb.className = "metric-val metric-green";
+        
+        decodedCtx.innerHTML = `
+            {<br>
+            &nbsp;&nbsp;<span class="dp-key">"sub"</span>: <span class="dp-val-str">"user_9821"</span>,<br>
+            &nbsp;&nbsp;<span class="dp-key">"role"</span>: <span class="dp-val-str">"ADMIN"</span>,<br>
+            &nbsp;&nbsp;<span class="dp-key">"exp"</span>: <span class="dp-val-num">1714060200</span><br>
+            }
+        `;
+
+        if(idx === 4 || idx === 5) {
+            for(let i=0; i<3; i++) { document.getElementById('l-phase-'+i).classList.add('done'); document.getElementById('r-phase-'+i).classList.add('done'); }
+            document.getElementById('l-phase-3').classList.add('active'); document.getElementById('r-phase-3').classList.add('active');
+            document.getElementById('l-phase-4').classList.add('active'); document.getElementById('r-phase-4').classList.add('active');
+        }
+    }
+  }
+
+  function goTo(idx) {
+    const scenes = document.querySelectorAll('.scene');
+    scenes.forEach(s => s.classList.remove('active'));
+    document.getElementById(STAGES[idx].id).classList.add('active');
+
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach((t, i) => {
+      t.classList.remove('active', 'done');
+      if (i < idx) t.classList.add('done');
+      if (i === idx) t.classList.add('active');
+    });
+
+    updateDynamicContent(idx);
+    
+    document.getElementById('footerStage').textContent = 'Stage: ' + STAGES[idx].phase;
+    document.getElementById('prevBtn').disabled = idx === 0;
+    document.getElementById('nextBtn').disabled = idx === STAGES.length - 1;
+    document.getElementById('nextBtn').textContent = idx === STAGES.length - 1 ? 'Done ✓' : 'Next →';
+
+    current = idx;
+    document.getElementById('center').scrollTop = 0;
+  }
+
+  function navigate(dir) {
+    const next = Math.max(0, Math.min(STAGES.length - 1, current + dir));
+    goTo(next);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
+  });
+
+  buildUI();
+  updateDynamicContent(0); // Init
+</script>
+</body>
+</html>

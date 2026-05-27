@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JVM Architecture Internals</title>
+<style>
+  :root {
+    --bg: #0f172a; /* Slate 900 */
+    --surface: #1e293b; /* Slate 800 */
+    --surface2: #334155; /* Slate 700 */
+    --border: rgba(255,255,255,0.1);
+    --border2: rgba(255,255,255,0.2);
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    
+    /* Java Theme Colors */
+    --java-blue: #38bdf8;
+    --java-blue-dark: #0284c7;
+    --java-orange: #fb923c;
+    --java-red: #ef4444;
+    --java-green: #34d399;
+    --java-purple: #c084fc;
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+  /* ─── TOP BAR ─── */
+  #topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex; align-items: center; gap: 0;
+    height: 60px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    margin-right: 32px;
+    font-size: 16px; font-weight: 700; color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .brand-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--java-orange);
+  }
+  .step-tabs {
+    display: flex; gap: 0; flex: 1; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .step-tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 0 16px; height: 60px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    cursor: pointer; border-bottom: 3px solid transparent;
+    white-space: nowrap; transition: all 0.2s; user-select: none;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active { color: var(--java-blue); border-bottom-color: var(--java-blue); }
+  .tab.done { color: var(--java-green); }
+  
+  .tab-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--text);
+    transition: all 0.2s;
+  }
+  .tab.active .tab-num { background: var(--java-blue); border-color: var(--java-blue); color: #000; }
+  .tab.done .tab-num { background: var(--java-green); border-color: var(--java-green); color: #000; }
+  
+  .nav-btns { display: flex; gap: 12px; margin-left: 16px; }
+  .nav-btn {
+    height: 36px; padding: 0 20px;
+    border-radius: 6px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .nav-btn:hover { background: var(--surface); border-color: var(--muted); }
+  .nav-btn.primary { background: var(--java-blue); border-color: var(--java-blue); color: #000; }
+  .nav-btn.primary:hover { opacity: 0.9; }
+  .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ─── MAIN LAYOUT (3 Panes) ─── */
+  #main {
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+  }
+
+  /* ─── LEFT PANEL (Code Context) ─── */
+  #left {
+    border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 24px;
+    background: var(--bg);
+  }
+  .panel-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+    color: var(--muted); text-transform: uppercase;
+    margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;
+  }
+  .code-window {
+    background: #020617; border: 1px solid var(--surface2);
+    border-radius: 8px; overflow: hidden; margin-bottom: 24px;
+  }
+  .code-header {
+    background: var(--surface); padding: 8px 12px;
+    font-size: 11px; font-family: monospace; color: var(--muted);
+    border-bottom: 1px solid var(--surface2);
+  }
+  .code-body {
+    padding: 12px; font-size: 11px; font-family: monospace;
+    line-height: 1.6; color: #e2e8f0; overflow-x: auto;
+  }
+  .kw { color: #c084fc; } /* keyword */
+  .ty { color: #38bdf8; } /* type */
+  .st { color: #a7f3d0; } /* string */
+  .cm { color: #64748b; font-style: italic; } /* comment */
+  
+  .file-node {
+    display: flex; align-items: center; gap: 8px; padding: 8px;
+    background: var(--surface); border-radius: 6px; border: 1px solid var(--border);
+    font-size: 12px; font-family: monospace; margin-bottom: 8px;
+  }
+  .file-arrow { text-align: center; color: var(--java-orange); font-size: 18px; margin-bottom: 8px; }
+
+  /* ─── CENTER PANEL (The Visual JVM) ─── */
+  #center {
+    position: relative;
+    background: var(--bg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  /* SVG Connections */
+  #svg-layer {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;
+  }
+  path.c-line { fill: none; stroke: var(--surface2); stroke-width: 2; stroke-dasharray: 4 4; transition: stroke 0.3s; }
+  path.c-line.active { stroke: var(--java-blue); stroke-dasharray: none; animation: flow 1s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -20; } }
+
+  /* JVM Nodes Layer */
+  .jvm-canvas {
+    position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 140px); /* Leave room for explainer */
+    z-index: 5;
+  }
+  
+  .jvm-node {
+    position: absolute;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid var(--surface2);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transition: all 0.4s ease;
+    backdrop-filter: blur(8px);
+    transform: translate(-50%, -50%);
+  }
+  .jvm-node.active { transform: translate(-50%, -50%) scale(1.05); z-index: 10; }
+  
+  .n-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+  .n-icon { font-size: 28px; margin-bottom: 8px; }
+  .n-desc { font-size: 10px; color: var(--muted); text-align: center; font-family: monospace;}
+  
+  /* Specific Node Positions */
+  #n-classloader { top: 15%; left: 50%; border-color: var(--java-blue); }
+  #n-classloader.active { box-shadow: 0 0 30px rgba(56, 189, 248, 0.3); }
+  
+  #n-metaspace { top: 40%; left: 25%; border-color: var(--java-purple); }
+  #n-metaspace.active { box-shadow: 0 0 30px rgba(192, 132, 252, 0.3); }
+  
+  #n-heap { top: 40%; left: 75%; border-color: var(--java-orange); width: 160px; }
+  #n-heap.active { box-shadow: 0 0 30px rgba(251, 146, 60, 0.3); }
+  
+  #n-stack { top: 50%; left: 50%; border-color: var(--java-green); }
+  #n-stack.active { box-shadow: 0 0 30px rgba(52, 211, 153, 0.3); }
+  
+  #n-engine { top: 80%; left: 50%; border-color: var(--java-red); width: 300px; display: flex; flex-direction: row; gap: 15px; justify-content: center; }
+  #n-engine.active { box-shadow: 0 0 30px rgba(239, 68, 68, 0.3); }
+  
+  .engine-part { background: var(--surface); padding: 10px; border-radius: 8px; text-align: center; border: 1px solid var(--border); flex: 1;}
+  
+  /* Sub-elements inside Heap */
+  .heap-zone { width: 100%; border: 1px solid var(--border); margin-top: 5px; font-size: 9px; text-align: center; padding: 4px; border-radius: 4px; }
+  .eden { background: rgba(56, 189, 248, 0.1); color: var(--java-blue); }
+  .surv { background: rgba(251, 146, 60, 0.1); color: var(--java-orange); }
+  .oldg { background: rgba(239, 68, 68, 0.1); color: var(--java-red); }
+  
+  /* Animated Packets */
+  .packet {
+    position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    transform: translate(-50%, -50%); opacity: 0; z-index: 20; pointer-events: none;
+  }
+  .pkt-blue { background: var(--java-blue); box-shadow: 0 0 10px var(--java-blue); }
+  .pkt-orange { background: var(--java-orange); box-shadow: 0 0 10px var(--java-orange); }
+  .pkt-red { background: var(--java-red); box-shadow: 0 0 10px var(--java-red); }
+
+  /* Garbage Collector Sweep */
+  #gc-sweep {
+    position: absolute; left: 0; width: 100%; height: 5px; background: var(--java-red);
+    box-shadow: 0 0 20px 5px var(--java-red); opacity: 0; z-index: 25; pointer-events: none;
+  }
+
+  /* Center Bottom Explainer Panel */
+  #explainer-panel {
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    background: rgba(15, 23, 42, 0.95);
+    border-top: 1px solid var(--java-blue);
+    padding: 24px 32px;
+    z-index: 30;
+    min-height: 140px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+  }
+  .exp-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; letter-spacing: -0.5px;}
+  .exp-text { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .exp-text code { background: var(--surface); padding: 2px 6px; border-radius: 4px; color: var(--java-blue); }
+
+  /* ─── RIGHT PANEL (Live Stats) ─── */
+  #right {
+    border-left: 1px solid var(--border);
+    overflow-y: auto; padding: 24px;
+    background: var(--bg);
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-bottom: 16px;
+  }
+  .stat-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .stat-val { font-size: 24px; font-weight: 700; font-family: monospace; color: var(--text); }
+  
+  .progress-bg { background: var(--bg); height: 6px; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .progress-fill { height: 100%; transition: width 0.3s; }
+  
+  .stack-trace {
+    background: #020617; padding: 8px; border-radius: 6px; border: 1px solid var(--border);
+    font-family: monospace; font-size: 10px; color: var(--muted); display: flex; flex-direction: column; gap: 4px;
+  }
+  .frame { background: var(--surface2); padding: 4px 8px; border-radius: 4px; color: #e2e8f0; border-left: 2px solid var(--java-green);}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <a href="../../index.html?pathway=keytopics" style="text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-right: 20px; flex-shrink: 0; transition: opacity 0.2s;">
+    <span>←</span> Back
+  </a>
+  <div class="brand">
+    <div class="brand-dot"></div>
+    JVM Architecture Masterclass
+  </div>
+  <div class="step-tabs" id="tabs"></div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
+    <button class="nav-btn primary" id="nextBtn" onclick="navigate(1)">Start Engine</button>
+  </div>
+</div>
+
+<!-- MAIN 3-PANE LAYOUT -->
+<div id="main">
+
+  <!-- LEFT PANE: Code Context -->
+  <div id="left">
+    <div class="panel-title">Source -> Bytecode</div>
+    
+    <div class="file-node" id="file-java">
+      <span style="color:var(--java-blue);">📄</span> App.java
+    </div>
+    
+    <div class="file-arrow">↓ <code style="font-size:10px;">javac</code></div>
+    
+    <div class="file-node" id="file-class" style="border-color:var(--java-orange);">
+      <span style="color:var(--java-orange);">⚙️</span> App.class (Bytecode)
+    </div>
+
+    <div class="code-window" style="margin-top: 20px;">
+      <div class="code-header">App.class (Disassembled)</div>
+      <div class="code-body">
+<span class="cm">// Method void main(String[])</span>
+<span class="kw">0:</span> <span class="ty">new</span>           #2  <span class="cm">// class User</span>
+<span class="kw">3:</span> <span class="ty">dup</span>
+<span class="kw">4:</span> <span class="ty">ldc</span>           #3  <span class="cm">// String "Alice"</span>
+<span class="kw">6:</span> <span class="ty">invokespecial</span> #4  <span class="cm">// Method User."<init>":(Ljava/lang/String;)V</span>
+<span class="kw">9:</span> <span class="ty">astore_1</span>
+<span class="kw">10:</span> <span class="ty">aload_1</span>
+<span class="kw">11:</span> <span class="ty">invokevirtual</span> #5  <span class="cm">// Method User.login:()V</span>
+<span class="kw">14:</span> <span class="ty">return</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER PANE: Visual Architecture -->
+  <div id="center">
+    
+    <!-- SVG Lines for Connections -->
+    <svg id="svg-layer">
+      <!-- To be drawn via JS -->
+      <path id="l-load" class="c-line" d=""></path>
+      <path id="l-meta" class="c-line" d=""></path>
+      <path id="l-heap" class="c-line" d=""></path>
+      <path id="l-stack" class="c-line" d=""></path>
+      <path id="l-exec" class="c-line" d=""></path>
+    </svg>
+
+    <!-- The Architecture Nodes -->
+    <div class="jvm-canvas">
+      
+      <div class="jvm-node" id="n-classloader">
+        <div class="n-icon" style="color:var(--java-blue);">📦</div>
+        <div class="n-title" style="color:var(--java-blue);">ClassLoader Subsystem</div>
+        <div class="n-desc">Loading → Linking → Init</div>
+      </div>
+
+      <div class="jvm-node" id="n-metaspace">
+        <div class="n-icon" style="color:var(--java-purple);">📐</div>
+        <div class="n-title" style="color:var(--java-purple);">Metaspace</div>
+        <div class="n-desc">Class Blueprints & Constant Pool</div>
+      </div>
+
+      <div class="jvm-node" id="n-heap">
+        <div class="n-icon" style="color:var(--java-orange);">🗄️</div>
+        <div class="n-title" style="color:var(--java-orange);">The Heap</div>
+        <div class="heap-zone eden">Eden Space (Young)</div>
+        <div class="heap-zone surv">Survivor (S0 / S1)</div>
+        <div class="heap-zone oldg">Old Generation</div>
+      </div>
+
+      <div class="jvm-node" id="n-stack">
+        <div class="n-icon" style="color:var(--java-green);">📚</div>
+        <div class="n-title" style="color:var(--java-green);">JVM Stack</div>
+        <div class="n-desc" style="margin-bottom:5px;">Thread Private</div>
+        <div style="font-size:9px; background:var(--surface); padding:4px; border-radius:4px; border:1px solid var(--border); width:100%; text-align:center;">
+          Frame [Local Vars | Operands]
+        </div>
+      </div>
+
+      <div class="jvm-node" id="n-engine">
+        <div style="position:absolute; top:-15px; background:var(--bg); padding:0 10px; font-size:11px; font-weight:bold; color:var(--java-red); border:1px solid var(--java-red); border-radius:10px;">EXECUTION ENGINE</div>
+        
+        <div class="engine-part" id="e-interp">
+          <div style="font-size:20px; margin-bottom:5px;">⚙️</div>
+          <div style="font-size:10px; font-weight:bold;">Interpreter</div>
+        </div>
+        
+        <div class="engine-part" id="e-jit">
+          <div style="font-size:20px; margin-bottom:5px;">⚡</div>
+          <div style="font-size:10px; font-weight:bold;">JIT Compiler</div>
+        </div>
+        
+        <div class="engine-part" id="e-gc">
+          <div style="font-size:20px; margin-bottom:5px;">🧹</div>
+          <div style="font-size:10px; font-weight:bold;">Garbage Collector</div>
+        </div>
+      </div>
+
+      <!-- Packets Container -->
+      <div id="packet-container"></div>
+      
+      <!-- GC Sweep Visual -->
+      <div id="gc-sweep"></div>
+    </div>
+
+    <!-- Explainer Panel -->
+    <div id="explainer-panel">
+      <div class="exp-title" id="exp-title">Initialization</div>
+      <div class="exp-text" id="exp-text">Press "Start Engine" to begin tracing the exact journey of Java bytecode through the JVM internal architecture.</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANE: Live Stats -->
+  <div id="right">
+    <div class="panel-title">Live Telemetry</div>
+    
+    <div class="stat-card">
+      <div class="stat-label">Heap Memory (Eden)</div>
+      <div class="stat-val" style="color:var(--java-blue);" id="stat-eden">0 MB</div>
+      <div class="progress-bg"><div class="progress-fill" id="bar-eden" style="width:0%; background:var(--java-blue);"></div></div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Active Stack Frames</div>
+      <div class="stack-trace" id="stack-trace">
+        <div style="text-align:center; padding:10px;">[Stack Empty]</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">JIT Compilations (C1/C2)</div>
+      <div class="stat-val" style="color:var(--java-purple);" id="stat-jit">0</div>
+      <div style="font-size:10px; color:var(--muted); margin-top:5px;">Hot methods optimized to Native Code</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-label">GC Pauses</div>
+      <div class="stat-val" style="color:var(--java-red);" id="stat-gc">0</div>
+      <div style="font-size:10px; color:var(--muted); margin-top:5px;">Minor Collections: <span id="stat-minor">0</span> | Major: <span id="stat-major">0</span></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // DOM Setup & Utilities
+  const getPx = (id) => { const e = document.getElementById(id); return { x: e.offsetLeft, y: e.offsetTop }; };
+  const drawLine = (pId, startId, endId) => {
+    const s = getPx(startId); const e = getPx(endId);
+    document.getElementById(pId).setAttribute('d', `M${s.x},${s.y} L${e.x},${e.y}`);
+  };
+  
+  function updateAllLines() {
+    drawLine('l-load', 'n-classloader', 'n-metaspace');
+    drawLine('l-meta', 'n-classloader', 'n-heap');
+    drawLine('l-heap', 'n-metaspace', 'n-stack');
+    drawLine('l-stack', 'n-heap', 'n-stack');
+    drawLine('l-exec', 'n-stack', 'n-engine');
+  }
+  
+  window.addEventListener('load', updateAllLines);
+  window.addEventListener('resize', updateAllLines);
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  
+  function spawnPacket(startId, endId, colorClass, duration=600) {
+      return new Promise(res => {
+          const s = getPx(startId); const e = getPx(endId);
+          const pkt = document.createElement('div');
+          pkt.className = `packet ${colorClass}`;
+          pkt.style.left = s.x + 'px'; pkt.style.top = s.y + 'px'; pkt.style.opacity = 1;
+          document.getElementById('packet-container').appendChild(pkt);
+          
+          void pkt.offsetWidth; // trigger reflow
+          pkt.style.transition = `left ${duration}ms ease-in-out, top ${duration}ms ease-in-out`;
+          pkt.style.left = e.x + 'px'; pkt.style.top = e.y + 'px';
+          
+          setTimeout(() => { pkt.remove(); res(); }, duration);
+      });
+  }
+
+  function setNodeActive(id, active=true) {
+      if(active) document.getElementById(id).classList.add('active');
+      else document.getElementById(id).classList.remove('active');
+  }
+  function setLineActive(id, active=true) {
+      if(active) document.getElementById(id).classList.add('active');
+      else document.getElementById(id).classList.remove('active');
+  }
+
+  // State
+  let currentStep = 0;
+  let isAnimating = false;
+  const titleEl = document.getElementById('exp-title');
+  const textEl = document.getElementById('exp-text');
+  const btnNext = document.getElementById('nextBtn');
+  const tabsContainer = document.getElementById('tabs');
+
+  const STAGES = [
+      { short: 'Overview', title: 'The Black Box', text: "If you write Java, Kotlin, or Scala, your code runs on the JVM. But to most developers, it's a black box. You feed it a <code>.class</code> file, and somehow an app runs. Today, we open the box. We will trace the exact microscopic journey of your code." },
+      { short: 'ClassLoader', title: '1. ClassLoader Subsystem', text: "The JVM doesn't load everything at startup. Using Dynamic Loading, a strict hierarchy takes over. <strong>Bootstrap</strong> loads core APIs (C++). <strong>Platform</strong> loads extensions. <strong>Application</strong> loads your code. The 'Delegation Principle' strictly ensures security." },
+      { short: 'Linking', title: '2. Linking & Init', text: "Once loaded, code enters Linking. The <strong>Bytecode Verifier</strong> scans every line to prevent malicious memory hacks. Preparation allocates memory for <code>static</code> vars with default values. Finally, Initialization runs your <code>static</code> blocks, making the class ready for memory." },
+      { short: 'Metaspace & Heap', title: '3. Shared Memory', text: "Welcome to Runtime Data Areas. The <strong>Metaspace</strong> holds the structural blueprints (class definitions). The <strong>Heap</strong> is the main kitchen where every object created via <code>new</code> lives. Shared by all threads, accessing the Heap requires synchronization." },
+      { short: 'JVM Stack', title: '4. Thread-Private Memory', text: "When a Thread spins up, it gets absolute privacy. The <strong>PC Register</strong> acts as a bookmark for the current bytecode line. The <strong>JVM Stack</strong> holds 'Stack Frames'. Every method call creates a Frame containing the Local Variable Array and the Operand Stack (the math workbench)." },
+      { short: 'Engine & JIT', title: '5. The Execution Engine', text: "The dual-brain Engine. The <strong>Interpreter</strong> translates bytecode line-by-line (slow). But the <strong>JIT (Just-In-Time) Compiler</strong> watches for 'hot' loops. When spotted, the JIT compiles the whole method to highly-optimized Native Machine Code. It runs at the speed of C++." },
+      { short: 'Garbage Collection', title: '6. The Garbage Collector', text: "The GC relies on the Generational Hypothesis: 'Most objects die young.' The Heap fills. A <strong>Minor GC</strong> sweeps the Eden space instantly. Stubborn objects move to Old Generation. When Old Gen fills, a <strong>Major GC</strong> triggers a 'Stop-The-World' pause to defragment memory." },
+      { short: 'JNI & Summary', title: '7. Native Interface & Summary', text: "Need to talk to hardware? The <strong>Java Native Interface (JNI)</strong> acts as a bridge, allowing the Engine to execute C/C++ libraries. The cycle is complete: Load, Link, Store, Execute, Optimize, and Clean. You now deeply understand the JVM." }
+  ];
+
+  // Initialize Tabs
+  STAGES.forEach((s, i) => {
+      const t = document.createElement('div');
+      t.className = 'tab' + (i===0 ? ' active' : '');
+      t.innerHTML = `<div class="tab-num">${i}</div> ${s.short}`;
+      tabsContainer.appendChild(t);
+  });
+
+  const updateUI = (idx) => {
+      titleEl.innerHTML = STAGES[idx].title;
+      textEl.innerHTML = STAGES[idx].text;
+      
+      document.querySelectorAll('.tab').forEach((t, i) => {
+          t.classList.remove('active', 'done');
+          if(i < idx) t.classList.add('done');
+          if(i === idx) t.classList.add('active');
+      });
+      
+      btnNext.innerText = idx === STAGES.length - 1 ? 'Reset Environment' : 'Next Step →';
+  };
+
+  // Complex Animations mapping to Steps
+  const runStepAnimation = async (idx) => {
+      // Clear previous active states
+      ['n-classloader', 'n-metaspace', 'n-heap', 'n-stack', 'n-engine'].forEach(id => setNodeActive(id, false));
+      ['l-load', 'l-meta', 'l-heap', 'l-stack', 'l-exec'].forEach(id => setLineActive(id, false));
+      
+      if(idx === 1) {
+          // ClassLoader
+          document.getElementById('file-class').style.background = 'rgba(251, 146, 60, 0.2)';
+          setNodeActive('n-classloader');
+      } 
+      else if(idx === 2) {
+          // Linking
+          setNodeActive('n-classloader');
+          await spawnPacket('n-classloader', 'n-classloader', 'pkt-blue', 400); // Visual activity
+      }
+      else if(idx === 3) {
+          // Metaspace & Heap
+          setLineActive('l-load');
+          setLineActive('l-meta');
+          await spawnPacket('n-classloader', 'n-metaspace', 'pkt-purple', 500);
+          setNodeActive('n-metaspace');
+          await sleep(300);
+          await spawnPacket('n-classloader', 'n-heap', 'pkt-orange', 500);
+          setNodeActive('n-heap');
+          
+          // Update Heap Stats
+          document.getElementById('stat-eden').innerText = "24 MB";
+          document.getElementById('bar-eden').style.width = "40%";
+      }
+      else if(idx === 4) {
+          // Stack
+          setLineActive('l-heap');
+          await spawnPacket('n-metaspace', 'n-stack', 'pkt-green', 500);
+          setNodeActive('n-stack');
+          
+          // Update Stack UI
+          document.getElementById('stack-trace').innerHTML = `
+            <div class="frame">main(String[]) : line 14</div>
+            <div class="frame">User.login() : line 42</div>
+            <div class="frame" style="border-color:var(--java-blue);">Database.connect() : line 8</div>
+          `;
+      }
+      else if(idx === 5) {
+          // Engine & JIT
+          setLineActive('l-exec');
+          await spawnPacket('n-stack', 'n-engine', 'pkt-red', 500);
+          setNodeActive('n-engine');
+          
+          document.getElementById('e-interp').style.background = 'rgba(239, 68, 68, 0.2)';
+          await sleep(800);
+          document.getElementById('e-interp').style.background = 'var(--surface)';
+          document.getElementById('e-jit').style.background = 'rgba(192, 132, 252, 0.4)'; // JIT takes over
+          
+          // Update JIT stat
+          let jit = 0;
+          const jitInt = setInterval(() => {
+              if(jit > 15) clearInterval(jitInt);
+              document.getElementById('stat-jit').innerText = jit++;
+          }, 50);
+      }
+      else if(idx === 6) {
+          // GC
+          setNodeActive('n-heap');
+          setNodeActive('n-engine');
+          document.getElementById('e-jit').style.background = 'var(--surface)';
+          document.getElementById('e-gc').style.background = 'rgba(239, 68, 68, 0.4)';
+          
+          // Fill Eden
+          document.getElementById('stat-eden').innerText = "256 MB (FULL)";
+          document.getElementById('bar-eden').style.width = "100%";
+          document.getElementById('bar-eden').style.background = "var(--java-red)";
+          
+          await sleep(1000);
+          
+          // Visual Sweep
+          const sweep = document.getElementById('gc-sweep');
+          const hRect = document.getElementById('n-heap').getBoundingClientRect();
+          const canvasRect = document.querySelector('.jvm-canvas').getBoundingClientRect();
+          
+          sweep.style.top = (hRect.top - canvasRect.top) + 'px';
+          sweep.style.left = (hRect.left - canvasRect.left) + 'px';
+          sweep.style.width = hRect.width + 'px';
+          sweep.style.opacity = 1;
+          
+          sweep.style.transition = 'top 0.8s linear';
+          sweep.style.top = (hRect.bottom - canvasRect.top) + 'px';
+          
+          await sleep(800);
+          sweep.style.opacity = 0;
+          sweep.style.transition = 'none';
+          
+          // Clear Eden
+          document.getElementById('stat-eden').innerText = "12 MB";
+          document.getElementById('bar-eden').style.width = "5%";
+          document.getElementById('bar-eden').style.background = "var(--java-blue)";
+          
+          document.getElementById('stat-gc').innerText = "1";
+          document.getElementById('stat-minor').innerText = "1";
+      }
+      else if(idx === 7) {
+          // Summary
+          ['n-classloader', 'n-metaspace', 'n-heap', 'n-stack', 'n-engine'].forEach(id => setNodeActive(id, true));
+          ['l-load', 'l-meta', 'l-heap', 'l-stack', 'l-exec'].forEach(id => setLineActive(id, true));
+      }
+  };
+
+  async function navigate(dir) {
+      if(isAnimating) return;
+      
+      let next = currentStep + dir;
+      if(next >= STAGES.length) {
+          // Hard Reset
+          currentStep = 0;
+          updateUI(0);
+          ['n-classloader', 'n-metaspace', 'n-heap', 'n-stack', 'n-engine'].forEach(id => setNodeActive(id, false));
+          ['l-load', 'l-meta', 'l-heap', 'l-stack', 'l-exec'].forEach(id => setLineActive(id, false));
+          document.getElementById('file-class').style.background = 'transparent';
+          document.getElementById('stack-trace').innerHTML = '<div style="text-align:center; padding:10px;">[Stack Empty]</div>';
+          document.getElementById('stat-eden').innerText = "0 MB";
+          document.getElementById('bar-eden').style.width = "0%";
+          document.getElementById('stat-jit').innerText = "0";
+          document.getElementById('stat-gc').innerText = "0";
+          document.getElementById('e-gc').style.background = 'var(--surface)';
+          return;
+      }
+      if(next < 0) next = 0;
+      
+      isAnimating = true;
+      btnNext.disabled = true;
+      document.getElementById('prevBtn').disabled = true;
+      
+      updateUI(next);
+      await runStepAnimation(next);
+      
+      currentStep = next;
+      isAnimating = false;
+      btnNext.disabled = false;
+      document.getElementById('prevBtn').disabled = currentStep === 0;
+  }
+  
+  // Init
+  updateUI(0);
+
+</script>
+</body>
+</html>

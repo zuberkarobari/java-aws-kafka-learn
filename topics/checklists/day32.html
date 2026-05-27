@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 32  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 32  ·  STUDY CHECKLIST — Docker and Kubernetes — Containers, Deployments, Services and Running Java Microservices</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 32 Checklist</div>
+    <h1 style="margin-top: 0;">Docker and Kubernetes — Containers, Deployments, Services and Running Java Microservices</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 32 · STUDY CHECKLIST</h3>
+    <h3>Docker and Kubernetes — Containers, Deployments, Services and Running Java Microservices</h3>
+    <h3>Docker</h3>
+    <p>Dockerfile, layers, multi-stage builds, image optimisation</p>
+    <h3>Kubernetes Objects</h3>
+    <p>Pod, Deployment, Service, ConfigMap, Secret, Ingress</p>
+    <h3>Reliability</h3>
+    <p>Resource limits, health probes, rolling deployments, HPA</p>
+    <h3>Java in K8s</h3>
+    <p>JVM in containers, graceful shutdown, static membership</p>
+    <p>Note:</p>
+    <p>Docker and Kubernetes questions at senior level go beyond knowing what a Pod is. Interviewers want to know: what happens when a container exceeds its memory limit, why your Java service OOMKills without a proper JVM heap configuration, what readiness vs liveness probes actually do to traffic routing, and how you achieve zero-downtime deployments. Connect every answer to operational decisions that matter in production.</p>
+    <h3>Day 32 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Docker: what a container is, how it differs from a VM, Linux namespaces and cgroups</span></li>
+      <li><span class="checkbox-label">Dockerfile: best practices for Java services — layer caching, non-root user, multi-stage builds</span></li>
+      <li><span class="checkbox-label">Image size optimisation: distroless vs alpine base images, why it matters</span></li>
+      <li><span class="checkbox-label">Kubernetes architecture: control plane components (API server, etcd, scheduler, controller manager) vs worker node components (kubelet, kube-proxy, container runtime)</span></li>
+      <li><span class="checkbox-label">Pod: what it is, why it is the smallest deployable unit, when to put two containers in one Pod</span></li>
+      <li><span class="checkbox-label">Deployment: how it manages ReplicaSets, rolling update strategy, maxSurge and maxUnavailable</span></li>
+      <li><span class="checkbox-label">Service types: ClusterIP, NodePort, LoadBalancer — when each is used</span></li>
+      <li><span class="checkbox-label">ConfigMap vs Secret: how they differ, how to mount them as env vars or volume files</span></li>
+      <li><span class="checkbox-label">Ingress: what it does, how it differs from a LoadBalancer Service</span></li>
+      <li><span class="checkbox-label">Resource requests vs limits: what the difference is, what happens when a container exceeds its memory limit</span></li>
+      <li><span class="checkbox-label">Horizontal Pod Autoscaler: what metric it watches, how it decides to scale</span></li>
+      <li><span class="checkbox-label">JVM in containers: why -XX:+UseContainerSupport matters, MaxRAMPercentage, heap sizing</span></li>
+      <li><span class="checkbox-label">Graceful shutdown in Kubernetes: SIGTERM, terminationGracePeriodSeconds, preStop hook</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Docker and Containerisation</h2>
+    <h3>What a Container Is</h3>
+    <p>Container vs VM:</p>
+    <h3>Production-Grade Dockerfile for a Java Service</h3>
+    <pre><code class="language-java"># Multi-stage build for a Spring Boot service
+# Stage 1: Build — use JDK, produces the JAR
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /build
+# Copy dependency files first — cached as a separate layer
+# If only source code changes, this layer is reused from cache
+COPY pom.xml .
+COPY .mvn/ .mvn/
+COPY mvnw .
+RUN ./mvnw dependency:go-offline -q
+# Copy source and build
+COPY src/ src/
+RUN ./mvnw package -DskipTests -q
+# Extract layered JAR (Spring Boot 2.3+ layertools)
+# Creates separate layers for dependencies, snapshot-dependencies, spring-boot-loader, application
+# This means most layers are cached even when only application code changes
+RUN java -Djarmode=layertools -jar target/*.jar extract --destination extracted
+# Stage 2: Runtime — use JRE only, much smaller image
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+# Run as non-root user — security best practice
+RUN addgroup -S appgroup &amp;&amp; adduser -S appuser -G appgroup
+USER appuser
+# Copy extracted layers in order from least to most frequently changed
+# Docker caches each COPY as a separate layer
+COPY --from=builder /build/extracted/dependencies/          ./
+COPY --from=builder /build/extracted/spring-boot-loader/    ./
+COPY --from=builder /build/extracted/snapshot-dependencies/ ./
+COPY --from=builder /build/extracted/application/          ./
+# JVM flags for containerised deployment
+# UseContainerSupport: reads cgroup memory limits instead of host memory
+# MaxRAMPercentage: use 75% of container memory for heap
+# ExitOnOutOfMemoryError: crash the JVM on OOM instead of hanging
+# -Dfile.encoding: prevent encoding issues in Alpine
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8"
+EXPOSE 8080
+# Use exec form so the JVM receives SIGTERM directly
+# Shell form wraps in /bin/sh -c which intercepts signals
+ENTRYPOINT ["java"]
+CMD ["-cp", "BOOT-INF/classes:BOOT-INF/lib/*", "com.example.PaymentApplication"]</code></pre>
+    <h3>Best practice</h3>
+    <h3>Why it matters</h3>
+    <h3>Multi-stage build</h3>
+    <p>Final image contains only the JRE and application — no JDK, no build tools, no source code. Typical reduction: 600MB → 150MB.</p>
+    <h3>Copy dependencies before source</h3>
+    <p>Layer cache is reused when only source code changes. Maven/Gradle dependency download is the slowest step — avoid repeating it on every build.</p>
+    <h3>Spring Boot layered JAR</h3>
+    <p>Dependencies are in a separate layer from application classes. A code change only invalidates the top layer, not the dependency layer.</p>
+    <h3>Non-root user</h3>
+    <p>If a container is compromised, the attacker does not have root on the container. Root in a container can be root on the host with certain configurations.</p>
+    <h3>Exec form ENTRYPOINT</h3>
+    <h3>UseContainerSupport</h3>
+    <p>Without this, the JVM reads the host machine's total memory and sizes its heap accordingly. On a 64GB host with a 512MB container limit, the JVM tries to allocate gigabytes and is OOMKilled immediately.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> What is a multi-stage Docker build and why is it important for Java services? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A multi-stage build uses multiple FROM instructions in one Dockerfile, each defining a stage. Artifacts from one stage can be copied into another. For Java, the build stage uses the full JDK to compile and package the application. The final stage uses only the JRE — no JDK, no build tools, no source code, no Maven cache. The result is a dramatically smaller image. A naive single-stage Dockerfile that starts from eclipse-temurin:21-jdk and keeps everything produces an image around 600MB. A multi-stage build starting from eclipse-temurin:21-jre for the final stage brings that down to around 150MB. Smaller images mean faster pulls from the registry when scaling up, less storage cost, and a smaller attack surface since fewer binaries are present. The Spring Boot layered JAR feature makes this even more effective by separating dependencies from application code into different layers, so a code-only change does not invalidate the dependency layer in the Docker cache.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — Kubernetes Objects</h2>
+    <h3>Core Object Reference</h3>
+    <h3>Object</h3>
+    <h3>What it is | Key detail</h3>
+    <h3>Pod</h3>
+    <p>Smallest deployable unit. One or more containers sharing network and storage. | You almost never create Pods directly — Deployments manage them.</p>
+    <h3>Deployment</h3>
+    <p>Manages a ReplicaSet to maintain a desired number of Pod replicas. Handles rolling updates and rollbacks. | The right object for stateless services.</p>
+    <h3>StatefulSet</h3>
+    <p>Like Deployment but gives Pods stable network identities and persistent storage. | Use for databases, Kafka brokers, anything that needs stable pod names.</p>
+    <h3>Service</h3>
+    <p>Stable network endpoint (IP + DNS name) that load-balances across matching Pods. | Pods come and go with new IPs — Services provide stable discovery.</p>
+    <h3>ConfigMap</h3>
+    <p>Key-value store for non-sensitive configuration. | Mount as env vars or as a file in the container filesystem.</p>
+    <h3>Secret</h3>
+    <p>Like ConfigMap but for sensitive data — base64 encoded at rest (not encrypted by default). | Use external secrets operator or AWS Secrets Manager integration for real security.</p>
+    <h3>Ingress</h3>
+    <p>HTTP/HTTPS routing rules managed by an Ingress Controller. | Routes /api/payments to the payment Service, /api/accounts to the account Service.</p>
+    <h3>HorizontalPodAutoscaler</h3>
+    <p>Automatically adjusts replica count based on CPU, memory, or custom metrics. | Works with Deployments and StatefulSets.</p>
+    <h3>PersistentVolumeClaim</h3>
+    <p>Request for storage. Bound to a PersistentVolume by the cluster. | Used by StatefulSets for per-pod durable storage.</p>
+    <h3>Namespace</h3>
+    <p>Virtual cluster within a cluster. Isolates resources by team or environment. | Use for multi-team clusters: namespace per team or per service.</p>
+    <h3>Deployment and Service for a Java Microservice</h3>
+    <pre><code class="language-java"># payment-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: payments
+  labels:
+    app: payment-service
+    version: "1.2.0"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: payment-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # allow 1 extra pod during update (4 pods max)
+      maxUnavailable: 0  # never reduce below 3 healthy pods
+  template:
+    metadata:
+      labels:
+        app: payment-service
+        version: "1.2.0"
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: payment-service
+          image: myregistry.io/payment-service:1.2.0
+          ports:
+            - containerPort: 8080
+          # Resource requests: what the scheduler uses to find a node
+          # Resource limits: hard ceiling — OOMKill if exceeded for memory
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"   # 250 millicores = 0.25 CPU core
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"  # 1 full CPU core
+          # Environment from ConfigMap and Secret
+          envFrom:
+            - configMapRef:
+                name: payment-config
+            - secretRef:
+                name: payment-secrets
+          # Startup probe: gives the app time to start before liveness kicks in
+          # Prevents liveness from killing a slow-starting Java app
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            failureThreshold: 30   # 30 * 10s = 5 minutes to start
+            periodSeconds: 10
+          # Liveness probe: is the app still alive? Restart if not.
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 0  # startup probe handles the initial delay
+            periodSeconds: 10
+            failureThreshold: 3
+          # Readiness probe: is the app ready to receive traffic?
+          # Pod removed from Service endpoints until this passes
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            failureThreshold: 3
+          # Pre-stop hook: give time for load balancer to stop routing
+          # before the JVM starts shutdown
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+---
+# Service — stable endpoint for the Deployment
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: payments
+spec:
+  selector:
+    app: payment-service  # routes to all Pods with this label
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP  # internal only — exposed via Ingress</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> What is the difference between a Pod and a Deployment in Kubernetes? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A Pod is the actual workload unit — one or more containers running together sharing network and storage. A Deployment is a controller that manages a desired number of Pods. You almost never create Pods directly because they are mortal — if a Pod dies, it stays dead. A Deployment watches its ReplicaSet and if a Pod disappears, the ReplicaSet creates a new one to maintain the desired replica count. Deployments also handle rolling updates: when you push a new image version, the Deployment creates a new ReplicaSet with the new version and gradually scales it up while scaling down the old one. The maxSurge and maxUnavailable settings control how aggressive that transition is. With maxUnavailable=0, the Deployment never drops below the desired replica count — it creates new Pods before removing old ones, giving you zero-downtime deployments.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Health Probes and Traffic Routing</h2>
+    <h3>The Three Probe Types and What They Actually Do</h3>
+    <h3>Probe</h3>
+    <h3>What Kubernetes does when it fails | What it should check | Common mistake</h3>
+    <h3>livenessProbe</h3>
+    <h3>readinessProbe</h3>
+    <pre><code class="language-java"># Spring Boot Actuator probe endpoints
+# application.yml
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true      # enables /actuator/health/liveness and /actuator/health/readiness
+      show-details: always
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+# What each probe checks by default:
+# /actuator/health/liveness  — LivenessState.CORRECT (is the app alive?)
+# /actuator/health/readiness — ReadinessState.ACCEPTING_TRAFFIC (is the app ready?)
+# Graceful shutdown — moves readiness to REFUSING_TRAFFIC before shutdown
+# This gives Kubernetes time to remove the Pod from endpoints before connections are closed
+server:
+  shutdown: graceful
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s  # wait up to 30s for in-flight requests to complete
+# What happens during a rolling update with correct probe configuration:
+# 1. New Pod starts — readinessProbe starts failing (app not ready yet)
+# 2. Service does NOT route traffic to the new Pod
+# 3. startupProbe passes — Spring Boot context is loaded
+# 4. readinessProbe passes — app declares itself ACCEPTING_TRAFFIC
+# 5. Service adds new Pod to endpoints — traffic starts flowing
+# 6. Old Pod receives SIGTERM — Spring sets readiness to REFUSING_TRAFFIC
+# 7. preStop sleep(5) — gives load balancer time to stop routing
+# 8. Existing requests finish (up to timeout-per-shutdown-phase)
+# 9. JVM shuts down cleanly</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> What is the difference between a liveness probe and a readiness probe? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">They answer different questions and have different consequences. Liveness answers: is this container still functioning at all? If it fails past the threshold, Kubernetes restarts the container. Use it to detect deadlocks, infinite loops, or any state where the process is alive but fundamentally broken. Readiness answers: is this container ready to receive traffic right now? If it fails, Kubernetes removes the Pod from the Service's endpoint list — no traffic is sent to it. The Pod is not restarted. Use it to signal warm-up completion, dependency unavailability, or temporary overload. The common mistake is checking database connectivity in the liveness probe. If your database goes down, your liveness probe fails, Kubernetes restarts all your pods — but the restarts do not fix the database. Now you have a thundering herd of restarting pods on top of a database issue. Keep liveness simple: just check that the process is alive. Let readiness handle dependency availability.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — Resource Management and Autoscaling</h2>
+    <h3>Requests vs Limits</h3>
+    <p>The critical distinction:</p>
+    <p>Requests are what the scheduler uses to decide which node has enough capacity for a Pod. A node with 4 CPU cores available can schedule a Pod requesting 1 CPU. Limits are the hard ceiling enforced by cgroups at runtime. Memory limits are hard: exceeding the memory limit causes an immediate OOMKill of the container. CPU limits are soft: exceeding the CPU limit causes throttling, not killing. The Pod slows down but does not die.</p>
+    <h3>Scenario</h3>
+    <h3>What happens</h3>
+    <h3>Memory usage > limit</h3>
+    <h3>CPU usage > limit</h3>
+    <p>Container is CPU-throttled — it gets less CPU time. The process slows down but is not killed.</p>
+    <h3>Memory request set too low</h3>
+    <p>Pod is scheduled on a node that cannot actually support its real memory usage. OOMKill at runtime.</p>
+    <h3>CPU request set too low</h3>
+    <p>Pod is scheduled correctly, but the node may become overloaded. Request affects scheduling only.</p>
+    <h3>No limits set</h3>
+    <p>Container can use all available node resources, starving other Pods on the same node. Never do this in production.</p>
+    <h3>Requests = Limits (Guaranteed QoS)</h3>
+    <p>Highest priority class. Kubernetes will evict Burstable and BestEffort Pods before Guaranteed ones under pressure.</p>
+    <pre><code class="language-java"># HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-service-hpa
+  namespace: payments
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-service
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60  # scale up when average CPU &gt; 60%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: AverageValue
+          averageValue: 800Mi    # scale up when average memory &gt; 800Mi
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30   # react quickly to traffic spikes
+      policies:
+        - type: Pods
+          value: 4
+          periodSeconds: 60             # add at most 4 pods per minute
+    scaleDown:
+      stabilizationWindowSeconds: 300  # be conservative scaling down
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60             # remove at most 25% of pods per minute</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What happens when a container exceeds its memory limit in Kubernetes? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">It is OOMKilled — the container runtime sends a SIGKILL to the container process immediately. There is no graceful shutdown, no cleanup, no warning. The container simply stops. Kubernetes then restarts it according to the restart policy. If it keeps getting OOMKilled, it enters CrashLoopBackOff — Kubernetes backs off the restart attempts exponentially to avoid thrashing. The fix is usually one of two things: either the memory limit is too low for the actual working set of the application and needs to be raised, or there is a memory leak. To distinguish: if the app stabilises at a certain memory level and then gets OOMKilled only when traffic spikes, the limit is too low. If memory keeps growing over time and eventually hits the limit even at steady traffic, it is a leak. For Java services, the most common cause of OOMKill is the JVM not knowing it is in a container. Without UseContainerSupport, the JVM reads the host machine's total RAM and sizes its heap accordingly. On a 64GB host with a 512MB container memory limit, the JVM allocates a massive heap and is OOMKilled before the app even starts serving traffic.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — Running Java Services in Kubernetes</h2>
+    <h3>JVM Configuration for Containers</h3>
+    <p>The core problem:</p>
+    <p>Old JVM versions (before Java 8u191 / Java 10) did not know they were running inside a container. They read memory and CPU limits from the host OS, not from the cgroup limits imposed by Kubernetes. A Java app in a 512Mi container on a 64GB host would size its heap for 64GB and immediately be OOMKilled. UseContainerSupport (the default from Java 10 onwards, and backported to Java 8u191) fixes this by reading cgroup limits.</p>
+    <pre><code class="language-java"># JVM flags for Kubernetes deployment
+# Set via JAVA_OPTS environment variable or directly in ENTRYPOINT
+# Core container-awareness flags
+# -XX:+UseContainerSupport          — reads cgroup limits (default ON in Java 10+)
+# -XX:MaxRAMPercentage=75.0         — use 75% of container memory for heap
+# -XX:InitialRAMPercentage=50.0     — start heap at 50% to avoid slow ramp-up
+# -XX:+ExitOnOutOfMemoryError       — crash fast instead of hanging on OOM
+# -XX:+HeapDumpOnOutOfMemoryError   — write heap dump for diagnosis
+# -XX:HeapDumpPath=/tmp/heapdump.hprof
+# Why 75% and not 100%?
+# Java process uses memory outside the heap too:
+# - Metaspace (class metadata)
+# - Thread stacks (each thread ~512KB)
+# - Direct ByteBuffer / off-heap (Netty, NIO)
+# - JVM internal overhead
+# If you give 100% to heap, the total process exceeds the container limit → OOMKill
+# 75% leaves enough room for non-heap memory
+# CPU awareness
+# -XX:ActiveProcessorCount=N       — override if auto-detection is wrong
+# Do not set this manually unless you have a specific reason
+# The JVM reads the CPU quota from cgroups and sizes thread pools accordingly
+# GC choice for containerised workloads
+# G1GC (default in Java 9+): good balance for most services
+# ZGC (-XX:+UseZGC): very low pause times, good for latency-sensitive services
+# ShenandoahGC: alternative to ZGC for low-pause scenarios
+# application.yml — Spring Boot specific
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+server:
+  shutdown: graceful
+# Kubernetes Deployment env section
+env:
+  - name: JAVA_OPTS
+    value: &gt;-
+      -XX:+UseContainerSupport
+      -XX:MaxRAMPercentage=75.0
+      -XX:InitialRAMPercentage=50.0
+      -XX:+ExitOnOutOfMemoryError
+      -XX:+HeapDumpOnOutOfMemoryError
+      -XX:HeapDumpPath=/tmp/heapdump.hprof
+      -Dfile.encoding=UTF-8</code></pre>
+    <h3>Graceful Shutdown in Kubernetes</h3>
+    <p>The shutdown sequence:</p>
+    <pre><code class="language-java"># Complete graceful shutdown configuration
+# Kubernetes Deployment
+spec:
+  template:
+    spec:
+      terminationGracePeriodSeconds: 60  # total time before SIGKILL
+      containers:
+        - name: payment-service
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+          # Timeline:
+          # t=0:  Kubernetes sends SIGTERM AND removes Pod from endpoints
+          # t=0:  preStop hook starts — sleep 5
+          # t=5:  preStop completes — SIGTERM delivered to JVM
+          # t=5:  Spring Boot graceful shutdown starts
+          #       - readiness probe → REFUSING_TRAFFIC
+          #       - waits for in-flight requests (up to 30s)
+          #       - closes DB connections, Kafka consumers
+          # t=35: JVM exits cleanly
+          # t=60: Kubernetes sends SIGKILL if JVM has not exited yet
+# Kafka consumer — deregister before shutdown
+# Spring Kafka handles this automatically with graceful shutdown:
+# - Stops polling new messages
+# - Finishes processing current batch
+# - Commits offsets
+# - Closes consumer
+# This is why static membership (group.instance.id) matters in Kubernetes:
+# Pod restarts rejoin with same identity — no full rebalance triggered</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> How do you handle graceful shutdown for a Spring Boot service in Kubernetes? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">There are three layers that need to work together. First, the JVM must receive SIGTERM correctly — this requires exec form in the Docker ENTRYPOINT, not shell form. Shell form wraps the process in /bin/sh and the JVM never sees the signal. Second, Spring Boot's graceful shutdown must be enabled with server.shutdown=graceful and a timeout configured via spring.lifecycle.timeout-per-shutdown-phase. When SIGTERM arrives, Spring sets the readiness state to REFUSING_TRAFFIC so no new requests are routed to the pod, then waits for in-flight requests to finish before proceeding with context shutdown. Third, the preStop hook in the Kubernetes Pod spec adds a sleep before SIGTERM reaches the JVM. This is necessary because Kubernetes removes the Pod from the Service endpoints and sends SIGTERM simultaneously, but load balancers take a few seconds to propagate the endpoint removal. Without the sleep, requests continue arriving at a JVM that has already started shutting down. Five seconds is usually enough for most load balancer configurations.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — ConfigMap, Secret and Ingress</h2>
+    <h3>ConfigMap and Secret</h3>
+    <pre><code class="language-java"># ConfigMap — non-sensitive configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-config
+  namespace: payments
+data:
+  SPRING_PROFILES_ACTIVE: "prod"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-brokers:9092"
+  PAYMENT_GATEWAY_URL: "https://api.stripe.com"
+  LOG_LEVEL: "INFO"
+---
+# Secret — sensitive configuration (base64 encoded, not encrypted by default)
+# In production: use External Secrets Operator or AWS Secrets Manager CSI driver
+# rather than storing secrets in the cluster etcd
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payment-secrets
+  namespace: payments
+type: Opaque
+data:
+  DB_PASSWORD: cGF5bWVudHNlY3JldA==   # base64 encoded
+  API_KEY: c2tfdGVzdF9hYmMxMjM=        # base64 encoded
+# Mounting as environment variables (shown in Deployment spec)
+envFrom:
+  - configMapRef:
+      name: payment-config
+  - secretRef:
+      name: payment-secrets
+# Mounting as volume (for config files, certificates)
+volumes:
+  - name: config-volume
+    configMap:
+      name: payment-config
+volumeMounts:
+  - name: config-volume
+    mountPath: /app/config
+    readOnly: true
+---
+# Ingress — HTTP routing to multiple services
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: payments
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.example.com
+      secretName: api-tls-secret
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /api/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: 80
+          - path: /api/accounts
+            pathType: Prefix
+            backend:
+              service:
+                name: account-service
+                port:
+                  number: 80</code></pre>
+    <h3>Service type</h3>
+    <h3>What it creates | When to use it</h3>
+    <h3>ClusterIP (default)</h3>
+    <p>Internal cluster IP only — not reachable from outside the cluster | Service-to-service communication inside the cluster. Always use with Ingress for external HTTP access.</p>
+    <h3>NodePort</h3>
+    <p>Opens a port (30000-32767) on every cluster node | Development and testing. Not suitable for production — exposes every node directly.</p>
+    <h3>LoadBalancer</h3>
+    <p>Provisions a cloud load balancer (AWS ALB/NLB) for this service | When you need L4 TCP/UDP load balancing directly to pods, or when you do not have an Ingress controller. One LB per service — expensive.</p>
+    <h3>ExternalName</h3>
+    <p>Maps a service to an external DNS name | Accessing external services (databases, APIs) using a cluster-internal name, making them easy to swap.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> What is the difference between a ConfigMap and a Secret in Kubernetes? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Both store key-value data that Pods can consume as environment variables or volume files. The difference is intended usage and handling. ConfigMaps store non-sensitive configuration — feature flags, log levels, service URLs, Kafka bootstrap servers. Secrets store sensitive data — database passwords, API keys, TLS certificates. Kubernetes encodes Secret values in base64 and marks them separately in its API so tooling knows to redact them from logs. The important thing to understand is that base64 is encoding, not encryption — anyone with kubectl access to the namespace can read the raw values. By default, Secrets are stored unencrypted in etcd. For genuine security, you enable etcd encryption at rest, restrict RBAC access to Secrets tightly, and ideally use an external secrets management solution like AWS Secrets Manager with the Secrets Store CSI driver or External Secrets Operator, which fetches secrets from AWS at runtime rather than storing them in the cluster.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write each exercise from memory. After each one, identify one production failure mode this configuration prevents.</p>
+    <h3>Exercise 1 — Production Dockerfile for Spring Boot</h3>
+    <p>Task:</p>
+    <p>Write a complete multi-stage Dockerfile for a Spring Boot 3 / Java 21 payment service.</p>
+    <p>Stage 1: build using eclipse-temurin:21-jdk-alpine with Maven, use layertools to extract layers.</p>
+    <p>Stage 2: runtime using eclipse-temurin:21-jre-alpine, non-root user, COPY layers in order.</p>
+    <p>Set JAVA_OPTS with UseContainerSupport, MaxRAMPercentage=75.0, ExitOnOutOfMemoryError.</p>
+    <p>Use exec form ENTRYPOINT. Expose port 8080.</p>
+    <p>Show: what happens if you use shell form instead of exec form for the ENTRYPOINT.</p>
+    <h3>Exercise 2 — Kubernetes Deployment with All Probes</h3>
+    <p>Task:</p>
+    <p>Write a Deployment for the payment service with all three probes configured correctly.</p>
+    <p>Resources: requests 256Mi/250m, limits 1Gi/1000m.</p>
+    <p>Add preStop sleep 5 and terminationGracePeriodSeconds: 60.</p>
+    <p>Explain: what goes wrong if you put the DB connectivity check in the liveness probe.</p>
+    <h3>Exercise 3 — ConfigMap, Secret and Service</h3>
+    <p>Task:</p>
+    <p>Write a ConfigMap with Kafka brokers, Spring profile, and log level.</p>
+    <p>Write a Secret with DB password and API key (show base64 encoding).</p>
+    <p>Mount both as environment variables in the Deployment via envFrom.</p>
+    <p>Write a ClusterIP Service for the Deployment on port 80 targeting container port 8080.</p>
+    <p>Explain why base64 in a Secret does not mean the data is secure — and what External Secrets Operator solves.</p>
+    <h3>Exercise 4 — Ingress with TLS</h3>
+    <p>Task:</p>
+    <p>Write an Ingress that routes /api/payments to the payment-service and /api/accounts to the account-service.</p>
+    <p>Configure TLS using a Secret named api-tls-secret for api.example.com.</p>
+    <p>Add annotations for the nginx ingress controller: rate limit 100 req/s per IP.</p>
+    <p>Explain the difference between a LoadBalancer Service and an Ingress for HTTP traffic — when would you choose each?</p>
+    <p>Show how the Ingress controller itself is exposed — what Service type does the nginx ingress controller use?</p>
+    <h3>Exercise 5 — HorizontalPodAutoscaler</h3>
+    <p>Task:</p>
+    <p>Write an HPA for the payment Deployment targeting 60% average CPU utilisation.</p>
+    <p>Min replicas: 3, max replicas: 20.</p>
+    <p>Configure scaleUp stabilizationWindowSeconds: 30 and scaleDown stabilizationWindowSeconds: 300.</p>
+    <p>Add a scale-down policy of at most 25% of pods per minute.</p>
+    <p>Explain: why is the scaleDown window much longer than scaleUp — what operational problem does this prevent?</p>
+    <h3>Exercise 6 — JVM Tuning for a 1Gi Container</h3>
+    <p>Task:</p>
+    <p>Given: container memory limit = 1Gi. Calculate: what heap size does MaxRAMPercentage=75.0 give?</p>
+    <p>Calculate: what does the remaining 25% need to cover? (metaspace, thread stacks, direct memory)</p>
+    <p>Show the full JAVA_OPTS string for a production payment service in a 1Gi container.</p>
+    <p>Explain: what happens if you set -Xmx768m explicitly AND also set MaxRAMPercentage — which wins?</p>
+    <p>Describe: two symptoms that tell you MaxRAMPercentage is set too high in production.</p>
+    <h3>Exercise 7 — BOSS: Complete Kubernetes Manifest Set</h3>
+    <p>Write the complete Kubernetes manifest set for a production payment microservice:</p>
+    <p>Namespace (payments). ConfigMap (kafka, spring profile, log level). Secret (DB credentials, API key). Deployment: 3 replicas, rolling update maxSurge=1 maxUnavailable=0, all three probes, resources requests and limits, preStop hook, terminationGracePeriodSeconds=60, envFrom both ConfigMap and Secret. ClusterIP Service. Ingress with TLS routing /api/payments. HPA min=3 max=20 at 60% CPU. Show how these manifests would be applied in a CI/CD pipeline: which order matters, which can be applied independently. Identify three failure modes that would be prevented by this configuration versus a naive deployment.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Cover the answer, say it out loud, then check. Every answer connects the Kubernetes concept to the operational consequence it addresses.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> What is a container and how does it differ from a virtual machine? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A container is a process (or set of processes) running in isolation using Linux kernel features — namespaces for isolation of things like the process tree, network stack, and filesystem mount points, and cgroups for resource limits like CPU and memory. Containers share the host OS kernel. A virtual machine runs a complete guest operating system on a hypervisor that virtualises hardware. The practical differences: containers start in milliseconds because there is no OS to boot — just a process. VMs take minutes. Containers use much less memory because there is no guest OS overhead. A minimal Java container might be 150MB; a minimal VM for the same app might be 1GB. The trade-off is isolation: since containers share the kernel, a kernel vulnerability affects all containers on that host. VMs have a hypervisor boundary that provides stronger isolation. For most microservices workloads, the container trade-off is the right one — the performance and density benefits outweigh the slightly weaker isolation boundary.</p>
+        </div>
+      </div>
+    </div>
+            
+    <p>A: Kubernetes creates a new ReplicaSet with the new image version. It then gradually scales up the new ReplicaSet and scales down the old one according to the rolling update strategy. With maxSurge=1 and maxUnavailable=0, it creates one new Pod with the new version and waits for it to pass the readiness probe before removing one old Pod. It repeats until all old Pods are replaced. Because of maxUnavailable=0, the service never drops below the desired replica count — you always have at least three healthy Pods serving traffic during the transition. The readiness probe is critical here: if the new Pod fails its readiness check, the rolling update stops and the old Pods keep serving traffic. The deployment does not proceed until the new Pod is ready. This is what gives you the ability to detect bad deployments before they affect all traffic.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> Why does a Java service in Kubernetes get OOMKilled even when the heap looks fine? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">The JVM heap is not the only memory a Java process uses. Beyond the heap there is metaspace (class metadata), thread stacks (each thread consumes roughly 512KB of stack space), direct ByteBuffers used by frameworks like Netty and Kafka clients, the JVM internal overhead itself, and native libraries. If you set the container memory limit to 1Gi and MaxRAMPercentage to 100%, the JVM allocates the full 1Gi for the heap. The total process memory then exceeds 1Gi once you add all the non-heap components, and the OOMKill happens at the OS level, not inside the JVM. The correct configuration is MaxRAMPercentage=75 which leaves 256Mi for non-heap memory on a 1Gi container. The other common cause: old JVM versions without UseContainerSupport read the host machine's total RAM instead of the container cgroup limit, so the heap calculation is based on completely wrong numbers.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> What is a Kubernetes Service and why do you need it if Pods already have IP addresses? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Pods do have IP addresses, but those addresses are ephemeral. Every time a Pod is created — whether due to a restart, a rolling update, or a scale-out — it gets a new IP address. If Service A hard-coded the IP of Service B's Pod, that connection would break every time Service B's Pod was replaced. A Service provides a stable IP address and a stable DNS name that persists regardless of Pod lifecycle. The Service uses a label selector to find all Pods it should route to. Kubernetes maintains an Endpoints object listing the current healthy Pod IPs behind each Service and updates it as Pods come and go. kube-proxy on each node maintains iptables or IPVS rules to route traffic from the Service IP to one of the backing Pods. The DNS name payment-service.payments.svc.cluster.local always resolves to the same Service IP regardless of how many times the Pods behind it have been replaced.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> What are resource requests and limits and why should they always be set? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Requests are the amount of CPU and memory the scheduler reserves on a node for this Pod. The scheduler will not place the Pod on a node that does not have enough unreserved capacity. Limits are the hard ceiling enforced at runtime by the kernel's cgroup mechanism. Without requests, the scheduler has no way to know how much capacity a Pod needs — it will place Pods on any node, and nodes can become overloaded with no warning. Without limits, a runaway process or memory leak can consume all resources on a node and starve other Pods. In production, I always set both, and I start with requests equal to the typical measured usage and limits at roughly twice the requests to give headroom for load spikes. For memory especially, I never skip limits — an unconstrained memory leak in one service should not take down all services on the node.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> How do you achieve zero-downtime deployments in Kubernetes? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Three things need to work together. First, the Deployment rolling update strategy must have maxUnavailable=0 so the number of healthy Pods never drops below the desired count during a rollout. Second, the new Pods must have a correctly configured readiness probe — only after a Pod passes the readiness check does Kubernetes add it to the Service endpoints and does the rolling update proceed to replace an old Pod. If the new version is broken and the readiness probe never passes, the rollout stalls and old Pods keep serving traffic. Third, the old Pods need graceful shutdown: the preStop hook adds a sleep to let the load balancer stop routing to the Pod before the JVM starts shutting down, and Spring Boot's graceful shutdown waits for in-flight requests to complete before closing connections. Miss any of these three and you will see 502 or 503 errors during deployments.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is an Ingress and how does it differ from a LoadBalancer Service? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A LoadBalancer Service creates a cloud load balancer (an AWS NLB or ALB) for each service individually. It operates at L4 — TCP/UDP routing based on port. Every service that needs external access gets its own load balancer, which means its own cost. An Ingress is an L7 HTTP routing rule — it routes based on the URL path and the hostname. A single Ingress controller (deployed in the cluster) handles all routing decisions and is backed by a single cloud load balancer. You can route /api/payments to the payment service and /api/accounts to the account service with one load balancer. The Ingress controller is itself a Deployment in the cluster, exposed via a LoadBalancer Service. For HTTP services, Ingress is almost always better: lower cost, centralised SSL termination, and HTTP-level features like path rewriting and rate limiting. Use LoadBalancer Services directly for non-HTTP protocols like TCP or for cases where you need a dedicated IP per service.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> What is a namespace in Kubernetes and how do you use it for multi-team environments? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A namespace is a virtual cluster within a cluster — a way to scope and isolate resources. Resources in different namespaces can have the same name without conflict. RBAC policies can be scoped to a namespace, so you can give Team A full control over the payments namespace and read-only access to the accounts namespace. Network policies can restrict cross-namespace communication. In multi-team environments, the common patterns are: one namespace per team (team-payments, team-accounts) so each team has ownership over their services; one namespace per environment within the same cluster (dev, staging) so environments are logically isolated; or one namespace per service for fine-grained isolation. I use resource quotas at the namespace level to prevent one team's runaway deployment from consuming all cluster resources. In the Deloitte Kubernetes work, we used per-team namespaces with RBAC role bindings so each team could deploy and debug their own services without being able to accidentally affect other teams' deployments.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> How does Horizontal Pod Autoscaling work and what are its limitations? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">HPA watches a metric — typically average CPU utilisation or average memory usage across all Pods in the target Deployment. When the metric exceeds the target, HPA calculates how many replicas are needed to bring the metric back to target and adjusts the Deployment's replica count. It uses a stabilisation window to avoid flapping — it will not scale down until the metric has been consistently below target for the stabilisation period. The limitations: there is a delay between a traffic spike and the new Pods being ready to serve it — Pods take time to start, pull the image, pass startup probes, and warm up. For Java services with warm-up times, the gap between a spike and the new capacity being available can be 30 to 60 seconds. This is why you set a higher minimum replica count for critical services. HPA also cannot scale below the minimum or above the maximum, so you must choose those boundaries carefully. Custom metrics via the metrics API allow scaling on Kafka consumer lag or custom business metrics.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What is the difference between a Deployment and a StatefulSet? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A Deployment manages a set of identical, interchangeable Pods. Each Pod gets a random name like payment-service-7d9f8b-xk2p and a new random IP when it is replaced. The Pods can be created or deleted in any order. A StatefulSet gives each Pod a stable, predictable identity — kafka-0, kafka-1, kafka-2 — that persists across restarts. The same Pod name always maps to the same persistent volume. StatefulSet Pods are created and deleted in order (0, 1, 2 for creation; 2, 1, 0 for deletion). Use StatefulSets for anything that has state tied to a specific instance: Kafka brokers, PostgreSQL instances, Redis clusters, Elasticsearch nodes. For stateless Spring Boot services, always use Deployments — they have simpler semantics and faster rollouts because Pods are interchangeable.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> What does it mean to run a container as non-root and why does it matter? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">By default, processes inside a container run as the root user (UID 0). Root inside a container is not the same as root on the host due to namespace isolation, but it is still dangerous. With certain misconfigurations — privileged containers, volume mounts, or certain kernel capabilities — root in a container can escalate to root on the host. Running as a non-root user limits what a compromised container can do. You cannot bind to privileged ports below 1024 (which is fine since you map ports in Kubernetes anyway), you cannot install software, and you cannot access most host resources. In the Dockerfile you create a dedicated system user and switch to it with USER before the ENTRYPOINT. In Kubernetes, you can also enforce this via the securityContext at the Pod or container level with runAsNonRoot: true and a specific runAsUser UID.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> How would you debug a CrashLoopBackOff in Kubernetes? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">CrashLoopBackOff means the container is starting and then crashing repeatedly. Kubernetes is backing off restart attempts exponentially. My diagnosis steps: first, run kubectl describe pod <pod-name> and look at the Events section at the bottom — it shows the exit code and any OOMKill signals. Exit code 137 means OOMKill (kill signal 9). Exit code 1 means the application itself exited with an error. Second, run kubectl logs <pod-name> --previous to see the logs from the crashed container. The previous flag is important — kubectl logs without it shows the current (probably empty) container, not the one that crashed. Third, if the container crashes too fast to log anything, temporarily override the command in the Deployment to sleep infinity so the container stays running and you can kubectl exec into it to investigate. For OOMKill, the fix is increasing the memory limit or fixing the JVM MaxRAMPercentage setting. For application errors, the logs tell you what went wrong.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> What is a PodDisruptionBudget and when do you need it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A PodDisruptionBudget tells Kubernetes the minimum number of Pods of a Deployment that must remain available during voluntary disruptions — node drains for maintenance, cluster upgrades, or Kubernetes itself trying to evict Pods. Without a PDB, a cluster upgrade might drain multiple nodes simultaneously and take all your Pods offline. With minAvailable=2 (or equivalently maxUnavailable=1), any drain operation that would violate this budget is blocked until a Pod elsewhere becomes available first. For a three-replica payment service, I set minAvailable=2. This means a node drain can proceed only if at least two replicas are still running after the eviction. In practice, this prevents situations where a cluster maintenance window causes a full outage for services that had only the minimum healthy replica count at that moment. It is a small configuration that prevents a class of self-inflicted availability incidents.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 32 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you explain the three probe types and what happens when each fails?</span></li>
+      <li><span class="checkbox-label">Can you state why putting DB checks in the liveness probe is dangerous?</span></li>
+      <li><span class="checkbox-label">Can you explain the SIGTERM + preStop sequence for zero-downtime shutdown?</span></li>
+      <li><span class="checkbox-label">Can you explain why JVM OOMKills without UseContainerSupport and MaxRAMPercentage?</span></li>
+      <li><span class="checkbox-label">Can you state the difference between requests and limits and what happens when each is exceeded?</span></li>
+      <li><span class="checkbox-label">All 7 exercises — Boss exercise (complete manifest set) done?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Multi-stage Dockerfile, layer ordering</h3>
+    <p>/5 |</p>
+    <h3>Deployment: rolling update, probes, lifecycle</h3>
+    <p>/5 |</p>
+    <p>/5 |</p>
+    <h3>Resource requests vs limits, OOMKill</h3>
+    <p>/5 |</p>
+    <h3>JVM in containers: UseContainerSupport, heap</h3>
+    <p>/5 |</p>
+    <h3>Graceful shutdown: SIGTERM, preStop, Spring</h3>
+    <p>/5 |</p>
+    <h3>ConfigMap vs Secret, external secrets</h3>
+    <p>/5 |</p>
+    <h3>Ingress vs LoadBalancer Service</h3>
+    <p>/5 |</p>
+    <h3>HPA: metrics, stabilisation, limitations</h3>
+    <p>/5 |</p>
+    <p>Day 32 complete:</p>
+    <p>Docker and Kubernetes questions at senior level are really reliability engineering questions. The interviewer wants to know whether your deployment causes 500 errors or not, whether your Java service survives node maintenance, and whether a bad deployment rolls back automatically or takes the whole service down. Those answers come from understanding probes, resource limits, graceful shutdown, and JVM configuration — not from knowing kubectl commands.</p>
+    <h3>Preview: Day 33 — System Design: URL Shortener</h3>
+    <p>End-to-end design of a URL shortening service covering encoding strategies, database choice and schema, redirect caching, rate limiting, analytics, and scaling to billions of URLs. The first full system design practice problem.</p>
+    <p>Day 32 of 60 · Docker and Kubernetes · Prepared for Md Zuber</p>
+    <p>"A container that crashes gracefully is not a failure. A container that hangs indefinitely is."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>

@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="DAY 13  ·  STUDY CHECKLIST — Interactive Study Checklist for Md Zuber" />
+  <title>DAY 13  ·  STUDY CHECKLIST — System Design Fundamentals — Scaling, CAP, Caching, Sharding, Rate Limiting & High-RPS Architecture</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body class="study-checklist-page">
+  
+  <!-- Topic Header Toolbar -->
+  <header class="topic-header" style="position: sticky; top: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border); padding: var(--space-4) 0; z-index: 100;">
+    <div style="max-width: var(--content-max); margin: 0 auto; padding: 0 var(--space-6); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-3);">
+      <a href="../../index.html?pathway=studyplan" style="text-decoration: none; color: var(--text-secondary); font-weight: 600; display: flex; align-items: center; gap: var(--space-2);">
+        <span>←</span> Back to Study Plan
+      </a>
+      <div class="pw" style="display: flex; align-items: center; gap: var(--space-3); min-width: 200px;">
+        <div class="pt" style="flex: 1; height: 6px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden;">
+          <div class="pf" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+        </div>
+        <span class="pl" style="font-size: 0.75rem; font-weight: 700; color: var(--accent);">0% Completed</span>
+      </div>
+    </div>
+  </header>
+
+  <main id="topic-content" style="max-width: var(--content-max); margin: var(--space-8) auto; padding: 0 var(--space-6);">
+    
+    <div class="hero-eyebrow" style="margin-bottom: var(--space-3); display: inline-block;">📅 Day 13 Checklist</div>
+    <h1 style="margin-top: 0;">System Design Fundamentals — Scaling, CAP, Caching, Sharding, Rate Limiting & High-RPS Architecture</h1>
+    <p style="font-size: 1.05rem; color: var(--text-secondary);">
+      Prepared for: <strong>Md Zuber</strong> &middot; Target: <strong>Senior Java Backend Engineer (5–8 LPA+)</strong>
+    </p>
+    
+    <hr />
+
+    <!-- Main Content rendered by compiler -->
+        <h3>DAY 13 · STUDY CHECKLIST</h3>
+    <h3>System Design Fundamentals — Scaling, CAP, Caching, Sharding, Rate Limiting & High-RPS Architecture</h3>
+    <h3>Scaling</h3>
+    <p>Vertical, Horizontal, Load Balancing</p>
+    <h3>CAP Theorem</h3>
+    <p>Consistency, Availability, Partition Tolerance</p>
+    <h3>Caching</h3>
+    <p>Strategies, Redis, Cache-aside, Write-through</p>
+    <h3>Sharding & Rate Limiting</h3>
+    <p>Consistent Hashing, Token Bucket, Sliding Window</p>
+    <p>Note:</p>
+    <p>System design questions are open-ended on purpose. Interviewers are not looking for the one correct answer — they are watching how you think: do you identify trade-offs, do you ask clarifying questions, do you know when to use what. Every concept today has a trade-off attached. Learn the trade-off as the core of your answer, not just the definition.</p>
+    <h3>Day 13 Study Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Scaling: vertical vs horizontal — trade-offs, when each stops working</span></li>
+      <li><span class="checkbox-label">Load balancing: algorithms (round-robin, least connections, IP hash, weighted), L4 vs L7</span></li>
+      <li><span class="checkbox-label">CAP theorem: what it means, which systems choose CP vs AP, and why</span></li>
+      <li><span class="checkbox-label">PACELC: the extension to CAP that is more relevant to real distributed systems</span></li>
+      <li><span class="checkbox-label">Caching: cache-aside, write-through, write-behind, read-through — when each fits</span></li>
+      <li><span class="checkbox-label">Cache invalidation: TTL, event-driven, write-through — the hard problem</span></li>
+      <li><span class="checkbox-label">Redis: data structures, persistence (RDB vs AOF), clustering, distributed lock (Redlock)</span></li>
+      <li><span class="checkbox-label">Database sharding: horizontal partitioning, shard key selection, hotspot problem</span></li>
+      <li><span class="checkbox-label">Consistent hashing: virtual nodes, why it solves the rebalancing problem</span></li>
+      <li><span class="checkbox-label">Rate limiting: token bucket vs leaky bucket vs sliding window — implementation</span></li>
+      <li><span class="checkbox-label">Idempotency: why it matters in distributed systems, how to implement it</span></li>
+      <li><span class="checkbox-label">Back-pressure: what it is and how to apply it with Kafka, queues, and HTTP</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises</span></li>
+    </ul>
+    <h2>Section 1 — Scaling</h2>
+    <h3>Vertical vs Horizontal Scaling</h3>
+    <h3>Vertical Scaling | Horizontal Scaling</h3>
+    <h3>What it means</h3>
+    <p>Bigger machine — more CPU, RAM, faster disk | More machines — add nodes to the cluster</p>
+    <h3>When it works</h3>
+    <p>Quick wins, early stage, stateful apps | Stateless apps, high traffic, fault tolerance</p>
+    <h3>Hard ceiling</h3>
+    <p>Yes — biggest available machine has a limit | No — theoretically infinite</p>
+    <h3>Cost</h3>
+    <p>Expensive at the top end (diminishing returns) | Commodity hardware, linear cost</p>
+    <h3>Failure impact</h3>
+    <p>Single point of failure | One node fails, others continue</p>
+    <h3>Application change</h3>
+    <h3>Real example</h3>
+    <p>Upgrade RDS from db.t3.medium to db.r5.4xlarge | Add EC2 instances behind an ALB</p>
+    <p>The real answer to 'when do you scale horizontally?':</p>
+    <p>When your single machine's vertical ceiling is approaching, OR when you need fault tolerance, OR when your load is bursty and you want auto-scaling. In AWS: EC2 Auto Scaling Groups + Application Load Balancer is horizontal scaling. RDS read replicas are horizontal read scaling. Aurora serverless is automatic vertical scaling within a range. The shift from vertical to horizontal is also a shift in application architecture — you cannot horizontally scale a stateful app that stores sessions in memory. You externalise state to Redis or a database first.</p>
+    <h3>Load Balancing</h3>
+    <h3>Algorithm</h3>
+    <h3>How it works | Best for</h3>
+    <h3>Round Robin</h3>
+    <p>Requests go to servers in rotation, equally | Homogeneous servers, similar request cost</p>
+    <h3>Weighted Round Robin</h3>
+    <p>Same but heavier servers get more requests | Mixed instance types</p>
+    <h3>Least Connections</h3>
+    <p>Route to the server with fewest active connections | Varying request durations (long-running vs fast)</p>
+    <h3>IP Hash</h3>
+    <p>Hash client IP to always hit the same server | Session stickiness without a session store</p>
+    <h3>Random</h3>
+    <p>Random selection | Simple, works fine for stateless uniform load</p>
+    <h3>Least Response Time</h3>
+    <p>Route to the server with lowest latency + fewest connections | Latency-sensitive applications</p>
+    <p>L4 vs L7 Load Balancing:</p>
+    <p>L4 (Transport Layer) — routes based on IP and TCP port. Fast, low overhead, no inspection of payload. AWS NLB is L4. L7 (Application Layer) — routes based on HTTP headers, URL path, cookies, or request body. Slower but smarter: can route /api/payments to the payment service and /api/users to the user service. AWS ALB is L7. Health checks: L4 checks TCP connection, L7 checks HTTP response code. In microservices you almost always want L7 so you can do path-based and header-based routing.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q1:</span> When would you use IP hash load balancing and what is its drawback? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">IP hash is useful when you want the same client to always hit the same server — session stickiness without needing a shared session store. The drawback is that it can create uneven load distribution: if a small number of clients generate a disproportionate volume of traffic, those clients always hit the same server while others are underutilised. The other issue is that when you add or remove a server, the hash changes and clients get routed to different servers — breaking any local session state. In modern stateless microservices we prefer externalising sessions to Redis and using round-robin or least-connections instead.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 2 — CAP Theorem</h2>
+    <h3>The Three Properties</h3>
+    <p>Consistency (C):</p>
+    <p>Every read returns the most recent write, or an error. All nodes see the same data at the same time. Strong consistency. Not to be confused with the C in ACID — they are different.</p>
+    <p>Availability (A):</p>
+    <p>Every request receives a response — not necessarily the most recent data, but a response. The system never rejects a request with an error due to a node being down.</p>
+    <p>Partition Tolerance (P):</p>
+    <p>The system continues operating even when network messages between nodes are lost or delayed. In any real distributed system, network partitions will happen — this is non-negotiable. You cannot sacrifice P in a real distributed system.</p>
+    <p>What CAP actually means in practice:</p>
+    <p>Since P is mandatory in any real distributed system (network partitions happen whether you want them to or not), the real choice is between C and A during a partition. When a partition occurs: do you return an error (choose C — consistency) or return potentially stale data (choose A — availability)? This is not a permanent architecture choice — most modern databases let you tune this per-operation.</p>
+    <h3>System</h3>
+    <h3>CAP Choice | What this means in practice</h3>
+    <h3>Apache Zookeeper</h3>
+    <p>CP — returns error if quorum not reached</p>
+    <h3>etcd</h3>
+    <p>CP — used by Kubernetes, leader election, strong consistency</p>
+    <h3>HBase</h3>
+    <p>CP — consistency over availability, used for financial data</p>
+    <h3>Cassandra</h3>
+    <p>AP — always available, eventual consistency, tunable per-query</p>
+    <h3>DynamoDB</h3>
+    <p>AP (default) — eventual consistency, but can request strong consistency</p>
+    <h3>MongoDB (default)</h3>
+    <p>CP — primary-only reads, consistent</p>
+    <h3>Couchbase</h3>
+    <p>AP (default) — tunable</p>
+    <h3>MySQL (single node)</h3>
+    <p>Not distributed — ACID, not CAP</p>
+    <h3>Aurora (cluster)</h3>
+    <p>CP — primary writes, replica reads with slight lag</p>
+    <h3>PACELC — The More Complete Model</h3>
+    <p>What PACELC adds:</p>
+    <p>CAP only describes behaviour during a partition. PACELC extends this: 'If Partition, choose between Availability and Consistency. Else (normal operation), choose between Latency and Consistency.' Most real-world debates are about the Else case — when the network is healthy, do you want low latency (return local data immediately) or strong consistency (wait for all replicas to confirm)? DynamoDB default: PA/EL — available during partition, low latency during normal operation. DynamoDB with strong consistency: PA/EC — available during partition, but consistent (waits for all replicas) during normal op.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q2:</span> A candidate says 'we chose Cassandra for our payment system because it is highly available.' What concerns would you raise? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Cassandra is AP — it prioritises availability over consistency. In a payment system, double-spending and lost transactions are catastrophic. If two nodes cannot communicate during a partition and both accept a debit, you have a real financial problem. I would push back with: what is your consistency level per operation? Cassandra supports QUORUM and ALL reads and writes — at QUORUM you get a much stronger consistency guarantee at the cost of some availability. For payment ledger writes specifically I would want at least LOCAL_QUORUM. The other concern is last-write-wins conflict resolution — payments are not idempotent by nature, so you need explicit idempotency keys and application-level deduplication on top. For a payments system I would lean toward CP — Aurora, CockroachDB, or Spanner — and accept the occasional timeout over the risk of inconsistency.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 3 — Caching Strategies</h2>
+    <h3>The Four Caching Patterns</h3>
+    <h3>Pattern</h3>
+    <h3>How it works | Pros | Cons | Use when</h3>
+    <h3>Cache-Aside (Lazy)</h3>
+    <h3>Read-Through</h3>
+    <h3>Write-Through</h3>
+    <p>Every write goes to cache AND DB synchronously. | Cache always consistent with DB | Slower writes (both must succeed), caches data that may never be read | When reads and writes are balanced, consistency is critical</p>
+    <h3>Write-Behind (Write-Back)</h3>
+    <p>App writes to cache only. Cache asynchronously flushes to DB. | Very fast writes, DB can absorb bursts | Risk of data loss if cache crashes before flush, complex failure handling | Write-heavy, some loss tolerance acceptable (metrics, view counts)</p>
+    <h3>Redis — The Practical Details</h3>
+    <p>Data structures you must know:</p>
+    <pre><code class="language-java">String (get/set/incr/expire), Hash (hgetall/hset — good for objects), List (lpush/rpop — queue), Set (sadd/sismember — unique membership), Sorted Set (zadd/zrange — leaderboard, rate limiting), Bitmap (setbit/bitcount — presence flags), HyperLogLog (pfadd/pfcount — approximate unique counts).
+// ── Cache-Aside in Spring Boot (most common pattern) ──
+@Service
+public class AccountService {
+    private final AccountRepository repo;
+    private final RedisTemplate&lt;String, Account&gt; redis;
+    private static final Duration TTL = Duration.ofMinutes(10);
+    public Account getAccount(String accountId) {
+        String key = "account:" + accountId;
+        // 1. Check cache
+        Account cached = redis.opsForValue().get(key);
+        if (cached != null) return cached;
+        // 2. Cache miss — load from DB
+        Account account = repo.findById(accountId)
+            .orElseThrow(() -&gt; new AccountNotFoundException(accountId));
+        // 3. Populate cache with TTL
+        redis.opsForValue().set(key, account, TTL);
+        return account;
+    }
+    public void updateBalance(String accountId, BigDecimal newBalance) {
+        repo.updateBalance(accountId, newBalance);
+        // Invalidate cache — next read will reload fresh data
+        redis.delete("account:" + accountId);
+    }
+}
+// ── Spring @Cacheable (Read-Through style, declarative) ──
+@Cacheable(value = "accounts", key = "#accountId", unless = "#result == null")
+public Account getAccount(String accountId) {
+    return repo.findById(accountId).orElseThrow();
+}
+@CacheEvict(value = "accounts", key = "#accountId")
+public void updateBalance(String accountId, BigDecimal newBalance) {
+    repo.updateBalance(accountId, newBalance);
+}
+// ── Distributed Lock with Redis (Redlock pattern) ──
+// Prevent duplicate payment processing across multiple instances
+public PaymentResult processOnce(PaymentRequest req) {
+    String lockKey  = "lock:payment:" + req.getIdempotencyKey();
+    String lockValue = UUID.randomUUID().toString(); // unique per instance
+    // Try to acquire lock: SET NX EX (set if not exists, with expiry)
+    Boolean acquired = redis.opsForValue()
+        .setIfAbsent(lockKey, lockValue, Duration.ofSeconds(30));
+    if (!acquired) {
+        throw new DuplicatePaymentException("Payment already in progress");
+    }
+    try {
+        return doProcess(req);
+    } finally {
+        // Release only if we still own the lock (compare-and-delete)
+        // Use Lua script for atomicity — GET then DEL is not atomic
+        String currentValue = redis.opsForValue().get(lockKey);
+        if (lockValue.equals(currentValue)) redis.delete(lockKey);
+    }
+}
+// ── Redis Sorted Set for rate limiting ──
+// Sliding window: track timestamps of requests in a sorted set
+public boolean isAllowed(String userId, int maxRequests, Duration window) {
+    String key     = "ratelimit:" + userId;
+    long   now     = System.currentTimeMillis();
+    long   cutoff  = now - window.toMillis();
+    // Remove timestamps older than the window
+    redis.opsForZSet().removeRangeByScore(key, 0, cutoff);
+    // Count requests in current window
+    Long count = redis.opsForZSet().zCard(key);
+    if (count != null &amp;&amp; count &gt;= maxRequests) return false;
+    // Add current request timestamp
+    redis.opsForZSet().add(key, String.valueOf(now), now);
+    redis.expire(key, window);
+    return true;
+}</code></pre>
+    <p>Cache Invalidation — the hard problem:</p>
+    <p>Phil Karlton famously said there are only two hard problems in computer science: cache invalidation and naming things. The difficulty: you have multiple app instances, each with a local or shared cache. When data changes, how do you ensure all caches see the fresh data? Options: TTL expiry (simple, but stale window), write-through (invalidate/update on every write, consistent but slower writes), event-driven invalidation (publish a 'data changed' event via Kafka or Redis pub/sub, all instances invalidate on receipt — decoupled and near real-time). The thundering herd problem: many concurrent cache misses all hit the DB at once. Fix: probabilistic early expiration, or a lock (only one thread refreshes while others wait).</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q3:</span> Walk me through how you would cache account balances in a payment service. [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I would use cache-aside with Redis. On a balance read: check Redis first with key 'account:{id}:balance'. Hit means return immediately. Miss means load from the database, store in Redis with a TTL of around 30 seconds, then return. The TTL choice depends on how stale you can tolerate — for balance displays 30 seconds is usually fine since we show the last known balance. On a balance update — any debit or credit — I delete the Redis key immediately so the next read sees fresh data from the database. I would not use write-through here because I do not want a cache failure to block a payment write to the database. The two critical concerns: thundering herd on a cache miss for a popular account, which I handle with a per-key Redis lock so only one request refreshes; and the distributed lock for payment processing itself, so two concurrent payment requests for the same account do not both pass a balance check against stale cache.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 4 — Database Sharding</h2>
+    <h3>What Sharding Is and When You Need It</h3>
+    <p>The problem sharding solves:</p>
+    <p>A single database node has limits: disk size, write throughput, connection count, query concurrency. When you exceed what the biggest available machine can handle, you split the data horizontally across multiple database nodes — each node owns a subset of the rows. This is horizontal partitioning at the database layer. You should consider sharding only after: read replicas are saturated, connection pooling is maxed, vertical scaling is too expensive, and query optimisation is done. Sharding introduces significant operational complexity — exhaust simpler options first.</p>
+    <h3>Shard Key Selection — The Most Important Decision</h3>
+    <h3>Shard Key Choice</h3>
+    <h3>What happens</h3>
+    <h3>accountId (good)</h3>
+    <p>Even distribution if accountIds are uniformly distributed. Most queries for one account hit one shard.</p>
+    <h3>timestamp / date (bad)</h3>
+    <p>All new writes go to the latest shard — hotspot. Old shards are cold. This is the time-series hotspot problem.</p>
+    <h3>country (can be bad)</h3>
+    <p>If 80% of users are in one country, 80% of writes go to one shard. Know your data distribution first.</p>
+    <h3>userId (common, good if uniform)</h3>
+    <h3>composite key (advanced)</h3>
+    <p>Hash(tenantId + entityId) — balances load across tenants. Common in multi-tenant SaaS.</p>
+    <h3>Consistent Hashing</h3>
+    <p>hash(key) % N assigns each key to a node. If you add or remove a node, N changes and almost every key maps to a different node — massive cache invalidation, hot spots, or full data rebalance. With 10 nodes, removing 1 remaps approximately 90% of keys.</p>
+    <p>How consistent hashing works:</p>
+    <p>Imagine a ring from 0 to 2^32 - 1. Each node is placed at a position on the ring by hashing its identifier. Each key is placed at hash(key) on the ring and is owned by the first node clockwise from that position. When you add a node: only keys between the new node and its predecessor on the ring need to move — roughly 1/N of all keys. When you remove a node: only that node's keys move to the next clockwise node. Virtual nodes (vnodes): each physical node occupies multiple positions on the ring. This ensures even distribution even when physical nodes have different capacities. Cassandra, DynamoDB, and Redis Cluster all use consistent hashing.</p>
+    <pre><code class="language-java">// Simplified consistent hashing ring
+public class ConsistentHashRing {
+    private final TreeMap&lt;Long, String&gt; ring    = new TreeMap&lt;&gt;();
+    private final int                   vnodes;  // virtual nodes per physical node
+    private final MessageDigest         md;
+    public ConsistentHashRing(int vnodes) throws Exception {
+        this.vnodes = vnodes;
+        this.md     = MessageDigest.getInstance("MD5");
+    }
+    public void addNode(String nodeId) {
+        for (int i = 0; i &lt; vnodes; i++) {
+            long hash = hash(nodeId + "-vnode-" + i);
+            ring.put(hash, nodeId);
+        }
+    }
+    public void removeNode(String nodeId) {
+        for (int i = 0; i &lt; vnodes; i++) {
+            ring.remove(hash(nodeId + "-vnode-" + i));
+        }
+    }
+    public String getNode(String key) {
+        if (ring.isEmpty()) throw new IllegalStateException("No nodes in ring");
+        long hash  = hash(key);
+        // Find the first node at or after this hash position
+        Map.Entry&lt;Long, String&gt; entry = ring.ceilingEntry(hash);
+        // Wrap around the ring if we are past the last node
+        return entry != null ? entry.getValue() : ring.firstEntry().getValue();
+    }
+    private long hash(String key) {
+        byte[] digest = md.digest(key.getBytes());
+        // Use first 4 bytes as an unsigned int
+        return ((long)(digest[0] &amp; 0xFF) &lt;&lt; 24) | ((long)(digest[1] &amp; 0xFF) &lt;&lt; 16)
+             | ((long)(digest[2] &amp; 0xFF) &lt;&lt; 8)  |  (long)(digest[3] &amp; 0xFF);
+    }
+}</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q4:</span> What is the hotspot problem in database sharding and how do you prevent it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A hotspot occurs when a disproportionate amount of traffic hits one shard — usually because the shard key correlates with request frequency. Classic example: sharding by date. All new writes go to today's shard; historical shards sit idle. Another example: sharding by customer tier where your top 10 enterprise customers generate 80% of traffic and all land on the same shard. Prevention: choose a shard key that is high-cardinality and uniformly distributed. UUID-based account IDs work well. If you must use a natural key that skews, add a random prefix or suffix to spread it. Consistent hashing with virtual nodes helps distribute a skewed key distribution across physical nodes. In DynamoDB, you explicitly design partition keys to avoid hot partitions — the recommended pattern is to add a random suffix and query all suffixed partitions in parallel.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 5 — Rate Limiting</h2>
+    <h3>The Three Main Algorithms</h3>
+    <h3>Algorithm</h3>
+    <h3>How it works | Burst handling | Best for</h3>
+    <h3>Token Bucket</h3>
+    <p>Bucket holds N tokens. Each request consumes one. Tokens refill at rate R/sec. Burst allowed up to bucket capacity. | Yes — bucket accumulates tokens during idle, allows short bursts | APIs that should allow occasional bursts, most common for public APIs</p>
+    <h3>Leaky Bucket</h3>
+    <p>Requests enter a queue (the bucket). Processed at a fixed outflow rate. If queue full, reject. | No — smooths all traffic to constant rate | Payment processing where strict steady rate is required, protecting downstream</p>
+    <h3>Sliding Window Log</h3>
+    <p>Track exact timestamps of all requests in a window. Count in window = current rate. | Accurate, no edge case at window boundaries | Most accurate, but high memory (store all timestamps)</p>
+    <h3>Sliding Window Counter</h3>
+    <p>Split window into smaller buckets (e.g., 60 × 1s buckets for a 60s window). Approximate count. | Good enough, low memory | Practical balance — used by most production rate limiters including Redis-based ones</p>
+    <h3>Fixed Window Counter</h3>
+    <p>Simple counter per time window (per minute, per hour). Resets at window boundary. | Boundary attack: 100 reqs at :59 + 100 at :01 = 200 in 2 seconds | Simple cases where boundary edge case is acceptable</p>
+    <pre><code class="language-java">// ── Token Bucket — in-memory (single instance) ──
+public class TokenBucketRateLimiter {
+    private final long   capacity;         // max tokens
+    private final double refillRate;        // tokens per millisecond
+    private       double tokens;
+    private       long   lastRefillTime;
+    public TokenBucketRateLimiter(long capacity, long refillPerSecond) {
+        this.capacity      = capacity;
+        this.refillRate    = (double) refillPerSecond / 1000.0;
+        this.tokens        = capacity;
+        this.lastRefillTime = System.currentTimeMillis();
+    }
+    public synchronized boolean tryConsume() {
+        refill();
+        if (tokens &gt;= 1) { tokens--; return true; }
+        return false;
+    }
+    private void refill() {
+        long  now     = System.currentTimeMillis();
+        double earned = (now - lastRefillTime) * refillRate;
+        tokens         = Math.min(capacity, tokens + earned);
+        lastRefillTime = now;
+    }
+}
+// ── Sliding Window with Redis Sorted Set (distributed) ──
+// Works across multiple instances — the rate limiter state lives in Redis
+@Component
+public class RedisRateLimiter {
+    private final RedisTemplate&lt;String, String&gt; redis;
+    public boolean isAllowed(String userId, int maxRequests, Duration window) {
+        String key    = "ratelimit:" + userId;
+        long   now    = System.currentTimeMillis();
+        long   cutoff = now - window.toMillis();
+        // Use a Lua script for atomicity across these three operations
+        List&lt;Object&gt; results = redis.executePipelined(conn -&gt; {
+            conn.zRemRangeByScore(key.getBytes(), 0, cutoff);  // remove stale
+            conn.zCard(key.getBytes());                         // count current
+            conn.zAdd(key.getBytes(), now, (now+"").getBytes()); // add this req
+            conn.expire(key.getBytes(), (int) window.toSeconds()); // set TTL
+            return null;
+        });
+        Long currentCount = (Long) results.get(1); // count before adding this req
+        return currentCount == null || currentCount &lt; maxRequests;
+    }
+}
+// ── Spring Cloud Gateway rate limiting (out of the box) ──
+// application.yml:
+// spring.cloud.gateway.routes[0].filters:
+//   - name: RequestRateLimiter
+//     args:
+//       redis-rate-limiter.replenishRate: 10    # tokens/sec
+//       redis-rate-limiter.burstCapacity: 20    # max burst
+//       redis-rate-limiter.requestedTokens: 1
+// This uses Redis token bucket behind the scenes.</code></pre>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q5:</span> What is the difference between the token bucket and leaky bucket algorithms? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Token bucket allows bursts — the bucket accumulates tokens during quiet periods and a burst of requests can consume them all at once, as long as the bucket has enough. This is good for APIs where you want to allow short bursts without penalising the user for being bursty. Leaky bucket smooths traffic to a constant output rate regardless of how bursty the input is — it queues incoming requests and drains them at a fixed pace. This is better for protecting a downstream service that cannot handle load spikes. For a public REST API I would use token bucket — it gives a better user experience because you can do up to your burst limit instantly. For an internal payment processor that calls a third-party gateway with a strict SLA, leaky bucket makes more sense — I do not want to slam it with a burst even if my own limiter would technically allow it.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 6 — Idempotency and Back-Pressure</h2>
+    <h3>Idempotency in Distributed Systems</h3>
+    <p>Why it matters:</p>
+    <p>In a distributed system, any request can fail ambiguously. The network times out — did the server receive it? Did it process it? Did the response get lost? The safe response is to retry. But if the operation is not idempotent, retrying causes duplicates — double charges, double inventory decrements, double emails. Idempotency means: calling the same operation N times has the same effect as calling it once.</p>
+    <pre><code class="language-java">// ── Idempotency Key Pattern ──
+// Client generates a unique idempotency key per logical operation.
+// Server stores the result of the first execution keyed by that ID.
+// On retry: detect the key, return the stored result — do not re-execute.
+@RestController
+@RequestMapping("/payments")
+public class PaymentController {
+    @PostMapping
+    public ResponseEntity&lt;PaymentResult&gt; createPayment(
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestBody PaymentRequest req) {
+        return paymentService.createIdempotent(idempotencyKey, req);
+    }
+}
+@Service
+public class PaymentService {
+    private final IdempotencyStore      store;  // Redis or DB-backed
+    private final PaymentGateway         gateway;
+    @Transactional
+    public ResponseEntity&lt;PaymentResult&gt; createIdempotent(
+            String key, PaymentRequest req) {
+        // 1. Check if we have already processed this key
+        Optional&lt;PaymentResult&gt; existing = store.find(key);
+        if (existing.isPresent()) {
+            return ResponseEntity.ok(existing.get()); // Return cached result
+        }
+        // 2. Lock the key to prevent concurrent duplicate execution
+        if (!store.tryLock(key, Duration.ofSeconds(30))) {
+            throw new ConcurrentRequestException("Duplicate request in progress");
+        }
+        try {
+            // 3. Process and store result atomically
+            PaymentResult result = gateway.charge(req);
+            store.save(key, result, Duration.ofDays(7)); // keep for 7 days
+            return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        } finally {
+            store.unlock(key);
+        }
+    }
+}
+// ── Idempotent Kafka Consumer ──
+// Messages can be delivered more than once (at-least-once semantics).
+// The consumer must be idempotent.
+@KafkaListener(topics = "payment.commands")
+public void handlePaymentCommand(ProcessPaymentCommand cmd) {
+    // Check if already processed using the command's own ID
+    if (processedCommandStore.contains(cmd.commandId())) {
+        log.info("Duplicate command, skipping: {}", cmd.commandId());
+        return;
+    }
+    paymentService.process(cmd);
+    processedCommandStore.markProcessed(cmd.commandId());
+}</code></pre>
+    <h3>Back-Pressure</h3>
+    <p>What back-pressure is:</p>
+    <p>Back-pressure patterns in practice:</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q6:</span> How would you prevent your payment service from overwhelming a third-party gateway? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Three complementary approaches. First, a rate limiter in front of outbound gateway calls — token bucket with the gateway's stated rate limit as the refill rate. Second, Resilience4j circuit breaker on the gateway client: if more than 50% of calls fail in a 10-second window, open the circuit for 30 seconds and return a fast failure. This prevents cascading timeouts from exhausting thread pools. Third, an outbound queue: payment requests go into a bounded blocking queue, a fixed thread pool drains it at a controlled pace, and the queue length is your back-pressure signal. If the queue fills, HTTP 429 back to the caller. I have used this pattern in the Deloitte JP Morgan project — we had a third-party compliance service with a strict rate limit and this combination kept us well within it while still processing all requests.</p>
+        </div>
+      </div>
+    </div>
+            
+    <hr class="section-divider" />
+    <h2>Section 7 — Designing for High RPS</h2>
+    <h3>A Payment Service Handling 100,000 RPS — Design Walkthrough</h3>
+    <p>What is the read/write ratio? What is the acceptable latency? What consistency level is required? What is the failure tolerance? These shape every subsequent decision. For a payment service: writes must be durable and consistent. Reads can tolerate slight staleness for balance display. Latency: <200ms p99. Failure: no data loss, no duplicate charges.</p>
+    <h3>Layer</h3>
+    <h3>Design Decision | Why</h3>
+    <h3>DNS</h3>
+    <p>Route 53 with health checks + latency routing | Global traffic distribution</p>
+    <h3>CDN / Edge</h3>
+    <p>CloudFront for static assets only — not applicable to payment API | APIs need auth, CDN is for public static content</p>
+    <h3>Load Balancer</h3>
+    <p>AWS ALB (L7) with path-based routing | Route /payments to payment service, /accounts to account service</p>
+    <h3>App Tier</h3>
+    <p>Stateless Spring Boot services in EC2 Auto Scaling Groups | Horizontal scaling, sessions in Redis not in-memory</p>
+    <h3>Async Processing</h3>
+    <p>Kafka: payment commands → processor → result events | Decouple ingestion from processing, absorb bursts</p>
+    <h3>Database</h3>
+    <p>Aurora PostgreSQL with one writer + multiple read replicas | Write consistency + read scalability</p>
+    <h3>Caching</h3>
+    <p>Redis Cluster for account lookups, rate limiting, idempotency store | Reduce DB read load, distributed state</p>
+    <h3>Connection Pool</h3>
+    <p>HikariCP, pool sized to CPU cores × 2, max 50 per instance | Prevent DB connection exhaustion</p>
+    <p>Resilience4j on all outbound calls | Prevent cascading failures</p>
+    <h3>Observability</h3>
+    <p>CloudWatch metrics + Logs Insights + distributed tracing (X-Ray) | Know what is failing before users notice</p>
+    <p>The most common bottlenecks in order:</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q7:</span> Walk me through how you would design a URL shortener for 100k reads per second. [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">I would start by separating reads and writes — reads are 95% of traffic, writes are 5%. The write path: accept a long URL, generate a 6-7 character base-62 ID (62^7 = 3.5 trillion unique IDs, enough for a long time), store in a single PostgreSQL table with the ID as primary key, return the short URL. This is a simple key-value write, one DB call. The read path is where the work is. For 100k RPS, hitting the database directly would require a very large database cluster. Instead: put a Redis cache in front with the short code as key and the long URL as value. Cache hit ratio for URL shorteners is typically very high because popular links get clicked many times — a small cache covers most traffic. On cache miss, load from DB and cache with a TTL of 24 hours. For the infrastructure: stateless Spring Boot services behind an ALB, EC2 Auto Scaling based on CPU, Redis Cluster for the cache. The HTTP response is a 301 (permanent redirect, browser caches it) or 302 (temporary redirect, browser always asks). I would use 302 if I want accurate click analytics — 301 means the browser never calls our service again for that URL.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Coding Lab — 7 Exercises</h3>
+    <p>Rules:</p>
+    <p>Write from memory where possible. For each exercise, after your implementation write one sentence about which failure mode this design prevents.</p>
+    <h3>Exercise 1 — Cache-Aside with Redis</h3>
+    <p>Task:</p>
+    <p>Implement a CachingAccountRepository that wraps a real AccountRepository.</p>
+    <p>Methods: findById(String id), save(Account account), deleteById(String id).</p>
+    <p>TTL: 10 minutes. Key format: 'account:{id}'.</p>
+    <p>Handle the thundering herd problem: if 100 concurrent requests miss the cache for the same key, only one should query the DB.</p>
+    <p>Hint: use Redis SET NX (set if not exists) as a lock before the DB call.</p>
+    <h3>Exercise 2 — Token Bucket Rate Limiter</h3>
+    <p>Task:</p>
+    <p>Write TokenBucketRateLimiter with: capacity, refillRate (tokens/sec), tryConsume(): boolean.</p>
+    <p>Make it thread-safe for concurrent use.</p>
+    <p>Write a RateLimitedPaymentService that wraps PaymentService and enforces: max 100 req/sec with burst of 200.</p>
+    <p>Return HTTP 429 with Retry-After header when the limit is exceeded.</p>
+    <p>Extend: make it per-user (each user gets their own bucket) using a ConcurrentHashMap.</p>
+    <h3>Exercise 3 — Sliding Window Rate Limiter with Redis</h3>
+    <p>Task:</p>
+    <p>Implement a distributed sliding window rate limiter using Redis Sorted Set.</p>
+    <p>isAllowed(String userId, int maxRequests, Duration window): boolean.</p>
+    <p>Store request timestamps as scores. Remove timestamps outside the window before counting.</p>
+    <p>Explain: why does this need to be atomic? What goes wrong if removeRangeByScore and zCard are not atomic?</p>
+    <p>Show how you would write this as a Redis Lua script for true atomicity.</p>
+    <h3>Exercise 4 — Idempotency Key Store</h3>
+    <p>Task:</p>
+    <p>Write an IdempotencyService backed by Redis.</p>
+    <p>Methods: tryAcquire(String key, Duration lockTTL): boolean, complete(String key, Object result, Duration resultTTL), getResult(String key): Optional<Object>.</p>
+    <p>The workflow: tryAcquire before processing, complete after, getResult on retry.</p>
+    <p>Handle the case where the first request crashes after tryAcquire but before complete — what does the retry see?</p>
+    <p>Show the full PaymentController integration with Idempotency-Key header.</p>
+    <h3>Exercise 5 — Consistent Hashing Ring</h3>
+    <p>Task:</p>
+    <p>Implement ConsistentHashRing<T> with: addNode(String id, T node), removeNode(String id), getNode(String key): T.</p>
+    <p>Use a TreeMap<Long, String> for the ring with MD5 hashing.</p>
+    <p>Support virtual nodes (default 150 per physical node).</p>
+    <p>Test: add 3 nodes, map 1000 keys — print distribution per node. Remove 1 node — how many keys moved?</p>
+    <p>Without virtual nodes: is the distribution even? Add virtual nodes and compare.</p>
+    <p>Task:</p>
+    <p>Write a PaymentGatewayClient that calls a third-party HTTP API.</p>
+    <p>Add a fallback: when circuit is OPEN, return a PaymentResult with status=PENDING and schedule a retry.</p>
+    <p>Add a TimeLimiter: max 2 seconds per call — after that, treat as failure.</p>
+    <p>Log state transitions: CLOSED → OPEN → HALF_OPEN → CLOSED. Show the state machine clearly.</p>
+    <h3>Exercise 7 — BOSS: High-RPS Payment Ingestion Service</h3>
+    <p>Design a complete payment ingestion endpoint that handles 10,000 RPS:</p>
+    <p>Requirements: 1) Rate limit at 1000 req/sec per client API key using token bucket. 2) Idempotency key deduplication using Redis. 3) Validate and enqueue to Kafka (do not process synchronously). 4) Return 202 Accepted immediately with a status URL. 5) A separate consumer processes from Kafka with at-least-once delivery and idempotent processing. 6) Back-pressure: if Kafka is lagging by > 10,000 messages, return 503 with Retry-After. Write the controller, service, Kafka producer, and consumer. Explain where each failure mode is handled: duplicate requests, gateway timeouts, broker unavailability.</p>
+    <h3>Interview Q&A — 15 Questions</h3>
+    <p>How to use:</p>
+    <p>Read the question, say your answer out loud before looking at the model answer. The goal is not to memorise these answers word for word — it is to understand the reasoning well enough to explain it in your own words.</p>
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q8:</span> What is the difference between horizontal and vertical scaling? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Vertical scaling means giving a single machine more resources — bigger CPU, more RAM, faster disk. It is quick and requires no application changes, but it has a hard ceiling and creates a single point of failure. Horizontal scaling means adding more machines and distributing load across them. It requires the application to be stateless — any session state must live outside the application process, typically in Redis. Horizontal scaling is theoretically infinite and gives you fault tolerance. In practice, most systems start with vertical scaling because it is simpler, then move to horizontal when load justifies it or when fault tolerance becomes a requirement.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q9:</span> Explain CAP theorem in plain language. [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">CAP says a distributed system can guarantee at most two of three properties: Consistency (every read sees the latest write), Availability (every request gets a response), and Partition Tolerance (the system keeps working even if some network messages are lost). The key insight is that partition tolerance is non-negotiable in any real distributed system — networks do partition. So the real choice is: when a partition happens, do you refuse requests until you are consistent again (choose C), or do you serve possibly stale data and stay available (choose A)? Cassandra chooses A — it stays up and returns what it has. HBase and Zookeeper choose C — they return an error if they cannot guarantee consistency. Most financial systems need C.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q10:</span> What is eventual consistency and when is it acceptable? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Eventual consistency means that given no new updates, all replicas will converge to the same value — but there is no guarantee on when. A read immediately after a write might return stale data. It is acceptable when: the cost of staleness is low (showing a slightly stale user profile), when you can tolerate the inconsistency window (a social media feed a few seconds behind), or when the business logic handles conflicts. It is not acceptable when: correctness is critical (account balance before a debit), when the user expects to immediately see what they just wrote (form submission confirmation), or when inconsistency has a financial consequence. I always ask: what is the worst case if a user sees stale data for 5 seconds? If the answer involves money, inventory below zero, or security, you need strong consistency.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q11:</span> Walk me through how cache-aside works. [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">On a read: the application checks the cache first. If the data is there (cache hit), return it directly. If not (cache miss), load from the database, write the result into the cache with a TTL, and return it. On a write: update the database and then delete (or update) the cache entry. Cache-aside is the most common pattern because it is simple, the application controls exactly what gets cached, and a cache failure does not break reads — you just fall through to the database. The main downside is the first request after a miss (or startup) is slower and hits the database. The thundering herd problem occurs when many requests miss the cache simultaneously for the same key — you fix that with a per-key lock so only one request refreshes the cache while others wait.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q12:</span> What is cache invalidation and why is it hard? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Cache invalidation is the process of removing or updating a cached value when the underlying data changes. It is hard because in a distributed system, you have multiple app instances and potentially multiple cache layers. When data changes, you need all of them to invalidate consistently. Options: TTL expiry is simple but data is stale until expiry. Write-through invalidation (delete on every write) is consistent but adds latency to writes and can cause cache stampedes when a popular key is deleted. Event-driven invalidation (publish a 'data changed' event via Kafka or Redis pub/sub, all instances listen and invalidate) is near real-time and decoupled. The classic failure mode: you update the DB and delete the cache, but before the cache is repopulated, a concurrent read loads stale data from DB (because a replica hasn't caught up) and repopulates the cache with stale data. This is why cache invalidation is considered hard.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q13:</span> How does consistent hashing work and why does it solve the rebalancing problem? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Standard modulo hashing (hash % N) breaks when N changes — almost every key remaps to a different node, forcing a massive data migration. Consistent hashing places both nodes and keys on a conceptual ring from 0 to 2^32. Each key is owned by the first node clockwise from its position. When you add a node, only keys between the new node and its predecessor move — roughly 1/N of all keys. When you remove a node, only that node's keys move to the next node. Virtual nodes (placing each physical node at many ring positions) ensure even distribution. Cassandra, DynamoDB, and Redis Cluster all use consistent hashing. In the context of my projects, this is relevant to how Kafka partitions are assigned — Kafka uses a similar concept when rebalancing partitions across brokers.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q14:</span> What is the difference between sharding and partitioning? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Partitioning usually refers to splitting a single table's data into separate physical storage units within one database instance — like PostgreSQL table partitioning by date range. It improves query performance by pruning irrelevant partitions. Sharding typically refers to splitting data across multiple separate database instances (different servers). Each shard is an independent database. Sharding is for scale-out when a single database instance cannot handle the load. Partitioning is for query performance within a single instance. You can combine them: shard by user region across database instances, then partition by date within each shard.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q15:</span> What is the token bucket algorithm for rate limiting? [Easy]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A token bucket holds up to N tokens. Tokens refill at a constant rate (say 100 tokens per second). Each incoming request consumes one token. If the bucket has tokens, the request is allowed. If empty, the request is rejected or queued. The bucket accumulates tokens during quiet periods, allowing short bursts up to the bucket capacity. This is the most common algorithm for public API rate limiting because it is simple, allows natural traffic bursts (legitimate clients are not penalised for momentary spikes), and is cheap to implement. In AWS API Gateway, the token bucket capacity is the burst limit and the refill rate is the rate limit.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q16:</span> What is idempotency and why does it matter in a payment system? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">An idempotent operation produces the same result no matter how many times you call it. In a payment system, network timeouts create ambiguity: the client does not know if the server processed the payment or not. The safe thing to do is retry. Without idempotency, retrying a payment can cause a double charge. The standard pattern: clients generate a unique idempotency key (a UUID) for each logical payment. The server stores the result of the first execution against that key. On retry, instead of re-executing, return the stored result. The key is usually stored in Redis with a TTL of 24-48 hours. Stripe, Razorpay, and every serious payment provider implements this and requires an Idempotency-Key header.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q17:</span> What is back-pressure and how do you implement it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Back-pressure is the mechanism by which a slow consumer signals to a fast producer to slow down, rather than building up an unbounded buffer or dropping requests. Without it: the producer overwhelms the consumer and either the buffer runs out of memory or requests are dropped silently. Implementation options: bounded blocking queue (the producer thread blocks when the queue is full — natural back-pressure), HTTP 429 Too Many Requests with a Retry-After header, Kafka consumer lag monitoring (if lag exceeds a threshold, add consumers or reduce producer rate), and circuit breaker (stop sending requests to an overloaded downstream service). In Project Reactor, back-pressure is a first-class feature — a subscriber can request only N items and the publisher will not emit more.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q18:</span> How would you design a rate limiter that works across multiple instances of your service? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A per-instance in-memory rate limiter does not work when you have 10 service instances — each instance allows up to the limit independently, giving 10x the intended limit. The state must be shared. Redis is the standard solution: use a Redis Sorted Set (sliding window approach) or a Redis INCR with EXPIRE (fixed window, simpler). The sliding window approach stores a timestamp per request and removes timestamps older than the window before counting — accurate and avoids the boundary attack of fixed windows. The tricky part is atomicity: remove-old-timestamps and count-and-increment must be atomic, which requires a Lua script in Redis. Spring Cloud Gateway has a built-in Redis-based token bucket rate limiter that handles this.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q19:</span> What is a CDN and when should a backend engineer care about it? [Medium]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">A CDN (Content Delivery Network) is a geographically distributed network of edge servers that cache and serve content close to the user. Backend engineers care about it for: static asset caching (JS, CSS, images — serve from edge, zero origin load), API response caching at the edge for truly cacheable responses (GET /config, GET /exchange-rates — set appropriate Cache-Control headers and CloudFront caches the response), DDoS protection (CloudFront + AWS Shield absorb volumetric attacks before they reach your origin), and SSL termination at the edge. What a CDN does NOT help with: authenticated, personalised, or mutable API responses. Do not try to cache /account/balance at the edge — the personalisation and consistency requirement breaks it.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q20:</span> How does database connection pooling work and how do you size a connection pool? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Connection pooling maintains a pool of pre-established database connections that are reused across requests, avoiding the expensive overhead of creating a new TCP connection and authenticating for each query. HikariCP is the standard in Spring Boot. Sizing the pool: the common mistake is making it large. The correct formula, from HikariCP's own documentation, is: pool size = (CPU cores × 2) + number of effective disk spindles. For a modern SSD instance with 4 cores, that is 9 connections. A larger pool does not help — it just creates more context switching. The real bottleneck is how fast the database can process queries, not how many connections are waiting. I learned this from our CloudWatch monitoring on the Deloitte project — we reduced pool size from 50 to 12 and saw query latency improve because of less connection contention on the database side.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q21:</span> What is the thundering herd problem and how do you prevent it? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">When a cache entry expires or is invalidated, all concurrent requests that were being served by that cache entry simultaneously miss the cache and all hit the database at once. For a popular key like a global exchange rate, this could mean thousands of simultaneous DB queries for the same piece of data. Prevention options: probabilistic early expiration (randomly expire the cache a bit before TTL for some fraction of requests, so the cache is refreshed before it expires for everyone), mutex/lock-based cache population (only one thread queries the DB to refresh the key; others wait for the result), and request coalescing at the application level. The simplest production implementation: Redis SET NX as a lock with a short TTL — only the lock holder queries the DB, all others wait and then find the cache populated.</p>
+        </div>
+      </div>
+    </div>
+            
+
+    <div class="interview-card">
+      <div class="interview-question-header">
+        <span class="interview-question-title">
+          <span class="interview-question-number">Q22:</span> What observability would you add to a high-RPS payment service? [Hard]
+        </span>
+        <span class="interview-chevron">▼</span>
+      </div>
+      <div class="interview-answer-panel">
+        <div class="interview-ideal-answer">
+          <span class="ideal-answer-label">💡 Ideal Answer (Amazon/GS Standard)</span>
+          <p class="ideal-answer-content">Four dimensions: metrics, logs, traces, and alerts. Metrics via Micrometer to CloudWatch: request rate (per endpoint), error rate (per status code), latency percentiles (p50, p95, p99), active connections, Kafka consumer lag, cache hit ratio, circuit breaker state. Structured logs via SLF4J with MDC: every log entry includes traceId, userId, accountId, amount. This makes Logs Insights queries fast and precise. Distributed traces via AWS X-Ray or OpenTelemetry: trace a payment from the controller through the service, DB query, Kafka publish, and downstream gateway call — see exactly where latency is. Alerts: PagerDuty on p99 latency > 1s, error rate > 1%, consumer lag > 10,000, circuit breaker OPEN state. The goal is to know a problem is happening before users start reporting it.</p>
+        </div>
+      </div>
+    </div>
+            
+    <h3>Daily Review and Self-Assessment</h3>
+    <h3>End of Day 13 Checklist</h3>
+    <ul class="study-checklist">
+      <li><span class="checkbox-label">Can you explain CAP theorem and give a CP and an AP example from real databases?</span></li>
+      <li><span class="checkbox-label">Can you walk through cache-aside, write-through, and write-behind — when each fits?</span></li>
+      <li><span class="checkbox-label">Consistent hashing — can you explain why 1/N keys move when a node is added?</span></li>
+      <li><span class="checkbox-label">Token bucket vs leaky bucket — can you explain the burst behaviour difference?</span></li>
+      <li><span class="checkbox-label">Idempotency key pattern — can you explain the full flow including the retry case?</span></li>
+      <li><span class="checkbox-label">All 7 coding exercises done — Boss exercise included?</span></li>
+    </ul>
+    <h3>Self-Assessment Table</h3>
+    <h3>Topic</h3>
+    <h3>Confidence (1-5) | Notes</h3>
+    <h3>Vertical vs horizontal scaling — trade-offs</h3>
+    <p>/5 |</p>
+    <h3>Load balancing algorithms — round-robin vs least-conn</h3>
+    <p>/5 |</p>
+    <h3>CAP theorem — C vs A choice during partition</h3>
+    <p>/5 |</p>
+    <h3>PACELC — latency vs consistency during normal operation</h3>
+    <p>/5 |</p>
+    <h3>Cache-aside pattern — thundering herd fix</h3>
+    <p>/5 |</p>
+    <h3>Redis data structures — which for which use case</h3>
+    <p>/5 |</p>
+    <h3>Sharding shard key selection — hotspot problem</h3>
+    <p>/5 |</p>
+    <h3>Consistent hashing — virtual nodes, ring mechanics</h3>
+    <p>/5 |</p>
+    <h3>Rate limiting — token bucket implementation</h3>
+    <p>/5 |</p>
+    <h3>Idempotency key pattern — full flow</h3>
+    <p>/5 |</p>
+    <h3>Back-pressure — mechanisms and when to apply</h3>
+    <p>/5 |</p>
+    <p>Day 13 complete:</p>
+    <p>System design is the area where senior engineers differentiate themselves. A junior engineer knows what a cache is. A senior engineer knows which caching pattern to use, what the invalidation strategy is, what goes wrong when the cache node crashes, and how to monitor it. Take the time to really internalise the trade-offs — they come up in every system design round.</p>
+    <h3>Preview: Day 14 — Microservices Patterns Part 2</h3>
+    <p>Saga pattern (choreography vs orchestration), CQRS + Event Sourcing, outbox pattern for reliable event publishing, distributed tracing, service mesh basics, and API gateway patterns. These are the patterns that senior engineers get asked about in architectural rounds.</p>
+    <p>Day 13 of 60 · System Design Fundamentals · Prepared for Md Zuber</p>
+    <p>"Every system design decision is a trade-off. The engineer who can name the trade-off is the one worth hiring."</p>
+
+    <!-- Dynamic Self-Assessment Matrix -->
+    <div class="self-assessment-card">
+      <div class="self-assessment-info">
+        <h4 class="self-assessment-title">Daily Self-Assessment & Reflection</h4>
+        <p class="self-assessment-desc">Rate your confidence in today's core concepts to update your dashboard Heatmap.</p>
+      </div>
+      <div class="star-rating-widget">
+        <!-- Injected by checklist.js -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module" src="../../js/checklist.js"></script>
+</body>
+</html>
