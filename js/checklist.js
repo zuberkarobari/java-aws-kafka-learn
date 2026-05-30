@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initStopwatch();
   initSelfAssessment();
   initInterviewAccordions();
+  initGlobalQuickActions();
   
   window.switchTab = (event, tabId) => {
     document.querySelectorAll('.tab-panel').forEach(panel => {
@@ -436,3 +437,52 @@ const initInterviewAccordions = () => {
     });
   });
 };
+
+// ─── Global Quick Actions (Search & Dashboard) ───────────────────────────
+
+const initGlobalQuickActions = () => {
+  const fab = document.createElement('div');
+  fab.className = 'global-quick-actions';
+  fab.innerHTML = `
+    <button class="gqa-btn" id="gqa-search" title="Search Topics" aria-label="Search">
+      <span class="gqa-icon">🔍</span>
+    </button>
+    <button class="gqa-btn" id="gqa-dashboard" title="Go to Dashboard" aria-label="Dashboard">
+      <span class="gqa-icon">📊</span>
+    </button>
+  `;
+  document.body.appendChild(fab);
+
+  // Mobile sidebar toggle
+  const sidebarToggle = document.createElement('button');
+  sidebarToggle.className = 'mobile-sidebar-toggle';
+  sidebarToggle.innerHTML = '☰';
+  sidebarToggle.setAttribute('aria-label', 'Toggle Menu');
+  document.body.appendChild(sidebarToggle);
+
+  sidebarToggle.addEventListener('click', () => {
+    const sidebar = document.querySelector('.topic-sidebar');
+    if (sidebar) {
+      sidebar.classList.toggle('open');
+      sidebarToggle.innerHTML = sidebar.classList.contains('open') ? '✕' : '☰';
+    }
+  });
+
+  const dashBtn = document.getElementById('gqa-dashboard');
+  if (dashBtn) {
+    dashBtn.addEventListener('click', () => {
+      window.location.href = '../../index.html?pathway=dashboard';
+    });
+  }
+
+  const searchBtn = document.getElementById('gqa-search');
+  if (searchBtn) {
+    searchBtn.addEventListener('click', () => {
+      const query = prompt("Search for a Java/Spring topic:");
+      if (query && query.trim()) {
+        window.location.href = '../../index.html?search=' + encodeURIComponent(query.trim());
+      }
+    });
+  }
+};
+
