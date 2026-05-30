@@ -34,6 +34,49 @@ document.addEventListener('DOMContentLoaded', () => {
   initStopwatch();
   initSelfAssessment();
   initInterviewAccordions();
+  
+  window.switchTab = (event, tabId) => {
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+      panel.style.display = 'none';
+    });
+    document.querySelectorAll('.nb').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    document.querySelectorAll('.sidebar-topic-link').forEach(link => {
+      link.classList.remove('sidebar-topic-active');
+    });
+    
+    document.getElementById(tabId).style.display = 'block';
+    
+    if (event.currentTarget.classList.contains('nb')) {
+      event.currentTarget.classList.add('active');
+      if (tabId === 'tab-morning') document.querySelectorAll('.sidebar-topic-link')[0].classList.add('sidebar-topic-active');
+      if (tabId === 'tab-topics') document.querySelectorAll('.sidebar-topic-link')[1].classList.add('sidebar-topic-active');
+      if (tabId === 'tab-mock') document.querySelectorAll('.sidebar-topic-link')[2].classList.add('sidebar-topic-active');
+    } else if (event.currentTarget.classList.contains('sidebar-topic-link')) {
+      event.currentTarget.classList.add('sidebar-topic-active');
+      if (tabId === 'tab-morning') document.querySelectorAll('.nb')[0].classList.add('active');
+      if (tabId === 'tab-topics') document.querySelectorAll('.nb')[1].classList.add('active');
+      if (tabId === 'tab-mock') document.querySelectorAll('.nb')[2].classList.add('active');
+    }
+    
+    event.preventDefault();
+  };
+
+  window.toggleAccordion = (element) => {
+    const container = element.parentElement;
+    const qans = container.querySelector('.qans');
+    if (container.classList.contains('open')) {
+      container.classList.remove('open');
+      if (qans) qans.style.display = 'none';
+    } else {
+      container.classList.add('open');
+      if (qans) {
+        qans.style.display = 'block';
+        qans.style.animation = 'fadeIn 0.25s ease-out forwards';
+      }
+    }
+  };
 });
 
 // ─── Theme Toggle Injection ────────────────────────────────────────────────
