@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 19 — Java Operators & Expressions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-main: #0B1121;
+  --bg-card: #151E32;
+  --bg-card-hover: #1E293B;
+  --text-main: #94A3B8;
+  --text-light: #F8FAFC;
+  --text-muted: #64748B;
+  
+  --accent-blue: #38BDF8;
+  --accent-blue-dim: rgba(56, 189, 248, 0.1);
+  --accent-purple: #A855F7;
+  --accent-purple-dim: rgba(168, 85, 247, 0.1);
+  --accent-green: #34D399;
+  --accent-green-dim: rgba(52, 211, 153, 0.1);
+  --accent-orange: #FB923C;
+  --accent-orange-dim: rgba(251, 146, 60, 0.1);
+  --accent-red: #F87171;
+  --accent-red-dim: rgba(248, 113, 113, 0.1);
+  
+  --border-light: rgba(255,255,255,0.08);
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.05), transparent 30%),
+    radial-gradient(circle at 85% 60%, rgba(168, 85, 247, 0.05), transparent 30%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: var(--glass-bg); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-light);
+  padding: 1rem 1.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100;
+}
+.day-badge {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; 
+  border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+}
+.header-title { font-size: 15px; font-weight: 700; color: var(--text-light); }
+.header-sub { font-size: 12px; color: var(--text-muted); margin-left: auto; font-weight: 500; }
+
+.progress-row { display: flex; align-items: center; gap: 10px; padding: 1rem 1.5rem 0.75rem; }
+.progress-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; font-weight: 600; }
+.progress-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); border-radius: 4px; width: 63%; box-shadow: 0 0 10px var(--accent-blue-dim); }
+
+/* Layout & Sidebar */
+.layout { display: flex; min-height: calc(100vh - 100px); }
+.sidebar {
+  width: 240px; flex-shrink: 0; background: rgba(21, 30, 50, 0.4);
+  border-right: 1px solid var(--border-light); padding: 1.5rem 0;
+  position: sticky; top: 100px; height: calc(100vh - 100px); overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+
+.sidebar-section { padding: 0 1rem; margin-bottom: 1.5rem; }
+.sidebar-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: var(--text-muted);
+  text-transform: uppercase; padding: 0 0.75rem; margin-bottom: 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px;
+  font-size: 13px; color: var(--text-main); font-weight: 500; cursor: pointer;
+  border: none; background: transparent; width: 100%; text-align: left; transition: all 0.2s ease;
+  font-family: inherit;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-light); }
+.nav-item.active { background: var(--accent-blue-dim); color: var(--accent-blue); font-weight: 600; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; transition: all 0.2s ease; }
+.nav-item.active .nav-dot { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+
+/* Main Content */
+.main { flex: 1; padding: 2.5rem; max-width: 840px; overflow-x: hidden; }
+.section { display: none; animation: fadeIn 0.4s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.sec-header { margin-bottom: 2rem; }
+.sec-title {
+  font-size: 26px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; letter-spacing: -0.5px;
+  background: linear-gradient(to right, #fff, #94A3B8); -webkit-background-clip: text; color: transparent;
+}
+.sec-sub { font-size: 14px; color: var(--text-main); line-height: 1.6; }
+.sec-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.sec-tag { font-size: 11px; padding: 4px 12px; border-radius: 20px; background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-light); font-weight: 500; }
+
+.topic-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem; }
+.ttab {
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  color: var(--text-muted); cursor: pointer; border: 1px solid transparent;
+  background: transparent; font-family: inherit; transition: all 0.2s ease;
+}
+.ttab:hover { color: var(--text-light); background: rgba(255,255,255,0.05); }
+.ttab.active { background: var(--bg-card); color: var(--text-light); border-color: var(--border-light); }
+.topic { display: none; animation: fadeIn 0.3s ease; }
+.topic.active { display: block; }
+
+.prose { font-size: 14.5px; color: var(--text-main); line-height: 1.8; }
+.prose p { margin-bottom: 1.25rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text-light); font-weight: 600; }
+
+/* Callouts */
+.callout { border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.5rem 0; font-size: 14px; line-height: 1.7; border: 1px solid var(--border-light); backdrop-filter: blur(5px); }
+.callout strong { font-weight: 800; display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.callout.how { background: var(--accent-blue-dim); border-left: 4px solid var(--accent-blue); color: #E0F2FE; }
+.callout.how strong { color: var(--accent-blue); }
+.callout.fail { background: var(--accent-red-dim); border-left: 4px solid var(--accent-red); color: #FEE2E2; }
+.callout.fail strong { color: var(--accent-red); }
+.callout.prod { background: var(--accent-green-dim); border-left: 4px solid var(--accent-green); color: #D1FAE5; }
+.callout.prod strong { color: var(--accent-green); }
+.callout.warn { background: var(--accent-orange-dim); border-left: 4px solid var(--accent-orange); color: #FFEDD5; }
+.callout.warn strong { color: var(--accent-orange); }
+
+/* Code Blocks */
+code { font-family: 'Fira Code', monospace; font-size: 12.5px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 2px 6px; color: var(--accent-blue); }
+.code-wrap { margin: 1.5rem 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-light); background: #050505; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+.code-header {
+  background: var(--bg-card); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+}
+.code-header::before {
+  content: ''; display: inline-block; height: 12px; width: 50px;
+  background-image: radial-gradient(circle, #ED6A5E 6px, transparent 6.5px),
+                    radial-gradient(circle, #F4BF4F 6px, transparent 6.5px),
+                    radial-gradient(circle, #61C554 6px, transparent 6.5px);
+  background-size: 12px 12px; background-position: 0 0, 18px 0, 36px 0; background-repeat: no-repeat;
+}
+.code-lang { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+pre { padding: 1.25rem 1.5rem; overflow-x: auto; margin: 0; }
+pre code { font-size: 13px; background: none; border: none; padding: 0; color: #E2E8F0; line-height: 1.7; display: block; white-space: pre; }
+/* Syntax Highlighting */
+.t-k { color: #F472B6; } /* Pink keywords */
+.t-s { color: #A3E635; } /* Green strings */
+.t-c { color: #6B7280; font-style: italic; } /* Gray comments */
+.t-n { color: #FBBF24; } /* Yellow numbers */
+.t-p { color: #38BDF8; } /* Blue properties */
+.t-a { color: #A855F7; } /* Purple annotations */
+.t-o { color: #34D399; } /* Green operators */
+
+/* Comparison Cards */
+.compare { display: grid; gap: 16px; margin: 1.5rem 0; }
+.compare.two { grid-template-columns: 1fr 1fr; }
+.compare.three { grid-template-columns: 1fr 1fr 1fr; }
+.compare-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 1.25rem; transition: transform 0.2s ease; }
+.compare-card:hover { transform: translateY(-3px); border-color: var(--text-muted); }
+.compare-card.accent { border-color: var(--accent-purple); background: rgba(168, 85, 247, 0.05); }
+.compare-card.accent .compare-title { color: var(--accent-purple); }
+.compare-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-light); }
+.compare-body { font-size: 13.5px; color: var(--text-main); line-height: 1.7; }
+.compare-body strong { color: var(--text-light); }
+
+/* Steps */
+.steps { display: flex; flex-direction: column; gap: 0; margin: 1.5rem 0; }
+.step { display: flex; gap: 0; }
+.step-line { display: flex; flex-direction: column; align-items: center; width: 40px; flex-shrink: 0; }
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--border-light);
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;
+  color: var(--text-muted); flex-shrink: 0; z-index: 2;
+}
+.step-connector { width: 2px; background: var(--border-light); flex: 1; min-height: 20px; margin-top: -2px; margin-bottom: -2px; }
+.step:last-child .step-connector { display: none; }
+.step-body { padding: 0 0 2rem 16px; flex: 1; }
+.step-title { font-size: 15px; font-weight: 700; color: var(--text-light); margin-bottom: 6px; }
+.step-text { font-size: 14px; color: var(--text-main); line-height: 1.7; }
+
+/* Interview Questions */
+.iq-list { display: flex; flex-direction: column; gap: 12px; }
+.iq { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.2s ease; }
+.iq:hover { border-color: var(--accent-purple); box-shadow: 0 4px 15px var(--accent-purple-dim); }
+.iq.open { border-color: var(--accent-purple); }
+.iq-head { display: flex; align-items: flex-start; gap: 14px; padding: 1.25rem; }
+.iq-num { font-size: 12px; font-weight: 800; color: var(--bg-main); background: var(--text-light); padding: 2px 8px; border-radius: 6px; }
+.iq-q { font-size: 15px; font-weight: 600; color: var(--text-light); flex: 1; line-height: 1.5; }
+.iq-diff { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; flex-shrink: 0; }
+.diff-m { background: var(--accent-orange-dim); color: var(--accent-orange); }
+.diff-h { background: var(--accent-red-dim); color: var(--accent-red); }
+.iq-arrow { font-size: 12px; color: var(--text-muted); transition: transform 0.3s ease; margin-top: 4px; }
+.iq.open .iq-arrow { transform: rotate(180deg); color: var(--accent-purple); }
+.iq-body { display: none; padding: 1.25rem; border-top: 1px solid var(--border-light); background: rgba(0,0,0,0.15); font-size: 14.5px; }
+.iq.open .iq-body { display: block; animation: fadeIn 0.3s ease; }
+.iq-body p { margin-bottom: 12px; }
+.iq-body p:last-child { margin-bottom: 0; }
+.iq-body strong { color: var(--text-light); font-weight: 600; }
+.iq-tip { background: var(--accent-green-dim); border-left: 3px solid var(--accent-green); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--accent-green); margin-top: 16px; line-height: 1.6; font-weight: 500; }
+
+.next-btn {
+  width: 100%; margin-top: 2.5rem; padding: 16px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
+}
+.next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(168, 85, 247, 0.4); }
+
+@media(max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 1.5rem; max-width: 100%; }
+  .compare.two, .compare.three { grid-template-columns: 1fr; }
+}
+</style>
+
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="header">
+  <span class="day-badge">Day 19 / 30</span>
+  <span class="header-title">Java Operators & Expressions</span>
+  <span class="header-sub">Phase 6 · Java Core Foundations</span>
+</div>
+<div class="progress-row">
+  <span class="progress-label">Phase 6</span>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <span class="progress-label">Day 19 of 30</span>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Core Operators</div>
+      <button class="nav-item active" onclick="nav('arithmetic',this)"><span class="nav-dot"></span>Arithmetic & Relational</button>
+      <button class="nav-item" onclick="nav('logical',this)"><span class="nav-dot"></span>Logical & Ternary</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Advanced</div>
+      <button class="nav-item" onclick="nav('bitwise',this)"><span class="nav-dot"></span>Bitwise & Shifts</button>
+      <button class="nav-item" onclick="nav('precedence',this)"><span class="nav-dot"></span>Precedence & Eval</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Practice</div>
+      <button class="nav-item" onclick="nav('interview',this)"><span class="nav-dot"></span>Interview Prep</button>
+      <button class="nav-item" onclick="nav('lab',this)"><span class="nav-dot"></span>Hands-on Lab</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    
+    <!-- ARITHMETIC & RELATIONAL -->
+    <div id="s-arithmetic" class="section active">
+      <div class="sec-header">
+        <div class="sec-title">Arithmetic & Relational Operators</div>
+        <div class="sec-sub">The foundation of computation and comparison in Java. Beyond simple math, understanding how prefix/postfix evaluation and object comparisons work is crucial.</div>
+        <div class="sec-tags">
+          <span class="sec-tag">Math</span>
+          <span class="sec-tag">Comparisons</span>
+          <span class="sec-tag">Increment</span>
+        </div>
+      </div>
+      
+      <div class="prose">
+        <p>Java provides standard arithmetic operators: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, and <code>%</code> (modulo). Note that integer division drops the fractional part (e.g., <code>5 / 2</code> evaluates to <code>2</code>).</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Increment & Decrement Traps</span></div>
+        <pre><code><span class="t-k">int</span> x = <span class="t-n">5</span>;
+<span class="t-k">int</span> y = ++x; <span class="t-c">// Prefix: Increment first, then assign. x=6, y=6.</span>
+
+<span class="t-k">int</span> a = <span class="t-n">5</span>;
+<span class="t-k">int</span> b = a++; <span class="t-c">// Postfix: Assign first, then increment. a=6, b=5.</span>
+
+<span class="t-c">// String Concatenation using +</span>
+System.out.println(<span class="t-s">"Total: "</span> + <span class="t-n">5</span> + <span class="t-n">4</span>);   <span class="t-c">// "Total: 54" (Left-to-right String conversion)</span>
+System.out.println(<span class="t-n">5</span> + <span class="t-n">4</span> + <span class="t-s">" Total"</span>);   <span class="t-c">// "9 Total" (Math first, then String conversion)</span></code></pre>
+      </div>
+
+      <div class="prose">
+        <p>Relational operators (<code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>) always return a <code>boolean</code>.</p>
+      </div>
+
+      <div class="callout fail">
+        <strong>The Relational == vs .equals() Trap</strong>
+        For primitives, <code>==</code> compares values. For Objects, <code>==</code> compares <strong>memory references</strong>. 
+        <br><br>
+        <code>new String("A") == new String("A")</code> is <strong>false</strong> because they are two distinct objects in memory. Always use <code>.equals()</code> for object content comparison!
+      </div>
+
+      <button class="next-btn" onclick="nav('logical', document.querySelectorAll('.nav-item')[1])">Logical & Ternary Operators →</button>
+    </div>
+
+    <!-- LOGICAL & TERNARY -->
+    <div id="s-logical" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Logical & Ternary Operators</div>
+        <div class="sec-sub">Logical operators control the flow of decision-making. The ternary operator offers a concise way to handle simple if-else assignments.</div>
+      </div>
+
+      <div class="topic-tabs">
+        <button class="ttab active" onclick="topic('log',0,this)">Short-Circuit Logical</button>
+        <button class="ttab" onclick="topic('log',1,this)">Ternary Operator</button>
+      </div>
+
+      <div id="log0" class="topic active">
+        <div class="prose">
+          <p>The standard logical operators are <strong><code>&amp;&amp;</code> (AND)</strong>, <strong><code>||</code> (OR)</strong>, and <strong><code>!</code> (NOT)</strong>. They are known as "short-circuit" operators because they stop evaluating as soon as the outcome is certain.</p>
+        </div>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">java</span></div>
+          <pre><code>User user = <span class="t-k">null</span>;
+
+<span class="t-c">// Short-circuit AND (&&) saves us from a NullPointerException here:</span>
+<span class="t-k">if</span> (user != <span class="t-k">null</span> <span class="t-o">&&</span> user.isActive()) {
+    <span class="t-c">// If user is null, the first condition is false. </span>
+    <span class="t-c">// Java skips the second condition entirely.</span>
+}
+
+<span class="t-c">// Short-circuit OR (||) stops if the first is true:</span>
+<span class="t-k">if</span> (isValid() <span class="t-o">||</span> heavyDatabaseCheck()) {
+    <span class="t-c">// If isValid() is true, heavyDatabaseCheck() is NEVER executed.</span>
+}</code></pre>
+        </div>
+        <div class="callout warn">
+          <strong>Single &amp; and | Operators</strong>
+          Java also has non-short-circuiting logical operators: <code>&amp;</code> and <code>|</code>. If you use them in an <code>if</code> statement, Java evaluates <em>both</em> sides regardless of the first side's result. This is rarely what you want in conditional logic, but they double as Bitwise operators for numeric types.
+        </div>
+      </div>
+
+      <div id="log1" class="topic">
+        <div class="prose">
+          <p>The Ternary operator (<code>? :</code>) is Java's only operator that takes three operands. It functions as a single-line <code>if-else</code> statement that returns a value.</p>
+          <p>Syntax: <code>condition ? valueIfTrue : valueIfFalse;</code></p>
+        </div>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">java</span></div>
+          <pre><code><span class="t-k">int</span> age = <span class="t-n">20</span>;
+
+<span class="t-c">// Traditional if-else</span>
+String status;
+<span class="t-k">if</span> (age &gt;= <span class="t-n">18</span>) {
+    status = <span class="t-s">"Adult"</span>;
+} <span class="t-k">else</span> {
+    status = <span class="t-s">"Minor"</span>;
+}
+
+<span class="t-c">// Ternary equivalent</span>
+String status = (age &gt;= <span class="t-n">18</span>) <span class="t-o">?</span> <span class="t-s">"Adult"</span> <span class="t-o">:</span> <span class="t-s">"Minor"</span>;</code></pre>
+        </div>
+        <div class="callout prod">
+          <strong>Ternary Null Checks</strong>
+          A common production pattern is using the ternary operator for safe variable assignment to avoid nulls: <br>
+          <code>String displayName = (user.getName() != null) ? user.getName() : "Guest";</code>
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('bitwise', document.querySelectorAll('.nav-item')[2])">Bitwise & Shift Operators →</button>
+    </div>
+
+    <!-- BITWISE & SHIFTS -->
+    <div id="s-bitwise" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Bitwise & Shift Operators</div>
+        <div class="sec-sub">These operators manipulate the individual bits of integer types. While rare in high-level web dev, they are essential for performance optimization, cryptography, networking, and reading source code of low-level libraries.</div>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">Bitwise Logic</div>
+          <div class="compare-body">
+            <strong><code>&amp;</code> (AND):</strong> 1 if both bits are 1.<br>
+            <strong><code>|</code> (OR):</strong> 1 if either bit is 1.<br>
+            <strong><code>^</code> (XOR):</strong> 1 if bits are different.<br>
+            <strong><code>~</code> (NOT):</strong> Inverts all bits (1s complement).
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Bit Shifts</div>
+          <div class="compare-body">
+            <strong><code>&lt;&lt;</code> (Left Shift):</strong> Shifts bits left, fills with 0. Effectively multiplies by 2^n.<br>
+            <strong><code>&gt;&gt;</code> (Right Shift):</strong> Shifts right, preserves the sign bit (fills with 0 if positive, 1 if negative). Effectively divides by 2^n.<br>
+            <strong><code>&gt;&gt;&gt;</code> (Unsigned Right):</strong> Shifts right, ALWAYS fills with 0, ignoring the sign.
+          </div>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java</span></div>
+        <pre><code><span class="t-k">int</span> a = <span class="t-n">5</span>;  <span class="t-c">// Binary: 0000 0101</span>
+<span class="t-k">int</span> b = <span class="t-n">3</span>;  <span class="t-c">// Binary: 0000 0011</span>
+
+System.out.println(a <span class="t-o">&amp;</span> b);  <span class="t-c">// 0000 0001 (1)</span>
+System.out.println(a <span class="t-o">|</span> b);  <span class="t-c">// 0000 0111 (7)</span>
+System.out.println(a <span class="t-o">^</span> b);  <span class="t-c">// 0000 0110 (6)</span>
+
+<span class="t-k">int</span> c = <span class="t-n">8</span>;  <span class="t-c">// Binary: 0000 1000</span>
+System.out.println(c <span class="t-o">&lt;&lt;</span> <span class="t-n">1</span>); <span class="t-c">// 0001 0000 (16) - Multiplied by 2</span>
+System.out.println(c <span class="t-o">&gt;&gt;</span> <span class="t-n">2</span>); <span class="t-c">// 0000 0010 (2)  - Divided by 4</span></code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('precedence', document.querySelectorAll('.nav-item')[3])">Precedence & Expression Eval →</button>
+    </div>
+
+    <!-- PRECEDENCE & EVAL -->
+    <div id="s-precedence" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Operator Precedence & Evaluation</div>
+        <div class="sec-sub">When multiple operators exist in a single statement, Java relies on precedence rules to determine what gets evaluated first.</div>
+      </div>
+
+      <div class="prose">
+        <p>Similar to PEMDAS in mathematics, Java has a hierarchy. Highest precedence evaluates first:</p>
+        <ol style="margin-left: 20px; margin-bottom: 15px; color: var(--text-main);">
+          <li>Postfix (<code>expr++</code>, <code>expr--</code>)</li>
+          <li>Unary (<code>++expr</code>, <code>-expr</code>, <code>!</code>, <code>~</code>)</li>
+          <li>Multiplicative (<code>*</code>, <code>/</code>, <code>%</code>)</li>
+          <li>Additive (<code>+</code>, <code>-</code>)</li>
+          <li>Shift (<code>&lt;&lt;</code>, <code>&gt;&gt;</code>, <code>&gt;&gt;&gt;</code>)</li>
+          <li>Relational (<code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>instanceof</code>)</li>
+          <li>Equality (<code>==</code>, <code>!=</code>)</li>
+          <li>Logical AND (<code>&amp;&amp;</code>) then Logical OR (<code>||</code>)</li>
+          <li>Ternary (<code>? :</code>)</li>
+          <li>Assignment (<code>=</code>, <code>+=</code>, <code>-=</code>, etc.)</li>
+        </ol>
+      </div>
+
+      <div class="callout how">
+        <strong>Assignment Evaluates Right-to-Left</strong>
+        While most operators evaluate left-to-right (e.g., <code>10 - 5 - 2</code> is <code>(10-5) - 2 = 3</code>), assignment evaluates right-to-left. 
+        <br><br>
+        This allows chaining: <code>int a, b, c;  a = b = c = 100;</code> <br>
+        <code>c = 100</code> evaluates first, returning 100, which is then assigned to <code>b</code>, which returns 100, which is assigned to <code>a</code>.
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Compound Assignment Implicit Cast</span></div>
+        <pre><code><span class="t-k">byte</span> b = <span class="t-n">10</span>;
+
+<span class="t-c">// This causes a COMPILE ERROR:</span>
+<span class="t-c">// b = b + 5; </span>
+<span class="t-c">// Reason: 'b + 5' automatically promotes to an 'int'. </span>
+<span class="t-c">// You cannot assign an int back into a byte without explicit casting.</span>
+
+<span class="t-c">// This WORKS:</span>
+b <span class="t-o">+=</span> <span class="t-n">5</span>; 
+<span class="t-c">// Reason: Compound assignment operators implicitly cast the result back</span>
+<span class="t-c">// to the target type. It is equivalent to: b = (byte)(b + 5);</span></code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('interview', document.querySelectorAll('.nav-item')[4])">Interview Prep →</button>
+    </div>
+
+    <!-- INTERVIEW PREP -->
+    <div id="s-interview" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Interview Prep</div>
+        <div class="sec-sub">Operators seem basic, but interviewers use them to test deep JVM understanding, short-circuit logic, and casting rules.</div>
+      </div>
+
+      <div class="iq-list">
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q1</span>
+            <span class="iq-q">What is the difference between && and & operators?</span>
+            <span class="iq-diff diff-m">Medium</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><strong>&&</strong> is the Logical AND operator. It is a <em>short-circuit</em> operator. If the left operand evaluates to false, it immediately returns false without evaluating the right operand. This is crucial for preventing NullPointerExceptions (e.g., <code>if (obj != null && obj.isValid())</code>).</p>
+            <p><strong>&</strong> is a Bitwise AND operator, but it can also be used as a Logical AND for booleans. When used with booleans, it is a <em>non-short-circuit</em> operator. It evaluates both the left and right operands regardless of the left operand's outcome. It is rarely used for conditional logic.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q2</span>
+            <span class="iq-q">If x = 5, what is the value of x and the result of the expression (x++ + ++x)?</span>
+            <span class="iq-diff diff-h">Hard</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>Let's break down the evaluation left-to-right:</p>
+            <p>1. <code>x++</code> evaluates to the <em>current</em> value of x (which is 5), and then increments x to 6.</p>
+            <p>2. The addition operator <code>+</code> waits for the right side.</p>
+            <p>3. <code>++x</code> increments x first (from 6 to 7), and then evaluates to 7.</p>
+            <p>4. The expression resolves to <code>5 + 7</code>, which equals <strong>12</strong>.</p>
+            <p>The final value of the variable <code>x</code> is <strong>7</strong>.</p>
+            <div class="iq-tip">Pro Tip: Compilers evaluate operands strictly from left to right in Java, resolving side effects as they go.</div>
+          </div>
+        </div>
+      </div>
+      
+      <button class="next-btn" onclick="nav('lab', document.querySelectorAll('.nav-item')[5])">Start Hands-on Lab →</button>
+    </div>
+
+    <!-- LAB -->
+    <div id="s-lab" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Hands-on Lab: Operator Mechanics</div>
+        <div class="sec-sub">Code speaks louder than words. Let's verify short-circuiting, implicit casting, and bit shifting.</div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">1</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Verify Short-Circuit Evaluation</div>
+            <div class="step-text">Use a method with a side-effect (printing) to prove when evaluation stops.</div>
+            <code class="step-cmd"><span class="t-k">public class</span> <span class="t-n">OperatorLab</span> {
+    <span class="t-k">static boolean</span> <span class="t-n">sideEffect</span>() {
+        System.out.println(<span class="t-s">"Side effect executed!"</span>);
+        <span class="t-k">return true</span>;
+    }
+
+    <span class="t-k">public static void</span> <span class="t-n">main</span>(String[] args) {
+        System.out.println(<span class="t-s">"Testing && :"</span>);
+        <span class="t-c">// False triggers short circuit, sideEffect() is ignored.</span>
+        <span class="t-k">boolean</span> res1 = <span class="t-k">false</span> <span class="t-o">&&</span> sideEffect(); 
+
+        System.out.println(<span class="t-s">"\nTesting & :"</span>);
+        <span class="t-c">// Single & forces both sides to evaluate!</span>
+        <span class="t-k">boolean</span> res2 = <span class="t-k">false</span> <span class="t-o">&amp;</span> sideEffect(); 
+    }
+}</code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">2</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Test Implicit Casting</div>
+            <div class="step-text">Confirm why compound assignments are safer (or riskier, depending on how you look at it).</div>
+            <code class="step-cmd"><span class="t-k">byte</span> b = <span class="t-n">120</span>;
+
+<span class="t-c">// Try uncommenting this:</span>
+<span class="t-c">// b = b + 10; // Compile Error!</span>
+
+b <span class="t-o">+=</span> <span class="t-n">10</span>; 
+System.out.println(<span class="t-s">"b = "</span> + b); 
+<span class="t-c">// Outputs -126! </span>
+<span class="t-c">// It implicitly cast (byte)(130), causing overflow wrap-around!</span></code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">3</div></div>
+          <div class="step-body">
+            <div class="step-title">Visualize Bit Shifting</div>
+            <div class="step-text">Print integers in their binary form to watch the bits move.</div>
+            <code class="step-cmd"><span class="t-k">int</span> x = <span class="t-n">8</span>;
+System.out.println(<span class="t-s">"Original 8:  "</span> + String.format(<span class="t-s">"%8s"</span>, Integer.toBinaryString(x)).replace(<span class="t-s">' '</span>, <span class="t-s">'0'</span>));
+
+<span class="t-k">int</span> leftShift = x <span class="t-o">&lt;&lt;</span> <span class="t-n">2</span>;
+System.out.println(<span class="t-s">"Left shift 2: "</span> + String.format(<span class="t-s">"%8s"</span>, Integer.toBinaryString(leftShift)).replace(<span class="t-s">' '</span>, <span class="t-s">'0'</span>) + <span class="t-s">" ("</span> + leftShift + <span class="t-s">")"</span>);
+
+<span class="t-k">int</span> rightShift = x <span class="t-o">&gt;&gt;</span> <span class="t-n">1</span>;
+System.out.println(<span class="t-s">"Right shift 1: "</span> + String.format(<span class="t-s">"%8s"</span>, Integer.toBinaryString(rightShift)).replace(<span class="t-s">' '</span>, <span class="t-s">'0'</span>) + <span class="t-s">" ("</span> + rightShift + <span class="t-s">")"</span>);</code>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+function nav(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  
+  const target = document.getElementById('s-' + id);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function topic(prefix, idx, btn) {
+  const section = btn.closest('.section');
+  section.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+  section.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+  
+  const target = document.getElementById(prefix + idx);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+function tog(el) {
+  el.classList.toggle('open');
+}
+</script>
+
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+  </body>
+</html>

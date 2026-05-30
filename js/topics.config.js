@@ -80,34 +80,18 @@ export const PATHWAYS = {
 export const TOPIC_ORDER = [
   // ── Fundamentals ──────────────────────────────────────────────
   'java-basics',
-  'variables-and-data-types',
-  'operators',
-  'control-flow',
-  'methods',
-  'arrays',
+  'java/variables_data_types',
+  'java/java_operators',
 
   // ── Object-Oriented Programming ───────────────────────────────
-  'oops',
-  'inheritance',
-  'polymorphism',
-  'abstraction',
-  'encapsulation',
-  'interfaces',
+  'java/java_oop_concepts',
 
   // ── Core Java ─────────────────────────────────────────────────
-  'exception-handling',
-  'collections',
-  'generics',
-  'streams-api',
-  'lambda-expressions',
-  'optional',
+  'java/java_collections_framework',
+  'java/java_streams_api',
 
   // ── Advanced ──────────────────────────────────────────────────
   'multithreading',
-  'concurrency',
-  'jvm-internals',
-  'memory-management',
-  'design-patterns',
 
   // ── Java Interview Q&A ──────────────────────────────────────────
   'questions and answers/java/multithreading_30qa',
@@ -144,6 +128,8 @@ export const TOPIC_ORDER = [
   'aws/aws_day11_route53_cloudfront',
   'aws/aws_day12_ecs_docker',
   'aws/aws_day13_elasticache_dynamodb',
+  'aws/aws_day14_cloudwatch',
+  'aws/aws_day15_cicd',
 
   // ── Kafka Messaging ───────────────────────────────────────────
   'kafka/kafka-basics',
@@ -255,121 +241,40 @@ export const TOPIC_META = {
     icon: '☕',
     description: 'JVM, JDK, JRE, Hello World, and the basics of Java.',
   },
-  'variables-and-data-types': {
+  'java/variables_data_types': {
     category: 'Fundamentals',
     icon: '📦',
-    description: 'Primitive types, reference types, type casting, and constants.',
+    title: 'Variables & Data Types',
+    description: 'Learn about stack vs heap storage, primitive data types, default values, casting traps, and local type inference.',
   },
-  'operators': {
+  'java/java_operators': {
     category: 'Fundamentals',
     icon: '➕',
-    description: 'Arithmetic, relational, logical, bitwise, and ternary operators.',
+    title: 'Java Operators',
+    description: 'Master arithmetic, relational, logical, bitwise, assignment, and ternary operators, along with precedence rules.',
   },
-  'control-flow': {
-    category: 'Fundamentals',
-    icon: '🔀',
-    description: 'if/else, switch, for, while, do-while, break, and continue.',
-  },
-  'methods': {
-    category: 'Fundamentals',
-    icon: '🔧',
-    description: 'Method declarations, parameters, return types, and overloading.',
-  },
-  'arrays': {
-    category: 'Fundamentals',
-    icon: '🗃️',
-    description: '1D/2D arrays, array iteration, and common array operations.',
-  },
-
-  // ── Object-Oriented Programming ───────────────────────────────
-  'oops': {
+  'java/java_oop_concepts': {
     category: 'Object-Oriented Programming',
     icon: '🧱',
-    description: 'Classes, objects, constructors, and the four pillars of OOP.',
+    title: 'OOP Concepts',
+    description: 'Understand the pillars of Object-Oriented Programming in Java: Inheritance, Polymorphism, Abstraction, and Encapsulation.',
   },
-  'inheritance': {
-    category: 'Object-Oriented Programming',
-    icon: '🧬',
-    description: 'Extending classes, super keyword, and method overriding.',
-  },
-  'polymorphism': {
-    category: 'Object-Oriented Programming',
-    icon: '🦋',
-    description: 'Compile-time and runtime polymorphism in Java.',
-  },
-  'abstraction': {
-    category: 'Object-Oriented Programming',
-    icon: '🎭',
-    description: 'Abstract classes and the purpose of hiding implementation details.',
-  },
-  'encapsulation': {
-    category: 'Object-Oriented Programming',
-    icon: '🔒',
-    description: 'Access modifiers, getters, setters, and data hiding.',
-  },
-  'interfaces': {
-    category: 'Object-Oriented Programming',
-    icon: '🔌',
-    description: 'Interface definitions, default methods, and multiple inheritance.',
-  },
-
-  // ── Core Java ─────────────────────────────────────────────────
-  'exception-handling': {
-    category: 'Core Java',
-    icon: '⚠️',
-    description: 'try/catch/finally, checked vs unchecked, and custom exceptions.',
-  },
-  'collections': {
+  'java/java_collections_framework': {
     category: 'Core Java',
     icon: '📚',
-    description: 'List, Set, Map, Queue — the Java Collections Framework.',
+    title: 'Collections Framework',
+    description: 'Deep dive into List, Set, Map, Queue implementations, performance complexity, and custom key hashing rules.',
   },
-  'generics': {
-    category: 'Core Java',
-    icon: '🧩',
-    description: 'Type parameters, bounded wildcards, and generic methods.',
-  },
-  'streams-api': {
+  'java/java_streams_api': {
     category: 'Core Java',
     icon: '🌊',
-    description: 'Stream pipeline, filter, map, reduce, and collectors.',
+    title: 'Streams API',
+    description: 'Master functional pipelines, lazy evaluation, intermediate and terminal operations, collectors, and parallel streams.',
   },
-  'lambda-expressions': {
-    category: 'Core Java',
-    icon: 'λ',
-    description: 'Functional interfaces, lambda syntax, and method references.',
-  },
-  'optional': {
-    category: 'Core Java',
-    icon: '❓',
-    description: 'Avoiding NullPointerException with Optional<T>.',
-  },
-
-  // ── Advanced ──────────────────────────────────────────────────
   'multithreading': {
     category: 'Advanced',
     icon: '🧵',
     description: 'Thread lifecycle, synchronization, and the Executor framework.',
-  },
-  'concurrency': {
-    category: 'Advanced',
-    icon: '⚡',
-    description: 'CompletableFuture, atomic variables, and concurrent collections.',
-  },
-  'jvm-internals': {
-    category: 'Advanced',
-    icon: '⚙️',
-    description: 'Class loading, bytecode, JIT compilation, and the JVM architecture.',
-  },
-  'memory-management': {
-    category: 'Advanced',
-    icon: '🧠',
-    description: 'Heap, stack, garbage collection algorithms, and memory leaks.',
-  },
-  'design-patterns': {
-    category: 'Advanced',
-    icon: '🏛️',
-    description: 'Singleton, Factory, Observer, Strategy, and other GoF patterns.',
   },
 
   // ── Spring Boot ───────────────────────────────────────────────
@@ -472,6 +377,18 @@ export const TOPIC_META = {
     icon: '⚡',
     title: 'ElastiCache & DynamoDB',
     description: 'Accelerate applications with Redis caching and learn DynamoDB schema design.',
+  },
+  'aws/aws_day14_cloudwatch': {
+    category: 'AWS Cloud',
+    icon: '📊',
+    title: 'CloudWatch Deep Dive',
+    description: 'Understand CloudWatch metrics storage, namespaces, custom EMF formatting, alarms, and Logs Insights queries.',
+  },
+  'aws/aws_day15_cicd': {
+    category: 'AWS Cloud',
+    icon: '🚀',
+    title: 'CI/CD Pipelines on AWS',
+    description: 'Understand continuous integration/continuous deployment pipelines with CodePipeline, CodeBuild, CodeDeploy, and Bitbucket integration.',
   },
 
   // ─── Kafka Messaging ───────────────────────────────────────────

@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 18 — Variables & Data Types</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-main: #0B1121;
+  --bg-card: #151E32;
+  --bg-card-hover: #1E293B;
+  --text-main: #94A3B8;
+  --text-light: #F8FAFC;
+  --text-muted: #64748B;
+  
+  --accent-blue: #38BDF8;
+  --accent-blue-dim: rgba(56, 189, 248, 0.1);
+  --accent-purple: #A855F7;
+  --accent-purple-dim: rgba(168, 85, 247, 0.1);
+  --accent-green: #34D399;
+  --accent-green-dim: rgba(52, 211, 153, 0.1);
+  --accent-orange: #FB923C;
+  --accent-orange-dim: rgba(251, 146, 60, 0.1);
+  --accent-red: #F87171;
+  --accent-red-dim: rgba(248, 113, 113, 0.1);
+  
+  --border-light: rgba(255,255,255,0.08);
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.05), transparent 30%),
+    radial-gradient(circle at 85% 60%, rgba(168, 85, 247, 0.05), transparent 30%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: var(--glass-bg); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-light);
+  padding: 1rem 1.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100;
+}
+.day-badge {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; 
+  border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+}
+.header-title { font-size: 15px; font-weight: 700; color: var(--text-light); }
+.header-sub { font-size: 12px; color: var(--text-muted); margin-left: auto; font-weight: 500; }
+
+.progress-row { display: flex; align-items: center; gap: 10px; padding: 1rem 1.5rem 0.75rem; }
+.progress-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; font-weight: 600; }
+.progress-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); border-radius: 4px; width: 60%; box-shadow: 0 0 10px var(--accent-blue-dim); }
+
+/* Layout & Sidebar */
+.layout { display: flex; min-height: calc(100vh - 100px); }
+.sidebar {
+  width: 240px; flex-shrink: 0; background: rgba(21, 30, 50, 0.4);
+  border-right: 1px solid var(--border-light); padding: 1.5rem 0;
+  position: sticky; top: 100px; height: calc(100vh - 100px); overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+
+.sidebar-section { padding: 0 1rem; margin-bottom: 1.5rem; }
+.sidebar-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: var(--text-muted);
+  text-transform: uppercase; padding: 0 0.75rem; margin-bottom: 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px;
+  font-size: 13px; color: var(--text-main); font-weight: 500; cursor: pointer;
+  border: none; background: transparent; width: 100%; text-align: left; transition: all 0.2s ease;
+  font-family: inherit;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-light); }
+.nav-item.active { background: var(--accent-blue-dim); color: var(--accent-blue); font-weight: 600; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; transition: all 0.2s ease; }
+.nav-item.active .nav-dot { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+
+/* Main Content */
+.main { flex: 1; padding: 2.5rem; max-width: 840px; overflow-x: hidden; }
+.section { display: none; animation: fadeIn 0.4s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.sec-header { margin-bottom: 2rem; }
+.sec-title {
+  font-size: 26px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; letter-spacing: -0.5px;
+  background: linear-gradient(to right, #fff, #94A3B8); -webkit-background-clip: text; color: transparent;
+}
+.sec-sub { font-size: 14px; color: var(--text-main); line-height: 1.6; }
+.sec-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.sec-tag { font-size: 11px; padding: 4px 12px; border-radius: 20px; background: var(--bg-card); border: 1px solid var(--border-light); color: var(--text-light); font-weight: 500; }
+
+.topic-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem; }
+.ttab {
+  padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  color: var(--text-muted); cursor: pointer; border: 1px solid transparent;
+  background: transparent; font-family: inherit; transition: all 0.2s ease;
+}
+.ttab:hover { color: var(--text-light); background: rgba(255,255,255,0.05); }
+.ttab.active { background: var(--bg-card); color: var(--text-light); border-color: var(--border-light); }
+.topic { display: none; animation: fadeIn 0.3s ease; }
+.topic.active { display: block; }
+
+.prose { font-size: 14.5px; color: var(--text-main); line-height: 1.8; }
+.prose p { margin-bottom: 1.25rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text-light); font-weight: 600; }
+
+/* Callouts */
+.callout { border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.5rem 0; font-size: 14px; line-height: 1.7; border: 1px solid var(--border-light); backdrop-filter: blur(5px); }
+.callout strong { font-weight: 800; display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.callout.how { background: var(--accent-blue-dim); border-left: 4px solid var(--accent-blue); color: #E0F2FE; }
+.callout.how strong { color: var(--accent-blue); }
+.callout.fail { background: var(--accent-red-dim); border-left: 4px solid var(--accent-red); color: #FEE2E2; }
+.callout.fail strong { color: var(--accent-red); }
+.callout.prod { background: var(--accent-green-dim); border-left: 4px solid var(--accent-green); color: #D1FAE5; }
+.callout.prod strong { color: var(--accent-green); }
+.callout.warn { background: var(--accent-orange-dim); border-left: 4px solid var(--accent-orange); color: #FFEDD5; }
+.callout.warn strong { color: var(--accent-orange); }
+
+/* Code Blocks */
+code { font-family: 'Fira Code', monospace; font-size: 12.5px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 2px 6px; color: var(--accent-blue); }
+.code-wrap { margin: 1.5rem 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-light); background: #050505; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+.code-header {
+  background: var(--bg-card); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+}
+.code-header::before {
+  content: ''; display: inline-block; height: 12px; width: 50px;
+  background-image: radial-gradient(circle, #ED6A5E 6px, transparent 6.5px),
+                    radial-gradient(circle, #F4BF4F 6px, transparent 6.5px),
+                    radial-gradient(circle, #61C554 6px, transparent 6.5px);
+  background-size: 12px 12px; background-position: 0 0, 18px 0, 36px 0; background-repeat: no-repeat;
+}
+.code-lang { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+pre { padding: 1.25rem 1.5rem; overflow-x: auto; margin: 0; }
+pre code { font-size: 13px; background: none; border: none; padding: 0; color: #E2E8F0; line-height: 1.7; display: block; white-space: pre; }
+/* Syntax Highlighting */
+.t-k { color: #F472B6; } /* Pink keywords */
+.t-s { color: #A3E635; } /* Green strings */
+.t-c { color: #6B7280; font-style: italic; } /* Gray comments */
+.t-n { color: #FBBF24; } /* Yellow numbers */
+.t-p { color: #38BDF8; } /* Blue properties */
+.t-a { color: #A855F7; } /* Purple annotations */
+
+/* Comparison Cards */
+.compare { display: grid; gap: 16px; margin: 1.5rem 0; }
+.compare.two { grid-template-columns: 1fr 1fr; }
+.compare.three { grid-template-columns: 1fr 1fr 1fr; }
+.compare-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 1.25rem; transition: transform 0.2s ease; }
+.compare-card:hover { transform: translateY(-3px); border-color: var(--text-muted); }
+.compare-card.accent { border-color: var(--accent-purple); background: rgba(168, 85, 247, 0.05); }
+.compare-card.accent .compare-title { color: var(--accent-purple); }
+.compare-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-light); }
+.compare-body { font-size: 13.5px; color: var(--text-main); line-height: 1.7; }
+.compare-body strong { color: var(--text-light); }
+
+/* Steps */
+.steps { display: flex; flex-direction: column; gap: 0; margin: 1.5rem 0; }
+.step { display: flex; gap: 0; }
+.step-line { display: flex; flex-direction: column; align-items: center; width: 40px; flex-shrink: 0; }
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--border-light);
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;
+  color: var(--text-muted); flex-shrink: 0; z-index: 2;
+}
+.step-connector { width: 2px; background: var(--border-light); flex: 1; min-height: 20px; margin-top: -2px; margin-bottom: -2px; }
+.step:last-child .step-connector { display: none; }
+.step-body { padding: 0 0 2rem 16px; flex: 1; }
+.step-title { font-size: 15px; font-weight: 700; color: var(--text-light); margin-bottom: 6px; }
+.step-text { font-size: 14px; color: var(--text-main); line-height: 1.7; }
+
+/* Interview Questions */
+.iq-list { display: flex; flex-direction: column; gap: 12px; }
+.iq { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.2s ease; }
+.iq:hover { border-color: var(--accent-purple); box-shadow: 0 4px 15px var(--accent-purple-dim); }
+.iq.open { border-color: var(--accent-purple); }
+.iq-head { display: flex; align-items: flex-start; gap: 14px; padding: 1.25rem; }
+.iq-num { font-size: 12px; font-weight: 800; color: var(--bg-main); background: var(--text-light); padding: 2px 8px; border-radius: 6px; }
+.iq-q { font-size: 15px; font-weight: 600; color: var(--text-light); flex: 1; line-height: 1.5; }
+.iq-diff { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; flex-shrink: 0; }
+.diff-m { background: var(--accent-orange-dim); color: var(--accent-orange); }
+.diff-h { background: var(--accent-red-dim); color: var(--accent-red); }
+.iq-arrow { font-size: 12px; color: var(--text-muted); transition: transform 0.3s ease; margin-top: 4px; }
+.iq.open .iq-arrow { transform: rotate(180deg); color: var(--accent-purple); }
+.iq-body { display: none; padding: 1.25rem; border-top: 1px solid var(--border-light); background: rgba(0,0,0,0.15); font-size: 14.5px; }
+.iq.open .iq-body { display: block; animation: fadeIn 0.3s ease; }
+.iq-body p { margin-bottom: 12px; }
+.iq-body p:last-child { margin-bottom: 0; }
+.iq-body strong { color: var(--text-light); font-weight: 600; }
+.iq-tip { background: var(--accent-green-dim); border-left: 3px solid var(--accent-green); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--accent-green); margin-top: 16px; line-height: 1.6; font-weight: 500; }
+
+.next-btn {
+  width: 100%; margin-top: 2.5rem; padding: 16px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
+}
+.next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(168, 85, 247, 0.4); }
+
+@media(max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 1.5rem; max-width: 100%; }
+  .compare.two, .compare.three { grid-template-columns: 1fr; }
+}
+</style>
+
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="header">
+  <span class="day-badge">Day 18 / 30</span>
+  <span class="header-title">Java Variables & Data Types</span>
+  <span class="header-sub">Phase 6 · Java Core Foundations</span>
+</div>
+<div class="progress-row">
+  <span class="progress-label">Phase 6</span>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <span class="progress-label">Day 18 of 30</span>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Core Concepts</div>
+      <button class="nav-item active" onclick="nav('overview',this)"><span class="nav-dot"></span>Primitives & Memory</button>
+      <button class="nav-item" onclick="nav('references',this)"><span class="nav-dot"></span>Reference vs Primitive</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Advanced Mechanics</div>
+      <button class="nav-item" onclick="nav('conversion',this)"><span class="nav-dot"></span>Type Conversion Traps</button>
+      <button class="nav-item" onclick="nav('defaults',this)"><span class="nav-dot"></span>Default Values</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Modern Java</div>
+      <button class="nav-item" onclick="nav('inference',this)"><span class="nav-dot"></span>Local Type Inference (var)</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Practice</div>
+      <button class="nav-item" onclick="nav('interview',this)"><span class="nav-dot"></span>Interview Prep</button>
+      <button class="nav-item" onclick="nav('lab',this)"><span class="nav-dot"></span>Hands-on Lab</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    
+    <!-- OVERVIEW & PRIMITIVES -->
+    <div id="s-overview" class="section active">
+      <div class="sec-header">
+        <div class="sec-title">Primitives & Memory Allocation</div>
+        <div class="sec-sub">Java is a statically typed language. Every variable must have a declared type before it can be used. Java provides 8 primitive data types, which are the fundamental building blocks of data manipulation. Unlike Objects, primitives are not instantiated with the <code>new</code> keyword and do not share state.</div>
+        <div class="sec-tags">
+          <span class="sec-tag">Static Typing</span>
+          <span class="sec-tag">Stack Memory</span>
+          <span class="sec-tag">Performance</span>
+        </div>
+      </div>
+      
+      <div class="prose">
+        <p>Primitives store raw values directly in memory. They are significantly faster and consume less memory than their Object wrapper equivalents (like <code>Integer</code> vs <code>int</code>).</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — The 8 Primitives</span></div>
+        <pre><code><span class="t-c">// --- Integer Types ---</span>
+<span class="t-k">byte</span>  <span class="t-p">b</span> = <span class="t-n">100</span>;         <span class="t-c">// 1 byte  (-128 to 127)</span>
+<span class="t-k">short</span> <span class="t-p">s</span> = <span class="t-n">30000</span>;       <span class="t-c">// 2 bytes (-32,768 to 32,767)</span>
+<span class="t-k">int</span>   <span class="t-p">i</span> = <span class="t-n">2000000000</span>;  <span class="t-c">// 4 bytes (-2^31 to 2^31-1) - Default for whole numbers</span>
+<span class="t-k">long</span>  <span class="t-p">l</span> = <span class="t-n">9000000000L</span>; <span class="t-c">// 8 bytes (-2^63 to 2^63-1) - Notice the 'L' suffix</span>
+
+<span class="t-c">// --- Floating-Point Types ---</span>
+<span class="t-k">float</span>  <span class="t-p">f</span> = <span class="t-n">19.99f</span>;     <span class="t-c">// 4 bytes (Single precision) - Notice the 'f' suffix</span>
+<span class="t-k">double</span> <span class="t-p">d</span> = <span class="t-n">19.99999</span>;   <span class="t-c">// 8 bytes (Double precision) - Default for decimals</span>
+
+<span class="t-c">// --- Character & Boolean ---</span>
+<span class="t-k">char</span>    <span class="t-p">c</span> = <span class="t-s">'A'</span>;       <span class="t-c">// 2 bytes (Unsigned, represents a single 16-bit Unicode character)</span>
+<span class="t-k">boolean</span> <span class="t-p">isJavaFun</span> = <span class="t-k">true</span>; <span class="t-c">// 1 bit of information (Actual memory size varies by JVM)</span></code></pre>
+      </div>
+
+      <div class="callout prod">
+        <strong>Underscores in Numeric Literals</strong>
+        Since Java 7, you can use underscores to make large numbers readable. The compiler simply strips them out. E.g., <code>int oneMillion = 1_000_000;</code> or <code>long creditCard = 1234_5678_9012_3456L;</code>.
+      </div>
+
+      <button class="next-btn" onclick="nav('references', document.querySelectorAll('.nav-item')[1])">Reference Types vs Primitives →</button>
+    </div>
+
+    <!-- REFERENCES VS PRIMITIVES -->
+    <div id="s-references" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Reference Types vs Primitives</div>
+        <div class="sec-sub">The distinction between how Java stores primitives and how it stores Objects is the source of 90% of beginner bugs, especially involving equality checks and method parameter passing.</div>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">Primitives (Stack Memory)</div>
+          <div class="compare-body">
+            Stored directly on the <strong>Stack</strong>.<br><br>
+            When you declare <code>int x = 5;</code>, the value <code>5</code> is placed exactly where <code>x</code> lives in memory.<br><br>
+            Assigning a primitive creates an independent copy: <code>int y = x;</code> copies the value <code>5</code>. Changing <code>y</code> later does not change <code>x</code>.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Reference Types (Heap Memory)</div>
+          <div class="compare-body">
+            Objects are stored on the <strong>Heap</strong>. The variable on the Stack only holds a <em>memory address</em> (pointer) to the object.<br><br>
+            When you declare <code>User u = new User();</code>, <code>u</code> stores an address like <code>0x1AB2</code>.<br><br>
+            Assigning a reference copies the <em>address</em>: <code>User u2 = u;</code>. Both variables now point to the exact same object. Modifying <code>u2</code> modifies <code>u</code>.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout fail">
+        <strong>The == Trap for Reference Types</strong>
+        Using <code>==</code> on primitives compares their actual values. Using <code>==</code> on Reference Types compares their <em>memory addresses</em>. 
+        <br><br>
+        <code>String a = new String("Java");</code><br>
+        <code>String b = new String("Java");</code><br>
+        <code>System.out.println(a == b); // Prints false!</code><br>
+        <br>Always use <code>.equals()</code> to compare the logical contents of an Object: <code>a.equals(b)</code> is true.
+      </div>
+
+      <button class="next-btn" onclick="nav('conversion', document.querySelectorAll('.nav-item')[2])">Type Conversion Traps →</button>
+    </div>
+
+    <!-- TYPE CONVERSION -->
+    <div id="s-conversion" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Type Conversion & Casting Traps</div>
+        <div class="sec-sub">Assigning a value of one type to a variable of another type triggers type conversion. This can be implicit (safe) or explicit (potentially destructive).</div>
+      </div>
+
+      <div class="topic-tabs">
+        <button class="ttab active" onclick="topic('conv',0,this)">Widening (Safe)</button>
+        <button class="ttab" onclick="topic('conv',1,this)">Narrowing (Risky)</button>
+        <button class="ttab" onclick="topic('conv',2,this)">Floating Point Trap</button>
+      </div>
+
+      <div id="conv0" class="topic active">
+        <div class="prose">
+          <p><strong>Widening Casting (Implicit)</strong> happens automatically when passing a smaller size type to a larger size type. There is no loss of information.</p>
+          <p>Sequence: <code>byte</code> → <code>short</code> → <code>char</code> → <code>int</code> → <code>long</code> → <code>float</code> → <code>double</code></p>
+        </div>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">java</span></div>
+          <pre><code><span class="t-k">int</span> <span class="t-p">myInt</span> = <span class="t-n">9</span>;
+<span class="t-k">double</span> <span class="t-p">myDouble</span> = myInt; <span class="t-c">// Automatic casting: int to double</span>
+System.out.println(myDouble); <span class="t-c">// Outputs 9.0</span></code></pre>
+        </div>
+      </div>
+
+      <div id="conv1" class="topic">
+        <div class="prose">
+          <p><strong>Narrowing Casting (Explicit)</strong> must be done manually by placing the type in parentheses in front of the value. This forces the compiler to squeeze a larger type into a smaller one, which can cause <strong>overflow</strong> or <strong>loss of precision</strong>.</p>
+        </div>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">java</span></div>
+          <pre><code><span class="t-k">double</span> <span class="t-p">myDouble</span> = <span class="t-n">9.78</span>;
+<span class="t-k">int</span> <span class="t-p">myInt</span> = (<span class="t-k">int</span>) myDouble; <span class="t-c">// Manual casting: double to int</span>
+System.out.println(myInt);    <span class="t-c">// Outputs 9 (Fractional part is completely chopped off, not rounded)</span>
+
+<span class="t-c">// Integer Overflow Trap</span>
+<span class="t-k">int</span> <span class="t-p">max</span> = Integer.MAX_VALUE; <span class="t-c">// 2147483647</span>
+max = max + <span class="t-n">1</span>; 
+System.out.println(max);     <span class="t-c">// Outputs -2147483648 (Overflow wraps around to the lowest negative!)</span></code></pre>
+        </div>
+      </div>
+
+      <div id="conv2" class="topic">
+        <div class="prose">
+          <p>Floating point numbers (<code>float</code> and <code>double</code>) use the IEEE 754 standard to represent fractions in binary. Because some fractions cannot be represented cleanly in binary (just like 1/3 cannot be cleanly written in decimal as 0.333...), they introduce minute precision errors.</p>
+        </div>
+        <div class="code-wrap">
+          <div class="code-header"><span class="code-lang">java — The 0.3 Trap</span></div>
+          <pre><code><span class="t-k">double</span> <span class="t-p">a</span> = <span class="t-n">0.1</span>;
+<span class="t-k">double</span> <span class="t-p">b</span> = <span class="t-n">0.2</span>;
+System.out.println(a + b); <span class="t-c">// Outputs: 0.30000000000000004</span>
+
+<span class="t-k">if</span> (a + b == <span class="t-n">0.3</span>) {
+    System.out.println(<span class="t-s">"Math works!"</span>); <span class="t-c">// This line will NEVER print.</span>
+}</code></pre>
+        </div>
+        <div class="callout warn">
+          <strong>Never use float/double for Currency!</strong>
+          If you use <code>double</code> to calculate financial transactions, pennies will silently appear or disappear due to binary rounding errors. Always use <code>java.math.BigDecimal</code> for money or precise scientific calculations.
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('defaults', document.querySelectorAll('.nav-item')[3])">Default Values →</button>
+    </div>
+
+    <!-- DEFAULT VALUES -->
+    <div id="s-defaults" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Default Values & Initialization</div>
+        <div class="sec-sub">Java's rules for initializing variables depend heavily on <em>where</em> the variable is declared.</div>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">Instance & Static Fields</div>
+          <div class="compare-body">
+            Variables declared at the class level get default values automatically if not initialized:<br><br>
+            • Numbers (byte, short, int, long): <code>0</code><br>
+            • Floating points (float, double): <code>0.0</code><br>
+            • booleans: <code>false</code><br>
+            • char: <code>'\u0000'</code> (null character)<br>
+            • <strong>All Reference Types:</strong> <code>null</code>
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Local Variables</div>
+          <div class="compare-body">
+            Variables declared inside a method <strong>do not</strong> get default values.<br><br>
+            If you declare a local variable and try to use it before initializing it, the Java compiler will throw an error: <code>variable might not have been initialized</code>.<br><br>
+            This forces developers to be explicit and prevents undefined behavior.
+          </div>
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('inference', document.querySelectorAll('.nav-item')[4])">Local Type Inference (var) →</button>
+    </div>
+
+    <!-- LOCAL TYPE INFERENCE -->
+    <div id="s-inference" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Local Variable Type Inference (<code>var</code>)</div>
+        <div class="sec-sub">Introduced in Java 10, the <code>var</code> keyword allows the compiler to infer the type of a local variable based on the value assigned to it. This reduces boilerplate, especially with complex Generics.</div>
+      </div>
+
+      <div class="prose">
+        <p>It is crucial to understand that Java remains <strong>strongly, statically typed</strong>. <code>var</code> is not a runtime dynamic type like in JavaScript. The type is baked in at compile time.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java</span></div>
+        <pre><code><span class="t-c">// Pre-Java 10: Repetitive typing</span>
+Map&lt;String, List&lt;UserProfile&gt;&gt; <span class="t-p">cache</span> = <span class="t-k">new</span> HashMap&lt;String, List&lt;UserProfile&gt;&gt;();
+
+<span class="t-c">// Java 10+: Clean and readable</span>
+<span class="t-k">var</span> <span class="t-p">cache</span> = <span class="t-k">new</span> HashMap&lt;String, List&lt;UserProfile&gt;&gt;();
+
+<span class="t-c">// The compiler knows 'message' is a String.</span>
+<span class="t-k">var</span> <span class="t-p">message</span> = <span class="t-s">"Hello World"</span>; 
+message = <span class="t-n">100</span>; <span class="t-c">// COMPILE ERROR: incompatible types. A String cannot hold an int.</span></code></pre>
+      </div>
+
+      <div class="callout fail">
+        <strong>Strict Rules for <code>var</code></strong>
+        <br>1. You can only use it for <strong>local variables</strong> inside methods. You cannot use <code>var</code> for class instance fields, method parameters, or method return types.
+        <br>2. It <strong>must be initialized immediately</strong> on the same line. <code>var name; name = "John";</code> will not compile.
+        <br>3. You cannot initialize it to <code>null</code>. <code>var user = null;</code> fails because the compiler has no clue what type of object `null` is supposed to represent.
+      </div>
+
+      <button class="next-btn" onclick="nav('interview', document.querySelectorAll('.nav-item')[5])">Interview Prep →</button>
+    </div>
+
+    <!-- INTERVIEW PREP -->
+    <div id="s-interview" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Interview Prep</div>
+        <div class="sec-sub">Questions on variables and memory are designed to expose developers who rely entirely on frameworks and don't understand the JVM's underlying mechanics.</div>
+      </div>
+
+      <div class="iq-list">
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q1</span>
+            <span class="iq-q">Why does Java use 16 bits (2 bytes) for a `char`, whereas C/C++ traditionally use 8 bits?</span>
+            <span class="iq-diff diff-m">Medium</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>Java was designed from the ground up to support internationalization. Instead of using ASCII (which only requires 8 bits to represent 256 characters), Java uses the <strong>Unicode (UTF-16)</strong> encoding system.</p>
+            <p>16 bits allow Java to natively represent 65,536 distinct characters, accommodating almost all standard characters from global languages. (Note: Supplementary characters beyond the Basic Multilingual Plane require surrogate pairs, which take two 16-bit `char`s).</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q2</span>
+            <span class="iq-q">What is the "Integer Cache" in Java, and how does it affect `==` comparisons?</span>
+            <span class="iq-diff diff-h">Hard</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>To save memory, Java internally caches <code>Integer</code> wrapper objects for values between <strong>-128 and 127</strong>.</p>
+            <p>If you write <code>Integer a = 100; Integer b = 100;</code>, Java reuses the cached object. Therefore, <code>a == b</code> returns <strong>true</strong> because they point to the exact same memory address.</p>
+            <p>However, if you write <code>Integer x = 128; Integer y = 128;</code>, these fall outside the cache. Java creates two separate objects on the heap. Therefore, <code>x == y</code> returns <strong>false</strong>.</p>
+            <p>This is why you must <em>always</em> use <code>.equals()</code> to compare wrapper classes, regardless of the value!</p>
+          </div>
+        </div>
+      </div>
+      
+      <button class="next-btn" onclick="nav('lab', document.querySelectorAll('.nav-item')[6])">Start Hands-on Lab →</button>
+    </div>
+
+    <!-- LAB -->
+    <div id="s-lab" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Hands-on Lab: Exploring Core Mechanics</div>
+        <div class="sec-sub">Create a simple Main class to prove these concepts. Experiencing overflow and caching traps firsthand cements the knowledge.</div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">1</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Demonstrate Overflow</div>
+            <div class="step-text">Push an integer past its limit. Observe the wrap-around.</div>
+            <code class="step-cmd"><span class="t-k">public class</span> <span class="t-n">VariablesLab</span> {
+    <span class="t-k">public static void</span> <span class="t-n">main</span>(String[] args) {
+        <span class="t-k">int</span> max = Integer.MAX_VALUE;
+        System.out.println(<span class="t-s">"Max int: "</span> + max);
+        System.out.println(<span class="t-s">"Max int + 1: "</span> + (max + <span class="t-n">1</span>)); <span class="t-c">// Prints -2147483648</span>
+    }
+}</code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">2</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Test the Integer Cache Trap</div>
+            <div class="step-text">See the difference between 127 and 128 when using `==`.</div>
+            <code class="step-cmd"><span class="t-c">// Inside main method:</span>
+Integer a = <span class="t-n">127</span>;
+Integer b = <span class="t-n">127</span>;
+System.out.println(<span class="t-s">"127 == 127 : "</span> + (a == b)); <span class="t-c">// true (cached)</span>
+
+Integer c = <span class="t-n">128</span>;
+Integer d = <span class="t-n">128</span>;
+System.out.println(<span class="t-s">"128 == 128 : "</span> + (c == d)); <span class="t-c">// false (different objects)</span>
+System.out.println(<span class="t-s">"128 .equals 128 : "</span> + c.equals(d)); <span class="t-c">// true</span></code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">3</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Verify Floating Point Inaccuracy</div>
+            <div class="step-text">Prove why `double` shouldn't be used for currency.</div>
+            <code class="step-cmd"><span class="t-k">double</span> price1 = <span class="t-n">0.1</span>;
+<span class="t-k">double</span> price2 = <span class="t-n">0.2</span>;
+System.out.println(<span class="t-s">"0.1 + 0.2 = "</span> + (price1 + price2)); <span class="t-c">// 0.30000000000000004</span>
+
+<span class="t-c">// The safe way:</span>
+java.math.BigDecimal bd1 = <span class="t-k">new</span> java.math.BigDecimal(<span class="t-s">"0.1"</span>);
+java.math.BigDecimal bd2 = <span class="t-k">new</span> java.math.BigDecimal(<span class="t-s">"0.2"</span>);
+System.out.println(<span class="t-s">"BigDecimal 0.1 + 0.2 = "</span> + bd1.add(bd2)); <span class="t-c">// 0.3</span></code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">4</div></div>
+          <div class="step-body">
+            <div class="step-title">Play with `var`</div>
+            <div class="step-text">Use local variable type inference and try to break it.</div>
+            <code class="step-cmd"><span class="t-k">var</span> greeting = <span class="t-s">"Hello from Java 10+"</span>;
+System.out.println(greeting.toUpperCase());
+
+<span class="t-c">// Uncomment to see compile errors:</span>
+<span class="t-c">// var uninitialized;</span>
+<span class="t-c">// var emptyObject = null;</span>
+<span class="t-c">// greeting = 404;</span></code>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+function nav(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  
+  const target = document.getElementById('s-' + id);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function topic(prefix, idx, btn) {
+  const section = btn.closest('.section');
+  section.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+  section.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+  
+  const target = document.getElementById(prefix + idx);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+function tog(el) {
+  el.classList.toggle('open');
+}
+</script>
+
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+  </body>
+</html>

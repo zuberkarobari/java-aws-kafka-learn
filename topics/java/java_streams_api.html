@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 22 — Java Streams API</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-main: #0B1121;
+  --bg-card: #151E32;
+  --bg-card-hover: #1E293B;
+  --text-main: #94A3B8;
+  --text-light: #F8FAFC;
+  --text-muted: #64748B;
+  
+  --accent-blue: #38BDF8;
+  --accent-blue-dim: rgba(56, 189, 248, 0.1);
+  --accent-purple: #A855F7;
+  --accent-purple-dim: rgba(168, 85, 247, 0.1);
+  --accent-green: #34D399;
+  --accent-green-dim: rgba(52, 211, 153, 0.1);
+  --accent-orange: #FB923C;
+  --accent-orange-dim: rgba(251, 146, 60, 0.1);
+  --accent-red: #F87171;
+  --accent-red-dim: rgba(248, 113, 113, 0.1);
+  
+  --border-light: rgba(255,255,255,0.08);
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.05), transparent 30%),
+    radial-gradient(circle at 85% 60%, rgba(168, 85, 247, 0.05), transparent 30%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: var(--glass-bg); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-light);
+  padding: 1rem 1.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100;
+}
+.day-badge {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; 
+  border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+}
+.header-title { font-size: 15px; font-weight: 700; color: var(--text-light); }
+.header-sub { font-size: 12px; color: var(--text-muted); margin-left: auto; font-weight: 500; }
+
+.progress-row { display: flex; align-items: center; gap: 10px; padding: 1rem 1.5rem 0.75rem; }
+.progress-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; font-weight: 600; }
+.progress-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); border-radius: 4px; width: 73%; box-shadow: 0 0 10px var(--accent-blue-dim); }
+
+/* Layout & Sidebar */
+.layout { display: flex; min-height: calc(100vh - 100px); }
+.sidebar {
+  width: 240px; flex-shrink: 0; background: rgba(21, 30, 50, 0.4);
+  border-right: 1px solid var(--border-light); padding: 1.5rem 0;
+  position: sticky; top: 100px; height: calc(100vh - 100px); overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+
+.sidebar-section { padding: 0 1rem; margin-bottom: 1.5rem; }
+.sidebar-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: var(--text-muted);
+  text-transform: uppercase; padding: 0 0.75rem; margin-bottom: 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px;
+  font-size: 13px; color: var(--text-main); font-weight: 500; cursor: pointer;
+  border: none; background: transparent; width: 100%; text-align: left; transition: all 0.2s ease;
+  font-family: inherit;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-light); }
+.nav-item.active { background: var(--accent-blue-dim); color: var(--accent-blue); font-weight: 600; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; transition: all 0.2s ease; }
+.nav-item.active .nav-dot { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+
+/* Main Content */
+.main { flex: 1; padding: 2.5rem; max-width: 840px; overflow-x: hidden; }
+.section { display: none; animation: fadeIn 0.4s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.sec-header { margin-bottom: 2rem; }
+.sec-title {
+  font-size: 26px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; letter-spacing: -0.5px;
+  background: linear-gradient(to right, #fff, #94A3B8); -webkit-background-clip: text; color: transparent;
+}
+.sec-sub { font-size: 14px; color: var(--text-main); line-height: 1.6; }
+
+.prose { font-size: 14.5px; color: var(--text-main); line-height: 1.8; }
+.prose p { margin-bottom: 1.25rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text-light); font-weight: 600; }
+
+/* Callouts */
+.callout { border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.5rem 0; font-size: 14px; line-height: 1.7; border: 1px solid var(--border-light); backdrop-filter: blur(5px); }
+.callout strong { font-weight: 800; display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.callout.how { background: var(--accent-blue-dim); border-left: 4px solid var(--accent-blue); color: #E0F2FE; }
+.callout.how strong { color: var(--accent-blue); }
+.callout.fail { background: var(--accent-red-dim); border-left: 4px solid var(--accent-red); color: #FEE2E2; }
+.callout.fail strong { color: var(--accent-red); }
+.callout.prod { background: var(--accent-green-dim); border-left: 4px solid var(--accent-green); color: #D1FAE5; }
+.callout.prod strong { color: var(--accent-green); }
+
+/* Code Blocks */
+code { font-family: 'Fira Code', monospace; font-size: 12.5px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 2px 6px; color: var(--accent-blue); }
+.code-wrap { margin: 1.5rem 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-light); background: #050505; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+.code-header {
+  background: var(--bg-card); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+}
+.code-header::before {
+  content: ''; display: inline-block; height: 12px; width: 50px;
+  background-image: radial-gradient(circle, #ED6A5E 6px, transparent 6.5px),
+                    radial-gradient(circle, #F4BF4F 6px, transparent 6.5px),
+                    radial-gradient(circle, #61C554 6px, transparent 6.5px);
+  background-size: 12px 12px; background-position: 0 0, 18px 0, 36px 0; background-repeat: no-repeat;
+}
+.code-lang { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+pre { padding: 1.25rem 1.5rem; overflow-x: auto; margin: 0; }
+pre code { font-size: 13px; background: none; border: none; padding: 0; color: #E2E8F0; line-height: 1.7; display: block; white-space: pre; }
+
+/* Syntax Highlighting */
+.t-k { color: #F472B6; } /* Pink keywords */
+.t-s { color: #A3E635; } /* Green strings */
+.t-c { color: #6B7280; font-style: italic; } /* Gray comments */
+.t-n { color: #FBBF24; } /* Yellow numbers */
+.t-p { color: #38BDF8; } /* Blue properties */
+.t-a { color: #A855F7; } /* Purple annotations */
+
+/* Comparison Cards */
+.compare { display: grid; gap: 16px; margin: 1.5rem 0; }
+.compare.two { grid-template-columns: 1fr 1fr; }
+.compare.three { grid-template-columns: 1fr 1fr 1fr; }
+.compare-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 1.25rem; transition: transform 0.2s ease; }
+.compare-card:hover { transform: translateY(-3px); border-color: var(--text-muted); }
+.compare-card.accent { border-color: var(--accent-purple); background: rgba(168, 85, 247, 0.05); }
+.compare-card.accent .compare-title { color: var(--accent-purple); }
+.compare-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-light); }
+.compare-body { font-size: 13.5px; color: var(--text-main); line-height: 1.7; }
+.compare-body strong { color: var(--text-light); }
+
+/* Pipeline Flow */
+.pipeline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 1.5rem 0; }
+.pipe-stage { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; padding: 10px 16px; font-size: 12px; font-weight: 700; color: var(--text-light); text-align: center; min-width: 100px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+.pipe-stage.accent { background: var(--accent-blue-dim); border-color: var(--accent-blue); color: var(--accent-blue); }
+.pipe-stage.green { background: var(--accent-green-dim); border-color: var(--accent-green); color: var(--accent-green); }
+.pipe-stage.amber { background: var(--accent-orange-dim); border-color: var(--accent-orange); color: var(--accent-orange); }
+.pipe-stage.purple { background: var(--accent-purple-dim); border-color: var(--accent-purple); color: var(--accent-purple); }
+.pipe-arrow { color: var(--text-muted); font-size: 16px; font-weight: 700; }
+.pipe-label { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 6px; font-weight: 500; }
+
+/* Interview Questions (Maximized for 25 Qs) */
+.iq-list { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+.iq { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s ease; }
+.iq:hover { border-color: var(--accent-purple); }
+.iq.open { border-color: var(--accent-purple); background: var(--bg-card-hover); }
+.iq-head { display: flex; align-items: flex-start; gap: 12px; padding: 1rem 1.25rem; }
+.iq-num { font-size: 12px; font-weight: 800; color: var(--bg-main); background: var(--text-light); padding: 2px 8px; border-radius: 6px; }
+.iq-q { font-size: 14.5px; font-weight: 600; color: var(--text-light); flex: 1; line-height: 1.5; }
+.iq-badges { display: flex; gap: 6px; flex-shrink: 0; }
+.iq-diff { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; }
+.iq-cat { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; background: var(--bg-main); color: var(--text-muted); border: 1px solid var(--border-light); }
+.diff-e { background: var(--accent-green-dim); color: var(--accent-green); border: 1px solid var(--accent-green); }
+.diff-m { background: var(--accent-orange-dim); color: var(--accent-orange); border: 1px solid var(--accent-orange); }
+.diff-h { background: var(--accent-red-dim); color: var(--accent-red); border: 1px solid var(--accent-red); }
+.iq-arrow { font-size: 12px; color: var(--text-muted); transition: transform 0.3s ease; margin-top: 4px; }
+.iq.open .iq-arrow { transform: rotate(180deg); color: var(--accent-purple); }
+.iq-body { display: none; padding: 1.25rem; border-top: 1px solid var(--border-light); font-size: 14px; color: var(--text-main); line-height: 1.7; }
+.iq.open .iq-body { display: block; animation: fadeIn 0.3s ease; }
+.iq-body p { margin-bottom: 12px; }
+.iq-body p:last-child { margin-bottom: 0; }
+.iq-body strong { color: var(--text-light); font-weight: 600; }
+.iq-body pre { background: var(--bg-main); border: 1px solid var(--border-light); border-radius: 6px; padding: 1rem; margin: 10px 0; }
+.iq-body code { font-size: 12px; background: transparent; padding: 0; border: none; color: #E2E8F0; }
+
+.category-header {
+  font-size: 12px; font-weight: 800; letter-spacing: 1px; color: var(--text-muted);
+  text-transform: uppercase; margin: 2rem 0 0.5rem 0; border-bottom: 1px solid var(--border-light); padding-bottom: 4px;
+}
+
+.next-btn {
+  width: 100%; margin-top: 2.5rem; padding: 16px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
+}
+.next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(168, 85, 247, 0.4); }
+
+@media(max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 1.5rem; max-width: 100%; }
+  .compare.two, .compare.three { grid-template-columns: 1fr; }
+  .iq-head { flex-wrap: wrap; }
+  .iq-q { width: 100%; margin-top: 8px; }
+}
+</style>
+
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="header">
+  <span class="day-badge">Day 22 / 30</span>
+  <span class="header-title">Java Streams API</span>
+  <span class="header-sub">Phase 6 · Java Core Foundations</span>
+</div>
+<div class="progress-row">
+  <span class="progress-label">Phase 6</span>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <span class="progress-label">Day 22 of 30</span>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Mechanics</div>
+      <button class="nav-item active" onclick="nav('overview',this)"><span class="nav-dot"></span>The Stream Pipeline</button>
+      <button class="nav-item" onclick="nav('intermediate',this)"><span class="nav-dot"></span>Intermediate Ops</button>
+      <button class="nav-item" onclick="nav('terminal',this)"><span class="nav-dot"></span>Terminal Ops & Reduce</button>
+      <button class="nav-item" onclick="nav('collectors',this)"><span class="nav-dot"></span>Collectors</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Masterclass</div>
+      <button class="nav-item" onclick="nav('interview',this)"><span class="nav-dot"></span>25 Interview Q&As 🔥</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    
+    <!-- OVERVIEW & PIPELINE -->
+    <div id="s-overview" class="section active">
+      <div class="sec-header">
+        <div class="sec-title">The Stream Pipeline 🌊</div>
+        <div class="sec-sub">Introduced in Java 8, Streams revolutionized how Java developers process data. A Stream is NOT a data structure. It does not store data. It is a sequence of elements moving through a pipeline of computational operations.</div>
+      </div>
+      
+      <div class="prose">
+        <p>A Stream pipeline always consists of exactly three parts:</p>
+      </div>
+
+      <div style="background:var(--bg-card);border-radius:var(--radius);border:1px solid var(--border-light);padding:1.5rem;margin:1.5rem 0">
+        <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+          <div style="text-align:center">
+            <div class="pipe-stage purple">1. Source</div>
+            <div class="pipe-label">Collection.stream()</div>
+          </div>
+          <div class="pipe-arrow" style="margin-top:10px">→</div>
+          <div style="text-align:center">
+            <div class="pipe-stage accent">2. Intermediate Ops</div>
+            <div class="pipe-label">filter(), map()</div>
+          </div>
+          <div class="pipe-arrow" style="margin-top:10px">→</div>
+          <div style="text-align:center">
+            <div class="pipe-stage green">3. Terminal Op</div>
+            <div class="pipe-label">collect(), count()</div>
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--text-main);line-height:1.7;margin-top:1.5rem;">
+          <strong>Lazy Evaluation:</strong> Intermediate operations are lazy. They do absolutely nothing until a Terminal operation is invoked. If you write a massive pipeline with 10 filters and maps but forget the <code>.collect()</code> at the end, the code inside the filters is never executed.
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — The Anatomy of a Pipeline</span></div>
+        <pre><code>List&lt;String&gt; names = Arrays.asList(<span class="t-s">"Alice"</span>, <span class="t-s">"Bob"</span>, <span class="t-s">"Charlie"</span>, <span class="t-s">"David"</span>);
+
+List&lt;String&gt; filteredNames = names.stream()               <span class="t-c">// 1. SOURCE</span>
+    .filter(name -&gt; name.length() &gt; <span class="t-n">4</span>)                    <span class="t-c">// 2. INTERMEDIATE</span>
+    .map(String::toUpperCase)                             <span class="t-c">// 2. INTERMEDIATE</span>
+    .collect(Collectors.toList());                        <span class="t-c">// 3. TERMINAL</span>
+
+System.out.println(filteredNames); <span class="t-c">// [ALICE, CHARLIE, DAVID]</span></code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('intermediate', document.querySelectorAll('.nav-item')[1])">Intermediate Operations →</button>
+    </div>
+
+    <!-- INTERMEDIATE OPS -->
+    <div id="s-intermediate" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Intermediate Operations</div>
+        <div class="sec-sub">Operations that transform one Stream into another Stream. They are always lazy.</div>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">Stateless Operations</div>
+          <div class="compare-body">
+            They process each element independently without needing to know about the other elements.<br><br>
+            <code>filter(Predicate)</code>: Keeps elements that match.<br>
+            <code>map(Function)</code>: Transforms element A into B.<br>
+            <code>flatMap(Function)</code>: Flattens a Stream of Streams into a single Stream.<br>
+            <code>peek(Consumer)</code>: Performs an action without modifying (great for debugging).
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Stateful Operations</div>
+          <div class="compare-body">
+            They require information about <em>other</em> elements in the stream to do their job. They can cause performance bottlenecks in Parallel streams.<br><br>
+            <code>distinct()</code>: Must remember elements seen so far.<br>
+            <code>sorted()</code>: Must buffer ALL elements before it can emit the first sorted element.<br>
+            <code>limit(n)</code> & <code>skip(n)</code>: Must track a counter.
+          </div>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — map() vs flatMap()</span></div>
+        <pre><code>List&lt;List&lt;String&gt;&gt; nestedList = Arrays.asList(
+    Arrays.asList(<span class="t-s">"A"</span>, <span class="t-s">"B"</span>),
+    Arrays.asList(<span class="t-s">"C"</span>, <span class="t-s">"D"</span>)
+);
+
+<span class="t-c">// map() transforms each inner list into a Stream, resulting in Stream&lt;Stream&lt;String&gt;&gt;</span>
+<span class="t-c">// flatMap() extracts the elements from the inner streams into a single flat Stream&lt;String&gt;</span>
+List&lt;String&gt; flat = nestedList.stream()
+    .flatMap(List::stream) 
+    .collect(Collectors.toList()); <span class="t-c">// Result: [A, B, C, D]</span></code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('terminal', document.querySelectorAll('.nav-item')[2])">Terminal Ops & Reduction →</button>
+    </div>
+
+    <!-- TERMINAL OPS -->
+    <div id="s-terminal" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Terminal Operations & Reduction</div>
+        <div class="sec-sub">Terminal operations produce a non-stream result (like a List, Integer, or void). Once a terminal operation executes, the stream is considered consumed and cannot be used again.</div>
+      </div>
+
+      <div class="prose">
+        <p><strong>Matching & Finding:</strong> <code>anyMatch()</code>, <code>allMatch()</code>, <code>noneMatch()</code> return booleans and use short-circuiting. <code>findFirst()</code> and <code>findAny()</code> return an <code>Optional</code>.</p>
+        <p><strong>Reduction:</strong> The <code>reduce()</code> method combines elements into a single value (like sum, min, max) by repeatedly applying a combining operation.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Using reduce()</span></div>
+        <pre><code>List&lt;Integer&gt; numbers = Arrays.asList(<span class="t-n">1</span>, <span class="t-n">2</span>, <span class="t-n">3</span>, <span class="t-n">4</span>, <span class="t-n">5</span>);
+
+<span class="t-c">// reduce(identity, BinaryOperator)</span>
+<span class="t-c">// 0 is the starting value. (subtotal, element) are passed to the lambda.</span>
+<span class="t-k">int</span> sum = numbers.stream()
+    .reduce(<span class="t-n">0</span>, (subtotal, element) -&gt; subtotal + element);
+
+<span class="t-c">// Cleaner with Method Reference:</span>
+<span class="t-k">int</span> sumClean = numbers.stream().reduce(<span class="t-n">0</span>, Integer::sum); 
+System.out.println(sumClean); <span class="t-c">// 15</span></code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('collectors', document.querySelectorAll('.nav-item')[3])">Collectors →</button>
+    </div>
+
+    <!-- COLLECTORS -->
+    <div id="s-collectors" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Advanced Collectors</div>
+        <div class="sec-sub">The <code>Collectors</code> utility class provides implementations for the <code>collect()</code> terminal operation. It handles grouping, joining, and complex data transformations.</div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — groupingBy and joining</span></div>
+        <pre><code><span class="t-k">class</span> <span class="t-n">Employee</span> { String dept; String name; <span class="t-k">int</span> salary; }
+<span class="t-c">// Assume a list of employees exists: List&lt;Employee&gt; roster;</span>
+
+<span class="t-c">// 1. Grouping by Department</span>
+Map&lt;String, List&lt;Employee&gt;&gt; byDept = roster.stream()
+    .collect(Collectors.groupingBy(Employee::getDept));
+
+<span class="t-c">// 2. Grouping by Dept, but only extracting the Names (Downstream Collector)</span>
+Map&lt;String, List&lt;String&gt;&gt; namesByDept = roster.stream()
+    .collect(Collectors.groupingBy(
+        Employee::getDept, 
+        Collectors.mapping(Employee::getName, Collectors.toList())
+    ));
+
+<span class="t-c">// 3. Joining Strings</span>
+String allNames = roster.stream()
+    .map(Employee::getName)
+    .collect(Collectors.joining(<span class="t-s">", "</span>)); <span class="t-c">// "Alice, Bob, Charlie"</span></code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('interview', document.querySelectorAll('.nav-item')[4])">Mega Interview Prep (25 Q&A) 🔥 →</button>
+    </div>
+
+    <!-- INTERVIEW MASTERCLASS -->
+    <div id="s-interview" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Streams Masterclass: 25 Interview Q&As 🔥</div>
+        <div class="sec-sub">Streams are incredibly expressive, but they have strict rules. Interviewers will test your understanding of state, parallelism, and terminal operations.</div>
+      </div>
+
+      <div class="iq-list">
+        
+        <div class="category-header">Basics & Fundamentals</div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">1</span>
+            <div class="iq-q">What is the difference between a Collection and a Stream?</div>
+            <div class="iq-badges"><span class="iq-cat">Basics</span><span class="iq-diff diff-e">Easy</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>A <strong>Collection</strong> is an in-memory data structure that holds all its elements. You can add, remove, and traverse it multiple times.</p>
+            <p>A <strong>Stream</strong> is not a data structure. It does not store elements. It is a pipeline of computations that pulls data from a source (like a Collection), transforms it, and produces a result. It can only be consumed <strong>once</strong>.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">2</span>
+            <div class="iq-q">What does it mean that Streams are "lazy"?</div>
+            <div class="iq-badges"><span class="iq-cat">Basics</span><span class="iq-diff diff-e">Easy</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>Intermediate operations (like <code>filter</code>, <code>map</code>) are <strong>lazy</strong>. When you call them, they don't process data immediately. They simply construct a pipeline recipe.</p>
+            <p>Data only begins flowing through the pipeline when a <strong>Terminal Operation</strong> (like <code>collect()</code> or <code>count()</code>) is invoked.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">3</span>
+            <div class="iq-q">Can a Stream be reused after a terminal operation?</div>
+            <div class="iq-badges"><span class="iq-cat">Basics</span><span class="iq-diff diff-e">Easy</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><strong>No.</strong> Streams are single-use. Once a terminal operation completes, the Stream is considered "closed" or "consumed". If you try to call another operation on the same stream reference, it throws an <code>IllegalStateException: stream has already been operated upon or closed</code>.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">4</span>
+            <div class="iq-q">How do you create an infinite Stream?</div>
+            <div class="iq-badges"><span class="iq-cat">Basics</span><span class="iq-diff diff-m">Med</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>You can create infinite streams using <code>Stream.generate(Supplier)</code> or <code>Stream.iterate(seed, UnaryOperator)</code>.</p>
+            <pre><code>Stream.iterate(1, n -> n + 1)
+      .limit(10) // Must use limit() to stop it!
+      .forEach(System.out::println);</code></pre>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">5</span>
+            <div class="iq-q">What are Primitive Streams and why do we need them?</div>
+            <div class="iq-badges"><span class="iq-cat">Basics</span><span class="iq-diff diff-m">Med</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><code>IntStream</code>, <code>LongStream</code>, and <code>DoubleStream</code> are specialized streams for primitive types.</p>
+            <p>Using <code>Stream&lt;Integer&gt;</code> incurs a heavy performance penalty due to "auto-boxing" (converting primitive <code>int</code> to Object <code>Integer</code> for every single element). Primitive streams avoid boxing, drastically improving performance and memory usage for heavy math operations.</p>
+          </div>
+        </div>
+
+        <div class="category-header">Intermediate Operations</div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">6</span>
+            <div class="iq-q">Difference between map() and flatMap()?</div>
+            <div class="iq-badges"><span class="iq-cat">Intermediate</span><span class="iq-diff diff-m">Med</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><code>map()</code> takes an element and transforms it into <strong>one</strong> new element (1-to-1 mapping). Resulting stream size is identical to the source.</p>
+            <p><code>flatMap()</code> takes an element and transforms it into a <strong>Stream of elements</strong>, and then "flattens" all those individual streams into one single giant Stream (1-to-N mapping). It's used to un-nest structures like <code>List&lt;List&lt;T&gt;&gt;</code> into <code>List&lt;T&gt;</code>.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">7</span>
+            <div class="iq-q">What is a "stateful" intermediate operation? Give examples.</div>
+            <div class="iq-badges"><span class="iq-cat">Intermediate</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>A stateful operation must retain information about prior elements to process the current element.</p>
+            <p><strong>Examples:</strong> <code>sorted()</code> (must buffer ALL elements to sort them before passing them downstream), <code>distinct()</code> (must remember previously seen elements), and <code>limit()</code>.</p>
+            <p>In parallel streams, stateful operations severely bottleneck performance because threads must coordinate state across the entire dataset.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">8</span>
+            <div class="iq-q">How does peek() work and when should you use it?</div>
+            <div class="iq-badges"><span class="iq-cat">Intermediate</span><span class="iq-diff diff-e">Easy</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><code>peek(Consumer)</code> allows you to perform an action on an element as it passes through the pipeline, <em>without modifying it</em>. It returns the exact same Stream.</p>
+            <p>It is meant strictly for <strong>debugging</strong> (e.g., logging elements before and after a <code>filter</code> to see what was dropped). It should NOT be used to mutate external state.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">9</span>
+            <div class="iq-q">Difference between limit() and skip()?</div>
+            <div class="iq-badges"><span class="iq-cat">Intermediate</span><span class="iq-diff diff-e">Easy</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><code>limit(n)</code> truncates the stream to be no longer than <code>n</code> elements. (It keeps the first <code>n</code> elements).</p>
+            <p><code>skip(n)</code> discards the first <code>n</code> elements of the stream and returns the rest. Used together, they act like pagination: <code>.skip(10).limit(5)</code> gets page 3 (size 5).</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">10</span>
+            <div class="iq-q">Is it safe to mutate an external variable inside a filter() or map()?</div>
+            <div class="iq-badges"><span class="iq-cat">Intermediate</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><strong>Absolutely not.</strong> This violates the functional programming principles Streams are built on (no side-effects). If you mutate an external <code>ArrayList</code> or counter inside a <code>map()</code>, and later convert to a parallel stream, multiple threads will corrupt that state, causing race conditions.</p>
+            <p>Always use <code>collect()</code> or <code>reduce()</code> to gather results cleanly.</p>
+          </div>
+        </div>
+
+        <div class="category-header">Terminal Operations & Reduction</div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">11</span>
+            <div class="iq-q">Difference between findFirst() and findAny()?</div>
+            <div class="iq-badges"><span class="iq-cat">Terminal</span><span class="iq-diff diff-m">Med</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><code>findFirst()</code> deterministically returns the first element in the stream (respecting encounter order).</p>
+            <p><code>findAny()</code> returns <em>any</em> element it finds. In sequential streams, it's usually the first one. However, in <strong>Parallel Streams</strong>, <code>findAny()</code> is much faster because it immediately returns whichever thread happens to find a matching element first, ignoring strict ordering.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">12</span>
+            <div class="iq-q">Why do terminal ops like findFirst() return an Optional?</div>
+            <div class="iq-badges"><span class="iq-cat">Terminal</span><span class="iq-diff diff-e">Easy</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>Because the stream might be <strong>empty</strong> (e.g., if a <code>filter()</code> dropped every single element). If <code>findFirst()</code> returned the raw object, it would have to return <code>null</code>, risking a <code>NullPointerException</code>. <code>Optional</code> forces the developer to handle the "empty" scenario explicitly.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">13</span>
+            <div class="iq-q">Difference between anyMatch(), allMatch(), and noneMatch()?</div>
+            <div class="iq-badges"><span class="iq-cat">Terminal</span><span class="iq-diff diff-e">Easy</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>All three take a <code>Predicate</code> and return a <code>boolean</code>. They all use <strong>short-circuiting</strong>.</p>
+            <p><code>anyMatch()</code>: True if at least ONE element matches. Stops evaluating immediately when true.</p>
+            <p><code>allMatch()</code>: True if EVERY element matches. Stops evaluating immediately when one returns false.</p>
+            <p><code>noneMatch()</code>: True if ZERO elements match.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">14</span>
+            <div class="iq-q">How does the reduce() method work?</div>
+            <div class="iq-badges"><span class="iq-cat">Terminal</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><code>reduce()</code> repeatedly combines elements to produce a single value. It takes an identity (starting value) and an accumulator (a <code>BinaryOperator</code>).</p>
+            <pre><code>int sum = numbers.stream().reduce(0, (a, b) -> a + b);</code></pre>
+            <p>It starts with 0. It takes 0 and the first element (e.g., 5), adds them. Takes the result (5) and the next element (3), adds them (8), and so on.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">15</span>
+            <div class="iq-q">Difference between reduce() and collect()?</div>
+            <div class="iq-badges"><span class="iq-cat">Terminal</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>Both are reduction operations, but they handle state differently.</p>
+            <p><code>reduce()</code> creates a <strong>new</strong> value every time it processes an element (immutable reduction). It's great for math (sums, mins).</p>
+            <p><code>collect()</code> mutates an <strong>existing</strong> stateful container (like a List or Map) as it processes elements (mutable reduction). If you tried to use <code>reduce()</code> to combine elements into an ArrayList, it would be terribly inefficient because you'd have to instantiate a brand new ArrayList for every single element processed.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">16</span>
+            <div class="iq-q">Explain the difference between forEach() and forEachOrdered().</div>
+            <div class="iq-badges"><span class="iq-cat">Terminal</span><span class="iq-diff diff-m">Med</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>In a sequential stream, they behave identically. In a <strong>Parallel Stream</strong>, <code>forEach()</code> will process elements in whatever order the threads finish them (randomly). <code>forEachOrdered()</code> forces the parallel threads to wait and process the final output strictly in the original encounter order of the source collection.</p>
+          </div>
+        </div>
+
+        <div class="category-header">Collectors Deep Dive</div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">17</span>
+            <div class="iq-q">What is groupingBy() and how does it differ from partitioningBy()?</div>
+            <div class="iq-badges"><span class="iq-cat">Collectors</span><span class="iq-diff diff-m">Med</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><code>groupingBy(Function)</code> creates a <code>Map&lt;K, List&lt;T&gt;&gt;</code> where the key is determined by the Function (e.g., grouping employees by Department String). Keys can be anything.</p>
+            <p><code>partitioningBy(Predicate)</code> is a specialized form of grouping that strictly takes a boolean condition. It creates a <code>Map&lt;Boolean, List&lt;T&gt;&gt;</code> with exactly two keys: <code>true</code> and <code>false</code> (e.g., partitioned by IsManager).</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">18</span>
+            <div class="iq-q">How can you join a list of strings with a comma using Streams?</div>
+            <div class="iq-badges"><span class="iq-cat">Collectors</span><span class="iq-diff diff-e">Easy</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <pre><code>String result = list.stream()
+    .collect(Collectors.joining(", "));</code></pre>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">19</span>
+            <div class="iq-q">Can you collect a Stream into a specific Map implementation, like TreeMap?</div>
+            <div class="iq-badges"><span class="iq-cat">Collectors</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>Yes. By default, <code>Collectors.toMap()</code> creates a HashMap. To specify the implementation, use the overloaded version that takes a <code>Supplier</code>:</p>
+            <pre><code>.collect(Collectors.toMap(
+    keyMapper, 
+    valueMapper, 
+    mergeFunction, 
+    TreeMap::new // Supplier
+));</code></pre>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">20</span>
+            <div class="iq-q">What is Collectors.toMap() and how do you handle key collisions?</div>
+            <div class="iq-badges"><span class="iq-cat">Collectors</span><span class="iq-diff diff-m">Med</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>It converts a stream into a Map. If two elements map to the exact same Key, it throws an <code>IllegalStateException: Duplicate key</code>.</p>
+            <p>To fix this, provide a third argument (Merge Function) that dictates which value wins when a collision occurs:</p>
+            <pre><code>.collect(Collectors.toMap(
+    Item::getId, 
+    Item::getName, 
+    (existingVal, newVal) -> existingVal // Keep old value on collision
+));</code></pre>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">21</span>
+            <div class="iq-q">How do you map objects to another type inside a groupingBy collector?</div>
+            <div class="iq-badges"><span class="iq-cat">Collectors</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>Use a downstream collector: <code>Collectors.mapping()</code>.</p>
+            <p>By default, <code>groupingBy(Emp::getDept)</code> results in <code>Map&lt;String, List&lt;Employee&gt;&gt;</code>. If you only want a list of their names, you pass a mapping collector as the second argument to groupingBy:</p>
+            <pre><code>groupingBy(
+    Emp::getDept, 
+    Collectors.mapping(Emp::getName, Collectors.toList())
+)</code></pre>
+          </div>
+        </div>
+
+        <div class="category-header">Parallel Streams & Advanced Performance</div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">22</span>
+            <div class="iq-q">What is a Parallel Stream and how does it work internally?</div>
+            <div class="iq-badges"><span class="iq-cat">Parallelism</span><span class="iq-diff diff-m">Med</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>A Parallel Stream splits the data source into chunks and processes them simultaneously across multiple CPU cores using the JVM's common <code>ForkJoinPool</code>.</p>
+            <p>You create it by calling <code>.parallelStream()</code> on a collection instead of <code>.stream()</code>.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">23</span>
+            <div class="iq-q">When should you NOT use a Parallel Stream?</div>
+            <div class="iq-badges"><span class="iq-cat">Parallelism</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>1. <strong>Small datasets:</strong> The overhead of splitting data and managing threads takes longer than just processing a few hundred items sequentially.</p>
+            <p>2. <strong>I/O Bound tasks:</strong> Parallel streams use the shared JVM ForkJoinPool (default size = CPU cores). If you make HTTP calls or DB queries inside a parallel stream, threads will block waiting for responses, starving the entire JVM of threads.</p>
+            <p>3. <strong>Stateful pipelines:</strong> If you use <code>sorted()</code> or <code>limit()</code>, the threads must synchronize constantly, defeating the purpose of parallelism.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">24</span>
+            <div class="iq-q">How do you control the thread pool size for Parallel Streams?</div>
+            <div class="iq-badges"><span class="iq-cat">Parallelism</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>By default, all parallel streams across the entire JVM share the <strong>Common ForkJoinPool</strong>. You cannot configure the pool size per stream.</p>
+            <p>You can change the global pool size via JVM flag: <code>-Djava.util.concurrent.ForkJoinPool.common.parallelism=10</code>. However, doing so affects the entire application. If you need a custom thread pool for a specific task, you should use an explicit <code>ExecutorService</code> or <code>CompletableFuture</code> instead of Parallel Streams.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">25</span>
+            <div class="iq-q">What is the performance difference between LinkedList.stream() and ArrayList.stream()?</div>
+            <div class="iq-badges"><span class="iq-cat">Performance</span><span class="iq-diff diff-h">Hard</span></div>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><code>ArrayList</code> processes significantly faster, especially for Parallel Streams. Parallelism relies on the <code>Spliterator</code> (Split Iterator) splitting the data source into even chunks.</p>
+            <p>An <code>ArrayList</code> can be split perfectly in half instantly because it's index-based (O(1)). A <code>LinkedList</code> is terrible for splitting—it has to iterate node-by-node (O(N)) to find the midpoint, causing severe performance degradation in parallel processing.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+function nav(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  
+  const target = document.getElementById('s-' + id);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function topic(prefix, idx, btn) {
+  const section = btn.closest('.section');
+  section.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+  section.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+  
+  const target = document.getElementById(prefix + idx);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+function tog(el) {
+  el.classList.toggle('open');
+}
+</script>
+
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+  </body>
+</html>

@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 15 — CI/CD Pipelines on AWS</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #161b27;
+  --surface2: #1e2535;
+  --border: #2a3347;
+  --border2: #3a4a63;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --accent: #38bdf8;
+  --accent-dim: #0c4a6e;
+  --green: #4ade80;
+  --green-dim: #14532d;
+  --amber: #fbbf24;
+  --amber-dim: #451a03;
+  --coral: #f87171;
+  --coral-dim: #450a0a;
+  --purple: #a78bfa;
+  --purple-dim: #2e1065;
+  --radius: 10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;min-height:100vh}
+
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.day-badge{background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.5px}
+.header-title{font-size:15px;font-weight:600}
+.header-sub{font-size:12px;color:var(--text3);margin-left:auto}
+
+.progress-row{display:flex;align-items:center;gap:10px;padding:1rem 1.5rem .75rem}
+.progress-label{font-size:11px;color:var(--text3);white-space:nowrap}
+.progress-bar{flex:1;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#0ea5e9,#6366f1);border-radius:4px;width:50%}
+
+.layout{display:flex;min-height:calc(100vh - 100px)}
+
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:1.25rem 0;position:sticky;top:100px;height:calc(100vh - 100px);overflow-y:auto}
+.sidebar-section{padding:0 .75rem;margin-bottom:1.25rem}
+.sidebar-label{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase;padding:0 .5rem;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--text2);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .15s;font-family:inherit}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.nav-item.active .nav-dot{background:var(--accent)}
+
+.main{flex:1;padding:2rem;max-width:780px;overflow-x:hidden}
+.section{display:none}.section.active{display:block}
+
+.topic-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:1rem}
+.ttab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border:1px solid transparent;background:none;font-family:inherit;transition:all .15s}
+.ttab:hover{color:var(--text2);border-color:var(--border2)}
+.ttab.active{background:var(--surface2);color:var(--text);border-color:var(--border2);font-weight:600}
+.topic{display:none}.topic.active{display:block}
+
+.sec-header{margin-bottom:1.5rem}
+.sec-title{font-size:22px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.sec-sub{font-size:13px;color:var(--text3);line-height:1.6}
+.sec-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sec-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);color:var(--text3)}
+
+.prose{font-size:13.5px;color:var(--text2);line-height:1.8}
+.prose p{margin-bottom:1rem}.prose p:last-child{margin-bottom:0}
+.prose strong{color:var(--text);font-weight:600}
+
+.callout{border-radius:var(--radius);padding:1rem 1.25rem;margin:1rem 0;font-size:13px;line-height:1.75}
+.callout strong{font-weight:700;display:block;margin-bottom:4px;font-size:11px;letter-spacing:.5px;text-transform:uppercase}
+.callout.how{background:var(--surface2);border-left:3px solid var(--accent);color:var(--text2)}
+.callout.how strong{color:var(--accent)}
+.callout.fail{background:#1a0f0f;border-left:3px solid var(--coral);color:#fca5a5}
+.callout.fail strong{color:var(--coral)}
+.callout.prod{background:#0a1f14;border-left:3px solid var(--green);color:#86efac}
+.callout.prod strong{color:var(--green)}
+.callout.warn{background:#1a1200;border-left:3px solid var(--amber);color:#fde68a}
+.callout.warn strong{color:var(--amber)}
+
+code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:11.5px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;color:var(--accent)}
+
+.code-wrap{margin:1rem 0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border2)}
+.code-header{background:var(--surface2);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2)}
+.code-lang{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+pre{background:#090d14;padding:1rem 1.25rem;overflow-x:auto;margin:0}
+pre code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;background:none;border:none;padding:0;color:#abb2bf;line-height:1.7;display:block;white-space:pre}
+.t-k{color:#c678dd}.t-s{color:#98c379}.t-c{color:#5c6370;font-style:italic}.t-n{color:#e5c07b}.t-f{color:#61afef}.t-p{color:#56b6c2}.t-v{color:#e06c75}
+
+.compare{display:grid;gap:10px;margin:1rem 0}
+.compare.two{grid-template-columns:1fr 1fr}
+.compare.three{grid-template-columns:1fr 1fr 1fr}
+.compare-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem}
+.compare-card.accent{border-color:var(--accent);background:#0c1e2e}
+.compare-card.accent .compare-title{color:var(--accent)}
+.compare-title{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.compare-body{font-size:12px;color:var(--text2);line-height:1.65}
+.compare-body strong{color:var(--text);font-weight:600}
+
+/* pipeline flow */
+.pipeline{display:flex;align-items:center;gap:0;margin:1rem 0;flex-wrap:wrap;gap:4px}
+.pipe-stage{background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:600;color:var(--text2);text-align:center;min-width:90px}
+.pipe-stage.accent{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.pipe-stage.green{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.pipe-stage.amber{background:var(--amber-dim);border-color:var(--amber);color:var(--amber)}
+.pipe-stage.coral{background:var(--coral-dim);border-color:var(--coral);color:var(--coral)}
+.pipe-arrow{color:var(--text3);font-size:16px;padding:0 2px}
+.pipe-label{font-size:10px;color:var(--text3);text-align:center;margin-top:3px}
+
+.steps{display:flex;flex-direction:column;gap:0;margin:1rem 0}
+.step{display:flex;gap:0}
+.step-line{display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--surface2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3);flex-shrink:0;cursor:pointer}
+.step.done .step-num{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.step-connector{width:1px;background:var(--border);flex:1;min-height:12px}
+.step-body{padding:0 0 1.25rem 12px;flex:1}
+.step-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.step-text{font-size:13px;color:var(--text2);line-height:1.7}
+.step-cmd{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#090d14;border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin-top:8px;color:#abb2bf;white-space:pre-wrap;word-break:break-all;line-height:1.65;display:block}
+.step-note{font-size:11px;color:var(--text3);margin-top:6px;font-style:italic;line-height:1.5}
+.step-btn{margin-top:8px;font-size:12px;padding:5px 14px;border-radius:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text3);cursor:pointer;font-family:inherit;transition:all .15s}
+.step-btn:hover{border-color:var(--green);color:var(--green)}
+.step.done .step-btn{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .15s}
+.iq:hover{border-color:var(--border2)}.iq.open{border-color:var(--border2)}
+.iq-head{display:flex;align-items:flex-start;gap:10px;padding:12px 16px}
+.iq-num{font-size:10px;font-weight:700;color:var(--text3);min-width:20px;padding-top:2px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45;color:var(--text)}
+.iq-diff{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;flex-shrink:0}
+.diff-e{background:var(--green-dim);color:var(--green)}
+.diff-m{background:var(--amber-dim);color:var(--amber)}
+.diff-h{background:var(--coral-dim);color:var(--coral)}
+.iq-arrow{font-size:12px;color:var(--text3);transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-arrow{transform:rotate(180deg)}
+.iq-body{display:none;padding:1rem 1.25rem;border-top:1px solid var(--border);background:var(--surface2)}
+.iq.open .iq-body{display:block}
+.iq-body p{font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:10px}
+.iq-body p:last-child{margin-bottom:0}
+.iq-body strong{color:var(--text);font-weight:600}
+.iq-tip{background:var(--green-dim);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--green);margin-top:10px;line-height:1.6}
+
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:1.5rem}
+.cs-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;transition:border-color .15s}
+.cs-card:hover{border-color:var(--border2)}
+.cs-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px}
+.cs-desc{font-size:11.5px;color:var(--text3);line-height:1.55}
+
+.rules{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem 1.25rem}
+.rule{display:flex;gap:10px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.5}
+.rule:last-child{border-bottom:none}
+.rule-n{font-size:11px;font-weight:700;color:var(--accent);min-width:18px;padding-top:1px}
+
+.divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
+.next-btn{width:100%;margin-top:1.5rem;padding:12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.next-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+@media(max-width:680px){.sidebar{display:none}.main{padding:1.25rem;max-width:100%}.compare.two,.compare.three{grid-template-columns:1fr}}
+</style>
+
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="header">
+  <span class="day-badge">Day 15 / 30</span>
+  <span class="header-title">CI/CD Pipelines on AWS</span>
+  <span class="header-sub">Phase 4 · DevOps & Monitoring</span>
+</div>
+
+<div class="progress-row">
+  <span class="progress-label">Phase 4</span>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <span class="progress-label">Day 15 of 30</span>
+</div>
+
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Concepts</div>
+    <button class="nav-item active" onclick="nav('overview',this)"><span class="nav-dot"></span>Pipeline overview</button>
+    <button class="nav-item" onclick="nav('codepipeline',this)"><span class="nav-dot"></span>CodePipeline</button>
+    <button class="nav-item" onclick="nav('codebuild',this)"><span class="nav-dot"></span>CodeBuild</button>
+    <button class="nav-item" onclick="nav('codedeploy',this)"><span class="nav-dot"></span>CodeDeploy</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Strategies</div>
+    <button class="nav-item" onclick="nav('deploystrategies',this)"><span class="nav-dot"></span>Deployment strategies</button>
+    <button class="nav-item" onclick="nav('rollback',this)"><span class="nav-dot"></span>Rollback patterns</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Real-World</div>
+    <button class="nav-item" onclick="nav('bitbucket',this)"><span class="nav-dot"></span>Bitbucket Pipelines</button>
+    <button class="nav-item" onclick="nav('oidc',this)"><span class="nav-dot"></span>OIDC & secrets</button>
+    <button class="nav-item" onclick="nav('containers',this)"><span class="nav-dot"></span>Container pipeline</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Practice</div>
+    <button class="nav-item" onclick="nav('interview',this)"><span class="nav-dot"></span>Interview prep</button>
+    <button class="nav-item" onclick="nav('lab',this)"><span class="nav-dot"></span>Lab</button>
+    <button class="nav-item" onclick="nav('cheatsheet',this)"><span class="nav-dot"></span>Cheatsheet</button>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- ══════════════════════════════════════════ -->
+<!-- OVERVIEW -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-overview" class="section active">
+  <div class="sec-header">
+    <div class="sec-title">CI/CD on AWS — what we're building and why</div>
+    <div class="sec-sub">A CI/CD pipeline is the automated path from a git commit to a running production deployment. Without it, every release is a manual, error-prone, anxiety-inducing event. With it, deployments are boring — which is exactly what production should be.</div>
+    <div class="sec-tags">
+      <span class="sec-tag">CodePipeline</span>
+      <span class="sec-tag">CodeBuild</span>
+      <span class="sec-tag">CodeDeploy</span>
+      <span class="sec-tag">Bitbucket OIDC</span>
+    </div>
+  </div>
+
+  <div class="prose">
+    <p>The complete pipeline for your Spring Boot application on AWS — from code push to production — involves four stages. Each stage has failure modes, security requirements, and AWS service integration points that need to be understood independently before the full pipeline makes sense.</p>
+  </div>
+
+  <div style="background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border2);padding:1.25rem;margin:1rem 0">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1rem">The complete Spring Boot deployment pipeline</div>
+
+    <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
+      <div style="text-align:center">
+        <div class="pipe-stage accent">Source</div>
+        <div class="pipe-label">Bitbucket / CodeCommit</div>
+      </div>
+      <div class="pipe-arrow" style="margin-top:10px">→</div>
+      <div style="text-align:center">
+        <div class="pipe-stage green">Build</div>
+        <div class="pipe-label">CodeBuild / Bitbucket CI</div>
+      </div>
+      <div class="pipe-arrow" style="margin-top:10px">→</div>
+      <div style="text-align:center">
+        <div class="pipe-stage amber">Test</div>
+        <div class="pipe-label">Unit + Integration</div>
+      </div>
+      <div class="pipe-arrow" style="margin-top:10px">→</div>
+      <div style="text-align:center">
+        <div class="pipe-stage" style="background:var(--purple-dim);border-color:var(--purple);color:var(--purple)">Package</div>
+        <div class="pipe-label">JAR → ECR image</div>
+      </div>
+      <div class="pipe-arrow" style="margin-top:10px">→</div>
+      <div style="text-align:center">
+        <div class="pipe-stage coral">Deploy</div>
+        <div class="pipe-label">CodeDeploy / ECS</div>
+      </div>
+      <div class="pipe-arrow" style="margin-top:10px">→</div>
+      <div style="text-align:center">
+        <div class="pipe-stage green">Validate</div>
+        <div class="pipe-label">Health + Error rate</div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--text3);line-height:1.7">
+      Each stage is a gate. A failure in any stage stops the pipeline and leaves production untouched. The earlier a failure is caught, the cheaper it is to fix. A test failure in the Build stage costs seconds. A failure caught in production validation after a bad deploy costs real users real downtime.
+    </div>
+  </div>
+
+  <div class="compare two">
+    <div class="compare-card">
+      <div class="compare-title">AWS-native pipeline (CodePipeline)</div>
+      <div class="compare-body">
+        Built entirely from AWS services. CodePipeline orchestrates, CodeBuild compiles and tests, CodeDeploy pushes to EC2/ECS.<br><br>
+        <strong>Best for:</strong> Teams already using AWS-managed source (CodeCommit) or want full AWS integration (IAM, CloudWatch, EventBridge native events).<br><br>
+        <strong>Cost:</strong> $1/active pipeline/month + CodeBuild minute charges (~$0.005/min for default environment).
+      </div>
+    </div>
+    <div class="compare-card accent">
+      <div class="compare-title">Bitbucket Pipelines → AWS (your stack)</div>
+      <div class="compare-body">
+        Bitbucket handles orchestration and build. AWS OIDC provides temporary credentials. Direct SDK/CLI calls deploy to ECS, EC2 ASG, Lambda.<br><br>
+        <strong>Best for:</strong> Teams already on Bitbucket (like your Deloitte project). Less AWS vendor lock-in. Familiar YAML-based config.<br><br>
+        <strong>Cost:</strong> Bitbucket minutes (~50 free/month, then $10/month for more) + zero AWS pipeline cost.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout how">
+    <strong>Why this day matters for your JP Morgan project</strong>
+    At Deloitte, your code goes through a CI/CD pipeline before reaching JP Morgan's environment. Understanding CodePipeline and CodeDeploy explains what happens in that pipeline — how builds are triggered, where artifacts are stored, how deployments are gated, and why rollbacks sometimes don't happen automatically when they should. When a deployment breaks production and the pipeline doesn't auto-rollback, you need to know where to look.
+  </div>
+
+  <button class="next-btn" onclick="nav('codepipeline',null)">CodePipeline internals →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CODEPIPELINE -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-codepipeline" class="section">
+  <div class="sec-header">
+    <div class="sec-title">CodePipeline — the orchestrator</div>
+    <div class="sec-sub">CodePipeline is the workflow engine. It doesn't build, test, or deploy — it coordinates the services that do. Understanding its stage/action model, artifact passing, and approval gates explains every CodePipeline behaviour you'll encounter.</div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('cp',0,this)">Architecture</button>
+    <button class="ttab" onclick="topic('cp',1,this)">Stages & actions</button>
+    <button class="ttab" onclick="topic('cp',2,this)">Artifacts</button>
+    <button class="ttab" onclick="topic('cp',3,this)">Approval gates</button>
+  </div>
+
+  <div id="cp0" class="topic active">
+    <div class="prose">
+      <p>A CodePipeline pipeline is a series of <strong>stages</strong>. Each stage contains one or more <strong>actions</strong>. Stages run sequentially. Within a stage, actions can run in parallel (same run order number) or sequentially (different run order numbers). A stage is complete only when all its actions succeed.</p>
+      <p>CodePipeline is a <strong>state machine</strong>. It doesn't poll for changes — it responds to events. A push to the main branch in CodeCommit (or an S3 object upload, or an EventBridge rule) triggers a pipeline execution. The execution moves through stages; each action invokes an AWS service (CodeBuild, CodeDeploy, Lambda, ECS) or waits for a human approval.</p>
+    </div>
+
+    <div class="callout how">
+      <strong>How CodePipeline knows when source code changes</strong>
+      For CodeCommit sources: EventBridge detects the commit and triggers the pipeline automatically. For S3 sources: an S3 event notification triggers the pipeline when the specified object changes. For GitHub/Bitbucket connections: AWS CodeStar Connections creates a webhook in the external source provider. When you push to the configured branch, the webhook fires EventBridge, which triggers the pipeline. The connection must be manually authorised in the AWS console before webhooks work — a common first-time setup step that engineers miss.
+    </div>
+
+    <div class="callout fail">
+      <strong>The pipeline that runs on every commit, including hotfix branches</strong>
+      By default, a CodePipeline source stage triggers on the configured branch. If you configure it on "main", only merges to main trigger the pipeline. But if you accidentally configure it on all branches (using a wildcard trigger pattern), every feature branch push triggers a production deployment attempt. Lock the trigger: configure the source action to trigger only on the specific production branch. Use separate pipelines (or pipeline conditions) for different environments — one pipeline for staging (triggers on develop branch), one for production (triggers on main or version tags only).
+    </div>
+  </div>
+
+  <div id="cp1" class="topic">
+    <div class="prose">
+      <p>Each action in a stage has a <strong>provider</strong> (which AWS service executes it), an <strong>action category</strong> (Source, Build, Test, Deploy, Approval, Invoke), and an optional <strong>run order</strong> (determines parallel vs sequential execution within a stage).</p>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">Source actions</div>
+        <div class="compare-body">
+          Provider: CodeCommit, S3, GitHub, Bitbucket (via CodeStar Connections), ECR.<br><br>
+          Downloads the source code or artifact into a pipeline artifact for downstream stages. The artifact is stored in a CodePipeline-managed S3 bucket.<br><br>
+          <strong>ECR source:</strong> Triggers when a new image is pushed to a specified ECR repository — useful for pipelines that deploy pre-built container images.
+        </div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-title">Build actions</div>
+        <div class="compare-body">
+          Provider: CodeBuild, Jenkins.<br><br>
+          Receives the source artifact, runs commands (compile, test, package), produces output artifacts. The buildspec.yml file (committed in the repo or defined inline) tells CodeBuild what to run.<br><br>
+          Multiple build actions in the same stage run in parallel — useful for running unit tests and integration tests simultaneously to reduce total pipeline time.
+        </div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-title">Deploy actions</div>
+        <div class="compare-body">
+          Provider: CodeDeploy, ECS, CloudFormation, Elastic Beanstalk, S3.<br><br>
+          Takes the build artifact and deploys it to the target environment. For ECS: updates the task definition and triggers a service update. For EC2: CodeDeploy coordinates the rolling deployment across instances.<br><br>
+          Multiple deploy actions with different run orders: deploy to staging (run order 1), then deploy to production (run order 2) — sequential environment promotion.
+        </div>
+      </div>
+      <div class="compare-card accent">
+        <div class="compare-title">Approval actions</div>
+        <div class="compare-body">
+          No provider — just a manual gate. The pipeline pauses until someone approves or rejects in the console, via CLI, or via a custom Lambda.<br><br>
+          <strong>Use for:</strong> Production deployments that require human sign-off. Pre-deployment validation window. Compliance checkpoints in regulated environments (your JP Morgan project).<br><br>
+          Auto-reject after configurable timeout (1 day default).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cp2" class="topic">
+    <div class="prose">
+      <p>Artifacts are the outputs of one stage that become the inputs of the next. CodePipeline stores artifacts in an S3 bucket it creates automatically (or one you specify). Artifacts are versioned — each pipeline execution has its own artifact set, identified by the execution ID.</p>
+      <p><strong>Source artifact:</strong> The source stage downloads your code and packages it as a ZIP file. This ZIP is the artifact passed to the Build stage. The ZIP contains your entire repository content.</p>
+      <p><strong>Build artifact:</strong> The Build stage (CodeBuild) compiles your code, runs tests, packages the JAR or Docker image, and uploads an output artifact (the JAR, a Docker tag, or a deployment specification) to the S3 artifact bucket.</p>
+    </div>
+
+    <div class="callout how">
+      <strong>Why artifacts are stored in S3, not passed directly between stages</strong>
+      CodePipeline stages can run in different accounts or regions. Storing artifacts in S3 with cross-account access policies allows the pipeline to span account boundaries — a source in a developer account, a build in a build account, a deployment into a production account. Even for single-account pipelines, S3-based artifact storage provides: immutability (the build artifact for execution #47 is always available for audit or re-deployment), parallelism (multiple stages can read the same artifact simultaneously), and durability (pipeline failure doesn't lose the artifact). The artifact bucket has a KMS encryption key — ensure your CodeBuild role has kms:GenerateDataKey and kms:Decrypt on that key, or artifact operations fail silently.
+    </div>
+
+    <div class="callout fail">
+      <strong>The artifact that's too large and silently fails</strong>
+      CodePipeline has a 3GB limit per artifact. A build artifact containing a fat JAR (200MB) plus all test reports, coverage reports, and generated documentation can exceed this if you're not careful. The build stage completes successfully but the artifact upload to S3 fails silently — downstream stages receive an empty or partial artifact. The deploy stage then fails with a confusing error about missing files. Always inspect what you're actually packaging as the output artifact. In your buildspec.yml, the <code>artifacts: files:</code> section controls what's included. List exactly what downstream stages need — not "**/*" which includes everything.
+    </div>
+  </div>
+
+  <div id="cp3" class="topic">
+    <div class="prose">
+      <p>Approval actions are the human-in-the-loop gates in a pipeline. They're particularly important in regulated environments like financial services where deployment to production requires sign-off from a release manager or security reviewer.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">CLI — approve or reject a pipeline action</span></div>
+      <pre><code><span class="t-c"># The pipeline pauses at the approval action and sends an SNS notification</span>
+<span class="t-c"># The notification contains: pipeline name, stage name, action name, token</span>
+
+<span class="t-c"># Approve: pipeline continues to the next stage</span>
+aws codepipeline put-approval-result \
+  --pipeline-name getwork-pipeline \
+  --stage-name production-deploy \
+  --action-name manual-approval \
+  --result summary="Reviewed deployment plan - approved" \
+  --token "YOUR_APPROVAL_TOKEN" \   <span class="t-c"># Token from the SNS notification</span>
+  --region ap-south-1
+
+<span class="t-c"># Reject: pipeline stops, production is not touched</span>
+aws codepipeline put-approval-result \
+  --pipeline-name getwork-pipeline \
+  --stage-name production-deploy \
+  --action-name manual-approval \
+  --result summary="Regression detected in staging - rejecting" \
+  --token "YOUR_APPROVAL_TOKEN" \
+  --status Rejected \
+  --region ap-south-1</code></pre>
+    </div>
+
+    <div class="callout prod">
+      <strong>Automating approval with Lambda — the right way for most teams</strong>
+      Pure manual approvals slow down deployments and create bottlenecks when the release manager is unavailable. A better pattern: the approval action sends an SNS notification to a Lambda function. The Lambda runs automated validation (smoke tests against staging, error rate check in CloudWatch, security scan results). If all checks pass, Lambda auto-approves via the CodePipeline API. If any check fails, Lambda rejects and sends a detailed alert to Slack. Humans only intervene when the automated checks fail — turning approval into exception-based oversight rather than routine gate-keeping.
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('codebuild',null)">CodeBuild — the build environment →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CODEBUILD -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-codebuild" class="section">
+  <div class="sec-header">
+    <div class="sec-title">CodeBuild — running your build in the cloud</div>
+    <div class="sec-sub">CodeBuild is a managed build service that compiles your code, runs tests, and produces artifacts — in a fresh, isolated environment for every build. Understanding the buildspec, environment configuration, caching, and the VPC integration explains every build failure you'll encounter.</div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('cb',0,this)">Buildspec deep</button>
+    <button class="ttab" onclick="topic('cb',1,this)">Build environment</button>
+    <button class="ttab" onclick="topic('cb',2,this)">Caching strategy</button>
+    <button class="ttab" onclick="topic('cb',3,this)">VPC access</button>
+  </div>
+
+  <div id="cb0" class="topic active">
+    <div class="prose">
+      <p>The buildspec.yml file is the complete specification for what CodeBuild does during a build. It is committed into the repository and defines phases, environment variables, artifacts, and caching. Every phase runs sequentially; a non-zero exit code in any phase fails the build.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">buildspec.yml — production Spring Boot pipeline</span></div>
+      <pre><code><span class="t-p">version</span>: <span class="t-n">0.2</span>
+
+<span class="t-p">env</span>:
+  <span class="t-p">variables</span>:
+    <span class="t-s">JAVA_HOME</span>: <span class="t-s">"/usr/lib/jvm/java-17-amazon-corretto"</span>
+    <span class="t-s">MAVEN_OPTS</span>: <span class="t-s">"-Xmx2g -XX:+TieredCompilation -XX:TieredStopAtLevel=1"</span>
+  <span class="t-p">parameter-store</span>:           <span class="t-c"># Fetch from SSM at build start (not secrets)</span>
+    <span class="t-s">APP_BUCKET</span>: <span class="t-s">"/getwork/prod/app-bucket"</span>
+    <span class="t-s">ECR_REPO</span>: <span class="t-s">"/getwork/prod/ecr-repo"</span>
+  <span class="t-p">secrets-manager</span>:           <span class="t-c"># Fetch secrets — never echo these to logs</span>
+    <span class="t-s">SONAR_TOKEN</span>: <span class="t-s">"/getwork/build/sonar-token:value"</span>
+
+<span class="t-p">phases</span>:
+  <span class="t-p">install</span>:
+    <span class="t-p">runtime-versions</span>:
+      <span class="t-s">java</span>: <span class="t-s">corretto17</span>
+    <span class="t-p">commands</span>:
+      - <span class="t-s">echo "Build started on $(date)"</span>
+      - <span class="t-s">java -version</span>
+      - <span class="t-s">mvn -version</span>
+
+  <span class="t-p">pre_build</span>:
+    <span class="t-p">commands</span>:
+      <span class="t-c"># Authenticate to ECR before build (needed for Docker layer cache pulls)</span>
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION |
+          docker login --username AWS --password-stdin $ECR_REPO
+      <span class="t-c"># Validate IAM policies if any changed</span>
+      - |
+        for f in $(git diff --name-only HEAD~1 | grep '.json$' | grep 'policy'); do
+          echo "Validating policy: $f"
+          aws accessanalyzer validate-policy \
+            --policy-document file://$f \
+            --policy-type IDENTITY_POLICY \
+            --query 'findings[?findingType==`ERROR`]' \
+            --output text | grep -q . && exit 1 || true
+        done
+
+  <span class="t-p">build</span>:
+    <span class="t-p">commands</span>:
+      <span class="t-c"># Run tests with coverage</span>
+      - mvn test jacoco:report -B
+      <span class="t-c"># Fail if coverage below 70%</span>
+      - mvn jacoco:check -B
+      <span class="t-c"># Package (skip tests — already ran above)</span>
+      - mvn package -DskipTests -B
+      <span class="t-c"># Build Docker image with build number tag</span>
+      - IMAGE_TAG=$CODEBUILD_BUILD_NUMBER
+      - docker build -t $ECR_REPO:build-$IMAGE_TAG -t $ECR_REPO:latest .
+      <span class="t-c"># Run container security scan</span>
+      - docker push $ECR_REPO:build-$IMAGE_TAG
+      <span class="t-c"># Wait for scan and fail on CRITICAL CVEs</span>
+      - |
+        for i in $(seq 1 20); do
+          STATUS=$(aws ecr describe-image-scan-findings \
+            --repository-name getwork-api \
+            --image-id imageTag=build-$IMAGE_TAG \
+            --query 'imageScanStatus.status' --output text 2>/dev/null)
+          [ "$STATUS" = "COMPLETE" ] && break; sleep 10
+        done
+        CRITICAL=$(aws ecr describe-image-scan-findings \
+          --repository-name getwork-api \
+          --image-id imageTag=build-$IMAGE_TAG \
+          --query 'imageScanFindings.findingSeverityCounts.CRITICAL // `0`' \
+          --output text)
+        [ "$CRITICAL" -gt 0 ] && echo "CRITICAL CVEs found: $CRITICAL" && exit 1
+
+  <span class="t-p">post_build</span>:
+    <span class="t-p">commands</span>:
+      <span class="t-c"># Tag as latest only after passing all checks</span>
+      - docker push $ECR_REPO:latest
+      <span class="t-c"># Write the image tag for downstream deployment stage</span>
+      - printf '{"imageTag":"%s"}' $IMAGE_TAG > imagedefinitions.json
+      - echo "Build $IMAGE_TAG completed successfully"
+
+<span class="t-p">artifacts</span>:
+  <span class="t-p">files</span>:
+    - imagedefinitions.json    <span class="t-c"># Tells ECS deploy which image to deploy</span>
+    - appspec.yml             <span class="t-c"># CodeDeploy deployment specification</span>
+    - scripts/**/*            <span class="t-c"># Lifecycle hook scripts</span>
+  <span class="t-p">discard-paths</span>: no
+
+<span class="t-p">cache</span>:
+  <span class="t-p">paths</span>:
+    - <span class="t-s">'/root/.m2/**/*'</span>    <span class="t-c"># Maven dependency cache</span></code></pre>
+    </div>
+
+    <div class="callout fail">
+      <strong>The build that prints your secrets to the build log</strong>
+      Any <code>echo</code> or <code>set -x</code> (xtrace) in a phase that uses environment variables can print secret values to the build log. CodeBuild build logs are stored in CloudWatch Logs and are visible to anyone with codebuild:GetBuildLog or cloudwatch:GetLogEvents. Never echo environment variables set from secrets-manager or parameter-store. Avoid <code>set -x</code> in phases that execute commands using secrets. CloudWatch Logs can also be disabled per-build project to prevent log storage of sensitive build output — consider this for builds that handle credentials.
+    </div>
+  </div>
+
+  <div id="cb1" class="topic">
+    <div class="prose">
+      <p>Each CodeBuild build runs in a fresh, isolated Docker container. The environment is defined by the <strong>compute type</strong> (CPU and memory) and the <strong>build image</strong> (the Docker image used as the build environment).</p>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">AWS-managed images</div>
+        <div class="compare-body">
+          Pre-built by AWS with common tools. Available for Amazon Linux 2023, Ubuntu.<br><br>
+          <code>aws/codebuild/amazonlinux2-x86_64-standard:5.0</code> — latest AL2023 with Java 17, Docker, Node 18, Python 3.11, Go 1.21.<br><br>
+          Use <code>runtime-versions</code> in buildspec to select specific tool versions within the image. No need to <code>apt-get install</code> common tools.
+        </div>
+      </div>
+      <div class="compare-card accent">
+        <div class="compare-title">Custom build images</div>
+        <div class="compare-body">
+          Your own Docker image from ECR. Used when: proprietary tools, specific tool versions not in managed images, faster builds via pre-installed dependencies.<br><br>
+          A custom image with Maven dependencies pre-loaded cuts build time by 2-3 minutes for large projects — the dependency download phase is eliminated because the image already contains them.<br><br>
+          Must be in ECR (private) or Docker Hub (public). CodeBuild pulls the image before the build starts.
+        </div>
+      </div>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">BUILD_GENERAL1_SMALL</div>
+        <div class="compare-body">3 GB RAM, 2 vCPUs. $0.005/min. Sufficient for unit tests on small Spring Boot projects.</div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-title">BUILD_GENERAL1_MEDIUM</div>
+        <div class="compare-body">7 GB RAM, 4 vCPUs. $0.010/min. Recommended for most Spring Boot builds with Docker. Enough RAM to run the JVM, Maven, and Docker simultaneously.</div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <strong>Docker in Docker — why CodeBuild needs privileged mode</strong>
+      Building Docker images inside a CodeBuild environment (Docker in Docker) requires the CodeBuild project to run in privileged mode. This gives the build container access to the host Docker daemon. Privileged mode is a security consideration — the build container has elevated access. Mitigate by: using AWS-managed images (not arbitrary Docker Hub images) for builds, restricting the CodeBuild service role to exactly the permissions it needs, enabling CloudTrail logging for CodeBuild API calls.
+    </div>
+  </div>
+
+  <div id="cb2" class="topic">
+    <div class="prose">
+      <p>By default, CodeBuild starts with a clean environment every build — Maven downloads all 200+ dependencies from the internet each time. For a large Spring Boot project, this can take 3-4 minutes per build. Caching stores the Maven local repository between builds, reducing download time to near-zero on cache hits.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">CodeBuild — cache configuration options</span></div>
+      <pre><code><span class="t-c"># Option 1: S3 cache (buildspec.yml cache section)</span>
+<span class="t-c"># CodeBuild uploads /root/.m2 to S3 after build, downloads before next build</span>
+<span class="t-p">cache</span>:
+  <span class="t-p">paths</span>:
+    - <span class="t-s">'/root/.m2/**/*'</span>         <span class="t-c"># Maven dependencies</span>
+    - <span class="t-s">'/root/.gradle/caches/**/*'</span> <span class="t-c"># Gradle cache (if using Gradle)</span>
+    - <span class="t-s">'/root/.npm/**/*'</span>         <span class="t-c"># npm cache (if building frontend)</span>
+
+<span class="t-c"># Configure S3 cache in CodeBuild project (not buildspec):</span>
+aws codebuild update-project \
+  --name getwork-build \
+  --cache type=S3,location=getwork-build-cache/maven \
+  --region ap-south-1
+
+<span class="t-c"># Option 2: Docker layer cache (for Docker build performance)</span>
+<span class="t-c"># Pull the previous image before building to populate Docker's layer cache</span>
+<span class="t-p">pre_build</span>:
+  <span class="t-p">commands</span>:
+    - docker pull $ECR_REPO:latest || true   <span class="t-c"># || true: don't fail if no image yet</span>
+<span class="t-p">build</span>:
+  <span class="t-p">commands</span>:
+    - docker build --cache-from $ECR_REPO:latest -t $ECR_REPO:build-$IMAGE_TAG .
+    <span class="t-c"># --cache-from: Docker reuses layers from previous build if they haven't changed</span>
+    <span class="t-c"># Application layer (2MB) always rebuilds. Dependency layer (200MB) is cached.</span></code></pre>
+    </div>
+
+    <div class="callout prod">
+      <strong>Caching impact: 8-minute build → 90-second build</strong>
+      A typical large Spring Boot project cold build: 3min dependency download + 2min compilation + 2min tests + 1min Docker build = 8 minutes. With Maven S3 cache (cache hit): 0min dependency download + 2min compilation + 2min tests + 30sec Docker build (layer cache) = 4.5 minutes. With custom build image (deps pre-baked): 0min deps + 1.5min compile + 90sec tests + 20sec Docker = ~3.5 minutes. Total cache savings: ~55% reduction in build time = 55% reduction in CodeBuild costs. For a team doing 50 builds per day, this matters significantly.
+    </div>
+  </div>
+
+  <div id="cb3" class="topic">
+    <div class="prose">
+      <p>By default, CodeBuild runs outside your VPC — in AWS's managed infrastructure. For builds that need to access private resources (internal test databases, private API endpoints, ElastiCache for integration tests), you must configure VPC access.</p>
+      <p>When VPC access is enabled, CodeBuild attaches an ENI to your VPC in the specified subnets with the specified Security Groups. The build environment can reach private resources. The Security Group for the CodeBuild ENI must be allowed by the target resource's Security Group (same chaining pattern as Days 4 and 8).</p>
+    </div>
+
+    <div class="callout fail">
+      <strong>VPC-enabled CodeBuild that can't reach the internet</strong>
+      You enable VPC access for CodeBuild to access your private RDS for integration tests. The build now runs in your private subnet — which has no internet access (private subnet, no NAT Gateway in the build subnet). The build fails immediately trying to download Maven dependencies from the internet. Two solutions: (1) configure VPC access in a subnet with NAT Gateway access, or (2) use private subnets for CodeBuild but configure an S3 Gateway Endpoint and CodeArtifact (AWS's Maven proxy) for dependency resolution — fully private build with no internet required. Solution 2 is the correct enterprise pattern for build pipelines that must not access the internet.
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('codedeploy',null)">CodeDeploy →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CODEDEPLOY -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-codedeploy" class="section">
+  <div class="sec-header">
+    <div class="sec-title">CodeDeploy — managing application deployments</div>
+    <div class="sec-sub">CodeDeploy automates application deployments to EC2, Lambda, and ECS. It handles the rollout mechanics — in-place, blue-green, canary — and the lifecycle hooks that give you control over every step of the deployment process.</div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('cd',0,this)">Concepts</button>
+    <button class="ttab" onclick="topic('cd',1,this)">appspec.yml</button>
+    <button class="ttab" onclick="topic('cd',2,this)">EC2 deployment</button>
+    <button class="ttab" onclick="topic('cd',3,this)">ECS deployment</button>
+  </div>
+
+  <div id="cd0" class="topic active">
+    <div class="prose">
+      <p>CodeDeploy has three key concepts: <strong>Application</strong> (a named group of deployments — one per service), <strong>Deployment Group</strong> (defines where to deploy — which EC2 instances or ECS service — and how — in-place or blue-green), and <strong>Deployment</strong> (a single deployment execution — push revision X to the deployment group).</p>
+      <p>The revision is the thing being deployed — for EC2: a ZIP file on S3 containing your JAR and an appspec.yml. For ECS: a task definition JSON or an ECS task definition ARN. For Lambda: a new function version.</p>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">In-place deployment (EC2)</div>
+        <div class="compare-body">
+          CodeDeploy stops the application on each instance, installs the new revision, restarts the application — in rolling batches.<br><br>
+          <strong>Rollback:</strong> Re-deploy the previous revision. Not instant — requires another deployment.<br><br>
+          <strong>Use when:</strong> Stateful applications where you can't have multiple versions simultaneously, or when cost of parallel infrastructure isn't justified.
+        </div>
+      </div>
+      <div class="compare-card accent">
+        <div class="compare-title">Blue-green deployment (EC2 or ECS)</div>
+        <div class="compare-body">
+          New (green) instances are launched with the new revision. Traffic is shifted from blue to green via ALB rule change. Blue remains available for instant rollback.<br><br>
+          <strong>Rollback:</strong> Shift traffic back to blue — takes seconds. No re-deployment needed.<br><br>
+          <strong>Use when:</strong> Zero-downtime requirement, production services where rollback speed is critical.
+        </div>
+      </div>
+    </div>
+
+    <div class="callout how">
+      <strong>CodeDeploy's relationship to what you already know</strong>
+      The ASG Instance Refresh from Day 8 and CodeDeploy rolling deployment are different mechanisms for the same goal. Instance Refresh is native to ASG and simpler to configure. CodeDeploy provides lifecycle hooks (BeforeInstall, AfterInstall, ApplicationStart, ValidateService) that give finer-grained control over what happens before and after the new version starts — without requiring Lambda or EventBridge. For teams already using CodePipeline, CodeDeploy is the natural deploy stage. For teams using Bitbucket Pipelines, Instance Refresh via CLI is simpler and doesn't require CodeDeploy setup.
+    </div>
+  </div>
+
+  <div id="cd1" class="topic">
+    <div class="prose">
+      <p>The appspec.yml file defines how CodeDeploy installs the revision and what lifecycle hook scripts to run at each stage of the deployment. For EC2 deployments, it lives in the root of your deployment bundle alongside the application files.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">appspec.yml — EC2 Spring Boot deployment</span></div>
+      <pre><code><span class="t-p">version</span>: <span class="t-n">0.0</span>
+<span class="t-p">os</span>: linux
+
+<span class="t-p">files</span>:
+  - <span class="t-p">source</span>: <span class="t-s">/app.jar</span>              <span class="t-c"># Source in the deployment bundle</span>
+    <span class="t-p">destination</span>: <span class="t-s">/opt/app</span>         <span class="t-c"># Destination on the EC2 instance</span>
+  - <span class="t-p">source</span>: <span class="t-s">/config/</span>
+    <span class="t-p">destination</span>: <span class="t-s">/opt/app/config</span>
+
+<span class="t-p">permissions</span>:
+  - <span class="t-p">object</span>: <span class="t-s">/opt/app/app.jar</span>
+    <span class="t-p">owner</span>: appuser
+    <span class="t-p">group</span>: appgroup
+    <span class="t-p">mode</span>: <span class="t-s">"644"</span>
+
+<span class="t-p">hooks</span>:
+  <span class="t-p">BeforeInstall</span>:              <span class="t-c"># Before CodeDeploy copies files</span>
+    - <span class="t-p">location</span>: <span class="t-s">scripts/stop_server.sh</span>
+      <span class="t-p">timeout</span>: <span class="t-n">60</span>
+      <span class="t-p">runas</span>: root
+
+  <span class="t-p">AfterInstall</span>:              <span class="t-c"># After files copied, before app starts</span>
+    - <span class="t-p">location</span>: <span class="t-s">scripts/install_dependencies.sh</span>
+      <span class="t-p">timeout</span>: <span class="t-n">120</span>
+
+  <span class="t-p">ApplicationStart</span>:          <span class="t-c"># Start the application</span>
+    - <span class="t-p">location</span>: <span class="t-s">scripts/start_server.sh</span>
+      <span class="t-p">timeout</span>: <span class="t-n">180</span>
+      <span class="t-p">runas</span>: root
+
+  <span class="t-p">ValidateService</span>:           <span class="t-c"># Health check after start — fail = rollback</span>
+    - <span class="t-p">location</span>: <span class="t-s">scripts/validate_service.sh</span>
+      <span class="t-p">timeout</span>: <span class="t-n">120</span>
+
+<span class="t-c">---</span>
+<span class="t-c"># scripts/validate_service.sh</span>
+<span class="t-c">#!/bin/bash</span>
+<span class="t-k">set</span> -e
+for i in $(seq 1 12); do
+  <span class="t-k">if</span> curl -sf http://localhost:8080/actuator/health/readiness > /dev/null; then
+    echo <span class="t-s">"Application healthy"</span>
+    exit 0
+  <span class="t-k">fi</span>
+  sleep 10
+done
+echo <span class="t-s">"Validation failed — triggering rollback"</span>
+exit 1</code></pre>
+    </div>
+
+    <div class="callout fail">
+      <strong>The ValidateService script that always exits 0</strong>
+      A developer writes a ValidateService script that runs a health check but always exits 0 (success) regardless of the result. CodeDeploy considers the deployment successful. The application is actually down — the health check silently failed. Every deployment goes green in the console while production is broken. Always use <code>set -e</code> at the top of lifecycle scripts and return non-zero exit codes for actual failures. CodeDeploy only triggers an automatic rollback when a lifecycle script exits with a non-zero code. A script that exits 0 unconditionally defeats the entire purpose of the ValidateService hook.
+    </div>
+  </div>
+
+  <div id="cd2" class="topic">
+    <div class="prose">
+      <p>For EC2 in-place deployments, CodeDeploy needs the CodeDeploy agent installed on every EC2 instance. The agent polls CodeDeploy for new deployments, downloads the revision from S3, and executes the appspec.yml lifecycle hooks locally.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">bash — install CodeDeploy agent in user data</span></div>
+      <pre><code><span class="t-c"># Add to your user data script (Day 7 pattern)</span>
+<span class="t-c"># Install the CodeDeploy agent — required on every EC2 in a deployment group</span>
+dnf install -y ruby wget
+cd /home/ec2-user
+wget https://aws-codedeploy-ap-south-1.s3.ap-south-1.amazonaws.com/latest/install
+chmod +x ./install
+sudo ./install auto
+sudo systemctl enable codedeploy-agent
+sudo systemctl start codedeploy-agent
+
+<span class="t-c"># The CodeDeploy agent requires the EC2 instance role to have:</span>
+<span class="t-c"># s3:Get* on the deployment artifact bucket</span>
+<span class="t-c"># codedeploy-commands-secure:GetDeploymentSpecification</span>
+<span class="t-c"># codedeploy-commands-secure:PollHostCommand</span>
+<span class="t-c"># codedeploy-commands-secure:PutHostCommandAcknowledgement</span>
+<span class="t-c"># codedeploy-commands-secure:PutHostCommandComplete</span>
+<span class="t-c"># Or simply attach: arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforAWSCodeDeploy</span>
+
+<span class="t-c"># Create deployment group targeting instances by tag</span>
+aws deploy create-deployment-group \
+  --application-name getwork-app \
+  --deployment-group-name getwork-prod \
+  --service-role-arn arn:aws:iam::ACCOUNT:role/CodeDeployServiceRole \
+  --ec2-tag-filters Key=Name,Value=getwork-app,Type=KEY_AND_VALUE \
+  --deployment-config-name CodeDeployDefault.HalfAtATime \
+  --auto-rollback-configuration enabled=true,events=DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM \
+  --region ap-south-1</code></pre>
+    </div>
+
+    <div class="callout how">
+      <strong>Deployment configurations — HalfAtATime, OneAtATime, AllAtOnce</strong>
+      CodeDeploy provides three built-in deployment configurations for EC2 in-place. <code>AllAtOnce</code>: deploys to all instances simultaneously — fastest but causes downtime if the deployment fails. <code>HalfAtATime</code>: deploys to 50% of instances at a time — the remaining 50% continues serving traffic. <code>OneAtATime</code>: deploys to one instance at a time — slowest but safest; only one instance is at risk at any given time. For production: HalfAtATime balances speed and availability. If you have 10 instances, 5 are always serving traffic during deployment. Custom configurations allow you to specify exact percentages.
+    </div>
+  </div>
+
+  <div id="cd3" class="topic">
+    <div class="prose">
+      <p>For ECS deployments, CodeDeploy integrates with the ALB to perform blue-green deployments at the container level. This is different from the ECS native rolling deployment (from Day 12) — CodeDeploy gives finer-grained traffic shifting control.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">appspec.yml — ECS deployment (CodeDeploy)</span></div>
+      <pre><code><span class="t-p">version</span>: <span class="t-n">0.0</span>
+<span class="t-p">Resources</span>:
+  - <span class="t-p">TargetService</span>:
+      <span class="t-p">Type</span>: <span class="t-s">AWS::ECS::Service</span>
+      <span class="t-p">Properties</span>:
+        <span class="t-p">TaskDefinition</span>: <span class="t-s">&lt;TASK_DEFINITION&gt;</span>   <span class="t-c"># Replaced by CodePipeline</span>
+        <span class="t-p">LoadBalancerInfo</span>:
+          <span class="t-p">ContainerName</span>: <span class="t-s">getwork-api</span>
+          <span class="t-p">ContainerPort</span>: <span class="t-n">8080</span>
+        <span class="t-p">PlatformVersion</span>: <span class="t-s">LATEST</span>
+
+<span class="t-p">Hooks</span>:
+  <span class="t-c"># Lambda function invoked at each hook point</span>
+  - <span class="t-p">BeforeAllowTraffic</span>: <span class="t-s">arn:aws:lambda:...:function:ValidateGreenDeployment</span>
+  - <span class="t-p">AfterAllowTraffic</span>: <span class="t-s">arn:aws:lambda:...:function:CleanupBlueDeployment</span>
+
+<span class="t-c">---</span>
+<span class="t-c"># Traffic shifting configurations for ECS CodeDeploy:</span>
+<span class="t-c"># CodeDeployDefault.ECSAllAtOnce — shift 100% traffic immediately</span>
+<span class="t-c"># CodeDeployDefault.ECSLinear10PercentEvery1Minutes — 10% more per minute</span>
+<span class="t-c"># CodeDeployDefault.ECSLinear10PercentEvery3Minutes — 10% more per 3 minutes</span>
+<span class="t-c"># CodeDeployDefault.ECSCanary10Percent5Minutes — 10% for 5 min, then 100%</span>
+<span class="t-c">#</span>
+<span class="t-c"># The linear and canary options are production-correct: traffic shifts</span>
+<span class="t-c"># gradually, with CloudWatch alarms able to trigger rollback at any point</span></code></pre>
+    </div>
+
+    <div class="callout prod">
+      <strong>ECSCanary10Percent5Minutes — the deployment config for production APIs</strong>
+      This shifts 10% of traffic to the new (green) ECS task set for 5 minutes. If CloudWatch alarms (configured in the deployment group) trigger during those 5 minutes, CodeDeploy automatically rolls back by shifting 100% traffic back to blue — taking seconds. If alarms stay OK after 5 minutes, CodeDeploy shifts the remaining 90% and completes the deployment. This is the safest ECS deployment option: small blast radius (only 10% of users see the new version), fast rollback (seconds), and automatic gate (alarm-triggered rollback without human action).
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('deploystrategies',null)">Deployment strategies in depth →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- DEPLOYMENT STRATEGIES -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-deploystrategies" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Deployment strategies — choosing the right risk profile</div>
+    <div class="sec-sub">Every deployment strategy is a trade-off between deployment speed, rollback speed, blast radius, and cost. Senior engineers are expected to choose the right strategy for each type of change — not to use the same strategy for every deployment.</div>
+  </div>
+
+  <div class="prose">
+    <p>The relationship between change risk and deployment strategy:</p>
+  </div>
+
+  <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin:1rem 0">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div style="text-align:center">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Low risk</div>
+        <div class="pipe-stage green" style="margin:0 auto;margin-bottom:4px">Rolling</div>
+        <div style="font-size:11px;color:var(--text3)">Dependency updates, config changes, minor features</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Medium risk</div>
+        <div class="pipe-stage amber" style="margin:0 auto;margin-bottom:4px">Canary</div>
+        <div style="font-size:11px;color:var(--text3)">API changes, new features, performance-sensitive updates</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">High risk</div>
+        <div class="pipe-stage coral" style="margin:0 auto;margin-bottom:4px">Blue-Green</div>
+        <div style="font-size:11px;color:var(--text3)">Breaking changes, schema migrations, major version bumps</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="compare three">
+    <div class="compare-card">
+      <div class="compare-title">Rolling</div>
+      <div class="compare-body">
+        <strong>Mechanism:</strong> Replace instances/tasks in batches, maintaining minimum healthy capacity throughout.<br><br>
+        <strong>Rollback time:</strong> Slow — requires another full deployment cycle.<br><br>
+        <strong>Blast radius:</strong> Grows as rollout progresses — 50% of traffic hits new version after half the fleet is replaced.<br><br>
+        <strong>Cost overhead:</strong> Zero — no additional infrastructure.<br><br>
+        <strong>Use when:</strong> Low-risk routine deployments (dependency updates, minor feature flags, configuration changes).
+      </div>
+    </div>
+    <div class="compare-card accent">
+      <div class="compare-title">Canary</div>
+      <div class="compare-body">
+        <strong>Mechanism:</strong> Route small % (5-10%) to new version. Monitor for N minutes. Progressive increase if healthy.<br><br>
+        <strong>Rollback time:</strong> Fast — shift weight back to 0% within seconds.<br><br>
+        <strong>Blast radius:</strong> Small — only 10% of users see the new version during validation.<br><br>
+        <strong>Cost overhead:</strong> Small — canary fleet is a fraction of production fleet.<br><br>
+        <strong>Use when:</strong> New API behaviour, changes affecting user experience, A/B testing.
+      </div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-title">Blue-Green</div>
+      <div class="compare-body">
+        <strong>Mechanism:</strong> Full parallel fleet for new version. Instant traffic cutover. Old fleet held for rollback.<br><br>
+        <strong>Rollback time:</strong> Instant — switch ALB target group or DNS back to blue.<br><br>
+        <strong>Blast radius:</strong> Full — once cutover, 100% of traffic is on new version.<br><br>
+        <strong>Cost overhead:</strong> Large — double fleet cost during validation window.<br><br>
+        <strong>Use when:</strong> High-risk releases, database migrations, need instant rollback capability.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout how">
+    <strong>The version compatibility window — valid for ALL strategies</strong>
+    Any strategy that doesn't do an instant, simultaneous swap of all instances (i.e. rolling and canary) creates a window where two versions run simultaneously. During this window, both versions share: the same RDS database, the same Redis cache, the same SQS queues. V2 must be able to read data written by V1 and write data that V1 can read. This means database migrations during rolling/canary deployments must be additive (add columns, don't remove or rename them) until V1 is completely gone. This constraint is not optional — it's the fundamental requirement for zero-downtime deployments with a shared database.
+  </div>
+
+  <button class="next-btn" onclick="nav('rollback',null)">Rollback patterns →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- ROLLBACK -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-rollback" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Rollback — making it fast, reliable, and tested</div>
+    <div class="sec-sub">A rollback that takes 20 minutes isn't a rollback — it's a second deployment in the wrong direction. The goal is to design your deployment pipeline such that rollback is as fast and reliable as a deployment forward, with as little human decision-making required under pressure.</div>
+  </div>
+
+  <div class="prose">
+    <p>There are four rollback approaches, ordered from fastest to slowest:</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-line"><div class="step-num" style="background:var(--coral-dim);border-color:var(--coral);color:var(--coral);cursor:default">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title" style="color:var(--coral)">Traffic shift rollback — seconds</div>
+        <div class="step-text">Blue-green or canary: shift ALB weights back to 0% green. The old version (blue) never stopped. No deployment, no image pull, no startup time. The fastest possible rollback — but only available when the old version infrastructure is still running.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-line"><div class="step-num" style="background:var(--amber-dim);border-color:var(--amber);color:var(--amber);cursor:default">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title" style="color:var(--amber)">Task/service rollback — 2-3 minutes</div>
+        <div class="step-text">Update ECS service to previous task definition revision, or trigger ASG Instance Refresh with previous Launch Template version. The container image is already in ECR or the AMI is already baked — rollback is as fast as a new deployment forward. This is the correct EC2/ECS rollback mechanism.</div>
+        <code class="step-cmd"># ECS rollback — point service at previous task definition
+PREV_REVISION=$((CURRENT_REVISION - 1))
+aws ecs update-service \
+  --cluster getwork-cluster \
+  --service getwork-api \
+  --task-definition getwork-api:$PREV_REVISION \
+  --force-new-deployment \
+  --region ap-south-1
+
+# EC2 ASG rollback — Instance Refresh with previous LT version
+aws autoscaling start-instance-refresh \
+  --auto-scaling-group-name getwork-asg \
+  --desired-configuration "LaunchTemplate={LaunchTemplateId=$LT_ID,Version=$PREV_VERSION}" \
+  --region ap-south-1</code>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-line"><div class="step-num" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent);cursor:default">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title" style="color:var(--accent)">Automated rollback — triggered by alarms</div>
+        <div class="step-text">CodeDeploy deployment groups can be configured to automatically roll back when specific CloudWatch alarms fire. The rollback starts within minutes of the alarm triggering — no human action required. This is the production pattern: deploy, watch your error rate alarm, let the system roll back automatically if the alarm fires.</div>
+        <code class="step-cmd"># Configure automatic rollback on alarm in CodeDeploy deployment group
+aws deploy update-deployment-group \
+  --application-name getwork-app \
+  --current-deployment-group-name getwork-prod \
+  --auto-rollback-configuration \
+    enabled=true,events=DEPLOYMENT_FAILURE,DEPLOYMENT_STOP_ON_ALARM \
+  --alarm-configuration \
+    enabled=true,alarms=[{name=getwork-api-5xx-rate-high}] \
+  --region ap-south-1</code>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-line"><div class="step-num" style="background:var(--surface2);border-color:var(--border2);cursor:default">4</div></div>
+      <div class="step-body">
+        <div class="step-title">Git revert + redeploy — slowest</div>
+        <div class="step-text">Revert the commit in git, push to main, let the pipeline re-run. Total time: pipeline execution time (8-15 minutes). This is the worst rollback option — avoid it. It's only necessary when the rollback itself introduces a new bug that wasn't in the previous version (rare). Using this as the primary rollback strategy is a sign of a pipeline that doesn't preserve immutable deployment artifacts.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout prod">
+    <strong>The rollback you never test that fails when you need it most</strong>
+    At 2AM during an incident, under pressure, is the wrong time to discover that your rollback procedure doesn't work. Make rollback testing part of your regular deployment practice: once per sprint, deliberately deploy a "broken" version (a version that fails health checks), verify the automatic rollback triggers and completes within your RTO target, and document the result. Teams that test rollback regularly roll back in 3 minutes at 2AM. Teams that don't test rollback spend 45 minutes figuring out why the rollback process they thought they had doesn't work.
+  </div>
+
+  <button class="next-btn" onclick="nav('bitbucket',null)">Bitbucket Pipelines — your actual CI/CD stack →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- BITBUCKET PIPELINES -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-bitbucket" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Bitbucket Pipelines → AWS — your production CI/CD</div>
+    <div class="sec-sub">You use Bitbucket at Deloitte. This section maps the pipeline concepts to the Bitbucket YAML format and shows the complete pipeline for deploying to ECS Fargate — including OIDC credential exchange, ECR push, and ECS service update with validation.</div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">bitbucket-pipelines.yml — complete Spring Boot → ECS Fargate pipeline</span></div>
+    <pre><code><span class="t-p">image</span>: maven:3.9-amazoncorretto-17
+
+<span class="t-p">definitions</span>:
+  <span class="t-p">services</span>:
+    <span class="t-p">localstack</span>:
+      <span class="t-p">image</span>: localstack/localstack:3.0
+      <span class="t-p">environment</span>:
+        SERVICES: s3,sqs,dynamodb,secretsmanager
+  <span class="t-p">caches</span>:
+    <span class="t-p">maven</span>: ~/.m2/repository        <span class="t-c"># Cache Maven deps between builds</span>
+
+<span class="t-p">pipelines</span>:
+  <span class="t-p">branches</span>:
+    <span class="t-p">main</span>:
+      <span class="t-c"># STAGE 1: Test</span>
+      - <span class="t-p">step</span>:
+          <span class="t-p">name</span>: <span class="t-s">"Unit Tests"</span>
+          <span class="t-p">caches</span>: [maven]
+          <span class="t-p">script</span>:
+            - mvn test jacoco:report -B
+            - mvn jacoco:check -B
+
+      <span class="t-c"># STAGE 2: Integration tests (against LocalStack)</span>
+      - <span class="t-p">step</span>:
+          <span class="t-p">name</span>: <span class="t-s">"Integration Tests"</span>
+          <span class="t-p">services</span>: [localstack]
+          <span class="t-p">caches</span>: [maven]
+          <span class="t-p">script</span>:
+            - export SPRING_PROFILES_ACTIVE=test
+            - export AWS_ENDPOINT_URL=http://localhost:4566
+            - export AWS_ACCESS_KEY_ID=test
+            - export AWS_SECRET_ACCESS_KEY=test
+            - mvn test -P integration-tests -B
+
+      <span class="t-c"># STAGE 3: Build image and push to ECR (OIDC — no stored credentials)</span>
+      - <span class="t-p">step</span>:
+          <span class="t-p">name</span>: <span class="t-s">"Build & Push to ECR"</span>
+          <span class="t-p">oidc</span>: <span class="t-k">true</span>              <span class="t-c"># OIDC token injected as $BITBUCKET_STEP_OIDC_TOKEN</span>
+          <span class="t-p">caches</span>: [maven]
+          <span class="t-p">script</span>:
+            <span class="t-c"># Exchange OIDC token for AWS credentials</span>
+            - export AWS_ROLE_ARN=$AWS_DEPLOY_ROLE_ARN
+            - export AWS_WEB_IDENTITY_TOKEN_FILE=$(mktemp)
+            - echo "$BITBUCKET_STEP_OIDC_TOKEN" > $AWS_WEB_IDENTITY_TOKEN_FILE
+            - export AWS_DEFAULT_REGION=ap-south-1
+
+            <span class="t-c"># Build JAR</span>
+            - mvn package -DskipTests -B
+            - IMAGE_TAG=$BITBUCKET_BUILD_NUMBER
+
+            <span class="t-c"># Authenticate to ECR and build image</span>
+            - |
+              aws ecr get-login-password | docker login --username AWS \
+                --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+            - docker build --cache-from $ECR_REPO:latest
+                -t $ECR_REPO:build-$IMAGE_TAG
+                -t $ECR_REPO:latest .
+
+            <span class="t-c"># Security scan before push</span>
+            - docker push $ECR_REPO:build-$IMAGE_TAG
+            - |
+              for i in $(seq 1 20); do
+                STATUS=$(aws ecr describe-image-scan-findings \
+                  --repository-name getwork-api \
+                  --image-id imageTag=build-$IMAGE_TAG \
+                  --query 'imageScanStatus.status' --output text 2>/dev/null || echo "IN_PROGRESS")
+                [ "$STATUS" = "COMPLETE" ] && break; sleep 10
+              done
+              CRITICAL=$(aws ecr describe-image-scan-findings \
+                --repository-name getwork-api \
+                --image-id imageTag=build-$IMAGE_TAG \
+                --query 'imageScanFindings.findingSeverityCounts.CRITICAL // `0`' \
+                --output text)
+              [ "$CRITICAL" -gt 0 ] && echo "CRITICAL CVEs: $CRITICAL" && exit 1
+            - docker push $ECR_REPO:latest
+
+      <span class="t-c"># STAGE 4: Deploy to ECS (rolling deployment with validation)</span>
+      - <span class="t-p">step</span>:
+          <span class="t-p">name</span>: <span class="t-s">"Deploy to ECS Fargate"</span>
+          <span class="t-p">oidc</span>: <span class="t-k">true</span>
+          <span class="t-p">deployment</span>: production    <span class="t-c"># Bitbucket environment tracking</span>
+          <span class="t-p">script</span>:
+            - export AWS_ROLE_ARN=$AWS_DEPLOY_ROLE_ARN
+            - export AWS_WEB_IDENTITY_TOKEN_FILE=$(mktemp)
+            - echo "$BITBUCKET_STEP_OIDC_TOKEN" > $AWS_WEB_IDENTITY_TOKEN_FILE
+            - export AWS_DEFAULT_REGION=ap-south-1
+            - IMAGE_TAG=$BITBUCKET_BUILD_NUMBER
+
+            <span class="t-c"># Update task definition with new image</span>
+            - |
+              TASK_DEF=$(aws ecs describe-task-definition \
+                --task-definition getwork-api \
+                --query 'taskDefinition' --output json | \
+                jq --arg img "$ECR_REPO:build-$IMAGE_TAG" \
+                  '.containerDefinitions[0].image = $img |
+                   del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy,.placementConstraints)')
+              NEW_REV=$(aws ecs register-task-definition \
+                --cli-input-json "$TASK_DEF" \
+                --query 'taskDefinition.revision' --output text)
+              echo "New task definition revision: $NEW_REV"
+
+            <span class="t-c"># Update service and wait for deployment</span>
+            - |
+              aws ecs update-service \
+                --cluster getwork-cluster \
+                --service getwork-api \
+                --task-definition getwork-api:$NEW_REV \
+                --force-new-deployment
+
+              echo "Deployment started — waiting for stability..."
+              aws ecs wait services-stable \
+                --cluster getwork-cluster \
+                --services getwork-api
+
+            <span class="t-c"># Post-deployment validation</span>
+            - |
+              ALB_DNS=$(aws elbv2 describe-load-balancers \
+                --names getwork-alb \
+                --query 'LoadBalancers[0].DNSName' --output text)
+              sleep 30  # Allow traffic to route to new tasks
+              for i in $(seq 1 6); do
+                ERROR_RATE=$(aws cloudwatch get-metric-statistics \
+                  --namespace AWS/ApplicationELB \
+                  --metric-name HTTPCode_Target_5XX_Count \
+                  --start-time $(date -u -d '5 minutes ago' +%Y-%m-%dT%H:%M:%SZ) \
+                  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+                  --period 300 --statistics Sum \
+                  --query 'Datapoints[0].Sum // `0`' --output text)
+                echo "5xx count (last 5min): $ERROR_RATE"
+                [ "${ERROR_RATE%.*}" -gt 10 ] && echo "High error rate — rollback!" && exit 1
+                sleep 30
+              done
+              echo "Deployment validated successfully"</code></pre>
+  </div>
+
+  <div class="callout prod">
+    <strong>Environment variables in Bitbucket — what goes where</strong>
+    Workspace variables: AWS_ACCOUNT_ID, ECR_REPO, AWS_DEPLOY_ROLE_ARN (non-sensitive, available to all pipelines).<br>
+    Repository variables: any repo-specific non-sensitive values.<br>
+    Environment-specific variables (marked secured): any sensitive overrides per environment.<br>
+    Never store: AWS credentials (use OIDC instead), database passwords, API keys — these go in Secrets Manager and are fetched at runtime by the application, not injected into the pipeline.
+  </div>
+
+  <button class="next-btn" onclick="nav('oidc',null)">OIDC & secrets management →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- OIDC -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-oidc" class="section">
+  <div class="sec-header">
+    <div class="sec-title">OIDC credential exchange — eliminating static AWS keys from CI/CD</div>
+    <div class="sec-sub">Storing AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in your CI/CD system is a critical security risk. OIDC (OpenID Connect) eliminates this: the CI/CD system authenticates with its own identity provider and exchanges a short-lived token for temporary AWS credentials. No stored credentials. No rotation burden. No credential leak risk.</div>
+  </div>
+
+  <div class="prose">
+    <p>The OIDC flow for Bitbucket Pipelines (same concept applies to GitHub Actions, GitLab CI, and any OIDC-capable CI system):</p>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-line"><div class="step-num" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent);cursor:default">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Configure the OIDC Identity Provider in AWS IAM</div>
+        <div class="step-text">Register Bitbucket's OIDC provider URL with AWS IAM. This tells AWS to trust tokens issued by Bitbucket as valid identities.</div>
+        <code class="step-cmd"># One-time setup — create the OIDC provider in AWS IAM
+aws iam create-open-id-connect-provider \
+  --url https://api.bitbucket.org/2.0/workspaces/YOUR_WORKSPACE/pipelines-config/identity/oidc \
+  --client-id-list ari:cloud:bitbucket::workspace/YOUR_WORKSPACE_ID \
+  --thumbprint-list "a031c46782e6e6c662c2c87c76da9aa62ccabd8e" \
+  --region ap-south-1
+
+# Get the provider ARN (needed for the trust policy)
+aws iam list-open-id-connect-providers \
+  --query 'OpenIDConnectProviderList[*].Arn' --output text</code>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-line"><div class="step-num" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent);cursor:default">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create the deploy IAM role with a trust policy scoped to your repository</div>
+        <div class="step-text">The trust policy specifies which Bitbucket workspace and repository is allowed to assume this role. This prevents any other Bitbucket repository from using this role.</div>
+        <code class="step-cmd">OIDC_PROVIDER_ARN="arn:aws:iam::ACCOUNT:oidc-provider/api.bitbucket.org/..."
+WORKSPACE_ID="your-bitbucket-workspace-uuid"
+REPO_UUID="your-repo-uuid"
+
+# Trust policy — only your specific repository can assume this role
+cat > deploy-trust-policy.json << POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"Federated": "$OIDC_PROVIDER_ARN"},
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "api.bitbucket.org/2.0/workspaces/$WORKSPACE_ID/pipelines-config/identity/oidc:aud":
+          "ari:cloud:bitbucket::workspace/$WORKSPACE_ID"
+      },
+      "StringLike": {
+        "api.bitbucket.org/2.0/workspaces/$WORKSPACE_ID/pipelines-config/identity/oidc:sub":
+          "{$REPO_UUID}:*"    
+      }
+    }
+  }]
+}
+POLICY
+
+aws iam create-role \
+  --role-name getwork-bitbucket-deploy \
+  --assume-role-policy-document file://deploy-trust-policy.json
+
+# Attach only the permissions needed for deployment
+# ecr:* (push images), ecs:* (update services), codedeploy:* (create deployments)
+aws iam attach-role-policy \
+  --role-name getwork-bitbucket-deploy \
+  --policy-arn arn:aws:iam::aws:policy/AmazonECS_FullAccess  # Scope down in production</code>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-line"><div class="step-num" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent);cursor:default">3</div></div>
+      <div class="step-body">
+        <div class="step-title">Exchange OIDC token for AWS credentials in the pipeline</div>
+        <div class="step-text">In the pipeline step, Bitbucket injects the OIDC token. The AWS SDK reads it via the AWS_WEB_IDENTITY_TOKEN_FILE environment variable and automatically exchanges it for temporary credentials.</div>
+        <code class="step-cmd"># In bitbucket-pipelines.yml step (oidc: true must be set)
+- export AWS_ROLE_ARN="arn:aws:iam::ACCOUNT:role/getwork-bitbucket-deploy"
+- export AWS_WEB_IDENTITY_TOKEN_FILE=$(mktemp)
+- echo "$BITBUCKET_STEP_OIDC_TOKEN" > $AWS_WEB_IDENTITY_TOKEN_FILE
+- export AWS_DEFAULT_REGION=ap-south-1
+
+# The AWS SDK now automatically:
+# 1. Reads the OIDC token from $AWS_WEB_IDENTITY_TOKEN_FILE
+# 2. Calls sts:AssumeRoleWithWebIdentity
+# 3. Returns temporary credentials (ASIA... prefix)
+# 4. Uses those credentials for all subsequent AWS CLI/SDK calls
+
+# Verify it works
+aws sts get-caller-identity
+# Returns: role/getwork-bitbucket-deploy — not a user, not AKIA keys</code>
+        <div class="step-note">The temporary credentials expire when the pipeline step completes. Even if a log file or artifact were to expose the credentials, they'd be worthless minutes later. This is the key security advantage over stored AKIA keys, which remain valid indefinitely until manually rotated.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout prod">
+    <strong>Scope down the deploy role aggressively</strong>
+    The deploy role should have exactly what the pipeline needs: ECR permissions to push images, ECS permissions to update task definitions and services, optionally CodeDeploy permissions. It should NOT have: IAM permissions (can't create new roles), RDS permissions (can't modify databases), S3 Delete on production data buckets. Run the pipeline once with AdministratorAccess to see what it needs, then replace with a minimal policy. AWS Access Advisor shows which services the role actually used — a perfect basis for scoping down.
+  </div>
+
+  <button class="next-btn" onclick="nav('containers',null)">Container pipeline — image to production →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CONTAINER PIPELINE -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-containers" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Container CI/CD pipeline — the complete flow</div>
+    <div class="sec-sub">From a git push to a running ECS Fargate container in production — every step, every tool, and every decision point in the container deployment pipeline.</div>
+  </div>
+
+  <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin:1rem 0">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1rem">Container deployment pipeline — full sequence</div>
+
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">1</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">git push to main</strong> — webhook fires, Bitbucket pipeline starts, OIDC token available</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">2</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">mvn test + jacoco:check</strong> — fail fast on test failures before spending on Docker build</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">3</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">docker build --cache-from ECR:latest</strong> — multi-stage build, layered JAR, non-root user</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">4</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">docker push ECR:build-N</strong> — immutable versioned tag, ECR scan-on-push triggers</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--amber-dim);border:1.5px solid var(--amber);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--amber);flex-shrink:0">5</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">ECR vulnerability scan</strong> — poll until COMPLETE, fail pipeline on CRITICAL CVEs</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">6</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">Register new task definition revision</strong> — point containerDefinitions[0].image to new tag</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--accent-dim);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0">7</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">ecs update-service + wait services-stable</strong> — rolling deployment, circuit breaker enabled</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--green-dim);border:1.5px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--green);flex-shrink:0">8</div>
+        <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">Smoke test + error rate check</strong> — 5-minute window, auto-rollback to previous revision if 5xx spike</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout how">
+    <strong>The jq task definition update pattern — what it does and why</strong>
+    The pipeline reads the current task definition JSON, updates only the image field using jq, strips AWS-generated fields that aren't valid on register (taskDefinitionArn, revision, status, etc.), and registers a new revision. This approach preserves all other task definition fields (resource limits, environment variables, secrets, health check, log configuration) and only changes the image tag. An alternative — hardcoding the entire task definition JSON in the pipeline — means any change to task definition configuration requires a pipeline code change, not just a task definition update. The jq approach is more maintainable.
+  </div>
+
+  <button class="next-btn" onclick="nav('interview',null)">Interview prep →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- INTERVIEW PREP -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-interview" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Interview prep</div>
+    <div class="sec-sub">CI/CD interview questions test whether you understand deployment pipelines as systems — with failure modes, security boundaries, and the trade-offs between speed, safety, and cost.</div>
+  </div>
+
+  <div class="iq-list">
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q1</span>
+        <span class="iq-q">A deployment just broke production. Error rate spiked to 15%. Walk me through exactly what you do in the next 10 minutes.</span>
+        <span class="iq-diff diff-h">Hard</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>The first 10 minutes of a production incident are about containment — stopping the bleeding before investigation. Don't investigate while users are impacted if you can stop the impact first.</p>
+        <p><strong>Minute 0–2 — Rollback immediately, investigate later.</strong> If you have a known working previous version and the deployment just happened, roll back now. Don't wait to understand the cause. <code>aws ecs update-service --cluster getwork-cluster --service getwork-api --task-definition getwork-api:PREV_REVISION --force-new-deployment</code>. For ASG: trigger Instance Refresh with previous Launch Template version. The rollback is the fastest path to stopping user impact.</p>
+        <p><strong>Minute 2–5 — Verify rollback is working.</strong> Watch ECS services-stable or Instance Refresh status. Monitor ALB 5xx count in CloudWatch — it should drop within 2-3 minutes as new tasks with the old version start receiving traffic and the failing new tasks are drained.</p>
+        <p><strong>Minute 5–8 — Confirm recovery.</strong> Check ALB HealthyHostCount and 5xx rate. When 5xx drops below 1%, the rollback has taken effect. Post to incident channel: "Rolled back to build N. Service recovered. Error rate now [X]%. Investigating root cause."</p>
+        <p><strong>Minute 8–10 — Begin investigation with preserved evidence.</strong> The failed tasks are stopped but CloudWatch Logs has their output. Query the log stream for the failed tasks: <code>aws logs tail /getwork/ecs/api --since 30m --filter-pattern "ERROR"</code>. Look for the first error that appeared after the deployment. Was it a startup failure (database connection, Flyway migration error)? An NullPointerException in new code? An environment variable missing from the task definition?</p>
+        <p><strong>After recovery — don't deploy again until you understand the failure.</strong> The failed build tag remains in ECR. After the postmortem, deploy a fixed version as a new build, not a re-run of the failed build.</p>
+        <div class="iq-tip">Why this works: prioritises user impact reduction over investigation. Gives the exact commands for rollback. Describes the observable signals for confirming recovery. The "investigate after rollback" discipline is what separates experienced incident responders from engineers who investigate while users are impacted.</div>
+      </div>
+    </div>
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q2</span>
+        <span class="iq-q">What is OIDC authentication for CI/CD and why is it better than storing AWS access keys in pipeline secrets?</span>
+        <span class="iq-diff diff-m">Medium</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>OIDC (OpenID Connect) allows a CI/CD system to authenticate using its own identity provider and exchange a short-lived token for temporary AWS credentials. No AWS access keys are stored anywhere.</p>
+        <p><strong>The flow:</strong> Bitbucket authenticates the pipeline step with its own OIDC provider and issues a signed JWT (the OIDC token) identifying the workspace, repository, and branch. The pipeline exchanges this token for temporary AWS credentials by calling <code>sts:AssumeRoleWithWebIdentity</code> — the same mechanism used by EC2 instance profiles, Lambda execution roles, and EKS IRSA. The temporary credentials (ASIA prefix) expire when the pipeline step completes — typically within minutes.</p>
+        <p><strong>Why OIDC is better than stored keys:</strong> Stored AKIA access keys are long-lived — they remain valid until explicitly rotated. If a key is exposed (in a log file, in a pipeline artifact, through a CI system compromise), the attacker has permanent access until you discover and rotate the key. OIDC credentials expire automatically — a leaked OIDC-derived credential is worthless minutes after it was generated. There's nothing to rotate because there are no static credentials. The IAM role trust policy additionally restricts which specific Bitbucket workspace and repository can assume the role — even with a valid OIDC token from a different repository, an attacker cannot assume your deploy role.</p>
+        <p><strong>At Deloitte with JP Morgan:</strong> Enterprise security policies often prohibit storing cloud credentials in CI/CD systems due to the risk of credential exposure through pipeline logs, build artifacts, or system compromise. OIDC satisfies this requirement: the pipeline never has long-lived credentials, the credentials are scoped to the pipeline execution, and the trust boundary is cryptographically enforced rather than relying on the CI/CD system's secret storage security.</p>
+        <div class="iq-tip">Why this works: explains the mechanism (not just "it's more secure"), the specific risk mitigated (long-lived key exposure), and connects it to the enterprise context you'll be asked about at Deloitte/JP Morgan interviews.</div>
+      </div>
+    </div>
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q3</span>
+        <span class="iq-q">When would you choose a canary deployment over blue-green for a new API feature in Spring Boot?</span>
+        <span class="iq-diff diff-m">Medium</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>The choice depends on what you want to validate and what the blast radius of a failure should be.</p>
+        <p><strong>Choose canary when:</strong> The new feature changes user-facing behaviour and you want to validate it with real production traffic before full rollout. You're not confident that your test suite covers all edge cases — real user requests from Mumbai construction workers will exercise paths your tests didn't. You can afford 30-60 minutes for the progressive rollout. The blast radius should stay small — only 10% of users affected if the new version has a bug. Canary also gives you A/B test capability: compare conversion rates or engagement metrics between the 10% on the new version and 90% on the old version.</p>
+        <p><strong>Choose blue-green when:</strong> The change is high-risk (database schema migration, major feature rewrite, third-party integration change) and you need instant rollback capability. You want 100% validation coverage before any real traffic hits the new version — you deploy green, run full regression tests against the green ALB endpoint directly, and only then cut traffic. You can't afford the 30-60 minute canary window because the current version has a critical bug that needs immediate replacement. The cost of running double fleet for 1-2 hours is acceptable.</p>
+        <p><strong>For the GetWork job creation API refactor:</strong> I'd use canary. The change is an API refactor (same functionality, internal restructuring). I want to validate that the refactor doesn't affect real job creation flows. Route 10% of traffic to the new version for 30 minutes. Monitor job creation success rate and latency. If both look identical between old and new traffic, progressively increase. If not, instant rollback — flip the weight back to 0%.</p>
+        <div class="iq-tip">Why this works: The answer isn't a rule ("always use canary for APIs") but a decision framework based on risk, blast radius, and validation requirements. The specific GetWork example with a concrete monitoring signal (job creation success rate) shows you know how to instrument the validation, not just set up the infrastructure.</div>
+      </div>
+    </div>
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q4</span>
+        <span class="iq-q">How do you ensure a database migration runs safely during a zero-downtime deployment?</span>
+        <span class="iq-diff diff-h">Hard</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>Database migrations during zero-downtime deployments require the expand-contract pattern because during any rolling or canary deployment, both V1 and V2 of the application run simultaneously against the same database.</p>
+        <p><strong>The fundamental constraint:</strong> V2 must be able to run against the database schema that V1 wrote, and V1 must be able to run against any database state that V2 produces. This eliminates: renaming columns (V1 can't find the old column name), deleting columns (V1 reads a column that no longer exists), changing column types incompatibly, and adding non-nullable columns without defaults.</p>
+        <p><strong>The expand-contract pattern in three deployments:</strong></p>
+        <p><strong>Deployment 1 (expand):</strong> Add the new column/table. Keep the old column. V2 writes to both old and new columns. V1 reads from old column (unchanged). Both versions work against the migrated schema. Deploy with rolling or canary — both versions are compatible.</p>
+        <p><strong>Deployment 2 (migrate data):</strong> If necessary, backfill the new column from old column data. This can be a one-off batch job or Flyway migration, not a code deployment. Run during a low-traffic window.</p>
+        <p><strong>Deployment 3 (contract):</strong> Update V2 to read from new column only. Stop writing to old column. Deploy. Old column is now unused.</p>
+        <p><strong>Cleanup:</strong> In a fourth deployment (or out-of-band migration): drop the old column. Now it's gone permanently.</p>
+        <p>Using Flyway or Liquibase: each migration is additive. Migrations tagged as V2__ run when the V2 application starts. If a rolling deployment runs V1 and V2 simultaneously, V2 applies the migration when its JVM starts. V1 must continue to work against the migrated schema — hence the expand (not replace) approach.</p>
+        <div class="iq-tip">Why this works: names the pattern (expand-contract), explains why simple rename/delete breaks zero-downtime, and gives the three-deployment sequence with what each version does. The Flyway integration point shows you've implemented this, not just described it.</div>
+      </div>
+    </div>
+
+  </div>
+  <button class="next-btn" onclick="nav('lab',null)">Start the lab →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- LAB -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-lab" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Lab — build the Bitbucket → ECS deployment pipeline</div>
+    <div class="sec-sub">Set up the OIDC trust relationship, write the complete pipeline YAML, test a deployment, and verify the rollback mechanism. By the end, you have a working CI/CD pipeline that deploys to ECS without any stored AWS credentials.</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n1" onclick="markDone(1)">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create the CodeBuild project for the build phase</div>
+        <div class="step-text">Create a CodeBuild project that compiles, tests, and packages the JAR. This is used as the build stage regardless of whether you use CodePipeline or Bitbucket as the orchestrator.</div>
+        <code class="step-cmd">ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+REGION=ap-south-1
+
+# Create S3 bucket for build artifacts
+aws s3 mb s3://getwork-build-artifacts-$ACCOUNT_ID --region $REGION 2>/dev/null || true
+
+# Create IAM role for CodeBuild
+aws iam create-role \
+  --role-name getwork-codebuild-role \
+  --assume-role-policy-document '{
+    "Version":"2012-10-17",
+    "Statement":[{"Effect":"Allow","Principal":{"Service":"codebuild.amazonaws.com"},
+    "Action":"sts:AssumeRole"}]}' 2>/dev/null || echo "Role exists"
+
+# Attach policies
+for policy in AmazonEC2ContainerRegistryPowerUser CloudWatchLogsFullAccess; do
+  aws iam attach-role-policy \
+    --role-name getwork-codebuild-role \
+    --policy-arn arn:aws:iam::aws:policy/$policy 2>/dev/null || true
+done
+
+# Create CodeBuild project
+aws codebuild create-project \
+  --name getwork-build \
+  --source type=NO_SOURCE,buildspec="$(cat << 'SPEC'
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      java: corretto17
+  build:
+    commands:
+      - echo "Build number $CODEBUILD_BUILD_NUMBER"
+      - echo "In a real project: mvn test && mvn package -DskipTests"
+      - echo "build-$CODEBUILD_BUILD_NUMBER" > build-info.txt
+  post_build:
+    commands:
+      - echo "Build complete"
+artifacts:
+  files:
+    - build-info.txt
+SPEC
+)" \
+  --artifacts type=S3,location=getwork-build-artifacts-$ACCOUNT_ID,packaging=ZIP \
+  --environment type=LINUX_CONTAINER,image=aws/codebuild/amazonlinux2-x86_64-standard:5.0,computeType=BUILD_GENERAL1_SMALL \
+  --service-role arn:aws:iam::${ACCOUNT_ID}:role/getwork-codebuild-role \
+  --cache type=S3,location=getwork-build-artifacts-$ACCOUNT_ID/cache \
+  --region $REGION
+
+echo "CodeBuild project created"
+
+# Trigger a test build
+BUILD_ID=$(aws codebuild start-build \
+  --project-name getwork-build \
+  --query 'build.id' --output text --region $REGION)
+echo "Build started: $BUILD_ID"
+
+# Watch the build
+aws codebuild wait build-complete --ids $BUILD_ID --region $REGION
+aws codebuild batch-get-builds --ids $BUILD_ID \
+  --query 'builds[0].{Status:buildStatus,Duration:currentPhase}' \
+  --output json --region $REGION</code>
+        <div class="step-note">This simplified buildspec doesn't run Maven — a real project would pull from your repository. The key validation: does CodeBuild start, execute phases, and produce an artifact in S3? The project is now usable as a CodePipeline build stage.</div>
+        <button class="step-btn" onclick="markDone(1)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n2" onclick="markDone(2)">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Set up the OIDC provider for Bitbucket (or GitHub Actions)</div>
+        <div class="step-text">Create the OIDC Identity Provider in IAM and the deploy role with a trust policy scoped to your repository. This eliminates static credentials from your CI/CD system.</div>
+        <code class="step-cmd">ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# For GitHub Actions (substitute with Bitbucket URL for Bitbucket)
+# GitHub OIDC provider — same setup works for any OIDC provider
+
+# Create OIDC provider (one-time per account)
+OIDC_ARN=$(aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com \
+  --thumbprint-list "6938fd4d98bab03faadb97b34396831e3780aea1" \
+  --query OpenIDConnectProviderArn --output text 2>/dev/null || \
+  aws iam list-open-id-connect-providers \
+  --query 'OpenIDConnectProviderList[?ends_with(Arn,`token.actions.githubusercontent.com`)].Arn' \
+  --output text)
+
+echo "OIDC Provider ARN: $OIDC_ARN"
+
+# Create deploy role with trust scoped to your GitHub org/repo
+YOUR_GITHUB_ORG="your-org"
+YOUR_GITHUB_REPO="your-repo"
+
+cat > /tmp/oidc-trust.json << TRUST
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"Federated": "$OIDC_ARN"},
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+      },
+      "StringLike": {
+        "token.actions.githubusercontent.com:sub": "repo:$YOUR_GITHUB_ORG/$YOUR_GITHUB_REPO:*"
+      }
+    }
+  }]
+}
+TRUST
+
+aws iam create-role \
+  --role-name getwork-github-deploy \
+  --assume-role-policy-document file:///tmp/oidc-trust.json 2>/dev/null || echo "Role exists"
+
+# Minimal deploy permissions — ECR push + ECS update
+cat > /tmp/deploy-policy.json << POLICY
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Effect":"Allow","Action":["ecr:GetAuthorizationToken"],"Resource":"*"},
+    {"Effect":"Allow","Action":["ecr:BatchGetImage","ecr:GetDownloadUrlForLayer",
+      "ecr:PutImage","ecr:InitiateLayerUpload","ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload","ecr:BatchCheckLayerAvailability",
+      "ecr:DescribeImageScanFindings"],
+      "Resource":"arn:aws:ecr:$REGION:$ACCOUNT_ID:repository/getwork-*"},
+    {"Effect":"Allow","Action":["ecs:UpdateService","ecs:DescribeServices",
+      "ecs:RegisterTaskDefinition","ecs:DescribeTaskDefinition",
+      "ecs:ListTaskDefinitions"],
+      "Resource":"*"},
+    {"Effect":"Allow","Action":["iam:PassRole"],
+      "Resource":"arn:aws:iam::$ACCOUNT_ID:role/ecsTaskExecutionRole"}
+  ]
+}
+POLICY
+
+aws iam put-role-policy \
+  --role-name getwork-github-deploy \
+  --policy-name deploy-permissions \
+  --policy-document file:///tmp/deploy-policy.json
+
+DEPLOY_ROLE_ARN=$(aws iam get-role \
+  --role-name getwork-github-deploy \
+  --query 'Role.Arn' --output text)
+echo "Deploy role ARN (add to GitHub/Bitbucket secrets): $DEPLOY_ROLE_ARN"</code>
+        <div class="step-note">For Bitbucket, replace the OIDC provider URL with your workspace's OIDC endpoint and update the trust condition to use the Bitbucket sub format. The role ARN goes into your CI/CD system as a non-secret variable (role ARNs are not sensitive — only the credentials they issue are).</div>
+        <button class="step-btn" onclick="markDone(2)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n3" onclick="markDone(3)">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Write and validate the complete pipeline YAML</div>
+        <div class="step-text">Write a minimal but complete pipeline file that demonstrates the OIDC flow, ECR push, and ECS update. Test the OIDC credential exchange locally to verify the trust policy works before committing.</div>
+        <code class="step-cmd"># Test the OIDC flow manually before adding to pipeline
+# Simulate what the pipeline does with OIDC
+
+# 1. Get a test OIDC token (for GitHub, use gh CLI; for testing, verify the role trust directly)
+# For manual testing, assume the role directly with your current credentials
+DEPLOY_ROLE_ARN=$(aws iam get-role \
+  --role-name getwork-github-deploy \
+  --query 'Role.Arn' --output text 2>/dev/null || \
+  echo "arn:aws:iam::$ACCOUNT_ID:role/getwork-github-deploy")
+
+aws sts assume-role \
+  --role-arn $DEPLOY_ROLE_ARN \
+  --role-session-name test-deploy-session \
+  --query 'Credentials.{Key:AccessKeyId,Prefix:AccessKeyId}' \
+  --output json
+
+# 2. Verify the role can do what the pipeline needs
+# Test ECR authentication
+aws ecr get-login-password --region $REGION | \
+  docker login --username AWS --password-stdin \
+  $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+echo "ECR auth: $([ $? -eq 0 ] && echo OK || echo FAILED)"
+
+# 3. Validate the buildspec has correct syntax
+cat > /tmp/test-buildspec.yml << 'SPEC'
+version: 0.2
+phases:
+  build:
+    commands:
+      - echo "Deploy pipeline test"
+      - aws sts get-caller-identity
+SPEC
+
+aws codebuild start-build \
+  --project-name getwork-build \
+  --buildspec-override file:///tmp/test-buildspec.yml \
+  --query 'build.{Id:id,Status:buildStatus}' \
+  --output json --region $REGION
+
+echo ""
+echo "Pipeline validation complete"
+echo "Next steps:"
+echo "  1. Add DEPLOY_ROLE_ARN to Bitbucket/GitHub repo variables"
+echo "  2. Commit bitbucket-pipelines.yml to your repository"  
+echo "  3. Push to trigger the first pipeline run"</code>
+        <div class="step-note">Always test the trust policy before relying on it in a production pipeline. A misconfigured trust policy causes "Not authorized to perform sts:AssumeRoleWithWebIdentity" errors that can be confusing to debug under deployment pressure.</div>
+        <button class="step-btn" onclick="markDone(3)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n4" onclick="markDone(4)">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create a CodePipeline pipeline (optional — AWS-native orchestration)</div>
+        <div class="step-text">If you want to use AWS-native CI/CD instead of Bitbucket Pipelines, create a CodePipeline that connects a CodeCommit source → CodeBuild → ECS deployment.</div>
+        <code class="step-cmd"># Create the CodePipeline service role
+aws iam create-role \
+  --role-name getwork-codepipeline-role \
+  --assume-role-policy-document '{
+    "Version":"2012-10-17",
+    "Statement":[{"Effect":"Allow",
+      "Principal":{"Service":"codepipeline.amazonaws.com"},
+      "Action":"sts:AssumeRole"}]}' 2>/dev/null || echo "Role exists"
+
+aws iam attach-role-policy \
+  --role-name getwork-codepipeline-role \
+  --policy-arn arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess 2>/dev/null || true
+
+# Minimal pipeline definition — Source from S3 (simulating CodeCommit)
+# In production: replace S3 source with CodeCommit or Bitbucket connection
+cat > /tmp/pipeline.json << PIPELINE
+{
+  "pipeline": {
+    "name": "getwork-pipeline",
+    "roleArn": "arn:aws:iam::$ACCOUNT_ID:role/getwork-codepipeline-role",
+    "artifactStore": {
+      "type": "S3",
+      "location": "getwork-build-artifacts-$ACCOUNT_ID"
+    },
+    "stages": [
+      {
+        "name": "Source",
+        "actions": [{
+          "name": "SourceAction",
+          "actionTypeId": {"category":"Source","owner":"AWS","provider":"S3","version":"1"},
+          "configuration": {
+            "S3Bucket": "getwork-build-artifacts-$ACCOUNT_ID",
+            "S3ObjectKey": "source/app.zip",
+            "PollForSourceChanges": "false"
+          },
+          "outputArtifacts": [{"name": "SourceArtifact"}],
+          "runOrder": 1
+        }]
+      },
+      {
+        "name": "Build",
+        "actions": [{
+          "name": "BuildAction",
+          "actionTypeId": {"category":"Build","owner":"AWS","provider":"CodeBuild","version":"1"},
+          "configuration": {"ProjectName": "getwork-build"},
+          "inputArtifacts": [{"name": "SourceArtifact"}],
+          "outputArtifacts": [{"name": "BuildArtifact"}],
+          "runOrder": 1
+        }]
+      }
+    ],
+    "version": 1
+  }
+}
+PIPELINE
+
+aws codepipeline create-pipeline \
+  --cli-input-json file:///tmp/pipeline.json \
+  --region $REGION 2>/dev/null || echo "Pipeline exists"
+
+echo "CodePipeline created: getwork-pipeline"
+echo "View at: https://ap-south-1.console.aws.amazon.com/codesuite/codepipeline/pipelines"</code>
+        <div class="step-note">This creates a minimal pipeline to demonstrate the CodePipeline structure. A production pipeline would add: approval stage before production deploy, ECS deploy stage using CodeDeploy, CloudWatch alarm monitoring, and proper notification actions. The pipeline console shows the visual stage-by-stage flow.</div>
+        <button class="step-btn" onclick="markDone(4)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n5" onclick="markDone(5)">5</div></div>
+      <div class="step-body">
+        <div class="step-title">Clean up CI/CD resources</div>
+        <div class="step-text">Delete the CodeBuild project, CodePipeline, and IAM roles. The OIDC provider and deploy role can remain — they have no cost and will be used for real deployments.</div>
+        <code class="step-cmd"># Delete CodePipeline
+aws codepipeline delete-pipeline --name getwork-pipeline --region $REGION 2>/dev/null || true
+
+# Delete CodeBuild project
+aws codebuild delete-project --name getwork-build --region $REGION 2>/dev/null || true
+
+# Clean up artifacts bucket (optional)
+# aws s3 rm s3://getwork-build-artifacts-$ACCOUNT_ID --recursive
+# aws s3 rb s3://getwork-build-artifacts-$ACCOUNT_ID
+
+# Keep the OIDC provider and deploy role — no cost and needed for real pipelines
+echo "Cleanup complete"
+echo ""
+echo "KEPT (no cost, useful for real deployments):"
+echo "  - OIDC provider: token.actions.githubusercontent.com"
+echo "  - Deploy role: getwork-github-deploy"
+echo ""
+echo "Cost while running:"
+echo "  CodePipeline: \$1/active pipeline/month"
+echo "  CodeBuild: \$0.005/min (BUILD_GENERAL1_SMALL)"
+echo "  OIDC provider + IAM role: FREE"</code>
+        <button class="step-btn" onclick="markDone(5)">Mark complete ✓</button>
+      </div>
+    </div>
+
+  </div>
+  <button class="next-btn" onclick="nav('cheatsheet',null)">Day 15 cheatsheet →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CHEATSHEET -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-cheatsheet" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Day 15 cheatsheet</div>
+    <div class="sec-sub">CI/CD production mechanics at a glance.</div>
+  </div>
+
+  <div class="cs-grid">
+    <div class="cs-card"><div class="cs-title">CodePipeline role</div><div class="cs-desc">Orchestrator only — doesn't build, test, or deploy. Coordinates CodeBuild, CodeDeploy, Lambda, and manual approvals. $1/active pipeline/month.</div></div>
+    <div class="cs-card"><div class="cs-title">Pipeline artifact S3</div><div class="cs-desc">CodePipeline stores artifacts in S3 between stages. Artifacts are versioned per execution. KMS-encrypted — CodeBuild role needs kms:Decrypt or artifact operations fail silently.</div></div>
+    <div class="cs-card"><div class="cs-title">Buildspec phases</div><div class="cs-desc">install → pre_build → build → post_build. Non-zero exit in any phase fails the build. Never echo secrets to build logs. set -x in phases with secrets prints credentials to CloudWatch Logs.</div></div>
+    <div class="cs-card"><div class="cs-title">CodeBuild caching</div><div class="cs-desc">S3 cache for Maven/Gradle deps: cold 8min → warm 4.5min. Docker layer cache (--cache-from ECR:latest): dep layer reused, only app layer rebuilt. 55%+ build time reduction.</div></div>
+    <div class="cs-card"><div class="cs-title">appspec.yml ValidateService</div><div class="cs-desc">MUST exit non-zero on failure. A script that always exits 0 makes every deployment succeed in CodeDeploy regardless of application health. Use set -e + curl health check + explicit exit 1.</div></div>
+    <div class="cs-card"><div class="cs-title">ECSCanary10Percent5Minutes</div><div class="cs-desc">Route 10% to green for 5 minutes. If CloudWatch alarm fires → auto-rollback to blue in seconds. Production-correct ECS deployment config for APIs where blast radius must be limited.</div></div>
+    <div class="cs-card"><div class="cs-title">OIDC = no stored credentials</div><div class="cs-desc">CI/CD exchanges short-lived OIDC token for temporary AWS creds. Credentials expire when step completes. Trust policy scoped to specific repo. Satisfies enterprise "no static keys in CI" requirement.</div></div>
+    <div class="cs-card"><div class="cs-title">Rollback priority order</div><div class="cs-desc">1. Traffic shift (seconds) — blue-green/canary. 2. Task/service rollback (2-3min) — ECS previous revision. 3. Auto-rollback via alarm. 4. Git revert + redeploy (slowest). Never use 4 as primary rollback.</div></div>
+    <div class="cs-card"><div class="cs-title">Expand-contract migrations</div><div class="cs-desc">Rolling/canary deployments run V1+V2 simultaneously. Database migrations must be additive only: add columns (don't rename/delete). Three-deployment pattern: expand → migrate → contract.</div></div>
+    <div class="cs-card"><div class="cs-title">jq task def update</div><div class="cs-desc">Read current task def → update image field → strip AWS-generated fields → register new revision. Preserves all other configuration. Don't hardcode full task def in pipeline — it drifts.</div></div>
+    <div class="cs-card"><div class="cs-title">CodeBuild VPC access</div><div class="cs-desc">Required to reach private RDS/ElastiCache for integration tests. But VPC = no internet. Need NAT Gateway in build subnet OR CodeArtifact proxy for Maven. Plan network topology before enabling.</div></div>
+    <div class="cs-card"><div class="cs-title">Test rollback quarterly</div><div class="cs-desc">Deliberately deploy a broken version. Verify rollback triggers automatically (or manually) within your RTO target. Document the result. 2AM is the wrong time to discover your rollback procedure is broken.</div></div>
+  </div>
+
+  <hr class="divider">
+  <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Production pipeline rules</div>
+  <div class="rules">
+    <div class="rule"><span class="rule-n">1</span><span>Use OIDC for CI/CD AWS authentication. No static AKIA keys in pipeline secrets — ever.</span></div>
+    <div class="rule"><span class="rule-n">2</span><span>Scope the deploy IAM role to exactly the permissions the pipeline needs. Run once with broad access, use Access Advisor to scope down.</span></div>
+    <div class="rule"><span class="rule-n">3</span><span>Use immutable versioned image tags (build-N, git-SHA). Never deploy :latest in production — rollback requires knowing which exact image was previously running.</span></div>
+    <div class="rule"><span class="rule-n">4</span><span>Gate on ECR vulnerability scan before deploying. Fail the pipeline on CRITICAL CVEs. This is a compliance requirement in financial services.</span></div>
+    <div class="rule"><span class="rule-n">5</span><span>Always validate after deployment: health check endpoint + error rate check in a 5-minute window. Auto-rollback if error rate exceeds threshold.</span></div>
+    <div class="rule"><span class="rule-n">6</span><span>appspec.yml ValidateService scripts must exit non-zero on failure. Test with a deliberately broken version before relying on it in production.</span></div>
+    <div class="rule"><span class="rule-n">7</span><span>Enable deployment circuit breaker on ECS services. Automatic rollback when tasks fail to become healthy prevents extended outages from bad deployments.</span></div>
+    <div class="rule"><span class="rule-n">8</span><span>Database migrations in rolling/canary deployments: additive only. Expand-contract pattern across three deployments. Never rename or delete columns while old version is still running.</span></div>
+    <div class="rule"><span class="rule-n">9</span><span>Run full pipeline on every pull request against a staging environment. Production deployments should be boring because you already validated the same code in staging.</span></div>
+    <div class="rule"><span class="rule-n">10</span><span>Test rollback quarterly. A rollback procedure you've never exercised is not a rollback procedure — it's wishful thinking.</span></div>
+  </div>
+
+  <hr class="divider">
+  <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem;font-size:13px;color:var(--text2);line-height:1.9">
+    <span style="font-weight:700;color:var(--text)">Day 16 next — Secrets Manager rotation + advanced IAM.</span><br>
+    Automatic secret rotation (RDS passwords, API keys) without application restarts. IAM advanced patterns: permission boundaries for delegated administration, IAM policy conditions, cross-account role assumption for the JP Morgan engagement. AWS Organisations and Service Control Policies for account-wide guardrails.
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+const sections={
+  overview:'s-overview',codepipeline:'s-codepipeline',codebuild:'s-codebuild',
+  codedeploy:'s-codedeploy',deploystrategies:'s-deploystrategies',rollback:'s-rollback',
+  bitbucket:'s-bitbucket',oidc:'s-oidc',containers:'s-containers',
+  interview:'s-interview',lab:'s-lab',cheatsheet:'s-cheatsheet'
+};
+function nav(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const sec=document.getElementById(sections[id]);
+  if(sec)sec.classList.add('active');
+  if(btn){btn.classList.add('active');}
+  else{document.querySelectorAll('.nav-item').forEach(n=>{const oc=n.getAttribute('onclick');if(oc&&oc.includes(`'${id}'`))n.classList.add('active');});}
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function topic(prefix,idx,btn){
+  const panel=btn.closest('.section');
+  panel.querySelectorAll('.topic').forEach(t=>t.classList.remove('active'));
+  panel.querySelectorAll('.ttab').forEach(t=>t.classList.remove('active'));
+  const t=document.getElementById(prefix+idx);
+  if(t)t.classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function markDone(n){
+  const node=document.getElementById('n'+n);
+  if(!node)return;
+  node.closest('.step').classList.add('done');
+  node.textContent='✓';
+}
+</script>
+
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+  </body>
+</html>

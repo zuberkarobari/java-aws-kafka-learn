@@ -1,0 +1,1713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 14 — CloudWatch Deep Dive</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #161b27;
+  --surface2: #1e2535;
+  --border: #2a3347;
+  --border2: #3a4a63;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --accent: #38bdf8;
+  --accent-dim: #0c4a6e;
+  --green: #4ade80;
+  --green-dim: #14532d;
+  --amber: #fbbf24;
+  --amber-dim: #451a03;
+  --coral: #f87171;
+  --coral-dim: #450a0a;
+  --purple: #a78bfa;
+  --purple-dim: #2e1065;
+  --radius: 10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;min-height:100vh}
+
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.day-badge{background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.5px}
+.header-title{font-size:15px;font-weight:600}
+.header-sub{font-size:12px;color:var(--text3);margin-left:auto}
+
+.progress-row{display:flex;align-items:center;gap:10px;padding:1rem 1.5rem .75rem}
+.progress-label{font-size:11px;color:var(--text3);white-space:nowrap}
+.progress-bar{flex:1;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#0ea5e9,#6366f1);border-radius:4px;width:47%}
+
+.layout{display:flex;min-height:calc(100vh - 100px)}
+
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:1.25rem 0;position:sticky;top:100px;height:calc(100vh - 100px);overflow-y:auto}
+.sidebar-section{padding:0 .75rem;margin-bottom:1.25rem}
+.sidebar-label{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase;padding:0 .5rem;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--text2);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .15s;font-family:inherit}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.nav-item.active .nav-dot{background:var(--accent)}
+
+.main{flex:1;padding:2rem;max-width:780px;overflow-x:hidden}
+.section{display:none}.section.active{display:block}
+
+.topic-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:1rem}
+.ttab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border:1px solid transparent;background:none;font-family:inherit;transition:all .15s}
+.ttab:hover{color:var(--text2);border-color:var(--border2)}
+.ttab.active{background:var(--surface2);color:var(--text);border-color:var(--border2);font-weight:600}
+.topic{display:none}.topic.active{display:block}
+
+.sec-header{margin-bottom:1.5rem}
+.sec-title{font-size:22px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.sec-sub{font-size:13px;color:var(--text3);line-height:1.6}
+.sec-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sec-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);color:var(--text3)}
+
+.prose{font-size:13.5px;color:var(--text2);line-height:1.8}
+.prose p{margin-bottom:1rem}.prose p:last-child{margin-bottom:0}
+.prose strong{color:var(--text);font-weight:600}
+
+.callout{border-radius:var(--radius);padding:1rem 1.25rem;margin:1rem 0;font-size:13px;line-height:1.75}
+.callout strong{font-weight:700;display:block;margin-bottom:4px;font-size:11px;letter-spacing:.5px;text-transform:uppercase}
+.callout.how{background:var(--surface2);border-left:3px solid var(--accent);color:var(--text2)}
+.callout.how strong{color:var(--accent)}
+.callout.fail{background:#1a0f0f;border-left:3px solid var(--coral);color:#fca5a5}
+.callout.fail strong{color:var(--coral)}
+.callout.prod{background:#0a1f14;border-left:3px solid var(--green);color:#86efac}
+.callout.prod strong{color:var(--green)}
+.callout.warn{background:#1a1200;border-left:3px solid var(--amber);color:#fde68a}
+.callout.warn strong{color:var(--amber)}
+
+code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:11.5px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;color:var(--accent)}
+
+.code-wrap{margin:1rem 0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border2)}
+.code-header{background:var(--surface2);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2)}
+.code-lang{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+pre{background:#090d14;padding:1rem 1.25rem;overflow-x:auto;margin:0}
+pre code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;background:none;border:none;padding:0;color:#abb2bf;line-height:1.7;display:block;white-space:pre}
+.t-k{color:#c678dd}.t-s{color:#98c379}.t-c{color:#5c6370;font-style:italic}.t-n{color:#e5c07b}.t-f{color:#61afef}.t-p{color:#56b6c2}.t-v{color:#e06c75}
+
+.compare{display:grid;gap:10px;margin:1rem 0}
+.compare.two{grid-template-columns:1fr 1fr}
+.compare.three{grid-template-columns:1fr 1fr 1fr}
+.compare-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem}
+.compare-card.accent{border-color:var(--accent);background:#0c1e2e}
+.compare-card.accent .compare-title{color:var(--accent)}
+.compare-title{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.compare-body{font-size:12px;color:var(--text2);line-height:1.65}
+.compare-body strong{color:var(--text);font-weight:600}
+
+.steps{display:flex;flex-direction:column;gap:0;margin:1rem 0}
+.step{display:flex;gap:0}
+.step-line{display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--surface2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3);flex-shrink:0;cursor:pointer}
+.step.done .step-num{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.step-connector{width:1px;background:var(--border);flex:1;min-height:12px}
+.step-body{padding:0 0 1.25rem 12px;flex:1}
+.step-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.step-text{font-size:13px;color:var(--text2);line-height:1.7}
+.step-cmd{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#090d14;border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin-top:8px;color:#abb2bf;white-space:pre-wrap;word-break:break-all;line-height:1.65;display:block}
+.step-note{font-size:11px;color:var(--text3);margin-top:6px;font-style:italic;line-height:1.5}
+.step-btn{margin-top:8px;font-size:12px;padding:5px 14px;border-radius:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text3);cursor:pointer;font-family:inherit;transition:all .15s}
+.step-btn:hover{border-color:var(--green);color:var(--green)}
+.step.done .step-btn{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .15s}
+.iq:hover{border-color:var(--border2)}.iq.open{border-color:var(--border2)}
+.iq-head{display:flex;align-items:flex-start;gap:10px;padding:12px 16px}
+.iq-num{font-size:10px;font-weight:700;color:var(--text3);min-width:20px;padding-top:2px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45;color:var(--text)}
+.iq-diff{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;flex-shrink:0}
+.diff-e{background:var(--green-dim);color:var(--green)}
+.diff-m{background:var(--amber-dim);color:var(--amber)}
+.diff-h{background:var(--coral-dim);color:var(--coral)}
+.iq-arrow{font-size:12px;color:var(--text3);transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-arrow{transform:rotate(180deg)}
+.iq-body{display:none;padding:1rem 1.25rem;border-top:1px solid var(--border);background:var(--surface2)}
+.iq.open .iq-body{display:block}
+.iq-body p{font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:10px}
+.iq-body p:last-child{margin-bottom:0}
+.iq-body strong{color:var(--text);font-weight:600}
+.iq-tip{background:var(--green-dim);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--green);margin-top:10px;line-height:1.6}
+
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:1.5rem}
+.cs-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;transition:border-color .15s}
+.cs-card:hover{border-color:var(--border2)}
+.cs-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px}
+.cs-desc{font-size:11.5px;color:var(--text3);line-height:1.55}
+
+.rules{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem 1.25rem}
+.rule{display:flex;gap:10px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.5}
+.rule:last-child{border-bottom:none}
+.rule-n{font-size:11px;font-weight:700;color:var(--accent);min-width:18px;padding-top:1px}
+
+.metric-table{width:100%;border-collapse:collapse;font-size:12px;margin:1rem 0}
+.metric-table th{text-align:left;padding:8px 12px;background:var(--surface2);color:var(--text3);font-weight:600;border-bottom:1px solid var(--border2)}
+.metric-table td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;line-height:1.5}
+.metric-table td:first-child{color:var(--text);font-weight:600;font-family:monospace;font-size:11px}
+.metric-table tr:last-child td{border-bottom:none}
+
+.divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
+
+.next-btn{width:100%;margin-top:1.5rem;padding:12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.next-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+.alarm-flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:1rem 0;background:var(--surface2);border-radius:var(--radius);padding:1rem}
+.alarm-box{border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;text-align:center;min-width:90px}
+.alarm-arrow{color:var(--text3);font-size:16px}
+
+@media(max-width:680px){.sidebar{display:none}.main{padding:1.25rem;max-width:100%}.compare.two,.compare.three{grid-template-columns:1fr}}
+</style>
+
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="header">
+  <span class="day-badge">Day 14 / 30</span>
+  <span class="header-title">CloudWatch Deep Dive</span>
+  <span class="header-sub">Phase 4 · DevOps & Monitoring</span>
+</div>
+
+<div class="progress-row">
+  <span class="progress-label">Phase 4</span>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <span class="progress-label">Day 14 of 30</span>
+</div>
+
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Metrics</div>
+    <button class="nav-item active" onclick="nav('metrics',this)"><span class="nav-dot"></span>Metrics internals</button>
+    <button class="nav-item" onclick="nav('namespaces',this)"><span class="nav-dot"></span>Namespaces & dimensions</button>
+    <button class="nav-item" onclick="nav('custom',this)"><span class="nav-dot"></span>Custom metrics</button>
+    <button class="nav-item" onclick="nav('math',this)"><span class="nav-dot"></span>Metric math</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Alarms</div>
+    <button class="nav-item" onclick="nav('alarms',this)"><span class="nav-dot"></span>Alarm mechanics</button>
+    <button class="nav-item" onclick="nav('composite',this)"><span class="nav-dot"></span>Composite alarms</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Logs</div>
+    <button class="nav-item" onclick="nav('logs',this)"><span class="nav-dot"></span>Logs architecture</button>
+    <button class="nav-item" onclick="nav('insights',this)"><span class="nav-dot"></span>Logs Insights queries</button>
+    <button class="nav-item" onclick="nav('agent',this)"><span class="nav-dot"></span>CloudWatch Agent</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Advanced</div>
+    <button class="nav-item" onclick="nav('dashboards',this)"><span class="nav-dot"></span>Dashboards</button>
+    <button class="nav-item" onclick="nav('anomaly',this)"><span class="nav-dot"></span>Anomaly detection</button>
+    <button class="nav-item" onclick="nav('container',this)"><span class="nav-dot"></span>Container Insights</button>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Practice</div>
+    <button class="nav-item" onclick="nav('interview',this)"><span class="nav-dot"></span>Interview prep</button>
+    <button class="nav-item" onclick="nav('lab',this)"><span class="nav-dot"></span>Lab</button>
+    <button class="nav-item" onclick="nav('cheatsheet',this)"><span class="nav-dot"></span>Cheatsheet</button>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- ══════════════════════════════════════════ -->
+<!-- METRICS INTERNALS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-metrics" class="section active">
+  <div class="sec-header">
+    <div class="sec-title">CloudWatch Metrics — the data model</div>
+    <div class="sec-sub">Every number AWS publishes about your infrastructure — CPU, network bytes, request count — flows through CloudWatch Metrics. Understanding how metrics are stored, resolved, and aggregated explains every confusing behaviour you'll encounter when building alarms and dashboards.</div>
+    <div class="sec-tags">
+      <span class="sec-tag">data points</span>
+      <span class="sec-tag">periods</span>
+      <span class="sec-tag">statistics</span>
+      <span class="sec-tag">resolution</span>
+    </div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('m',0,this)">Storage model</button>
+    <button class="ttab" onclick="topic('m',1,this)">Periods & statistics</button>
+    <button class="ttab" onclick="topic('m',2,this)">Standard vs high resolution</button>
+    <button class="ttab" onclick="topic('m',3,this)">Retention</button>
+  </div>
+
+  <div id="m0" class="topic active">
+    <div class="prose">
+      <p>A CloudWatch metric is identified by three things: a <strong>namespace</strong> (e.g. <code>AWS/EC2</code>), a <strong>metric name</strong> (e.g. <code>CPUUtilization</code>), and a set of <strong>dimensions</strong> (key-value pairs that further identify the resource, e.g. <code>InstanceId=i-abc123</code>). These three together uniquely identify a metric time series.</p>
+      <p>Data points are individual measurements with a timestamp and value. AWS services publish data points on a schedule — EC2 publishes every 5 minutes by default (detailed monitoring: every 1 minute). Each data point is stored with the exact timestamp of measurement. CloudWatch stores raw data points for 3 hours, then aggregates them into 1-minute rollups (kept 15 days), then 5-minute rollups (kept 63 days), then 1-hour rollups (kept 455 days).</p>
+    </div>
+
+    <div class="callout how">
+      <strong>Why the storage model matters for your dashboards</strong>
+      When you query a metric over a 2-week period, you must use at least a 5-minute period — the raw 1-second data doesn't exist anymore. When you query a metric from 3 months ago, you can only get 1-hour resolution. If you build a dashboard that queries the last 30 days with a 1-minute period, CloudWatch will silently return no data for the older half of the range (where 1-minute rollups have expired) and show data for the recent half. This looks like a gap in your metrics rather than a resolution mismatch. Always match the query period to the data's available resolution.
+    </div>
+
+    <div class="callout fail">
+      <strong>The metric that disappears after 15 minutes</strong>
+      Standard resolution metrics published by your application (e.g. via <code>PutMetricData</code>) with a timestamp more than 2 hours in the past are rejected by CloudWatch. A batch job that runs for 3 hours and tries to backfill metrics with old timestamps will silently drop any data point with a timestamp older than 2 hours. Always publish metrics with the current timestamp, not the timestamp of when the event occurred.
+    </div>
+  </div>
+
+  <div id="m1" class="topic">
+    <div class="prose">
+      <p>When you query a metric, you choose a <strong>period</strong> (the time bucket size) and a <strong>statistic</strong> (how to aggregate data points within each bucket). These two choices determine what you see.</p>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">Statistics</div>
+        <div class="compare-body">
+          <strong>Average</strong> — mean of all data points in the period. Use for: CPU utilisation, cache hit rate. Masks spikes if data is noisy.<br><br>
+          <strong>Sum</strong> — total of all data points. Use for: request count, error count, bytes transferred. Tells you "how much total" in that window.<br><br>
+          <strong>Maximum</strong> — highest single value. Use for: latency (you care about the worst case), queue depth peaks.<br><br>
+          <strong>Minimum</strong> — lowest single value. Use for: free memory (minimum free memory over the period is the most concerning).<br><br>
+          <strong>p99, p95, p50</strong> — percentile statistics. Require extended statistics. Use for: latency (p99 latency tells you what 99% of users experienced).
+        </div>
+      </div>
+      <div class="compare-card accent">
+        <div class="compare-title">Period selection guide</div>
+        <div class="compare-body">
+          <strong>Real-time dashboards</strong> — 1 minute period. Requires detailed monitoring on EC2 (enabled per instance).<br><br>
+          <strong>Operational dashboards</strong> — 5 minutes. Matches standard EC2 publish frequency. Sufficient for most monitoring.<br><br>
+          <strong>Trend analysis</strong> — 1 hour or 1 day. Long-term patterns, capacity planning, weekly/monthly reports.<br><br>
+          <strong>Alarms</strong> — match period to how quickly you need to react. 1-minute alarm period for latency. 5-minute for CPU. 1-hour for disk usage.
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <strong>Average CPU is almost always the wrong statistic for an alarm</strong>
+      You have 10 EC2 instances. One is at 100% CPU (saturated, users on that instance see timeouts). Nine are at 10% CPU. Average: 19%. Your "average CPU > 70%" alarm doesn't fire. Use Maximum CPU across all instances, or use per-instance alarms. Better yet: use ALBRequestCountPerTarget (from Day 8) which directly measures what users experience, not what instances are doing internally.
+    </div>
+  </div>
+
+  <div id="m2" class="topic">
+    <div class="prose">
+      <p><strong>Standard resolution</strong> metrics are published at 1-minute minimum granularity. Most AWS service metrics are standard resolution. You can publish custom metrics at standard resolution.</p>
+      <p><strong>High resolution</strong> custom metrics can be published at 1-second granularity via <code>PutMetricData</code> with <code>StorageResolution=1</code>. High-resolution metrics cost more ($0.30/metric/month vs $0.10) and alarms on high-resolution metrics can fire in as little as 10 seconds.</p>
+    </div>
+
+    <div class="callout prod">
+      <strong>When to use high-resolution metrics</strong>
+      Payment processing: detect a spike in payment failures within 10 seconds rather than waiting for the 1-minute standard resolution. Trading systems: detect price anomalies or order failures in near-real-time. Health check failover: detect an ALB target going unhealthy in 10 seconds instead of 60. For GetWork and most Spring Boot applications, standard resolution (1-minute) alarms are sufficient. High-resolution adds cost and complexity that is rarely justified outside financial services or real-time systems.
+    </div>
+  </div>
+
+  <div id="m3" class="topic">
+    <div class="prose">
+      <p>CloudWatch retains metric data at decreasing resolution over time. This is automatic — you don't configure it:</p>
+    </div>
+    <table class="metric-table">
+      <thead><tr><th>Retention period</th><th>Available resolution</th><th>Use case</th></tr></thead>
+      <tbody>
+        <tr><td>0–3 hours</td><td>Raw (1-second for high-res, 1-minute for standard)</td><td>Immediate incident response, live dashboards</td></tr>
+        <tr><td>3–15 days</td><td>1-minute rollups</td><td>Short-term trend analysis, incident postmortems</td></tr>
+        <tr><td>15–63 days</td><td>5-minute rollups</td><td>Weekly operational reviews</td></tr>
+        <tr><td>63–455 days</td><td>1-hour rollups</td><td>Monthly reports, capacity planning</td></tr>
+        <tr><td>455+ days</td><td>Not retained</td><td>Archive to S3 via Metrics Streams if needed</td></tr>
+      </tbody>
+    </table>
+    <div class="callout how">
+      <strong>Metrics Streams for long-term retention</strong>
+      If you need metric data beyond 15 months (regulatory requirement, multi-year capacity planning), CloudWatch Metrics Streams can continuously stream all metrics to S3 (via Kinesis Data Firehose) in Parquet or JSON format. Query the archived metrics from Athena. This is the correct architecture for organisations with multi-year data retention requirements — not increasing CloudWatch's retention limit, which cannot be extended.
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('namespaces',null)">Namespaces & dimensions →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- NAMESPACES & DIMENSIONS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-namespaces" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Namespaces and dimensions</div>
+    <div class="sec-sub">Namespaces partition metrics by service. Dimensions are the key-value filters that identify which specific resource a metric belongs to. Mastering dimensions is what allows you to write queries and alarms that target exactly the right resource.</div>
+  </div>
+
+  <div class="prose">
+    <p>The AWS service metric namespaces you'll use most often in a Spring Boot deployment:</p>
+  </div>
+
+  <table class="metric-table">
+    <thead><tr><th>Namespace</th><th>What it covers</th><th>Key metrics</th></tr></thead>
+    <tbody>
+      <tr><td>AWS/EC2</td><td>EC2 instance metrics</td><td>CPUUtilization, NetworkIn/Out, StatusCheckFailed, EBSReadOps</td></tr>
+      <tr><td>AWS/ApplicationELB</td><td>ALB metrics</td><td>RequestCount, HTTPCode_Target_5XX_Count, TargetResponseTime, HealthyHostCount</td></tr>
+      <tr><td>AWS/AutoScaling</td><td>ASG metrics</td><td>GroupInServiceInstances, GroupDesiredCapacity, GroupPendingInstances</td></tr>
+      <tr><td>AWS/RDS</td><td>RDS instance metrics</td><td>CPUUtilization, DatabaseConnections, FreeableMemory, ReadLatency, ReplicaLag</td></tr>
+      <tr><td>AWS/ElastiCache</td><td>ElastiCache cluster metrics</td><td>CacheHits, CacheMisses, CurrConnections, Evictions, BytesUsedForCache</td></tr>
+      <tr><td>AWS/DynamoDB</td><td>DynamoDB table metrics</td><td>ConsumedReadCapacityUnits, ThrottledRequests, SuccessfulRequestLatency</td></tr>
+      <tr><td>AWS/ECS</td><td>ECS cluster and service metrics</td><td>CPUUtilization, MemoryUtilization, RunningTaskCount</td></tr>
+      <tr><td>CWAgent</td><td>CloudWatch Agent (OS-level)</td><td>mem_used_percent, disk_used_percent, cpu_usage_user</td></tr>
+    </tbody>
+  </table>
+
+  <div class="prose">
+    <p>Dimensions are the key-value pairs that narrow a metric to a specific resource. The same metric name (<code>CPUUtilization</code>) exists in the <code>AWS/EC2</code> namespace for every EC2 instance in your account. The <code>InstanceId</code> dimension (<code>InstanceId=i-abc123</code>) identifies which specific instance's CPU you're looking at.</p>
+    <p>Multiple dimension combinations for the same metric represent different aggregation levels. For ALB: <code>RequestCount</code> with dimension <code>LoadBalancer=app/getwork-alb/abc123</code> gives total ALB request count. Adding <code>TargetGroup=targetgroup/getwork-api-tg/xyz</code> narrows it to a specific target group. Both are valid metrics — different aggregation granularity.</p>
+  </div>
+
+  <div class="callout fail">
+    <strong>The dimension mismatch that makes your alarm always insufficient</strong>
+    You create an alarm on <code>AWS/ApplicationELB HTTPCode_Target_5XX_Count</code> without specifying any dimensions. You expect it to alarm when any target group returns 5xx. But CloudWatch aggregates across all load balancers and all target groups — a low 5xx rate on one target group is diluted by zero 5xx on all other resources. Your alarm doesn't fire even when your API target group has a 10% error rate. Always specify the LoadBalancer and TargetGroup dimensions when alarming on ALB metrics. The metric name alone without dimensions is nearly useless for precise alarming.
+  </div>
+
+  <button class="next-btn" onclick="nav('custom',null)">Custom metrics →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CUSTOM METRICS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-custom" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Custom metrics — measuring what AWS can't see</div>
+    <div class="sec-sub">Infrastructure metrics (CPU, memory, network) tell you about resources. Custom business metrics (jobs created per minute, payment success rate, active worker sessions) tell you whether your application is actually working. A system with perfect infrastructure metrics can still be completely broken from a user perspective.</div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('cm',0,this)">Publishing via SDK</button>
+    <button class="ttab" onclick="topic('cm',1,this)">Micrometer + CloudWatch</button>
+    <button class="ttab" onclick="topic('cm',2,this)">EMF for zero-cost metrics</button>
+  </div>
+
+  <div id="cm0" class="topic active">
+    <div class="prose">
+      <p>The simplest way to publish a custom metric is directly via the AWS SDK's <code>PutMetricData</code> API. This is appropriate for one-off scripts, batch jobs, and Lambda functions.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — direct PutMetricData</span></div>
+      <pre><code><span class="t-c">// Direct SDK call — useful for batch jobs, Lambda, one-off instrumentation</span>
+<span class="t-k">public class</span> <span class="t-n">MetricsPublisher</span> {
+    <span class="t-k">private final</span> <span class="t-n">CloudWatchClient</span> cw = <span class="t-n">CloudWatchClient</span>.builder()
+        .region(<span class="t-n">Region</span>.AP_SOUTH_1)
+        .credentialsProvider(<span class="t-n">DefaultCredentialsProvider</span>.create())
+        .build();
+
+    <span class="t-k">public void</span> <span class="t-f">publishJobCreated</span>(<span class="t-n">String</span> city, <span class="t-k">int</span> count) {
+        cw.<span class="t-f">putMetricData</span>(r -> r
+            .namespace(<span class="t-s">"GetWork/API"</span>)                 <span class="t-c">// Your namespace</span>
+            .metricData(<span class="t-n">MetricDatum</span>.builder()
+                .metricName(<span class="t-s">"JobsCreated"</span>)
+                .value((double) count)
+                .unit(<span class="t-n">StandardUnit</span>.COUNT)
+                .timestamp(<span class="t-n">Instant</span>.now())
+                .dimensions(                              <span class="t-c">// Max 30 dimensions per metric</span>
+                    <span class="t-n">Dimension</span>.builder().name(<span class="t-s">"City"</span>).value(city).build(),
+                    <span class="t-n">Dimension</span>.builder().name(<span class="t-s">"Environment"</span>).value(<span class="t-s">"production"</span>).build()
+                )
+                .storageResolution(<span class="t-n">1</span>)               <span class="t-c">// 1=high-res(1s), 60=standard(1min)</span>
+                .build())
+        );
+    }
+}</code></pre>
+    </div>
+
+    <div class="callout warn">
+      <strong>PutMetricData costs — the bill that surprises teams at scale</strong>
+      CloudWatch charges $0.01 per 1,000 metric data points published. A Spring Boot service publishing 5 custom metrics every second: 5 × 60 × 60 × 24 = 432,000 data points/day = $4.32/day = ~$130/month for one service. Ten microservices: $1,300/month just for custom metrics. Mitigation: publish every 60 seconds (not every second), batch multiple data points per API call (up to 1,000 per call), and use Embedded Metric Format (EMF) which is free up to the first 10 custom metrics per EMF log event.
+    </div>
+  </div>
+
+  <div id="cm1" class="topic">
+    <div class="prose">
+      <p>For Spring Boot applications, Micrometer is the preferred instrumentation layer. It provides a vendor-neutral API for counters, timers, and gauges, with backends for CloudWatch, Prometheus, Datadog, and others. Adding the <code>micrometer-registry-cloudwatch2</code> dependency automatically publishes all Spring Boot actuator metrics plus your custom metrics to CloudWatch.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Micrometer with CloudWatch backend</span></div>
+      <pre><code><span class="t-c">// pom.xml</span>
+<span class="t-v">&lt;dependency&gt;</span>
+  <span class="t-v">&lt;groupId&gt;</span>io.micrometer<span class="t-v">&lt;/groupId&gt;</span>
+  <span class="t-v">&lt;artifactId&gt;</span>micrometer-registry-cloudwatch2<span class="t-v">&lt;/artifactId&gt;</span>
+<span class="t-v">&lt;/dependency&gt;</span>
+
+<span class="t-c">// CloudWatch registry config — publishes every 1 minute</span>
+<span class="t-k">@Bean</span>
+<span class="t-k">public</span> <span class="t-n">CloudWatchMeterRegistry</span> <span class="t-f">cloudWatchRegistry</span>() {
+    <span class="t-n">CloudWatchConfig</span> config = key -> <span class="t-k">switch</span>(key) {
+        <span class="t-k">case</span> <span class="t-s">"cloudwatch.namespace"</span> -> <span class="t-s">"GetWork/API"</span>;
+        <span class="t-k">case</span> <span class="t-s">"cloudwatch.step"</span>      -> <span class="t-s">"PT1M"</span>;   <span class="t-c">// Publish every 60 seconds</span>
+        <span class="t-k">case</span> <span class="t-s">"cloudwatch.batchSize"</span> -> <span class="t-s">"20"</span>;    <span class="t-c">// Up to 20 metrics per API call</span>
+        <span class="t-k">default</span> -> <span class="t-k">null</span>;
+    };
+    <span class="t-k">return new</span> <span class="t-n">CloudWatchMeterRegistry</span>(config, <span class="t-n">Clock</span>.SYSTEM,
+        <span class="t-n">CloudWatchAsyncClient</span>.builder()
+            .region(<span class="t-n">Region</span>.AP_SOUTH_1).build());
+}
+
+<span class="t-c">// Instrumentation in your service — zero AWS SDK calls in business logic</span>
+<span class="t-k">@Service</span>
+<span class="t-k">public class</span> <span class="t-n">JobService</span> {
+    <span class="t-k">private final</span> <span class="t-n">Counter</span> jobsCreated;
+    <span class="t-k">private final</span> <span class="t-n">Timer</span> jobCreationLatency;
+    <span class="t-k">private final</span> <span class="t-n">Gauge</span> activeJobCount;
+
+    <span class="t-k">public</span> <span class="t-n">JobService</span>(<span class="t-n">MeterRegistry</span> registry, <span class="t-n">JobRepository</span> jobRepo) {
+        <span class="t-k">this</span>.jobsCreated = <span class="t-n">Counter</span>.builder(<span class="t-s">"getwork.jobs.created"</span>)
+            .tag(<span class="t-s">"env"</span>, <span class="t-s">"production"</span>)
+            .register(registry);
+
+        <span class="t-k">this</span>.jobCreationLatency = <span class="t-n">Timer</span>.builder(<span class="t-s">"getwork.jobs.creation.duration"</span>)
+            .publishPercentiles(0.5, 0.95, 0.99)
+            .register(registry);
+
+        <span class="t-c">// Gauge: reads the value when Micrometer publishes (not on every call)</span>
+        <span class="t-n">Gauge</span>.builder(<span class="t-s">"getwork.jobs.active.count"</span>, jobRepo, <span class="t-n">JobRepository</span>::countActive)
+            .register(registry);
+    }
+
+    <span class="t-k">public</span> <span class="t-n">Job</span> <span class="t-f">createJob</span>(<span class="t-n">CreateJobRequest</span> req) {
+        <span class="t-k">return</span> jobCreationLatency.<span class="t-f">recordCallable</span>(() -> {
+            <span class="t-n">Job</span> job = jobRepository.<span class="t-f">save</span>(<span class="t-k">new</span> <span class="t-n">Job</span>(req));
+            jobsCreated.<span class="t-f">increment</span>();
+            <span class="t-k">return</span> job;
+        });
+    }
+}</code></pre>
+    </div>
+
+    <div class="callout prod">
+      <strong>Micrometer publishes to CloudWatch every 60 seconds by default — this is correct</strong>
+      The PT1M step means your metrics arrive in CloudWatch once per minute, batched. This keeps PutMetricData costs manageable (60× fewer API calls than per-second publishing) while giving you 1-minute granularity in dashboards and alarms. For 20 custom metrics × 1 publish/minute × 60 min/hr × 24 hr = 28,800 data points/day = $0.29/day per service — affordable at scale.
+    </div>
+  </div>
+
+  <div id="cm2" class="topic">
+    <div class="prose">
+      <p><strong>Embedded Metric Format (EMF)</strong> is a way to publish CloudWatch Metrics by embedding structured metric data inside CloudWatch Logs. The advantage: CloudWatch Logs Insights automatically extracts the metrics and creates CloudWatch metric time series — at no additional PutMetricData cost. You pay only for the CloudWatch Logs ingestion and storage, not for metric publishing.</p>
+      <p>EMF is available as a first-class feature in the CloudWatch agent and as a library (<code>aws-embedded-metrics</code> for Node.js/Python). For Java, you can implement EMF by writing structured JSON logs with the <code>_aws.CloudWatchMetrics</code> key, which CloudWatch Logs automatically processes.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JSON — EMF log format</span></div>
+      <pre><code><span class="t-c">// A single log line containing EMF-formatted metrics</span>
+<span class="t-c">// CloudWatch Logs extracts this and creates metric data points automatically</span>
+{
+  <span class="t-s">"_aws"</span>: {
+    <span class="t-s">"Timestamp"</span>: <span class="t-n">1710513000000</span>,
+    <span class="t-s">"CloudWatchMetrics"</span>: [{
+      <span class="t-s">"Namespace"</span>: <span class="t-s">"GetWork/API"</span>,
+      <span class="t-s">"Dimensions"</span>: [[<span class="t-s">"City"</span>, <span class="t-s">"Environment"</span>]],
+      <span class="t-s">"Metrics"</span>: [
+        {<span class="t-s">"Name"</span>: <span class="t-s">"JobsCreated"</span>, <span class="t-s">"Unit"</span>: <span class="t-s">"Count"</span>},
+        {<span class="t-s">"Name"</span>: <span class="t-s">"JobCreationLatency"</span>, <span class="t-s">"Unit"</span>: <span class="t-s">"Milliseconds"</span>}
+      ]
+    }]
+  },
+  <span class="t-s">"City"</span>: <span class="t-s">"Mumbai"</span>,
+  <span class="t-s">"Environment"</span>: <span class="t-s">"production"</span>,
+  <span class="t-s">"JobsCreated"</span>: <span class="t-n">5</span>,
+  <span class="t-s">"JobCreationLatency"</span>: <span class="t-n">142</span>,
+  <span class="t-s">"requestId"</span>: <span class="t-s">"abc-123"</span>     <span class="t-c">// additional log context — searchable in Insights</span>
+}</code></pre>
+    </div>
+
+    <div class="callout how">
+      <strong>EMF is the recommended approach for Lambda functions</strong>
+      Lambda functions are charged per invocation and duration. Making PutMetricData SDK calls adds latency (15–50ms network call) to every Lambda invocation. EMF avoids this: write a structured JSON log line (microseconds), Lambda's logging mechanism ships it to CloudWatch Logs asynchronously after the function returns, and CloudWatch extracts the metrics. Zero added latency to function duration. Zero PutMetricData API calls. Metrics appear in CloudWatch within 1–2 minutes of log ingestion.
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('math',null)">Metric math — deriving new signals →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- METRIC MATH -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-math" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Metric math — deriving new metrics without publishing them</div>
+    <div class="sec-sub">Metric math lets you create derived metrics by combining existing ones with mathematical expressions — directly in CloudWatch dashboards and alarms, without writing any code or publishing additional data points. This is the correct way to build composite signals like error rate percentage or cache miss ratio.</div>
+  </div>
+
+  <div class="prose">
+    <p>Metric math expressions use a simple syntax where each referenced metric gets a label (m1, m2, etc.) and you write an expression using those labels and built-in functions. The result is a virtual metric that only exists in the context of the dashboard widget or alarm you're building.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">CloudWatch Metric Math — essential expressions</span></div>
+    <pre><code><span class="t-c"># Error rate percentage — 5xx as % of total requests</span>
+<span class="t-c"># m1 = HTTPCode_Target_5XX_Count (Sum, 1 min)</span>
+<span class="t-c"># m2 = RequestCount (Sum, 1 min)</span>
+<span class="t-p">expression</span>: (m1 / m2) * 100
+<span class="t-c"># Alarm: expression > 1 for 3 consecutive minutes = error rate > 1%</span>
+
+<span class="t-c"># Cache hit rate percentage</span>
+<span class="t-c"># m3 = CacheHits (Sum), m4 = CacheMisses (Sum)</span>
+<span class="t-p">expression</span>: (m3 / (m3 + m4)) * 100
+<span class="t-c"># Target: > 80%</span>
+
+<span class="t-c"># Sum across multiple regions or target groups</span>
+<span class="t-c"># m5 = RequestCount in ap-south-1, m6 = RequestCount in ap-southeast-1</span>
+<span class="t-p">expression</span>: SUM([m5, m6])
+
+<span class="t-c"># Running average of last N data points (smoothing noisy metrics)</span>
+<span class="t-p">expression</span>: RUNNING_SUM(m1) / RUNNING_SUM(m2)
+
+<span class="t-c"># Anomaly detection band (covered in the Anomaly Detection section)</span>
+<span class="t-p">expression</span>: ANOMALY_DETECTION_BAND(m1, 2)
+<span class="t-c"># Creates upper/lower bounds. 2 = 2 standard deviations from expected</span>
+
+<span class="t-c"># Fill gaps in sparse metrics (avoid sawtooth graphs)</span>
+<span class="t-p">expression</span>: FILL(m1, 0)
+<span class="t-c"># Returns 0 for periods with no data instead of null (missing data points)</span>
+
+<span class="t-c"># Rate (data points per second from a counter)</span>
+<span class="t-c"># Useful when you have a cumulative counter and want the rate of change</span>
+<span class="t-p">expression</span>: RATE(m1)</code></pre>
+  </div>
+
+  <div class="callout fail">
+    <strong>Dividing by zero when request count is 0</strong>
+    The error rate expression <code>(m1 / m2) * 100</code> throws a divide-by-zero when <code>m2</code> (request count) is 0 — during off-peak hours when no requests are flowing. CloudWatch treats this as an error and the alarm may transition to INSUFFICIENT_DATA state. Protect against it: <code>IF(m2 > 0, (m1 / m2) * 100, 0)</code>. Returns 0% error rate when there are no requests, rather than an undefined value that confuses alarms.
+  </div>
+
+  <button class="next-btn" onclick="nav('alarms',null)">Alarm mechanics →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- ALARM MECHANICS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-alarms" class="section">
+  <div class="sec-header">
+    <div class="sec-title">CloudWatch Alarms — how they actually work</div>
+    <div class="sec-sub">Alarms are not simple threshold triggers. They have three states, a complex evaluation model with datapoints-to-alarm semantics, and nuanced missing-data handling that determines whether a quiet period produces false alarms or silently hides real problems.</div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('al',0,this)">States and evaluation</button>
+    <button class="ttab" onclick="topic('al',1,this)">Datapoints-to-alarm</button>
+    <button class="ttab" onclick="topic('al',2,this)">Missing data treatment</button>
+    <button class="ttab" onclick="topic('al',3,this)">Actions and SNS</button>
+  </div>
+
+  <div id="al0" class="topic active">
+    <div class="prose">
+      <p>A CloudWatch Alarm has three states: <strong>OK</strong> (metric is within the threshold), <strong>ALARM</strong> (metric has breached the threshold), and <strong>INSUFFICIENT_DATA</strong> (not enough data points to evaluate — occurs at creation or when data stops flowing).</p>
+      <p>State transitions trigger actions. You can configure separate actions for: entering ALARM state (send a page), exiting ALARM state (send recovery notification), and entering INSUFFICIENT_DATA state (send an alert — this is often skipped but represents a real signal: your monitoring has gone blind).</p>
+    </div>
+
+    <div class="alarm-flow">
+      <div class="alarm-box" style="background:#0a1f14;border:1px solid var(--green);color:var(--green)">OK</div>
+      <div class="alarm-arrow">→ threshold breached →</div>
+      <div class="alarm-box" style="background:var(--coral-dim);border:1px solid var(--coral);color:var(--coral)">ALARM</div>
+      <div class="alarm-arrow">→ SNS → PagerDuty</div>
+      <div class="alarm-box" style="background:var(--amber-dim);border:1px solid var(--amber);color:var(--amber)">Actions fired</div>
+    </div>
+
+    <div class="alarm-flow">
+      <div class="alarm-box" style="background:var(--coral-dim);border:1px solid var(--coral);color:var(--coral)">ALARM</div>
+      <div class="alarm-arrow">→ metric recovers →</div>
+      <div class="alarm-box" style="background:#0a1f14;border:1px solid var(--green);color:var(--green)">OK</div>
+      <div class="alarm-arrow">→ SNS → "Resolved" notification</div>
+      <div class="alarm-box" style="background:var(--green-dim);border:1px solid var(--green);color:var(--green)">Recovery fired</div>
+    </div>
+
+    <div class="callout how">
+      <strong>Alarm evaluation period vs evaluation window</strong>
+      The alarm has a <strong>period</strong> (how often to evaluate — 60 seconds, 300 seconds) and an <strong>evaluation period</strong> (how many periods to look at before deciding). The threshold condition is checked against each data point in the evaluation window. Combined with the datapoints-to-alarm setting, these three numbers determine how quickly the alarm responds and how sensitive it is to transient spikes.
+    </div>
+  </div>
+
+  <div id="al1" class="topic">
+    <div class="prose">
+      <p>The <strong>datapoints-to-alarm</strong> (M out of N) setting is the most important alarm configuration that engineers routinely set incorrectly. It defines how many of the N evaluation periods must breach the threshold before the alarm fires.</p>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">1 out of 1 (default)</div>
+        <div class="compare-body">
+          A single data point above the threshold triggers the alarm immediately.<br><br>
+          <strong>Problem:</strong> Any brief spike (a single slow request, a momentary CPU blip) triggers the alarm. You get paged at 3AM for a 15-second anomaly that self-resolved. Alert fatigue follows.<br><br>
+          <strong>Use when:</strong> Zero tolerance — payment failures, complete service outages. One failure is one too many.
+        </div>
+      </div>
+      <div class="compare-card accent">
+        <div class="compare-title">3 out of 5 (production sweet spot)</div>
+        <div class="compare-body">
+          3 of the last 5 evaluation periods must breach threshold.<br><br>
+          <strong>Why this works:</strong> Transient spikes (1-2 periods) don't trigger the alarm. Sustained problems (3+ consecutive periods) do. The alarm is still responsive (fires within 3 evaluation periods of a real problem starting) but resistant to false positives.<br><br>
+          <strong>Use for:</strong> Latency alarms, CPU alarms, error rate alarms. Most production operational alarms.
+        </div>
+      </div>
+    </div>
+
+    <div class="callout prod">
+      <strong>The recommended alarm config for GetWork's API error rate</strong>
+      Metric: <code>HTTPCode_Target_5XX_Count / RequestCount * 100</code> (metric math expression). Period: 60 seconds. Evaluation periods: 5. Datapoints to alarm: 3. Threshold: > 1%. This means: the alarm fires when the error rate exceeds 1% in 3 of the last 5 minutes. A single bad minute (deployment, brief DB hiccup) doesn't trigger. 3+ consecutive bad minutes definitely triggers. Recovery requires the expression to be below 1% in 3 of 5 consecutive evaluation periods — so the alarm clears only when the situation is definitively resolved, not just temporarily better.
+    </div>
+  </div>
+
+  <div id="al2" class="topic">
+    <div class="prose">
+      <p>When a metric has no data points for an evaluation period, CloudWatch must decide how to treat that missing data. The four options have very different implications:</p>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">missing = notBreaching</div>
+        <div class="compare-body">
+          Missing data counts as below the threshold. The alarm stays OK during quiet periods.<br><br>
+          <strong>Use for:</strong> Metrics where no data means nothing is happening — error count (no errors = no data = good). Request count during maintenance windows.
+        </div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-title">missing = breaching</div>
+        <div class="compare-body">
+          Missing data counts as above the threshold. The alarm enters ALARM state if data stops.<br><br>
+          <strong>Use for:</strong> Heartbeat monitors — if your application stops publishing metrics, you want to know. Critical health checks where "no data" is itself a sign of failure.
+        </div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-title">missing = ignore</div>
+        <div class="compare-body">
+          Missing periods are ignored — the alarm state doesn't change, and the missing period doesn't count toward datapoints-to-alarm.<br><br>
+          <strong>Use for:</strong> Sporadic metrics that are published irregularly. Scheduled batch jobs.
+        </div>
+      </div>
+      <div class="compare-card accent">
+        <div class="compare-title">missing = insufficient data</div>
+        <div class="compare-body">
+          Missing data transitions the alarm to INSUFFICIENT_DATA state.<br><br>
+          <strong>Default behaviour.</strong> Results in frequent INSUFFICIENT_DATA state for sparse metrics. Not usually what you want for operational alarms — it creates noise.
+        </div>
+      </div>
+    </div>
+
+    <div class="callout fail">
+      <strong>The alarm that fires every night at 2AM for no reason</strong>
+      Your error rate alarm uses the default missing data = insufficient_data. At 2AM, traffic drops to near-zero. Some 1-minute evaluation periods have no request count data. The metric math expression returns null. The alarm transitions to INSUFFICIENT_DATA. CloudWatch's INSUFFICIENT_DATA action fires. Your on-call engineer gets paged. The "error" is just low traffic, not an actual problem. Fix: set missing data treatment to notBreaching for rate-based alarms. Missing data on an error rate means "we couldn't calculate the rate" — not "there were errors."
+    </div>
+  </div>
+
+  <div id="al3" class="topic">
+    <div class="prose">
+      <p>Alarm actions are triggered when the alarm state changes. The primary action type is <strong>SNS (Simple Notification Service)</strong> — the alarm publishes a message to an SNS topic, which then fans out to subscribers: email, SMS, Lambda, SQS, HTTP endpoints (PagerDuty, Slack webhooks, OpsGenie).</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">CLI — create a production alarm with SNS action</span></div>
+      <pre><code><span class="t-c"># Create SNS topic for alerts</span>
+ALERT_TOPIC=$(aws sns create-topic --name getwork-alerts \
+  --query TopicArn --output text --region ap-south-1)
+
+<span class="t-c"># Subscribe your PagerDuty/Slack webhook endpoint to the topic</span>
+aws sns subscribe --topic-arn $ALERT_TOPIC \
+  --protocol https \
+  --notification-endpoint https://events.pagerduty.com/integration/YOUR_KEY/enqueue
+
+<span class="t-c"># Create the alarm — 5xx error rate > 1% for 3/5 minutes</span>
+aws cloudwatch put-metric-alarm \
+  --alarm-name "getwork-api-5xx-rate" \
+  --alarm-description "API 5xx error rate exceeds 1%" \
+  --namespace "AWS/ApplicationELB" \
+  --metric-name "HTTPCode_Target_5XX_Count" \
+  --dimensions Name=LoadBalancer,Value=app/getwork-alb/abc123 \
+               Name=TargetGroup,Value=targetgroup/getwork-api-tg/xyz \
+  --statistic Sum \
+  --period 60 \
+  --evaluation-periods 5 \
+  --datapoints-to-alarm 3 \
+  --threshold 5 \
+  --comparison-operator GreaterThanOrEqualToThreshold \
+  --treat-missing-data notBreaching \
+  --alarm-actions $ALERT_TOPIC \
+  --ok-actions $ALERT_TOPIC \
+  --region ap-south-1</code></pre>
+    </div>
+
+    <div class="callout how">
+      <strong>Alarm as an Auto Scaling trigger — the connection from Day 8</strong>
+      CloudWatch Alarms are also the trigger mechanism for EC2 Auto Scaling step scaling policies. When CPU > 80% alarm fires → ASG adds 2 instances. When CPU < 30% alarm fires for 10 consecutive minutes → ASG removes 1 instance. This is the same alarm infrastructure — you configure <code>--alarm-actions arn:aws:autoscaling:region:account:scalingPolicy/policy-id</code> instead of an SNS ARN. Target tracking scaling (from Day 8) creates and manages these alarms internally on your behalf.
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('composite',null)">Composite alarms →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- COMPOSITE ALARMS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-composite" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Composite alarms — reducing alert noise with logic</div>
+    <div class="sec-sub">A composite alarm uses boolean logic (AND, OR, NOT) to combine multiple individual alarms into a single alarm that only fires when the combination of conditions is true. This is how you reduce alert fatigue from correlated alarms.</div>
+  </div>
+
+  <div class="prose">
+    <p>Consider what happens during an RDS failover: the error rate alarm fires, the latency alarm fires, the connection count alarm fires, and the EC2 CPU alarm fires (instances work harder handling errors). You receive 4 pages simultaneously for what is a single root cause event.</p>
+    <p>A composite alarm solves this: <code>ALARM("api-5xx-rate") AND ALARM("rds-failover-in-progress")</code> → one page with context, rather than four separate pages. The composite alarm fires only when both conditions are true, and only sends one notification.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">CLI — composite alarm for correlated failures</span></div>
+    <pre><code><span class="t-c"># Composite alarm: page only when BOTH error rate is high AND latency is high</span>
+<span class="t-c"># (eliminates false pages when one metric briefly spikes without the other)</span>
+aws cloudwatch put-composite-alarm \
+  --alarm-name "getwork-api-degraded" \
+  --alarm-description "API degraded: high errors AND high latency" \
+  --alarm-rule "ALARM(\"getwork-api-5xx-rate\") AND ALARM(\"getwork-api-p99-latency\")" \
+  --alarm-actions $ALERT_TOPIC \
+  --region ap-south-1
+
+<span class="t-c"># Composite alarm: page when API is down for any reason</span>
+aws cloudwatch put-composite-alarm \
+  --alarm-name "getwork-api-down" \
+  --alarm-rule "ALARM(\"getwork-alb-healthy-hosts-zero\") OR \
+               (ALARM(\"getwork-api-5xx-rate\") AND ALARM(\"getwork-api-no-requests\"))" \
+  --alarm-actions $PAGERDUTY_TOPIC \
+  --region ap-south-1
+
+<span class="t-c"># Suppress child alarm notifications — only composite alarm pages</span>
+<span class="t-c"># Set action-suppressor on child alarms pointing to composite alarm</span>
+aws cloudwatch put-metric-alarm \
+  --alarm-name "getwork-api-5xx-rate" \
+  ... <span class="t-c"># same as before</span>
+  --actions-suppressor "getwork-api-degraded" \  <span class="t-c"># suppress when composite handles it</span>
+  --actions-suppressor-wait-period 10 \
+  --actions-suppressor-extension-period 30</code></pre>
+  </div>
+
+  <div class="callout prod">
+    <strong>The three-tier alarm architecture for GetWork</strong>
+    Tier 1 (individual alarms, no SNS actions): CPU, memory, disk — these monitor individual resources and feed into composite alarms. They are visible in the console but don't page anyone directly.<br>
+    Tier 2 (composite alarms, Slack): sustained CPU > 80% AND memory > 80% → post to #ops-alerts Slack. Non-urgent, investigate during business hours.<br>
+    Tier 3 (composite alarms, PagerDuty): ALB healthy hosts = 0 OR (error rate > 5% AND duration > 5 min) → wake someone up. These represent actual user impact.
+  </div>
+
+  <button class="next-btn" onclick="nav('logs',null)">CloudWatch Logs →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- LOGS ARCHITECTURE -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-logs" class="section">
+  <div class="sec-header">
+    <div class="sec-title">CloudWatch Logs — centralised logging architecture</div>
+    <div class="sec-sub">CloudWatch Logs is the centralised logging service for your AWS infrastructure. Understanding the log group, log stream, and retention model — and why log groups cost money you're probably not thinking about — is necessary for running a production system without a surprise bill.</div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('lg',0,this)">Data model</button>
+    <button class="ttab" onclick="topic('lg',1,this)">Retention policies</button>
+    <button class="ttab" onclick="topic('lg',2,this)">Metric filters</button>
+    <button class="ttab" onclick="topic('lg',3,this)">Subscriptions</button>
+  </div>
+
+  <div id="lg0" class="topic active">
+    <div class="prose">
+      <p>The hierarchy: <strong>Log Group</strong> → <strong>Log Stream</strong> → <strong>Log Events</strong>.</p>
+      <p>A <strong>log group</strong> is a container for related log streams. Typically one per application or service component. Retention policy, metric filters, and subscription filters are configured at the log group level. Examples: <code>/getwork/app</code>, <code>/getwork/ecs/api</code>, <code>/aws/lambda/getwork-auth</code>.</p>
+      <p>A <strong>log stream</strong> is a sequence of log events from a single source. In ECS: each task instance has its own log stream (prefixed with the task ID). In Lambda: each concurrent execution environment has its own stream. In EC2: each instance has its own stream within the log group.</p>
+      <p>A <strong>log event</strong> is a single log entry: a timestamp and a message string. CloudWatch Logs Insights can parse structured (JSON) messages into fields for querying.</p>
+    </div>
+
+    <div class="callout warn">
+      <strong>CloudWatch Logs pricing — the component of your AWS bill nobody reviews</strong>
+      Ingestion: $0.50/GB. Storage: $0.03/GB-month. Filter extraction to metrics: $0.10/GB scanned. For a production Spring Boot app logging at INFO level: roughly 1–5 GB/day = $0.50–$2.50/day in ingestion alone = $15–$75/month just for log ingestion. Multiply by 10 microservices: $150–$750/month. Log retention defaults to <strong>Never Expire</strong>. Every log event stored since creation accumulates storage charges forever at $0.03/GB/month. After 12 months: $0.03 × 12 months × monthly volume = significant recurring cost. Set retention policies. Use compression-friendly log formats. Filter out DEBUG logs in production. These three actions typically reduce log costs by 60–80%.
+    </div>
+  </div>
+
+  <div id="lg1" class="topic">
+    <div class="prose">
+      <p>Retention policies determine how long CloudWatch keeps log events before automatically deleting them. Without a retention policy, logs are kept forever at $0.03/GB/month.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">CLI — set retention on all log groups</span></div>
+      <pre><code><span class="t-c"># Recommended retention periods by log type</span>
+<span class="t-c"># Application logs (debug/info): short retention</span>
+aws logs put-retention-policy \
+  --log-group-name /getwork/app \
+  --retention-in-days 30 --region ap-south-1
+
+<span class="t-c"># Application error logs: medium retention</span>
+aws logs put-retention-policy \
+  --log-group-name /getwork/errors \
+  --retention-in-days 90 --region ap-south-1
+
+<span class="t-c"># CloudTrail security audit logs: long retention (1 year)</span>
+aws logs put-retention-policy \
+  --log-group-name /aws/cloudtrail/getwork \
+  --retention-in-days 365 --region ap-south-1
+
+<span class="t-c"># Set retention on ALL log groups (run this as a periodic audit)</span>
+aws logs describe-log-groups \
+  --query 'logGroups[?!retentionInDays].logGroupName' \
+  --output text --region ap-south-1 | \
+tr '\t' '\n' | while read GROUP; do
+  echo "Setting 30-day retention on: $GROUP"
+  aws logs put-retention-policy \
+    --log-group-name "$GROUP" \
+    --retention-in-days 30 --region ap-south-1
+done</code></pre>
+    </div>
+
+    <div class="callout prod">
+      <strong>Enforce retention with AWS Config or Terraform</strong>
+      Manually setting retention is error-prone — any new log group created automatically (by Lambda, ECS, etc.) has no retention policy until someone notices. Use an AWS Config rule to detect log groups without retention policies and alert or auto-remediate. In Terraform, every <code>aws_cloudwatch_log_group</code> resource should include <code>retention_in_days</code> — make it a required field in your Terraform module for log groups. This prevents the "accumulated 2 years of CloudWatch Logs storage from Lambda functions nobody knew was running" bill.
+    </div>
+  </div>
+
+  <div id="lg2" class="topic">
+    <div class="prose">
+      <p>Metric filters parse log events in real-time and publish CloudWatch metric data points when the filter pattern matches. This converts log events into metrics without changing your application code — useful for creating alarms based on specific log patterns.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">CLI — create metric filters from Spring Boot logs</span></div>
+      <pre><code><span class="t-c"># Filter pattern: count ERROR-level log events as a metric</span>
+aws logs put-metric-filter \
+  --log-group-name /getwork/app \
+  --filter-name ErrorCount \
+  --filter-pattern "{ $.level = \"ERROR\" }" \
+  --metric-transformations \
+    metricName=ApplicationErrors,metricNamespace=GetWork/App,metricValue=1,unit=Count \
+  --region ap-south-1
+
+<span class="t-c"># Filter for OutOfMemoryError specifically</span>
+aws logs put-metric-filter \
+  --log-group-name /getwork/app \
+  --filter-name OOMErrors \
+  --filter-pattern "OutOfMemoryError" \
+  --metric-transformations \
+    metricName=OOMErrors,metricNamespace=GetWork/App,metricValue=1,unit=Count \
+  --region ap-south-1
+
+<span class="t-c"># Filter for specific exception class in JSON logs</span>
+<span class="t-c"># JSON log format: {"level":"ERROR","exception":"NullPointerException",...}</span>
+aws logs put-metric-filter \
+  --log-group-name /getwork/app \
+  --filter-name NullPointerExceptions \
+  --filter-pattern "{ $.exception = \"NullPointerException\" }" \
+  --metric-transformations \
+    metricName=NullPointerExceptions,metricNamespace=GetWork/App,metricValue=1,unit=Count \
+  --region ap-south-1</code></pre>
+    </div>
+
+    <div class="callout how">
+      <strong>Metric filters are the bridge between logs and alarms without code changes</strong>
+      You have a legacy service that logs payment failures as <code>ERROR Payment failed: {orderId}</code>. You can't easily change the code to publish a CloudWatch metric directly. Metric filter: pattern <code>ERROR Payment failed</code> → metric <code>PaymentFailures</code> count. Create an alarm on that metric. You get payment failure alerting without touching the application. This is a powerful operational capability for observing systems you can't modify.
+    </div>
+  </div>
+
+  <div id="lg3" class="topic">
+    <div class="prose">
+      <p>Subscription filters stream log events from a log group to another destination in near real-time: a Lambda function, a Kinesis Data Stream, or a Kinesis Data Firehose (for S3 archival or OpenSearch). This is the architecture for centralised logging, SIEM integration, and long-term log archival.</p>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">→ Lambda function</div>
+        <div class="compare-body">
+          Process log events in real-time. Use cases: parse logs and extract structured data, enrich with additional context (add account ID, environment), forward to a third-party logging service (Datadog, Splunk), auto-create PagerDuty incidents from specific log patterns.<br><br>
+          Invoked per log batch (typically every 5 seconds or when batch reaches 1MB). Lambda has 15-minute max execution — suitable for near-real-time processing, not slow batch analytics.
+        </div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-title">→ Kinesis → S3</div>
+        <div class="compare-body">
+          Long-term archival for logs beyond CloudWatch's retention window. Kinesis Data Firehose buffers logs (60 seconds or 128MB) and writes to S3 in GZIP-compressed format. S3 stores indefinitely at $0.023/GB/month (vs $0.03/GB/month in CloudWatch Logs).<br><br>
+          S3-archived logs can be queried with Athena using a Glue catalog — cost-effective analytics on historical logs without loading into a database.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('insights',null)">Logs Insights — query language →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- LOGS INSIGHTS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-insights" class="section">
+  <div class="sec-header">
+    <div class="sec-title">CloudWatch Logs Insights — querying your logs</div>
+    <div class="sec-sub">Logs Insights is a query language for searching and aggregating log data across multiple log groups simultaneously. It replaces grepping log files and becomes your primary tool for incident investigation and performance analysis.</div>
+  </div>
+
+  <div class="prose">
+    <p>Logs Insights queries are charged per GB of data scanned ($0.0057/GB). Use time range filters and specific log group selections to limit scan scope. A query scanning 100GB costs $0.57 — manageable, but querying your entire log history for 12 months of a busy service could cost tens of dollars per query.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Logs Insights — essential query patterns</span></div>
+    <pre><code><span class="t-c">/* Find all ERROR logs in the last hour */</span>
+<span class="t-k">fields</span> @timestamp, @message
+<span class="t-k">| filter</span> @message <span class="t-k">like</span> /ERROR/
+<span class="t-k">| sort</span> @timestamp <span class="t-k">desc</span>
+<span class="t-k">| limit</span> 100
+
+<span class="t-c">/* Count errors by exception type (requires JSON logging format) */</span>
+<span class="t-k">fields</span> exception, level
+<span class="t-k">| filter</span> level = <span class="t-s">"ERROR"</span>
+<span class="t-k">| stats</span> <span class="t-f">count</span>(*) <span class="t-k">as</span> errorCount <span class="t-k">by</span> exception
+<span class="t-k">| sort</span> errorCount <span class="t-k">desc</span>
+<span class="t-k">| limit</span> 20
+
+<span class="t-c">/* p99 latency of job creation endpoint over the last 6 hours */</span>
+<span class="t-k">fields</span> @timestamp, duration, endpoint
+<span class="t-k">| filter</span> endpoint = <span class="t-s">"/api/v1/jobs"</span> <span class="t-k">and</span> method = <span class="t-s">"POST"</span>
+<span class="t-k">| stats</span> <span class="t-f">pct</span>(duration, 99) <span class="t-k">as</span> p99, <span class="t-f">pct</span>(duration, 95) <span class="t-k">as</span> p95,
+        <span class="t-f">avg</span>(duration) <span class="t-k">as</span> avg, <span class="t-f">count</span>(*) <span class="t-k">as</span> requests
+  <span class="t-k">by</span> <span class="t-f">bin</span>(5m)   <span class="t-c">/* Group into 5-minute buckets */</span>
+<span class="t-k">| sort</span> @timestamp <span class="t-k">desc</span>
+
+<span class="t-c">/* Find requests from a specific user that resulted in errors */</span>
+<span class="t-k">fields</span> @timestamp, userId, endpoint, statusCode, message
+<span class="t-k">| filter</span> userId = <span class="t-s">"42"</span> <span class="t-k">and</span> statusCode >= 400
+<span class="t-k">| sort</span> @timestamp <span class="t-k">desc</span>
+
+<span class="t-c">/* Find slow requests (> 2 seconds) and their distribution */</span>
+<span class="t-k">fields</span> @timestamp, endpoint, duration, traceId
+<span class="t-k">| filter</span> duration > 2000
+<span class="t-k">| stats</span> <span class="t-f">count</span>(*) <span class="t-k">as</span> slowRequests <span class="t-k">by</span> endpoint
+<span class="t-k">| sort</span> slowRequests <span class="t-k">desc</span>
+
+<span class="t-c">/* Identify which EC2 instance is generating errors (multi-stream query) */</span>
+<span class="t-k">fields</span> @logStream, @message
+<span class="t-k">| filter</span> level = <span class="t-s">"ERROR"</span>
+<span class="t-k">| stats</span> <span class="t-f">count</span>(*) <span class="t-k">as</span> errors <span class="t-k">by</span> @logStream
+<span class="t-k">| sort</span> errors <span class="t-k">desc</span>
+<span class="t-c">/* @logStream = "instance/i-abc123" — reveals which instance has the most errors */</span></code></pre>
+  </div>
+
+  <div class="callout how">
+    <strong>Querying multiple log groups simultaneously</strong>
+    Logs Insights supports querying up to 50 log groups in a single query. Select all service log groups and find which service generated a specific error. This is the key capability for incident investigation in microservices architectures — you don't need to query each service's logs separately to trace a failing request across services.
+  </div>
+
+  <div class="callout fail">
+    <strong>parse and regex are powerful but expensive</strong>
+    The <code>parse</code> command extracts fields from unstructured log lines using regex or glob patterns. <code>parse @message "* user=* endpoint=*" as level, user, endpoint</code>. It works, but applying regex to every log line in a large time window scans more data and costs more than querying pre-parsed JSON fields. If you use JSON logging (as recommended in Day 12's ECS section), Logs Insights automatically recognises JSON fields without any parse command — reducing query cost and complexity significantly.
+  </div>
+
+  <button class="next-btn" onclick="nav('agent',null)">CloudWatch Agent →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CLOUDWATCH AGENT -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-agent" class="section">
+  <div class="sec-header">
+    <div class="sec-title">CloudWatch Agent — OS-level visibility</div>
+    <div class="sec-sub">Standard CloudWatch EC2 metrics (published by the hypervisor) don't include memory usage, disk utilisation, or process-level CPU. The CloudWatch Agent runs inside the EC2 instance and publishes these OS-level metrics that the hypervisor can't see.</div>
+  </div>
+
+  <div class="prose">
+    <p>What standard EC2 metrics don't include: memory utilisation (the hypervisor doesn't know what your OS is doing with RAM), swap usage, disk space percentage (it knows disk IOPS but not how full the disk is), per-process CPU, open file descriptors. All of these require the CloudWatch Agent running inside the instance with access to <code>/proc</code> and other OS interfaces.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">JSON — CloudWatch Agent config for Spring Boot EC2</span></div>
+    <pre><code>{
+  <span class="t-s">"metrics"</span>: {
+    <span class="t-s">"namespace"</span>: <span class="t-s">"GetWork/EC2"</span>,
+    <span class="t-s">"metrics_collected"</span>: {
+      <span class="t-s">"mem"</span>: {
+        <span class="t-s">"measurement"</span>: [<span class="t-s">"mem_used_percent"</span>, <span class="t-s">"mem_available_percent"</span>],
+        <span class="t-s">"metrics_collection_interval"</span>: <span class="t-n">60</span>
+      },
+      <span class="t-s">"disk"</span>: {
+        <span class="t-s">"measurement"</span>: [<span class="t-s">"disk_used_percent"</span>, <span class="t-s">"inodes_free"</span>],
+        <span class="t-s">"resources"</span>: [<span class="t-s">"/"</span>, <span class="t-s">"/data"</span>],
+        <span class="t-s">"metrics_collection_interval"</span>: <span class="t-n">60</span>
+      },
+      <span class="t-s">"swap"</span>: {
+        <span class="t-s">"measurement"</span>: [<span class="t-s">"swap_used_percent"</span>],
+        <span class="t-s">"metrics_collection_interval"</span>: <span class="t-n">60</span>
+      },
+      <span class="t-s">"procstat"</span>: [{                           <span class="t-c">// Per-process metrics</span>
+        <span class="t-s">"pattern"</span>: <span class="t-s">"java"</span>,                      <span class="t-c">// Track the JVM process</span>
+        <span class="t-s">"measurement"</span>: [<span class="t-s">"cpu_usage"</span>, <span class="t-s">"memory_rss"</span>,
+                          <span class="t-s">"num_threads"</span>, <span class="t-s">"open_file_num"</span>],
+        <span class="t-s">"metrics_collection_interval"</span>: <span class="t-n">60</span>
+      }]
+    }
+  },
+  <span class="t-s">"logs"</span>: {
+    <span class="t-s">"logs_collected"</span>: {
+      <span class="t-s">"files"</span>: {
+        <span class="t-s">"collect_list"</span>: [{
+          <span class="t-s">"file_path"</span>: <span class="t-s">"/var/log/user-data.log"</span>,
+          <span class="t-s">"log_group_name"</span>: <span class="t-s">"/getwork/ec2/user-data"</span>,
+          <span class="t-s">"log_stream_name"</span>: <span class="t-s">"{instance_id}"</span>,
+          <span class="t-s">"timezone"</span>: <span class="t-s">"UTC"</span>
+        }]
+      }
+    }
+  }
+}</code></pre>
+  </div>
+
+  <div class="callout prod">
+    <strong>Store the agent config in SSM Parameter Store — centralised management</strong>
+    Instead of baking the CloudWatch Agent config into your AMI, store it in SSM Parameter Store at <code>/getwork/prod/cloudwatch-agent-config</code>. Your user data script starts the agent with: <code>amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:/getwork/prod/cloudwatch-agent-config</code>. When you update the config in SSM, run SSM Run Command to reload the agent on all instances — no AMI rebuild, no rolling deployment required. This is the correct operational pattern for agent configuration management at scale.
+  </div>
+
+  <button class="next-btn" onclick="nav('dashboards',null)">Dashboards →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- DASHBOARDS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-dashboards" class="section">
+  <div class="sec-header">
+    <div class="sec-title">CloudWatch Dashboards — operational visibility at a glance</div>
+    <div class="sec-sub">A good operational dashboard answers one question in under 5 seconds: is the system healthy right now? A bad dashboard is a wall of widgets that requires expert interpretation. The principle: infrastructure dashboards for engineers, outcome dashboards for business stakeholders.</div>
+  </div>
+
+  <div class="compare two">
+    <div class="compare-card accent">
+      <div class="compare-title">GetWork Operations Dashboard</div>
+      <div class="compare-body">
+        <strong>Row 1 — User outcomes:</strong> Jobs created/min, active sessions, payment success rate, API error rate %<br><br>
+        <strong>Row 2 — Application layer:</strong> ALB request count, p99 latency, 5xx count, healthy target count<br><br>
+        <strong>Row 3 — Compute:</strong> EC2 CPU (avg + max), ASG instance count, ECS running task count<br><br>
+        <strong>Row 4 — Data layer:</strong> RDS CPU, DB connections, ElastiCache hit rate, DynamoDB consumed RCUs<br><br>
+        <strong>Row 5 — Infrastructure:</strong> NAT Gateway bytes, S3 request count, alarm status widget
+      </div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-title">Dashboard best practices</div>
+      <div class="compare-body">
+        <strong>Cross-region dashboards:</strong> One dashboard can show metrics from multiple regions — essential for multi-region architectures.<br><br>
+        <strong>Alarm status widgets:</strong> Add an "Alarm Status" widget showing green/red for each alarm. The fastest way to see overall system health.<br><br>
+        <strong>Annotations:</strong> Add vertical lines at deployment times (EventBridge → CloudWatch). Instantly correlates performance changes with deployments.<br><br>
+        <strong>Cost:</strong> $3/dashboard/month + $0/API call for up to 3 GetMetricData API calls per second. Dashboards with many widgets that auto-refresh every 30 seconds can generate significant API call volume.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout how">
+    <strong>Deployment annotations — the most valuable dashboard feature you don't know about</strong>
+    CloudWatch lets you add vertical annotation lines to graphs with a timestamp and label. When your CI/CD pipeline deploys a new version, publish an annotation: <code>aws cloudwatch put-dashboard</code> with a new annotation for the current timestamp and "Deploy v47". Now your latency graph shows a vertical line at every deployment. Latency spike immediately after a deployment line? You know the cause without investigation. Flat performance across all deployment lines? Your deployments are safe. This is the difference between correlating incidents manually and seeing causation at a glance.
+  </div>
+
+  <button class="next-btn" onclick="nav('anomaly',null)">Anomaly detection →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- ANOMALY DETECTION -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-anomaly" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Anomaly detection — alarms that learn your baseline</div>
+    <div class="sec-sub">Standard threshold alarms require you to know what "normal" looks like and set a static number. Anomaly detection learns your metric's normal behaviour (including daily and weekly patterns) and alarms when behaviour deviates significantly — without you needing to choose a threshold.</div>
+  </div>
+
+  <div class="prose">
+    <p>CloudWatch Anomaly Detection uses a machine learning model to establish a <strong>baseline band</strong> for a metric — the expected range of values based on historical data. The model accounts for: time-of-day patterns (lower traffic at 3AM), day-of-week patterns (lower traffic on Sundays), seasonal trends. The band is visualised as shaded region around the metric line on your dashboard — the metric is "normal" when it stays within the band.</p>
+    <p>You configure how many standard deviations constitute an anomaly. A value of 2 means the alarm fires when the metric is more than 2 standard deviations from the expected value. Higher values (3, 4) produce fewer false alarms but may miss subtle anomalies.</p>
+  </div>
+
+  <div class="callout how">
+    <strong>When anomaly detection outperforms threshold alarms</strong>
+    Request count on Monday mornings: peaks at 1,000 req/s. Same metric at 3AM Saturday: baseline is 50 req/s. A static threshold alarm at "below 100 req/s" fires every Saturday night and every Sunday, creating noise. An anomaly detection alarm fires when request count is significantly below what's expected for that specific time — it knows Saturday 3AM should have 50 req/s, so 50 req/s is fine. But if the model expects 800 req/s at Monday 9AM and you're seeing 200 req/s, that's a real anomaly worth paging about.
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">CLI — create anomaly detection model and alarm</span></div>
+    <pre><code><span class="t-c"># Create anomaly detection model for ALB request count</span>
+aws cloudwatch put-anomaly-detector \
+  --namespace "AWS/ApplicationELB" \
+  --metric-name "RequestCount" \
+  --dimensions Name=LoadBalancer,Value=app/getwork-alb/abc123 \
+  --stat "Sum" \
+  --configuration ExcludedTimeRanges=[{StartTime=2024-01-01T00:00:00Z,EndTime=2024-01-03T00:00:00Z}] \
+  --region ap-south-1
+<span class="t-c"># ExcludedTimeRanges: exclude holiday periods from the training data</span>
+
+<span class="t-c"># Create alarm that fires when metric is BELOW the expected band</span>
+<span class="t-c"># (request count drop = possible outage, not a metric threshold exceedance)</span>
+aws cloudwatch put-metric-alarm \
+  --alarm-name "getwork-request-count-anomaly" \
+  --alarm-description "Request count significantly below expected baseline" \
+  --metrics '[
+    {"Id":"m1","MetricStat":{"Metric":{"Namespace":"AWS/ApplicationELB",
+      "MetricName":"RequestCount",
+      "Dimensions":[{"Name":"LoadBalancer","Value":"app/getwork-alb/abc123"}]},
+      "Period":300,"Stat":"Sum"}},
+    {"Id":"e1","Expression":"ANOMALY_DETECTION_BAND(m1,2)","Label":"Expected"}
+  ]' \
+  --comparison-operator LessThanLowerOrGreaterThanUpperThreshold \
+  --threshold-metric-id "e1" \
+  --evaluation-periods 3 \
+  --datapoints-to-alarm 2 \
+  --treat-missing-data notBreaching \
+  --alarm-actions $ALERT_TOPIC \
+  --region ap-south-1</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <strong>Anomaly detection requires 2 weeks of training data</strong>
+    The ML model needs at least 2 weeks of historical metric data to learn weekly patterns. A model trained on less data produces poor bands and frequent false alarms. If you're setting up anomaly detection for a new service, wait 2–3 weeks before enabling anomaly-based alarms. Use standard threshold alarms during the training period.
+  </div>
+
+  <button class="next-btn" onclick="nav('container',null)">Container Insights →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CONTAINER INSIGHTS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-container" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Container Insights — ECS and EKS observability</div>
+    <div class="sec-sub">Container Insights provides container-level metrics and logs for ECS and EKS that standard CloudWatch doesn't include — CPU and memory per task, per container, and per service. It also provides a pre-built performance dashboard and automated log collection from containers.</div>
+  </div>
+
+  <div class="prose">
+    <p>Without Container Insights, ECS service-level metrics (like <code>CPUUtilization</code> in the <code>AWS/ECS</code> namespace) show the average across all tasks — the same problem as average EC2 CPU. Container Insights publishes per-task and per-container metrics, letting you identify which specific task is consuming excessive CPU or is close to its memory limit.</p>
+    <p>Container Insights for ECS publishes to the <code>ECS/ContainerInsights</code> namespace. Key metrics: <code>CpuUtilized</code>, <code>MemoryUtilized</code>, <code>MemoryReserved</code>, <code>NetworkRxBytes</code>, <code>NetworkTxBytes</code> — all with dimensions for ClusterName, ServiceName, TaskDefinitionFamily.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">CLI — enable Container Insights on ECS cluster</span></div>
+    <pre><code><span class="t-c"># Enable Container Insights when creating cluster</span>
+aws ecs create-cluster \
+  --cluster-name getwork-cluster \
+  --settings name=containerInsights,value=enabled \
+  --region ap-south-1
+
+<span class="t-c"># Or enable on existing cluster</span>
+aws ecs update-cluster-settings \
+  --cluster getwork-cluster \
+  --settings name=containerInsights,value=enabled \
+  --region ap-south-1
+
+<span class="t-c"># Query Container Insights metrics</span>
+aws cloudwatch get-metric-data \
+  --metric-data-queries '[
+    {
+      "Id": "cpu",
+      "MetricStat": {
+        "Metric": {
+          "Namespace": "ECS/ContainerInsights",
+          "MetricName": "CpuUtilized",
+          "Dimensions": [
+            {"Name": "ClusterName", "Value": "getwork-cluster"},
+            {"Name": "ServiceName", "Value": "getwork-api"}
+          ]
+        },
+        "Period": 300,
+        "Stat": "Average"
+      }
+    }
+  ]' \
+  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --region ap-south-1</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <strong>Container Insights cost — higher than you expect</strong>
+    Container Insights is not free. It charges for custom metrics ($0.30/metric/month) and CloudWatch Logs ingestion ($0.50/GB). For an ECS cluster with 10 services and 5 tasks per service: roughly 50 container entities × ~15 metrics each = 750 custom metrics × $0.30 = $225/month just for the metrics, plus log ingestion. For a startup-scale deployment, consider enabling Container Insights only on production clusters and using standard ECS metrics for dev/staging.
+  </div>
+
+  <button class="next-btn" onclick="nav('interview',null)">Interview prep →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- INTERVIEW PREP -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-interview" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Interview prep</div>
+    <div class="sec-sub">CloudWatch interview questions test whether you understand observability as a system design discipline — not just metric names and alarm configuration.</div>
+  </div>
+
+  <div class="iq-list">
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q1</span>
+        <span class="iq-q">Your on-call engineer is getting paged 20 times per week for alarms that self-resolve within 5 minutes. How do you fix the alerting system?</span>
+        <span class="iq-diff diff-h">Hard</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>This is an alert fatigue problem caused by alarms that are too sensitive. The fix is a combination of tuning existing alarms and restructuring the alarm hierarchy.</p>
+        <p><strong>Step 1 — Audit the offending alarms.</strong> For each alarm that fires repeatedly and self-resolves, look at the metric history. Are these 1-minute spikes above threshold followed by immediate recovery? If yes, the datapoints-to-alarm setting is 1/1. Change it to 3/5 — require 3 consecutive breaches in 5 evaluation periods before alarming. A 1-minute spike that self-resolves won't trigger. A 3-minute sustained problem will.</p>
+        <p><strong>Step 2 — Fix missing data treatment.</strong> Alarms transitioning to INSUFFICIENT_DATA during low-traffic periods (nights, weekends) and triggering INSUFFICIENT_DATA actions are a common source of false pages. Set missing data treatment to <code>notBreaching</code> for rate-based alarms (error rate, request count) and <code>ignore</code> for sparse metrics.</p>
+        <p><strong>Step 3 — Introduce composite alarms.</strong> If the engineer is getting 5 separate pages for one correlated failure (RDS failover triggers error rate alarm, latency alarm, connection count alarm simultaneously), consolidate into a composite alarm. The composite alarm fires once; the child alarms are suppressed.</p>
+        <p><strong>Step 4 — Separate urgency tiers.</strong> Not all alarms should page. Create three tiers: informational (write to Slack, no page), warning (Slack with @-mention, page if sustained), critical (PagerDuty, wake someone up). Most operational metrics belong in the first two tiers. Only genuine user-impact conditions belong in the third.</p>
+        <p><strong>Step 5 — Review the alarm on the right metric.</strong> CPU-based alarms on a load-balanced fleet often fire when one instance spikes but users aren't affected (load is spread across 9 others). Switch to user-outcome metrics: p99 latency, error rate percentage. These directly measure user impact. CPU is an infrastructure signal, not a user-impact signal.</p>
+        <div class="iq-tip">Why this works: structured five-step approach covering all root causes. The distinction between infrastructure signals and user-impact signals shows architectural maturity. Mentioning composite alarm suppression shows advanced CloudWatch knowledge.</div>
+      </div>
+    </div>
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q2</span>
+        <span class="iq-q">How would you monitor a Spring Boot application on ECS to detect a memory leak?</span>
+        <span class="iq-diff diff-m">Medium</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>Memory leak detection requires combining multiple monitoring signals because no single metric definitively identifies a leak.</p>
+        <p><strong>Container Insights MemoryUtilized trend:</strong> The most direct signal. With Container Insights enabled, watch <code>ECS/ContainerInsights MemoryUtilized</code> for the ECS service. A memory leak shows as a steady, non-plateauing increase in memory usage over hours or days — not correlated with traffic increase. A step function increase followed by a plateau is normal (JVM heap filling up and stabilising). A linear trend that never plateaus is a leak.</p>
+        <p><strong>JVM metrics via Micrometer:</strong> Expose JVM metrics from Spring Boot Actuator (automatically available with Micrometer). Key metrics: <code>jvm.memory.used{area=heap}</code> (heap usage), <code>jvm.gc.pause</code> (GC pause duration — increasing GC pauses with high heap usage indicates GC is struggling to free memory), <code>jvm.classes.loaded</code> (class loading anomalies can indicate classloader leaks). Publish to CloudWatch. Alarm on GC pause duration > 500ms sustained — this indicates the heap is so full that GC can't free enough space.</p>
+        <p><strong>Practical detection approach:</strong> Create an alarm on <code>MemoryUtilized > 85% of MemoryReserved</code> for the ECS service. This fires before OOMKill (which happens at 100%). When the alarm fires, use ECS Exec (<code>aws ecs execute-command</code>) to shell into the affected container and run a heap dump: <code>jmap -dump:format=b,file=/tmp/heapdump.hprof $(pgrep java)</code>. Copy the dump to S3 and analyse with Eclipse Memory Analyzer offline. The heap dump reveals exactly what objects are holding memory unexpectedly.</p>
+        <div class="iq-tip">Why this works: three concrete monitoring signals (Container Insights trend, JVM via Micrometer, GC pause correlation), a specific alarm threshold (85% before OOMKill), and the exact diagnostic steps including ECS Exec and heap dump. This is operational depth, not just theory.</div>
+      </div>
+    </div>
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q3</span>
+        <span class="iq-q">What is the difference between CloudWatch Logs metric filters and publishing custom metrics via PutMetricData? When would you use each?</span>
+        <span class="iq-diff diff-e">Easy</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>Both produce CloudWatch metric data points, but they differ in where the metric extraction happens, the cost model, and what data is available.</p>
+        <p><strong>Metric filters</strong> are configured on a log group. CloudWatch scans log events in real-time and creates a metric data point when the filter pattern matches. No application code change required. The metric value is extracted from the log message (e.g. count matching lines, or extract a numeric field from JSON). Cost: $0.10/GB of log data scanned for filter evaluation. Works on existing log streams without touching the application.</p>
+        <p><strong>PutMetricData</strong> (or Micrometer) is called by the application itself at the point of measurement. The application has full context about what it's measuring — latency in milliseconds, count of a specific event type, gauge value. Richer metadata (dimensions, units). Cost: $0.01/1,000 data points published. Requires application code instrumentation.</p>
+        <p><strong>Use metric filters when:</strong> You can't change the application (legacy system), the metric is derivable from existing log output, you need a quick metric without a deployment cycle, you want to count occurrences of specific log messages (errors, warnings, specific exceptions).</p>
+        <p><strong>Use PutMetricData/Micrometer when:</strong> You're instrumenting a new application, the metric requires application context not available in logs (intermediate calculation results, business logic state), you need higher precision (per-endpoint latency with specific dimensions), you're building dashboards that should work even when logging is disabled.</p>
+        <div class="iq-tip">Why this works: names the mechanism difference (log scanning vs application publishing), the cost model for each, and gives concrete use-case guidance for choosing between them.</div>
+      </div>
+    </div>
+
+  </div>
+  <button class="next-btn" onclick="nav('lab',null)">Start the lab →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- LAB -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-lab" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Lab — build the complete monitoring stack</div>
+    <div class="sec-sub">Set up the production monitoring configuration for the GetWork architecture: metric filters, the full alarm stack, a Logs Insights saved query, and an operational dashboard.</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n1" onclick="markDone(1)">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create SNS topics for tiered alerting</div>
+        <div class="step-text">Create two SNS topics: one for critical alerts (PagerDuty) and one for warnings (Slack). Subscribe email endpoints for testing.</div>
+        <code class="step-cmd">REGION=ap-south-1
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# Critical alerts topic (PagerDuty in production — email for lab)
+CRITICAL_TOPIC=$(aws sns create-topic \
+  --name getwork-critical-alerts \
+  --query TopicArn --output text --region $REGION)
+echo "Critical topic: $CRITICAL_TOPIC"
+
+# Warning alerts topic (Slack in production — email for lab)
+WARN_TOPIC=$(aws sns create-topic \
+  --name getwork-warn-alerts \
+  --query TopicArn --output text --region $REGION)
+echo "Warning topic: $WARN_TOPIC"
+
+# Subscribe your email for lab testing
+aws sns subscribe --topic-arn $CRITICAL_TOPIC \
+  --protocol email \
+  --notification-endpoint your-email@example.com \
+  --region $REGION
+# You'll receive a confirmation email — click to confirm
+
+aws sns subscribe --topic-arn $WARN_TOPIC \
+  --protocol email \
+  --notification-endpoint your-email@example.com \
+  --region $REGION
+
+echo "SNS topics created"
+echo "CRITICAL_TOPIC=$CRITICAL_TOPIC"
+echo "WARN_TOPIC=$WARN_TOPIC"</code>
+        <div class="step-note">Save the ARNs — used in all subsequent alarm creation steps. In production, the critical topic would have a PagerDuty webhook subscription and the warning topic would have a Lambda that posts to Slack.</div>
+        <button class="step-btn" onclick="markDone(1)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n2" onclick="markDone(2)">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create the core alarm stack</div>
+        <div class="step-text">Create alarms for ALB health, RDS, and EC2. Use the production-correct configuration: 3/5 datapoints-to-alarm, notBreaching for missing data on rate metrics.</div>
+        <code class="step-cmd"># Replace with your actual resource identifiers
+ALB_ARN=app/getwork-alb/YOUR_SUFFIX
+TG_ARN=targetgroup/getwork-api-tg/YOUR_SUFFIX
+DB_ID=getwork-db
+
+# 1. ALB healthy hosts = 0 (CRITICAL — site is down)
+aws cloudwatch put-metric-alarm \
+  --alarm-name "getwork-alb-no-healthy-hosts" \
+  --alarm-description "CRITICAL: No healthy instances behind ALB" \
+  --namespace AWS/ApplicationELB \
+  --metric-name HealthyHostCount \
+  --dimensions Name=LoadBalancer,Value=$ALB_ARN Name=TargetGroup,Value=$TG_ARN \
+  --statistic Minimum \
+  --period 60 --evaluation-periods 1 --datapoints-to-alarm 1 \
+  --threshold 1 --comparison-operator LessThanThreshold \
+  --treat-missing-data breaching \
+  --alarm-actions $CRITICAL_TOPIC \
+  --region $REGION
+
+# 2. ALB 5xx error rate > 1% (WARNING at first, critical if sustained)
+aws cloudwatch put-metric-alarm \
+  --alarm-name "getwork-api-5xx-rate-high" \
+  --alarm-description "API 5xx error rate > 1% for 3/5 minutes" \
+  --namespace AWS/ApplicationELB \
+  --metric-name HTTPCode_Target_5XX_Count \
+  --dimensions Name=LoadBalancer,Value=$ALB_ARN \
+  --statistic Sum --period 60 \
+  --evaluation-periods 5 --datapoints-to-alarm 3 \
+  --threshold 5 --comparison-operator GreaterThanOrEqualToThreshold \
+  --treat-missing-data notBreaching \
+  --alarm-actions $WARN_TOPIC \
+  --region $REGION
+
+# 3. RDS DB connections > 80% of max (WARNING)
+aws cloudwatch put-metric-alarm \
+  --alarm-name "getwork-rds-connections-high" \
+  --alarm-description "RDS connections approaching limit" \
+  --namespace AWS/RDS \
+  --metric-name DatabaseConnections \
+  --dimensions Name=DBInstanceIdentifier,Value=$DB_ID \
+  --statistic Average --period 300 \
+  --evaluation-periods 3 --datapoints-to-alarm 2 \
+  --threshold 240 --comparison-operator GreaterThanOrEqualToThreshold \
+  --treat-missing-data notBreaching \
+  --alarm-actions $WARN_TOPIC \
+  --region $REGION
+
+# 4. RDS free storage < 5GB (CRITICAL — disk full approaching)
+aws cloudwatch put-metric-alarm \
+  --alarm-name "getwork-rds-low-storage" \
+  --alarm-description "CRITICAL: RDS free storage < 5GB" \
+  --namespace AWS/RDS \
+  --metric-name FreeStorageSpace \
+  --dimensions Name=DBInstanceIdentifier,Value=$DB_ID \
+  --statistic Minimum --period 300 \
+  --evaluation-periods 1 --datapoints-to-alarm 1 \
+  --threshold 5368709120 --comparison-operator LessThanOrEqualToThreshold \
+  --treat-missing-data breaching \
+  --alarm-actions $CRITICAL_TOPIC \
+  --region $REGION
+
+echo "Core alarms created"
+aws cloudwatch describe-alarms \
+  --alarm-name-prefix getwork \
+  --query 'MetricAlarms[*].{Name:AlarmName,State:StateValue}' \
+  --output table --region $REGION</code>
+        <div class="step-note">The RDS storage threshold 5368709120 bytes = 5GB. CloudWatch alarm thresholds for FreeStorageSpace are in bytes. 5GB = 5 × 1024 × 1024 × 1024 = 5,368,709,120.</div>
+        <button class="step-btn" onclick="markDone(2)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n3" onclick="markDone(3)">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create a metric filter on your application log group</div>
+        <div class="step-text">Add a metric filter to extract error counts from application logs. Then create an alarm on the resulting metric.</div>
+        <code class="step-cmd"># Create log group if it doesn't exist
+aws logs create-log-group \
+  --log-group-name /getwork/app --region $REGION 2>/dev/null || true
+
+# Set retention
+aws logs put-retention-policy \
+  --log-group-name /getwork/app \
+  --retention-in-days 30 --region $REGION
+
+# Create metric filter — count ERROR log events
+aws logs put-metric-filter \
+  --log-group-name /getwork/app \
+  --filter-name ApplicationErrors \
+  --filter-pattern "ERROR" \
+  --metric-transformations \
+    metricName=ApplicationErrors,metricNamespace=GetWork/App,metricValue=1,unit=Count,defaultValue=0 \
+  --region $REGION
+
+# Create alarm on the metric filter output
+aws cloudwatch put-metric-alarm \
+  --alarm-name "getwork-app-error-spike" \
+  --alarm-description "Application error rate spike detected in logs" \
+  --namespace GetWork/App \
+  --metric-name ApplicationErrors \
+  --statistic Sum \
+  --period 60 --evaluation-periods 5 --datapoints-to-alarm 3 \
+  --threshold 10 --comparison-operator GreaterThanOrEqualToThreshold \
+  --treat-missing-data notBreaching \
+  --alarm-actions $WARN_TOPIC \
+  --region $REGION
+
+echo "Metric filter and alarm created"
+
+# Test: write a log line that matches the filter
+aws logs create-log-stream \
+  --log-group-name /getwork/app \
+  --log-stream-name test-stream --region $REGION 2>/dev/null || true
+
+aws logs put-log-events \
+  --log-group-name /getwork/app \
+  --log-stream-name test-stream \
+  --log-events "[{\"timestamp\":$(date +%s%3N),\"message\":\"ERROR NullPointerException at JobService.createJob\"}]" \
+  --region $REGION
+
+echo "Test error log written — metric will appear in ~1 minute"</code>
+        <div class="step-note">defaultValue=0 in the metric transformation means CloudWatch publishes 0 for time periods with no matching log events — critical for alarm evaluation to work correctly on periods with no errors (otherwise missing data causes alarm state confusion).</div>
+        <button class="step-btn" onclick="markDone(3)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n4" onclick="markDone(4)">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Run a Logs Insights query and save it</div>
+        <div class="step-text">Use Logs Insights to query your application logs. Save a useful query for future incident investigation.</div>
+        <code class="step-cmd"># Run a Logs Insights query — find all errors in the last hour
+# Note the START/END times in Unix epoch milliseconds
+START_TIME=$(($(date +%s) - 3600))  # 1 hour ago
+END_TIME=$(date +%s)
+
+QUERY_ID=$(aws logs start-query \
+  --log-group-name /getwork/app \
+  --start-time $START_TIME \
+  --end-time $END_TIME \
+  --query-string 'fields @timestamp, @message
+| filter @message like /ERROR/
+| sort @timestamp desc
+| limit 20' \
+  --query 'queryId' --output text --region $REGION)
+
+echo "Query started: $QUERY_ID"
+sleep 5  # Wait for query to execute
+
+# Get results
+aws logs get-query-results \
+  --query-id $QUERY_ID \
+  --query 'results[*][*].{field:field,value:value}' \
+  --output json --region $REGION
+
+# Check query cost estimate
+aws logs get-query-results \
+  --query-id $QUERY_ID \
+  --query 'statistics' \
+  --output json --region $REGION
+# Look at bytesScanned — this determines the cost of the query</code>
+        <div class="step-note">The bytesScanned field in the query statistics tells you exactly how much data was scanned, which determines the cost. A query on 1 month of logs for a busy service might scan 100GB — $0.57. A targeted query on the last hour of a quiet service might scan 10MB — effectively free.</div>
+        <button class="step-btn" onclick="markDone(4)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n5" onclick="markDone(5)">5</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Audit all log groups and enforce retention</div>
+        <div class="step-text">Run the retention audit query from Day 14 to find log groups without retention policies. This is a production hygiene task you should run monthly.</div>
+        <code class="step-cmd"># Find all log groups without a retention policy (retain forever = billing forever)
+echo "=== Log groups WITHOUT retention policy (will accumulate forever) ==="
+aws logs describe-log-groups \
+  --query 'logGroups[?!retentionInDays].{Name:logGroupName,SizeMB:storedBytes}' \
+  --output table --region $REGION
+
+# Find log groups by size (most expensive ones)
+echo ""
+echo "=== Log groups by stored size ==="
+aws logs describe-log-groups \
+  --query 'sort_by(logGroups, &storedBytes)[-10:]
+           .{Name:logGroupName,SizeMB:storedBytes,Retention:retentionInDays}' \
+  --output table --region $REGION
+
+# Set 30-day retention on any log group missing a policy
+aws logs describe-log-groups \
+  --query 'logGroups[?!retentionInDays].logGroupName' \
+  --output text --region $REGION | \
+tr '\t' '\n' | while read GROUP; do
+  [ -z "$GROUP" ] && continue
+  echo "Setting 30-day retention: $GROUP"
+  aws logs put-retention-policy \
+    --log-group-name "$GROUP" \
+    --retention-in-days 30 \
+    --region $REGION
+done
+
+echo "Retention audit complete"</code>
+        <div class="step-note">AWS Lambda automatically creates log groups for every function (e.g. /aws/lambda/function-name). These groups have no retention by default. If you've used Lambda at any point, you likely have orphaned log groups with no retention accumulating storage charges. This audit finds them all.</div>
+        <button class="step-btn" onclick="markDone(5)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n6" onclick="markDone(6)">6</div></div>
+      <div class="step-body">
+        <div class="step-title">Create an operational dashboard</div>
+        <div class="step-text">Build a CloudWatch dashboard that shows the key signals from the alarm stack — your operational homepage for the GetWork system.</div>
+        <code class="step-cmd">DASHBOARD_BODY=$(cat << 'DASH'
+{
+  "widgets": [
+    {
+      "type": "alarm",
+      "properties": {
+        "title": "System Status",
+        "alarms": [
+          "arn:aws:cloudwatch:ap-south-1:ACCOUNT:alarm:getwork-alb-no-healthy-hosts",
+          "arn:aws:cloudwatch:ap-south-1:ACCOUNT:alarm:getwork-api-5xx-rate-high",
+          "arn:aws:cloudwatch:ap-south-1:ACCOUNT:alarm:getwork-rds-connections-high",
+          "arn:aws:cloudwatch:ap-south-1:ACCOUNT:alarm:getwork-rds-low-storage",
+          "arn:aws:cloudwatch:ap-south-1:ACCOUNT:alarm:getwork-app-error-spike"
+        ]
+      },
+      "x": 0, "y": 0, "width": 24, "height": 3
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "title": "ALB Request Count & Error Rate",
+        "metrics": [
+          ["AWS/ApplicationELB", "RequestCount",
+           "LoadBalancer", "app/getwork-alb/SUFFIX"],
+          ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count",
+           "LoadBalancer", "app/getwork-alb/SUFFIX"]
+        ],
+        "period": 60, "stat": "Sum", "view": "timeSeries"
+      },
+      "x": 0, "y": 3, "width": 12, "height": 6
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "title": "RDS Connections & CPU",
+        "metrics": [
+          ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "getwork-db"],
+          ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "getwork-db"]
+        ],
+        "period": 300, "stat": "Average", "view": "timeSeries"
+      },
+      "x": 12, "y": 3, "width": 12, "height": 6
+    }
+  ]
+}
+DASH
+)
+
+aws cloudwatch put-dashboard \
+  --dashboard-name GetWork-Operations \
+  --dashboard-body "$DASHBOARD_BODY" \
+  --region $REGION
+
+echo "Dashboard created!"
+echo "View at: https://ap-south-1.console.aws.amazon.com/cloudwatch/home#dashboards:name=GetWork-Operations"</code>
+        <div class="step-note">The dashboard is immediately accessible in the CloudWatch console. The alarm status widget at the top gives instant red/green health status. Replace ACCOUNT and SUFFIX with your actual values. Dashboards cost $3/month — minimal for the operational visibility they provide.</div>
+        <button class="step-btn" onclick="markDone(6)">Mark complete ✓</button>
+      </div>
+    </div>
+
+  </div>
+  <button class="next-btn" onclick="nav('cheatsheet',null)">Day 14 cheatsheet →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CHEATSHEET -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-cheatsheet" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Day 14 cheatsheet</div>
+    <div class="sec-sub">CloudWatch production mechanics at a glance.</div>
+  </div>
+
+  <div class="cs-grid">
+    <div class="cs-card"><div class="cs-title">Metric resolution decay</div><div class="cs-desc">Raw: 3hrs. 1-min rollups: 15 days. 5-min rollups: 63 days. 1-hr rollups: 455 days. Match query period to available resolution or you get empty graphs.</div></div>
+    <div class="cs-card"><div class="cs-title">Average CPU is wrong</div><div class="cs-desc">Fleet average masks saturated individual instances. Use Maximum CPU, or better: ALBRequestCountPerTarget which directly measures user experience.</div></div>
+    <div class="cs-card"><div class="cs-title">3/5 datapoints-to-alarm</div><div class="cs-desc">The production sweet spot. Ignores 1-2 period transient spikes. Fires on 3 consecutive breaches. Reduces false pages by 80%+ vs default 1/1.</div></div>
+    <div class="cs-card"><div class="cs-title">Missing data = notBreaching</div><div class="cs-desc">For rate-based alarms (error rate, request count). Prevents false INSUFFICIENT_DATA alerts during low-traffic periods. Missing rate data = 0 errors, not unknown.</div></div>
+    <div class="cs-card"><div class="cs-title">Composite alarms</div><div class="cs-desc">Boolean AND/OR/NOT of child alarms. One page for correlated failures. Suppress child alarm actions when composite handles the notification.</div></div>
+    <div class="cs-card"><div class="cs-title">Divide-by-zero in metric math</div><div class="cs-desc">Error rate = (5xx / requests) * 100. Returns NaN when requests=0. Use: IF(m2 > 0, (m1/m2)*100, 0). Prevents alarm INSUFFICIENT_DATA state during zero-traffic periods.</div></div>
+    <div class="cs-card"><div class="cs-title">Log retention = $ forever</div><div class="cs-desc">Default: never expire. Set retention on every log group: 30 days (app logs), 90 days (errors), 365 days (audit). Auto-created Lambda/ECS log groups have no retention — audit monthly.</div></div>
+    <div class="cs-card"><div class="cs-title">JSON logging → free field queries</div><div class="cs-desc">Logs Insights auto-parses JSON log fields. No parse command needed. Queries are faster, cheaper, and simpler. Use logstash-logback-encoder or structured logging from Day 12.</div></div>
+    <div class="cs-card"><div class="cs-title">EMF for Lambda metrics</div><div class="cs-desc">Embedded Metric Format: write JSON log lines with _aws.CloudWatchMetrics key. CloudWatch extracts metrics for free. Zero added Lambda execution time vs PutMetricData SDK call.</div></div>
+    <div class="cs-card"><div class="cs-title">defaultValue=0 in metric filters</div><div class="cs-desc">Critical for alarm evaluation. Without it, periods with no matching log events have no data point — alarm transitions to INSUFFICIENT_DATA instead of staying OK.</div></div>
+    <div class="cs-card"><div class="cs-title">Anomaly detection training</div><div class="cs-desc">Needs 2 weeks of data to learn daily/weekly patterns. Use threshold alarms during training period. Accounts for time-of-day and day-of-week patterns automatically.</div></div>
+    <div class="cs-card"><div class="cs-title">Container Insights cost</div><div class="cs-desc">~$0.30/metric/month + log ingestion. 10 services × 15 metrics = $45/month for metrics alone. Enable on production only; use standard ECS metrics for dev/staging.</div></div>
+  </div>
+
+  <hr class="divider">
+  <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Production alarm checklist</div>
+  <div class="rules">
+    <div class="rule"><span class="rule-n">1</span><span>Never use 1/1 datapoints-to-alarm for operational alarms. Minimum: 2/3. Recommended: 3/5.</span></div>
+    <div class="rule"><span class="rule-n">2</span><span>Set treat-missing-data=notBreaching on all rate-based alarms (error rate, request count). Use breaching only for heartbeat monitors.</span></div>
+    <div class="rule"><span class="rule-n">3</span><span>Always specify dimensions on ALB alarms. Undimensioned ALB metrics aggregate across all load balancers and dilute the signal.</span></div>
+    <div class="rule"><span class="rule-n">4</span><span>Use composite alarms to reduce correlated failure noise. Never page on individual resource alarms that are caused by one root event.</span></div>
+    <div class="rule"><span class="rule-n">5</span><span>Set retention on every log group — including auto-created ones. Run the retention audit script monthly.</span></div>
+    <div class="rule"><span class="rule-n">6</span><span>Add defaultValue=0 to every metric filter transformation. Without it, alarm evaluation breaks on zero-activity periods.</span></div>
+    <div class="rule"><span class="rule-n">7</span><span>Use JSON structured logging. Logs Insights queries are simpler, faster, and cheaper than unstructured log parsing with regex.</span></div>
+    <div class="rule"><span class="rule-n">8</span><span>Alarm on user outcomes first (error rate %, p99 latency), infrastructure second (CPU, memory). Infrastructure alarms are leading indicators; outcome alarms are definitive.</span></div>
+    <div class="rule"><span class="rule-n">9</span><span>Store CloudWatch Agent config in SSM Parameter Store. Update agent config without AMI rebuild or deployment.</span></div>
+    <div class="rule"><span class="rule-n">10</span><span>Add deployment annotations to CloudWatch dashboards. Instant correlation between deployment events and metric changes.</span></div>
+  </div>
+
+  <hr class="divider">
+  <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem;font-size:13px;color:var(--text2);line-height:1.9">
+    <span style="font-weight:700;color:var(--text)">Day 15 next — CI/CD pipelines on AWS.</span><br>
+    CodePipeline, CodeBuild, CodeDeploy. Your Bitbucket pipeline patterns mapped to AWS-native equivalents. Deployment strategies — rolling, blue-green, canary — wired into the pipeline. The complete pipeline from git commit to production deployment with automatic rollback.
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+const sections = {
+  metrics:'s-metrics', namespaces:'s-namespaces', custom:'s-custom',
+  math:'s-math', alarms:'s-alarms', composite:'s-composite',
+  logs:'s-logs', insights:'s-insights', agent:'s-agent',
+  dashboards:'s-dashboards', anomaly:'s-anomaly', container:'s-container',
+  interview:'s-interview', lab:'s-lab', cheatsheet:'s-cheatsheet'
+};
+
+function nav(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById(sections[id]);
+  if (sec) sec.classList.add('active');
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    document.querySelectorAll('.nav-item').forEach(n => {
+      const oc = n.getAttribute('onclick');
+      if (oc && oc.includes(`'${id}'`)) n.classList.add('active');
+    });
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function topic(prefix, idx, btn) {
+  const panel = btn.closest('.section');
+  panel.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+  panel.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+  const t = document.getElementById(prefix + idx);
+  if (t) t.classList.add('active');
+  btn.classList.add('active');
+}
+
+function tog(el) { el.classList.toggle('open'); }
+
+function markDone(n) {
+  const node = document.getElementById('n' + n);
+  if (!node) return;
+  node.closest('.step').classList.add('done');
+  node.textContent = '✓';
+}
+</script>
+
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+  </body>
+</html>

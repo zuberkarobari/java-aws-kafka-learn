@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 21 — Java Collections Framework</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-main: #0B1121;
+  --bg-card: #151E32;
+  --bg-card-hover: #1E293B;
+  --text-main: #94A3B8;
+  --text-light: #F8FAFC;
+  --text-muted: #64748B;
+  
+  --accent-blue: #38BDF8;
+  --accent-blue-dim: rgba(56, 189, 248, 0.1);
+  --accent-purple: #A855F7;
+  --accent-purple-dim: rgba(168, 85, 247, 0.1);
+  --accent-green: #34D399;
+  --accent-green-dim: rgba(52, 211, 153, 0.1);
+  --accent-orange: #FB923C;
+  --accent-orange-dim: rgba(251, 146, 60, 0.1);
+  --accent-red: #F87171;
+  --accent-red-dim: rgba(248, 113, 113, 0.1);
+  
+  --border-light: rgba(255,255,255,0.08);
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.05), transparent 30%),
+    radial-gradient(circle at 85% 60%, rgba(168, 85, 247, 0.05), transparent 30%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: var(--glass-bg); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-light);
+  padding: 1rem 1.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100;
+}
+.day-badge {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; 
+  border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+}
+.header-title { font-size: 15px; font-weight: 700; color: var(--text-light); }
+.header-sub { font-size: 12px; color: var(--text-muted); margin-left: auto; font-weight: 500; }
+
+.progress-row { display: flex; align-items: center; gap: 10px; padding: 1rem 1.5rem 0.75rem; }
+.progress-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; font-weight: 600; }
+.progress-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); border-radius: 4px; width: 70%; box-shadow: 0 0 10px var(--accent-blue-dim); }
+
+/* Layout & Sidebar */
+.layout { display: flex; min-height: calc(100vh - 100px); }
+.sidebar {
+  width: 240px; flex-shrink: 0; background: rgba(21, 30, 50, 0.4);
+  border-right: 1px solid var(--border-light); padding: 1.5rem 0;
+  position: sticky; top: 100px; height: calc(100vh - 100px); overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+
+.sidebar-section { padding: 0 1rem; margin-bottom: 1.5rem; }
+.sidebar-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: var(--text-muted);
+  text-transform: uppercase; padding: 0 0.75rem; margin-bottom: 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px;
+  font-size: 13px; color: var(--text-main); font-weight: 500; cursor: pointer;
+  border: none; background: transparent; width: 100%; text-align: left; transition: all 0.2s ease;
+  font-family: inherit;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-light); }
+.nav-item.active { background: var(--accent-blue-dim); color: var(--accent-blue); font-weight: 600; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; transition: all 0.2s ease; }
+.nav-item.active .nav-dot { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+
+/* Main Content */
+.main { flex: 1; padding: 2.5rem; max-width: 840px; overflow-x: hidden; }
+.section { display: none; animation: fadeIn 0.4s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.sec-header { margin-bottom: 2rem; }
+.sec-title {
+  font-size: 26px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; letter-spacing: -0.5px;
+  background: linear-gradient(to right, #fff, #94A3B8); -webkit-background-clip: text; color: transparent;
+}
+.sec-sub { font-size: 14px; color: var(--text-main); line-height: 1.6; }
+
+.prose { font-size: 14.5px; color: var(--text-main); line-height: 1.8; }
+.prose p { margin-bottom: 1.25rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text-light); font-weight: 600; }
+
+/* Callouts */
+.callout { border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.5rem 0; font-size: 14px; line-height: 1.7; border: 1px solid var(--border-light); backdrop-filter: blur(5px); }
+.callout strong { font-weight: 800; display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.callout.how { background: var(--accent-blue-dim); border-left: 4px solid var(--accent-blue); color: #E0F2FE; }
+.callout.how strong { color: var(--accent-blue); }
+.callout.fail { background: var(--accent-red-dim); border-left: 4px solid var(--accent-red); color: #FEE2E2; }
+.callout.fail strong { color: var(--accent-red); }
+.callout.prod { background: var(--accent-green-dim); border-left: 4px solid var(--accent-green); color: #D1FAE5; }
+.callout.prod strong { color: var(--accent-green); }
+
+/* Code Blocks */
+code { font-family: 'Fira Code', monospace; font-size: 12.5px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 2px 6px; color: var(--accent-blue); }
+.code-wrap { margin: 1.5rem 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-light); background: #050505; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+.code-header {
+  background: var(--bg-card); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+}
+.code-header::before {
+  content: ''; display: inline-block; height: 12px; width: 50px;
+  background-image: radial-gradient(circle, #ED6A5E 6px, transparent 6.5px),
+                    radial-gradient(circle, #F4BF4F 6px, transparent 6.5px),
+                    radial-gradient(circle, #61C554 6px, transparent 6.5px);
+  background-size: 12px 12px; background-position: 0 0, 18px 0, 36px 0; background-repeat: no-repeat;
+}
+.code-lang { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+pre { padding: 1.25rem 1.5rem; overflow-x: auto; margin: 0; }
+pre code { font-size: 13px; background: none; border: none; padding: 0; color: #E2E8F0; line-height: 1.7; display: block; white-space: pre; }
+
+/* Syntax Highlighting */
+.t-k { color: #F472B6; } /* Pink keywords */
+.t-s { color: #A3E635; } /* Green strings */
+.t-c { color: #6B7280; font-style: italic; } /* Gray comments */
+.t-n { color: #FBBF24; } /* Yellow numbers */
+.t-p { color: #38BDF8; } /* Blue properties */
+.t-a { color: #A855F7; } /* Purple annotations */
+.t-o { color: #34D399; } /* Operators */
+
+/* Comparison Cards */
+.compare { display: grid; gap: 16px; margin: 1.5rem 0; }
+.compare.two { grid-template-columns: 1fr 1fr; }
+.compare.three { grid-template-columns: 1fr 1fr 1fr; }
+.compare-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 1.25rem; transition: transform 0.2s ease; }
+.compare-card:hover { transform: translateY(-3px); border-color: var(--text-muted); }
+.compare-card.accent { border-color: var(--accent-purple); background: rgba(168, 85, 247, 0.05); }
+.compare-card.accent .compare-title { color: var(--accent-purple); }
+.compare-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-light); }
+.compare-body { font-size: 13.5px; color: var(--text-main); line-height: 1.7; }
+.compare-body strong { color: var(--text-light); }
+
+/* Tree Chart Styles */
+.tree-container {
+  margin: 2rem 0;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  padding-top: 1rem;
+}
+.tree, .tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tree ul {
+  padding-left: 3rem;
+  position: relative;
+  margin-top: 1rem;
+}
+.tree ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 1.5rem;
+  border-left: 2px solid var(--border-light);
+}
+.tree li {
+  margin: 1rem 0;
+  position: relative;
+}
+.tree ul > li::before {
+  content: "";
+  position: absolute;
+  top: 1.5rem;
+  left: -1.5rem;
+  width: 1.5rem;
+  border-top: 2px solid var(--border-light);
+}
+.tree ul > li:last-child::after {
+  content: "";
+  position: absolute;
+  top: 1.5rem;
+  left: -1.6rem;
+  bottom: -3rem;
+  width: 4px;
+  background: var(--bg-main);
+  z-index: 1;
+}
+.node-box {
+  display: inline-block;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  min-width: 180px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.node-box:hover {
+  transform: translateY(-2px);
+  border-color: var(--text-muted);
+}
+.node-i { border-left: 4px solid var(--accent-purple); }
+.node-c { border-left: 4px solid var(--accent-blue); }
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.node-name { font-size: 14px; font-weight: 700; color: var(--text-light); }
+.node-note { font-size: 11.5px; color: var(--text-muted); margin-top: 6px; }
+.badge-type {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.node-i .badge-type { background: var(--accent-purple-dim); color: var(--accent-purple); }
+.node-c .badge-type { background: var(--accent-blue-dim); color: var(--accent-blue); }
+
+/* Steps */
+.steps { display: flex; flex-direction: column; gap: 0; margin: 1.5rem 0; }
+.step { display: flex; gap: 0; }
+.step-line { display: flex; flex-direction: column; align-items: center; width: 40px; flex-shrink: 0; }
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--border-light);
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;
+  color: var(--text-muted); flex-shrink: 0; z-index: 2;
+}
+.step-connector { width: 2px; background: var(--border-light); flex: 1; min-height: 20px; margin-top: -2px; margin-bottom: -2px; }
+.step:last-child .step-connector { display: none; }
+.step-body { padding: 0 0 2rem 16px; flex: 1; }
+.step-title { font-size: 15px; font-weight: 700; color: var(--text-light); margin-bottom: 6px; }
+.step-text { font-size: 14px; color: var(--text-main); line-height: 1.7; }
+.step-cmd { font-family: 'Fira Code', monospace; font-size: 12.5px; background: #050505; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px 16px; margin-top: 12px; color: #E2E8F0; white-space: pre-wrap; word-break: break-all; line-height: 1.65; display: block; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+
+/* Interview Questions */
+.iq-list { display: flex; flex-direction: column; gap: 12px; }
+.iq { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.2s ease; }
+.iq:hover { border-color: var(--accent-purple); box-shadow: 0 4px 15px var(--accent-purple-dim); }
+.iq.open { border-color: var(--accent-purple); }
+.iq-head { display: flex; align-items: flex-start; gap: 14px; padding: 1.25rem; }
+.iq-num { font-size: 12px; font-weight: 800; color: var(--bg-main); background: var(--text-light); padding: 2px 8px; border-radius: 6px; }
+.iq-q { font-size: 15px; font-weight: 600; color: var(--text-light); flex: 1; line-height: 1.5; }
+.iq-diff { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; flex-shrink: 0; }
+.diff-e { background: var(--accent-green-dim); color: var(--accent-green); }
+.diff-m { background: var(--accent-orange-dim); color: var(--accent-orange); }
+.diff-h { background: var(--accent-red-dim); color: var(--accent-red); }
+.iq-arrow { font-size: 12px; color: var(--text-muted); transition: transform 0.3s ease; margin-top: 4px; }
+.iq.open .iq-arrow { transform: rotate(180deg); color: var(--accent-purple); }
+.iq-body { display: none; padding: 1.25rem; border-top: 1px solid var(--border-light); background: rgba(0,0,0,0.15); font-size: 14.5px; }
+.iq.open .iq-body { display: block; animation: fadeIn 0.3s ease; }
+.iq-body p { margin-bottom: 12px; }
+.iq-body p:last-child { margin-bottom: 0; }
+.iq-body strong { color: var(--text-light); font-weight: 600; }
+
+.next-btn {
+  width: 100%; margin-top: 2.5rem; padding: 16px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
+}
+.next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(168, 85, 247, 0.4); }
+
+@media(max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 1.5rem; max-width: 100%; }
+  .compare.two, .compare.three { grid-template-columns: 1fr; }
+}
+</style>
+
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="header">
+  <span class="day-badge">Day 21 / 30</span>
+  <span class="header-title">Java Collections Framework</span>
+  <span class="header-sub">Phase 6 · Java Core Foundations</span>
+</div>
+<div class="progress-row">
+  <span class="progress-label">Phase 6</span>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <span class="progress-label">Day 21 of 30</span>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Architecture</div>
+      <button class="nav-item active" onclick="nav('hierarchy',this)"><span class="nav-dot"></span>Framework Hierarchy</button>
+      <button class="nav-item" onclick="nav('methods',this)"><span class="nav-dot"></span>Core Methods Guide</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">The Interfaces</div>
+      <button class="nav-item" onclick="nav('list',this)"><span class="nav-dot"></span>List (ArrayList, Linked)</button>
+      <button class="nav-item" onclick="nav('set',this)"><span class="nav-dot"></span>Set (Hash, Tree)</button>
+      <button class="nav-item" onclick="nav('queue',this)"><span class="nav-dot"></span>Queue & Deque</button>
+      <button class="nav-item" onclick="nav('map',this)"><span class="nav-dot"></span>Map (Hash, Tree)</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Practice</div>
+      <button class="nav-item" onclick="nav('interview',this)"><span class="nav-dot"></span>Interview Prep</button>
+      <button class="nav-item" onclick="nav('lab',this)"><span class="nav-dot"></span>Hands-on Lab</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    
+    <!-- HIERARCHY -->
+    <div id="s-hierarchy" class="section active">
+      <div class="sec-header">
+        <div class="sec-title">Collections Framework Hierarchy</div>
+        <div class="sec-sub">The Java Collections Framework (JCF) provides an architecture to store and manipulate groups of objects. It reduces programming effort by providing high-performance, thoroughly tested data structures.</div>
+      </div>
+      
+      <div class="prose">
+        <p>Before diving into specific classes, you must memorize the parent class hierarchy. Notice that <code>Map</code> <strong>does not</strong> inherit from <code>Collection</code>, as it represents a key-value pair rather than a single sequence of elements.</p>
+      </div>
+
+      <div class="tree-container">
+        <ul class="tree">
+          <li>
+            <div class="node-box node-i">
+              <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">Iterable</span></div>
+            </div>
+            <ul>
+              <li>
+                <div class="node-box node-i">
+                  <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">Collection</span></div>
+                </div>
+                <ul>
+                  <li>
+                    <div class="node-box node-i">
+                      <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">List</span></div>
+                      <div class="node-note">Ordered, allows duplicates</div>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="node-box node-c">
+                          <div class="node-header"><span class="badge-type">Class</span><span class="node-name">ArrayList</span></div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node-box node-c">
+                          <div class="node-header"><span class="badge-type">Class</span><span class="node-name">LinkedList</span></div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node-box node-c">
+                          <div class="node-header"><span class="badge-type">Class</span><span class="node-name">Vector</span></div>
+                          <div class="node-note">↳ Stack (Legacy)</div>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    <div class="node-box node-i">
+                      <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">Set</span></div>
+                      <div class="node-note">No duplicates</div>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="node-box node-c">
+                          <div class="node-header"><span class="badge-type">Class</span><span class="node-name">HashSet</span></div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node-box node-c">
+                          <div class="node-header"><span class="badge-type">Class</span><span class="node-name">LinkedHashSet</span></div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node-box node-i">
+                          <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">SortedSet</span></div>
+                        </div>
+                        <ul>
+                          <li>
+                            <div class="node-box node-c">
+                              <div class="node-header"><span class="badge-type">Class</span><span class="node-name">TreeSet</span></div>
+                            </div>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    <div class="node-box node-i">
+                      <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">Queue</span></div>
+                      <div class="node-note">FIFO processing</div>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="node-box node-c">
+                          <div class="node-header"><span class="badge-type">Class</span><span class="node-name">PriorityQueue</span></div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="node-box node-i">
+                          <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">Deque</span></div>
+                        </div>
+                        <ul>
+                          <li>
+                            <div class="node-box node-c">
+                              <div class="node-header"><span class="badge-type">Class</span><span class="node-name">ArrayDeque</span></div>
+                            </div>
+                          </li>
+                          <li>
+                            <div class="node-box node-c">
+                              <div class="node-header"><span class="badge-type">Class</span><span class="node-name">LinkedList</span></div>
+                              <div class="node-note">Also implements List</div>
+                            </div>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          
+          <li style="margin-top: 3rem;">
+            <div class="node-box node-i">
+              <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">Map</span></div>
+              <div class="node-note">Key-Value pairs (Does NOT extend Collection)</div>
+            </div>
+            <ul>
+              <li>
+                <div class="node-box node-c">
+                  <div class="node-header"><span class="badge-type">Class</span><span class="node-name">HashMap</span></div>
+                </div>
+              </li>
+              <li>
+                <div class="node-box node-c">
+                  <div class="node-header"><span class="badge-type">Class</span><span class="node-name">LinkedHashMap</span></div>
+                </div>
+              </li>
+              <li>
+                <div class="node-box node-c">
+                  <div class="node-header"><span class="badge-type">Class</span><span class="node-name">Hashtable</span></div>
+                  <div class="node-note">Legacy</div>
+                </div>
+              </li>
+              <li>
+                <div class="node-box node-i">
+                  <div class="node-header"><span class="badge-type">Interface</span><span class="node-name">SortedMap</span></div>
+                </div>
+                <ul>
+                  <li>
+                    <div class="node-box node-c">
+                      <div class="node-header"><span class="badge-type">Class</span><span class="node-name">TreeMap</span></div>
+                    </div>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <button class="next-btn" onclick="nav('methods', document.querySelectorAll('.nav-item')[1])">Deep Dive: Core Methods Guide →</button>
+    </div>
+
+    <!-- METHODS -->
+    <div id="s-methods" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Core Methods Guide</div>
+        <div class="sec-sub">To master the Collections framework, you must know the exact methods defined by the primary interfaces. Because interfaces enforce contracts, these methods are guaranteed to exist across all their implementing classes.</div>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title"><span class="ht-i">Collection&lt;E&gt;</span> Methods</div>
+          <div class="compare-body">
+            <em>Applies to all Lists, Sets, and Queues.</em><br><br>
+            <code>boolean add(E e)</code> - Adds element.<br>
+            <code>boolean remove(Object o)</code> - Removes instance.<br>
+            <code>boolean contains(Object o)</code> - Checks existence.<br>
+            <code>int size()</code> - Number of elements.<br>
+            <code>boolean isEmpty()</code> - True if size is 0.<br>
+            <code>void clear()</code> - Removes all elements.<br>
+            <code>Iterator&lt;E&gt; iterator()</code> - Returns an iterator.<br>
+            <code>Object[] toArray()</code> - Converts to a raw array.
+          </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-title"><span class="ht-i">List&lt;E&gt;</span> Specific Methods</div>
+          <div class="compare-body">
+            <em>Lists are indexed, unlocking positional methods.</em><br><br>
+            <code>E get(int index)</code> - Retrieves at index.<br>
+            <code>E set(int index, E element)</code> - Replaces at index.<br>
+            <code>void add(int index, E element)</code> - Inserts at index.<br>
+            <code>E remove(int index)</code> - Removes at index.<br>
+            <code>int indexOf(Object o)</code> - Finds first index of obj.<br>
+            <code>List&lt;E&gt; subList(int from, int to)</code> - Returns a view.
+          </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-title"><span class="ht-i">Map&lt;K, V&gt;</span> Methods</div>
+          <div class="compare-body">
+            <em>Maps handle Key-Value pairs.</em><br><br>
+            <code>V put(K key, V value)</code> - Inserts/updates mapping.<br>
+            <code>V get(Object key)</code> - Retrieves by key.<br>
+            <code>V remove(Object key)</code> - Deletes mapping.<br>
+            <code>boolean containsKey(Object key)</code> - Checks key.<br>
+            <code>boolean containsValue(Object val)</code> - Checks val.<br>
+            <code>Set&lt;K&gt; keySet()</code> - Returns all keys.<br>
+            <code>Collection&lt;V&gt; values()</code> - Returns all values.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Java 8+ Map Additions</div>
+          <div class="compare-body">
+            <code>putIfAbsent(K key, V value)</code> - Only inserts if missing or null.<br>
+            <code>getOrDefault(Object key, V default)</code> - Safe retrieval.<br>
+            <code>computeIfAbsent(...)</code> - Builds value if key missing.<br>
+            <code>forEach(BiConsumer)</code> - Lambda iteration.
+          </div>
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('list', document.querySelectorAll('.nav-item')[2])">The List Interface →</button>
+    </div>
+
+    <!-- LIST -->
+    <div id="s-list" class="section">
+      <div class="sec-header">
+        <div class="sec-title">The List Interface</div>
+        <div class="sec-sub">An ordered collection (also known as a sequence). The user of this interface has precise control over where in the list each element is inserted. Allows duplicate elements.</div>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">ArrayList</div>
+          <div class="compare-body">
+            Backed by a <strong>dynamic resizable array</strong>.<br><br>
+            <strong>Access <code>get(i)</code>:</strong> O(1) - Extremely fast.<br>
+            <strong>Insertion <code>add(e)</code>:</strong> O(1) amortized.<br>
+            <strong>Middle Insertion <code>add(i, e)</code>:</strong> O(N) - Slow, requires shifting elements to the right.<br><br>
+            <strong>Verdict:</strong> Best for 95% of use cases where you mostly read data and add to the end of the list.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">LinkedList</div>
+          <div class="compare-body">
+            Backed by a <strong>doubly-linked list</strong> (nodes with pointers to previous and next).<br><br>
+            <strong>Access <code>get(i)</code>:</strong> O(N) - Slow, must traverse nodes.<br>
+            <strong>Insertion <code>add(e)</code>:</strong> O(1).<br>
+            <strong>Middle Insertion:</strong> O(1) <em>if</em> you already have the Node reference via an Iterator, otherwise O(N) to find it.<br><br>
+            <strong>Verdict:</strong> Use when you are heavily adding/removing elements from the <em>beginning</em> or middle of a large list.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout fail">
+        <strong>The ConcurrentModificationException Trap</strong>
+        If you iterate through a List using a <code>for-each</code> loop and try to <code>.remove()</code> an element from the list inside the loop, Java will throw a <code>ConcurrentModificationException</code>. 
+        <br><br>
+        <strong>Fix:</strong> Use an explicit <code>Iterator</code> and call <code>iterator.remove()</code>, OR use Java 8's <code>list.removeIf(condition)</code>.
+      </div>
+
+      <button class="next-btn" onclick="nav('set', document.querySelectorAll('.nav-item')[3])">The Set Interface →</button>
+    </div>
+
+    <!-- SET -->
+    <div id="s-set" class="section">
+      <div class="sec-header">
+        <div class="sec-title">The Set Interface</div>
+        <div class="sec-sub">A collection that contains no duplicate elements. It models the mathematical set abstraction.</div>
+      </div>
+
+      <div class="compare three">
+        <div class="compare-card">
+          <div class="compare-title">HashSet</div>
+          <div class="compare-body">
+            Backed by a HashMap instance internally.<br><br>
+            <strong>Ordering:</strong> None. Elements are scattered randomly based on their Hash Code.<br>
+            <strong>Performance:</strong> O(1) for add, remove, and contains.<br><br>
+            <strong>Verdict:</strong> The go-to default when you just need to ensure uniqueness and do fast lookups.
+          </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-title">LinkedHashSet</div>
+          <div class="compare-body">
+            Backed by a Hash table and a linked list running through it.<br><br>
+            <strong>Ordering:</strong> Insertion-order. Iterating over it returns elements in the exact order they were added.<br>
+            <strong>Performance:</strong> Slightly slower O(1) due to maintaining the linked list.<br><br>
+            <strong>Verdict:</strong> Use when uniqueness AND order of creation matter.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">TreeSet</div>
+          <div class="compare-body">
+            Backed by a Red-Black Tree.<br><br>
+            <strong>Ordering:</strong> Natural ordering (alphabetical/numerical) or by a custom <code>Comparator</code>.<br>
+            <strong>Performance:</strong> O(log N) for add, remove, and contains.<br><br>
+            <strong>Verdict:</strong> Use when you need to maintain a constantly sorted list without duplicate values.
+          </div>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Set Uniqueness Example</span></div>
+        <pre><code>Set&lt;String&gt; uniqueNames = <span class="t-k">new</span> HashSet&lt;&gt;();
+uniqueNames.add(<span class="t-s">"Alice"</span>);
+uniqueNames.add(<span class="t-s">"Bob"</span>);
+<span class="t-k">boolean</span> isAdded = uniqueNames.add(<span class="t-s">"Alice"</span>); 
+
+System.out.println(isAdded); <span class="t-c">// Output: false (Alice was already there)</span>
+System.out.println(uniqueNames.size()); <span class="t-c">// Output: 2</span></code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('queue', document.querySelectorAll('.nav-item')[4])">The Queue Interface →</button>
+    </div>
+
+    <!-- QUEUE -->
+    <div id="s-queue" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Queue & Deque</div>
+        <div class="sec-sub">Queues typically process elements in a FIFO (First-In-First-Out) manner. Deques (Double Ended Queues) allow insertion and removal at both ends.</div>
+      </div>
+
+      <div class="prose">
+        <p>The Queue interface provides special methods for handling capacity constraints. For example, <code>add()</code> throws an exception if the queue is full, whereas <code>offer()</code> gracefully returns <code>false</code>.</p>
+        <p><strong>Removal:</strong> <code>remove()</code> throws exception if empty; <code>poll()</code> returns null. <br>
+        <strong>Inspection:</strong> <code>element()</code> throws exception if empty; <code>peek()</code> returns null.</p>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">PriorityQueue</div>
+          <div class="compare-body">
+            Elements are ordered based on their natural ordering or a supplied <code>Comparator</code>, NOT by insertion order.<br><br>
+            The element at the head of the queue is always the "least" element according to the specified ordering.<br><br>
+            <strong>Use Case:</strong> Task scheduling systems where high-priority tasks must jump ahead of low-priority tasks.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">ArrayDeque</div>
+          <div class="compare-body">
+            A resizable-array implementation of the <code>Deque</code> interface.<br><br>
+            Can be used as a Queue (FIFO) or a Stack (LIFO).<br><br>
+            <strong>Use Case:</strong> It is significantly faster than <code>Stack</code> when used as a stack, and faster than <code>LinkedList</code> when used as a queue. This is the modern go-to for Stack/Queue operations.
+          </div>
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('map', document.querySelectorAll('.nav-item')[5])">The Map Interface →</button>
+    </div>
+
+    <!-- MAP -->
+    <div id="s-map" class="section">
+      <div class="sec-header">
+        <div class="sec-title">The Map Interface</div>
+        <div class="sec-sub">An object that maps keys to values. A map cannot contain duplicate keys; each key can map to at most one value.</div>
+      </div>
+
+      <div class="compare three">
+        <div class="compare-card">
+          <div class="compare-title">HashMap</div>
+          <div class="compare-body">
+            Does not maintain any order.<br>
+            Allows one <code>null</code> key and multiple <code>null</code> values.<br>
+            O(1) time complexity for <code>get()</code> and <code>put()</code>.<br>
+            The default map to use in almost all situations.
+          </div>
+        </div>
+        <div class="compare-card">
+          <div class="compare-title">LinkedHashMap</div>
+          <div class="compare-body">
+            Maintains <strong>insertion order</strong> (or access order if configured via constructor).<br>
+            Great for building simple LRU (Least Recently Used) caches.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">TreeMap</div>
+          <div class="compare-body">
+            Sorted according to the natural ordering of its keys, or by a <code>Comparator</code>.<br>
+            O(log N) time for operations.<br>
+            Does NOT allow <code>null</code> keys.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout how">
+        <strong>How HashMap works under the hood (Crucial Interview Topic)</strong>
+        <br>1. A HashMap is backed by an array of <code>Node&lt;K,V&gt;</code> objects (called "buckets").
+        <br>2. When you call <code>put(Key, Value)</code>, Java calls <code>hashCode()</code> on the Key.
+        <br>3. A mathematical formula converts the hash code into an array index (e.g., Index 4).
+        <br>4. The Node is placed in bucket 4. 
+        <br>5. <strong>Hash Collision:</strong> If another Key hashes to bucket 4, it is added to a Linked List at that bucket. 
+        <br>6. <strong>Java 8 Optimization:</strong> If the Linked List at one bucket grows beyond 8 elements, Java converts it into a Red-Black Tree, improving lookup from O(N) to O(log N).
+      </div>
+
+      <div class="callout warn">
+        <strong>The equals() and hashCode() Contract</strong>
+        If you use a custom Object as a Map Key, you <strong>MUST</strong> override both <code>equals()</code> and <code>hashCode()</code>. If two objects are <code>equals()</code>, they must return the same <code>hashCode()</code>. If you don't override them, <code>put()</code> and <code>get()</code> will fail to find your object in the Map.
+      </div>
+
+      <button class="next-btn" onclick="nav('interview', document.querySelectorAll('.nav-item')[6])">Interview Prep →</button>
+    </div>
+
+    <!-- INTERVIEW PREP -->
+    <div id="s-interview" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Interview Prep</div>
+        <div class="sec-sub">Collections are the most frequently asked topic in Java interviews. You must understand internal structures and concurrency implications.</div>
+      </div>
+
+      <div class="iq-list">
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q1</span>
+            <span class="iq-q">ArrayList vs LinkedList: When to use which?</span>
+            <span class="iq-diff diff-e">Easy</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p>Use <strong>ArrayList</strong> (dynamic array) for 95% of use cases. It provides fast O(1) random access. Adding to the end is O(1). However, inserting/removing from the middle is O(N) because elements must be shifted.</p>
+            <p>Use <strong>LinkedList</strong> (doubly linked nodes) only when you are constantly inserting or deleting elements from the beginning or middle of the list. Random access in LinkedList is O(N) because it must traverse the nodes from the start/end to find the index.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q2</span>
+            <span class="iq-q">What is the difference between Fail-Fast and Fail-Safe Iterators?</span>
+            <span class="iq-diff diff-h">Hard</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><strong>Fail-Fast</strong> iterators operate directly on the collection itself. If the collection is structurally modified (an element is added or removed) while iterating, it immediately throws a <code>ConcurrentModificationException</code>. Examples: ArrayList, HashMap, HashSet.</p>
+            <p><strong>Fail-Safe</strong> iterators operate on a <em>clone</em> of the collection. Therefore, structural modifications to the original collection during iteration are ignored, and no exception is thrown. Examples: <code>ConcurrentHashMap</code>, <code>CopyOnWriteArrayList</code>.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q3</span>
+            <span class="iq-q">HashMap vs Hashtable vs ConcurrentHashMap?</span>
+            <span class="iq-diff diff-m">Medium</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><strong>HashMap:</strong> Not thread-safe. Fast. Allows one null key and multiple null values.</p>
+            <p><strong>Hashtable:</strong> Legacy class. Thread-safe, but poorly designed because it synchronizes (locks) the <em>entire</em> map during every read/write, causing a massive performance bottleneck. No null keys/values allowed.</p>
+            <p><strong>ConcurrentHashMap:</strong> The modern thread-safe alternative. It uses lock-striping at the bucket level. Multiple threads can read/write simultaneously as long as they are operating on different buckets. Highly performant in concurrent environments.</p>
+          </div>
+        </div>
+      </div>
+      
+      <button class="next-btn" onclick="nav('lab', document.querySelectorAll('.nav-item')[7])">Start Hands-on Lab →</button>
+    </div>
+
+    <!-- LAB -->
+    <div id="s-lab" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Hands-on Lab: Collections Mastery</div>
+        <div class="sec-sub">Implement and observe the behavior of Lists, Sets, and Maps.</div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">1</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">ArrayList and safe removal</div>
+            <div class="step-text">Safely remove items while iterating using Java 8 <code>removeIf</code>.</div>
+            <code class="step-cmd">List&lt;String&gt; tasks = <span class="t-k">new</span> ArrayList&lt;&gt;(Arrays.asList(<span class="t-s">"Code"</span>, <span class="t-s">"Test"</span>, <span class="t-s">"Deploy"</span>, <span class="t-s">"Sleep"</span>));
+
+<span class="t-c">// The WRONG way (throws Exception):</span>
+<span class="t-c">// for(String t : tasks) { if(t.equals("Sleep")) tasks.remove(t); }</span>
+
+<span class="t-c">// The RIGHT way (Java 8+):</span>
+tasks.removeIf(t -&gt; t.equals(<span class="t-s">"Sleep"</span>));
+System.out.println(tasks); <span class="t-c">// [Code, Test, Deploy]</span></code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">2</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">Map iteration and `getOrDefault`</div>
+            <div class="step-text">Use modern Map features to avoid null pointer exceptions.</div>
+            <code class="step-cmd">Map&lt;String, Integer&gt; inventory = <span class="t-k">new</span> HashMap&lt;&gt;();
+inventory.put(<span class="t-s">"Laptops"</span>, <span class="t-n">10</span>);
+inventory.put(<span class="t-s">"Monitors"</span>, <span class="t-n">5</span>);
+
+<span class="t-c">// Safe retrieval (avoids null)</span>
+<span class="t-k">int</span> miceCount = inventory.getOrDefault(<span class="t-s">"Mice"</span>, <span class="t-n">0</span>);
+System.out.println(<span class="t-s">"Mice: "</span> + miceCount); <span class="t-c">// Outputs 0</span>
+
+<span class="t-c">// Modern Iteration via BiConsumer</span>
+inventory.forEach((key, value) -&gt; {
+    System.out.println(key + <span class="t-s">" : "</span> + value);
+});</code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">3</div></div>
+          <div class="step-body">
+            <div class="step-title">TreeSet for automatic sorting</div>
+            <div class="step-text">Watch TreeSet automatically sort elements upon insertion.</div>
+            <code class="step-cmd">Set&lt;Integer&gt; scores = <span class="t-k">new</span> TreeSet&lt;&gt;();
+scores.add(<span class="t-n">55</span>);
+scores.add(<span class="t-n">99</span>);
+scores.add(<span class="t-n">23</span>);
+scores.add(<span class="t-n">88</span>);
+
+<span class="t-c">// Automatically prints sorted: [23, 55, 88, 99]</span>
+System.out.println(scores); </code>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+function nav(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  
+  const target = document.getElementById('s-' + id);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function topic(prefix, idx, btn) {
+  const section = btn.closest('.section');
+  section.querySelectorAll('.topic').forEach(t => t.classList.remove('active'));
+  section.querySelectorAll('.ttab').forEach(t => t.classList.remove('active'));
+  
+  const target = document.getElementById(prefix + idx);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+function tog(el) {
+  el.classList.toggle('open');
+}
+</script>
+
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+  </body>
+</html>

@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 20 — Object-Oriented Programming (OOP)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-main: #0B1121;
+  --bg-card: #151E32;
+  --bg-card-hover: #1E293B;
+  --text-main: #94A3B8;
+  --text-light: #F8FAFC;
+  --text-muted: #64748B;
+  
+  --accent-blue: #38BDF8;
+  --accent-blue-dim: rgba(56, 189, 248, 0.1);
+  --accent-purple: #A855F7;
+  --accent-purple-dim: rgba(168, 85, 247, 0.1);
+  --accent-green: #34D399;
+  --accent-green-dim: rgba(52, 211, 153, 0.1);
+  --accent-orange: #FB923C;
+  --accent-orange-dim: rgba(251, 146, 60, 0.1);
+  --accent-red: #F87171;
+  --accent-red-dim: rgba(248, 113, 113, 0.1);
+  
+  --border-light: rgba(255,255,255,0.08);
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.05), transparent 30%),
+    radial-gradient(circle at 85% 60%, rgba(168, 85, 247, 0.05), transparent 30%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header */
+.header {
+  background: var(--glass-bg); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-light);
+  padding: 1rem 1.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100;
+}
+.day-badge {
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 11px; font-weight: 800; padding: 6px 14px; 
+  border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+}
+.header-title { font-size: 15px; font-weight: 700; color: var(--text-light); }
+.header-sub { font-size: 12px; color: var(--text-muted); margin-left: auto; font-weight: 500; }
+
+.progress-row { display: flex; align-items: center; gap: 10px; padding: 1rem 1.5rem 0.75rem; }
+.progress-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; font-weight: 600; }
+.progress-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.3); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); border-radius: 4px; width: 66%; box-shadow: 0 0 10px var(--accent-blue-dim); }
+
+/* Layout & Sidebar */
+.layout { display: flex; min-height: calc(100vh - 100px); }
+.sidebar {
+  width: 240px; flex-shrink: 0; background: rgba(21, 30, 50, 0.4);
+  border-right: 1px solid var(--border-light); padding: 1.5rem 0;
+  position: sticky; top: 100px; height: calc(100vh - 100px); overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+
+.sidebar-section { padding: 0 1rem; margin-bottom: 1.5rem; }
+.sidebar-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: var(--text-muted);
+  text-transform: uppercase; padding: 0 0.75rem; margin-bottom: 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px;
+  font-size: 13px; color: var(--text-main); font-weight: 500; cursor: pointer;
+  border: none; background: transparent; width: 100%; text-align: left; transition: all 0.2s ease;
+  font-family: inherit;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: var(--text-light); }
+.nav-item.active { background: var(--accent-blue-dim); color: var(--accent-blue); font-weight: 600; }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; transition: all 0.2s ease; }
+.nav-item.active .nav-dot { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+
+/* Main Content */
+.main { flex: 1; padding: 2.5rem; max-width: 840px; overflow-x: hidden; }
+.section { display: none; animation: fadeIn 0.4s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.sec-header { margin-bottom: 2rem; }
+.sec-title {
+  font-size: 26px; font-weight: 800; line-height: 1.3; margin-bottom: 8px; letter-spacing: -0.5px;
+  background: linear-gradient(to right, #fff, #94A3B8); -webkit-background-clip: text; color: transparent;
+}
+.sec-sub { font-size: 14px; color: var(--text-main); line-height: 1.6; }
+
+.prose { font-size: 14.5px; color: var(--text-main); line-height: 1.8; }
+.prose p { margin-bottom: 1.25rem; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text-light); font-weight: 600; }
+
+/* Callouts */
+.callout { border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1.5rem 0; font-size: 14px; line-height: 1.7; border: 1px solid var(--border-light); backdrop-filter: blur(5px); }
+.callout strong { font-weight: 800; display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.callout.how { background: var(--accent-blue-dim); border-left: 4px solid var(--accent-blue); color: #E0F2FE; }
+.callout.how strong { color: var(--accent-blue); }
+.callout.fail { background: var(--accent-red-dim); border-left: 4px solid var(--accent-red); color: #FEE2E2; }
+.callout.fail strong { color: var(--accent-red); }
+.callout.prod { background: var(--accent-green-dim); border-left: 4px solid var(--accent-green); color: #D1FAE5; }
+.callout.prod strong { color: var(--accent-green); }
+
+/* Code Blocks */
+code { font-family: 'Fira Code', monospace; font-size: 12.5px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); border-radius: 6px; padding: 2px 6px; color: var(--accent-blue); }
+.code-wrap { margin: 1.5rem 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border-light); background: #050505; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+.code-header {
+  background: var(--bg-card); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-light);
+}
+.code-header::before {
+  content: ''; display: inline-block; height: 12px; width: 50px;
+  background-image: radial-gradient(circle, #ED6A5E 6px, transparent 6.5px),
+                    radial-gradient(circle, #F4BF4F 6px, transparent 6.5px),
+                    radial-gradient(circle, #61C554 6px, transparent 6.5px);
+  background-size: 12px 12px; background-position: 0 0, 18px 0, 36px 0; background-repeat: no-repeat;
+}
+.code-lang { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+pre { padding: 1.25rem 1.5rem; overflow-x: auto; margin: 0; }
+pre code { font-size: 13px; background: none; border: none; padding: 0; color: #E2E8F0; line-height: 1.7; display: block; white-space: pre; }
+
+/* Syntax Highlighting */
+.t-k { color: #F472B6; } /* Pink keywords */
+.t-s { color: #A3E635; } /* Green strings */
+.t-c { color: #6B7280; font-style: italic; } /* Gray comments */
+.t-n { color: #FBBF24; } /* Yellow numbers */
+.t-p { color: #38BDF8; } /* Blue properties */
+.t-a { color: #A855F7; } /* Purple annotations */
+
+/* Comparison Cards */
+.compare { display: grid; gap: 16px; margin: 1.5rem 0; }
+.compare.two { grid-template-columns: 1fr 1fr; }
+.compare.three { grid-template-columns: 1fr 1fr 1fr; }
+.compare-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 1.25rem; transition: transform 0.2s ease; }
+.compare-card:hover { transform: translateY(-3px); border-color: var(--text-muted); }
+.compare-card.accent { border-color: var(--accent-purple); background: rgba(168, 85, 247, 0.05); }
+.compare-card.accent .compare-title { color: var(--accent-purple); }
+.compare-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-light); }
+.compare-body { font-size: 13.5px; color: var(--text-main); line-height: 1.7; }
+
+/* Steps */
+.steps { display: flex; flex-direction: column; gap: 0; margin: 1.5rem 0; }
+.step { display: flex; gap: 0; }
+.step-line { display: flex; flex-direction: column; align-items: center; width: 40px; flex-shrink: 0; }
+.step-num {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--border-light);
+  display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;
+  color: var(--text-muted); flex-shrink: 0; z-index: 2;
+}
+.step-connector { width: 2px; background: var(--border-light); flex: 1; min-height: 20px; margin-top: -2px; margin-bottom: -2px; }
+.step:last-child .step-connector { display: none; }
+.step-body { padding: 0 0 2rem 16px; flex: 1; }
+.step-title { font-size: 15px; font-weight: 700; color: var(--text-light); margin-bottom: 6px; }
+.step-text { font-size: 14px; color: var(--text-main); line-height: 1.7; }
+.step-cmd { font-family: 'Fira Code', monospace; font-size: 12.5px; background: #050505; border: 1px solid var(--border-light); border-radius: 8px; padding: 12px 16px; margin-top: 12px; color: #E2E8F0; white-space: pre-wrap; word-break: break-all; line-height: 1.65; display: block; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+
+
+/* Interview Questions */
+.iq-list { display: flex; flex-direction: column; gap: 12px; }
+.iq { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.2s ease; }
+.iq:hover { border-color: var(--accent-purple); box-shadow: 0 4px 15px var(--accent-purple-dim); }
+.iq.open { border-color: var(--accent-purple); }
+.iq-head { display: flex; align-items: flex-start; gap: 14px; padding: 1.25rem; }
+.iq-num { font-size: 12px; font-weight: 800; color: var(--bg-main); background: var(--text-light); padding: 2px 8px; border-radius: 6px; }
+.iq-q { font-size: 15px; font-weight: 600; color: var(--text-light); flex: 1; line-height: 1.5; }
+.iq-diff { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase; flex-shrink: 0; }
+.diff-e { background: var(--accent-green-dim); color: var(--accent-green); }
+.diff-m { background: var(--accent-orange-dim); color: var(--accent-orange); }
+.diff-h { background: var(--accent-red-dim); color: var(--accent-red); }
+.iq-arrow { font-size: 12px; color: var(--text-muted); transition: transform 0.3s ease; margin-top: 4px; }
+.iq.open .iq-arrow { transform: rotate(180deg); color: var(--accent-purple); }
+.iq-body { display: none; padding: 1.25rem; border-top: 1px solid var(--border-light); background: rgba(0,0,0,0.15); font-size: 14.5px; }
+.iq.open .iq-body { display: block; animation: fadeIn 0.3s ease; }
+.iq-body p { margin-bottom: 12px; }
+.iq-body p:last-child { margin-bottom: 0; }
+.iq-body strong { color: var(--text-light); font-weight: 600; }
+
+.next-btn {
+  width: 100%; margin-top: 2.5rem; padding: 16px; border-radius: 12px; border: none;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25);
+}
+.next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(168, 85, 247, 0.4); }
+
+@media(max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 1.5rem; max-width: 100%; }
+  .compare.two, .compare.three { grid-template-columns: 1fr; }
+}
+</style>
+
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="header">
+  <span class="day-badge">Day 20 / 30</span>
+  <span class="header-title">Object-Oriented Programming</span>
+  <span class="header-sub">Phase 6 · Java Core Foundations</span>
+</div>
+<div class="progress-row">
+  <span class="progress-label">Phase 6</span>
+  <div class="progress-bar"><div class="progress-fill"></div></div>
+  <span class="progress-label">Day 20 of 30</span>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">The Basics</div>
+      <button class="nav-item active" onclick="nav('classes',this)"><span class="nav-dot"></span>Classes & Objects 🧬</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">The 4 Pillars</div>
+      <button class="nav-item" onclick="nav('encapsulation',this)"><span class="nav-dot"></span>Encapsulation 🔒</button>
+      <button class="nav-item" onclick="nav('inheritance',this)"><span class="nav-dot"></span>Inheritance 🦋</button>
+      <button class="nav-item" onclick="nav('polymorphism',this)"><span class="nav-dot"></span>Polymorphism 🎭</button>
+      <button class="nav-item" onclick="nav('abstraction',this)"><span class="nav-dot"></span>Abstraction ☁️</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Contracts</div>
+      <button class="nav-item" onclick="nav('interfaces',this)"><span class="nav-dot"></span>Interfaces 🔌</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Practice</div>
+      <button class="nav-item" onclick="nav('interview',this)"><span class="nav-dot"></span>Interview Prep</button>
+      <button class="nav-item" onclick="nav('lab',this)"><span class="nav-dot"></span>Hands-on Lab</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    
+    <!-- CLASSES & OBJECTS -->
+    <div id="s-classes" class="section active">
+      <div class="sec-header">
+        <div class="sec-title">Classes, Objects & Constructors 🧬</div>
+        <div class="sec-sub">Java is an Object-Oriented Programming (OOP) language. Everything in Java is associated with classes and objects, along with its attributes and methods.</div>
+      </div>
+      
+      <div class="prose">
+        <p>A <strong>Class</strong> is a blueprint or template. It defines the state (fields/variables) and behavior (methods) of a type. An <strong>Object</strong> is a physical instance of a class, taking up memory on the Heap.</p>
+        <p>A <strong>Constructor</strong> is a special method used to initialize objects. It is called when an object of a class is created using the <code>new</code> keyword. It must have the exact same name as the class and no return type.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Class & Constructor Example</span></div>
+        <pre><code><span class="t-k">public class</span> <span class="t-n">Car</span> {
+    <span class="t-c">// Fields (State)</span>
+    <span class="t-k">String</span> brand;
+    <span class="t-k">int</span> year;
+
+    <span class="t-c">// Default Constructor (Provided implicitly if no constructors exist, but explicit here)</span>
+    <span class="t-k">public</span> <span class="t-n">Car</span>() {
+        <span class="t-k">this</span>.brand = <span class="t-s">"Unknown"</span>;
+        <span class="t-k">this</span>.year = <span class="t-n">0</span>;
+    }
+
+    <span class="t-c">// Parameterized Constructor</span>
+    <span class="t-k">public</span> <span class="t-n">Car</span>(<span class="t-k">String</span> brand, <span class="t-k">int</span> year) {
+        <span class="t-c">// 'this' refers to the current object instance</span>
+        <span class="t-k">this</span>.brand = brand;
+        <span class="t-k">this</span>.year = year;
+    }
+
+    <span class="t-c">// Method (Behavior)</span>
+    <span class="t-k">public void</span> <span class="t-n">startEngine</span>() {
+        System.out.println(brand + <span class="t-s">" engine started!"</span>);
+    }
+}
+
+<span class="t-c">// Creating objects</span>
+<span class="t-n">Car</span> myCar = <span class="t-k">new</span> <span class="t-n">Car</span>(<span class="t-s">"Toyota"</span>, <span class="t-n">2023</span>);
+myCar.startEngine();</code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('encapsulation', document.querySelectorAll('.nav-item')[1])">Pillar 1: Encapsulation 🔒 →</button>
+    </div>
+
+    <!-- ENCAPSULATION -->
+    <div id="s-encapsulation" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Encapsulation 🔒</div>
+        <div class="sec-sub">The mechanism of wrapping the data (variables) and code acting on the data (methods) together as a single unit. In encapsulation, the variables of a class are hidden from other classes, preventing direct access.</div>
+      </div>
+
+      <div class="prose">
+        <p>To achieve encapsulation in Java: declare the variables of a class as <code>private</code>, and provide <code>public</code> setter and getter methods to modify and view the variables values.</p>
+        <p>This provides <strong>Data Hiding</strong>. The external world doesn't know *how* the class stores its data; it only knows the public interface to interact with it. This allows you to add validation logic inside setters later without breaking external code.</p>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">Access Modifiers</div>
+          <div class="compare-body">
+            <strong><code>private</code>:</strong> Accessible ONLY within the same class.<br>
+            <strong><code>(default)</code>:</strong> Accessible within the same package.<br>
+            <strong><code>protected</code>:</strong> Accessible within the same package AND subclasses in different packages.<br>
+            <strong><code>public</code>:</strong> Accessible everywhere.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Why Encapsulate?</div>
+          <div class="compare-body">
+            If <code>balance</code> is public, anyone can write <code>account.balance = -10000;</code>.<br><br>
+            By making it private and using a setter, you can add rules: <br>
+            <code>if (amount > 0) { this.balance += amount; }</code>
+          </div>
+        </div>
+      </div>
+
+      <button class="next-btn" onclick="nav('inheritance', document.querySelectorAll('.nav-item')[2])">Pillar 2: Inheritance 🦋 →</button>
+    </div>
+
+    <!-- INHERITANCE -->
+    <div id="s-inheritance" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Inheritance 🦋</div>
+        <div class="sec-sub">Inheritance is a mechanism where a new class is derived from an existing class. It promotes code reusability and establishes an IS-A relationship.</div>
+      </div>
+
+      <div class="prose">
+        <p>In Java, we use the <code>extends</code> keyword to inherit from a class. The class being inherited from is the <strong>Superclass</strong> (or parent), and the class inheriting is the <strong>Subclass</strong> (or child).</p>
+        <p>A subclass inherits all non-private members of the superclass. Every class in Java implicitly inherits from <code>java.lang.Object</code>.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Extending Classes & super keyword</span></div>
+        <pre><code><span class="t-k">class</span> <span class="t-n">Animal</span> {
+    <span class="t-k">protected</span> <span class="t-k">String</span> name;
+
+    <span class="t-k">public</span> <span class="t-n">Animal</span>(<span class="t-k">String</span> name) {
+        <span class="t-k">this</span>.name = name;
+    }
+
+    <span class="t-k">public void</span> <span class="t-n">makeSound</span>() {
+        System.out.println(<span class="t-s">"Some generic animal sound"</span>);
+    }
+}
+
+<span class="t-c">// Dog IS-A Animal</span>
+<span class="t-k">class</span> <span class="t-n">Dog</span> <span class="t-k">extends</span> <span class="t-n">Animal</span> {
+    
+    <span class="t-k">public</span> <span class="t-n">Dog</span>(<span class="t-k">String</span> name) {
+        <span class="t-c">// 'super' calls the constructor of the parent class</span>
+        <span class="t-c">// It MUST be the first statement in the constructor</span>
+        <span class="t-k">super</span>(name); 
+    }
+
+    <span class="t-c">// Method Overriding</span>
+    <span class="t-a">@Override</span>
+    <span class="t-k">public void</span> <span class="t-n">makeSound</span>() {
+        System.out.println(name + <span class="t-s">" barks: Woof!"</span>);
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout fail">
+        <strong>Multiple Inheritance in Java</strong>
+        Java does <strong>NOT</strong> support multiple inheritance with classes (a class cannot extend more than one class). This avoids the "Diamond Problem" of ambiguity. However, a class *can* implement multiple interfaces.
+      </div>
+
+      <button class="next-btn" onclick="nav('polymorphism', document.querySelectorAll('.nav-item')[3])">Pillar 3: Polymorphism 🎭 →</button>
+    </div>
+
+    <!-- POLYMORPHISM -->
+    <div id="s-polymorphism" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Polymorphism 🎭</div>
+        <div class="sec-sub">Polymorphism means "many forms". It allows us to perform a single action in different ways. In Java, this is achieved via method overloading and overriding.</div>
+      </div>
+
+      <div class="compare two">
+        <div class="compare-card">
+          <div class="compare-title">Compile-Time (Static)</div>
+          <div class="compare-body">
+            Achieved via <strong>Method Overloading</strong>.<br><br>
+            Multiple methods in the same class have the same name but different parameters (type, number, or order).<br><br>
+            The compiler decides which method to call based on the arguments passed.
+          </div>
+        </div>
+        <div class="compare-card accent">
+          <div class="compare-title">Runtime (Dynamic)</div>
+          <div class="compare-body">
+            Achieved via <strong>Method Overriding</strong> and <strong>Upcasting</strong>.<br><br>
+            A subclass provides a specific implementation of a method that is already provided by its parent class.<br><br>
+            The JVM decides which method to execute at runtime based on the actual object created, not the reference variable type.
+          </div>
+        </div>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Dynamic Method Dispatch</span></div>
+        <pre><code><span class="t-n">Animal</span> myPet = <span class="t-k">new</span> <span class="t-n">Dog</span>(<span class="t-s">"Buddy"</span>); <span class="t-c">// Upcasting</span>
+
+<span class="t-c">// At compile time, the compiler checks if 'makeSound' exists in Animal. It does.</span>
+<span class="t-c">// At runtime, the JVM looks at the ACTUAL object (Dog) and calls Dog's overridden method.</span>
+myPet.makeSound(); <span class="t-c">// Outputs: Buddy barks: Woof!</span></code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('abstraction', document.querySelectorAll('.nav-item')[4])">Pillar 4: Abstraction ☁️ →</button>
+    </div>
+
+    <!-- ABSTRACTION -->
+    <div id="s-abstraction" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Abstraction ☁️</div>
+        <div class="sec-sub">Abstraction is the process of hiding the implementation details and showing only functionality to the user. It lets you focus on what the object does instead of how it does it.</div>
+      </div>
+
+      <div class="prose">
+        <p>In Java, abstraction is achieved using <strong>Abstract classes</strong> and <strong>Interfaces</strong>.</p>
+        <p>An abstract class (declared with the <code>abstract</code> keyword) cannot be instantiated (you cannot use <code>new</code> on it). It can have both abstract methods (methods without a body) and regular methods. It serves as a strict template for subclasses.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Abstract Classes</span></div>
+        <pre><code><span class="t-k">abstract class</span> <span class="t-n">Shape</span> {
+    <span class="t-k">String</span> color;
+    
+    <span class="t-c">// Abstract method: No body. Subclasses MUST implement this.</span>
+    <span class="t-k">abstract double</span> <span class="t-n">getArea</span>();
+
+    <span class="t-c">// Concrete method: Shared by all subclasses.</span>
+    <span class="t-k">public void</span> <span class="t-n">setColor</span>(<span class="t-k">String</span> color) {
+        <span class="t-k">this</span>.color = color;
+    }
+}
+
+<span class="t-k">class</span> <span class="t-n">Circle</span> <span class="t-k">extends</span> <span class="t-n">Shape</span> {
+    <span class="t-k">double</span> radius;
+    
+    <span class="t-k">public</span> <span class="t-n">Circle</span>(<span class="t-k">double</span> radius) { <span class="t-k">this</span>.radius = radius; }
+
+    <span class="t-a">@Override</span>
+    <span class="t-k">double</span> <span class="t-n">getArea</span>() {
+        <span class="t-k">return</span> Math.PI * radius * radius;
+    }
+}</code></pre>
+      </div>
+
+      <button class="next-btn" onclick="nav('interfaces', document.querySelectorAll('.nav-item')[5])">Interfaces 🔌 →</button>
+    </div>
+
+    <!-- INTERFACES -->
+    <div id="s-interfaces" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Interfaces 🔌</div>
+        <div class="sec-sub">An interface is a completely "abstract class" that is used to group related methods with empty bodies. It establishes a contract: any class implementing the interface MUST fulfill the contract.</div>
+      </div>
+
+      <div class="prose">
+        <p>A class uses the <code>implements</code> keyword to inherit an interface. Unlike classes, a single Java class can implement <strong>multiple</strong> interfaces, bypassing the single-inheritance restriction.</p>
+        <p>Historically, interfaces could only have abstract methods and constants (<code>public static final</code>). Since Java 8, interfaces can also have <code>default</code> and <code>static</code> methods with concrete implementations.</p>
+      </div>
+
+      <div class="code-wrap">
+        <div class="code-header"><span class="code-lang">java — Interfaces & Default Methods</span></div>
+        <pre><code><span class="t-k">interface</span> <span class="t-n">PaymentProcessor</span> {
+    <span class="t-c">// Implicitly public and abstract</span>
+    <span class="t-k">void</span> <span class="t-n">processPayment</span>(<span class="t-k">double</span> amount);
+
+    <span class="t-c">// Default method (Java 8+). Provides a fallback implementation.</span>
+    <span class="t-k">default void</span> <span class="t-n">issueReceipt</span>() {
+        System.out.println(<span class="t-s">"Receipt sent via email."</span>);
+    }
+}
+
+<span class="t-k">interface</span> <span class="t-n">Refundable</span> {
+    <span class="t-k">void</span> <span class="t-n">processRefund</span>(<span class="t-k">double</span> amount);
+}
+
+<span class="t-c">// Implementing multiple interfaces</span>
+<span class="t-k">class</span> <span class="t-n">StripeGateway</span> <span class="t-k">implements</span> <span class="t-n">PaymentProcessor</span>, <span class="t-n">Refundable</span> {
+    <span class="t-a">@Override</span>
+    <span class="t-k">public void</span> <span class="t-n">processPayment</span>(<span class="t-k">double</span> amount) {
+        System.out.println(<span class="t-s">"Processing $"</span> + amount + <span class="t-s">" via Stripe"</span>);
+    }
+
+    <span class="t-a">@Override</span>
+    <span class="t-k">public void</span> <span class="t-n">processRefund</span>(<span class="t-k">double</span> amount) {
+        System.out.println(<span class="t-s">"Refunding $"</span> + amount + <span class="t-s">" via Stripe"</span>);
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout prod">
+        <strong>Why did Java 8 add Default Methods?</strong>
+        They were added to support <em>backward compatibility</em>. When Java developers wanted to add the <code>.stream()</code> method to the <code>Collection</code> interface, adding an abstract method would have broken millions of custom classes worldwide that implement <code>Collection</code>. By making it a <code>default</code> method, old code still compiled without needing modifications!
+      </div>
+
+      <button class="next-btn" onclick="nav('interview', document.querySelectorAll('.nav-item')[6])">Interview Prep →</button>
+    </div>
+
+    <!-- INTERVIEW PREP -->
+    <div id="s-interview" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Interview Prep</div>
+        <div class="sec-sub">OOP questions are guaranteed in any Java interview. Focus on the subtle differences between similar concepts.</div>
+      </div>
+
+      <div class="iq-list">
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q1</span>
+            <span class="iq-q">What is the difference between an Abstract Class and an Interface?</span>
+            <span class="iq-diff diff-m">Medium</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><strong>1. Inheritance:</strong> A class can implement multiple interfaces, but can extend only one abstract class.</p>
+            <p><strong>2. State:</strong> Abstract classes can have instance variables (state) and constructors. Interfaces cannot have instance variables (only <code>public static final</code> constants) and cannot have constructors.</p>
+            <p><strong>3. Use Case:</strong> Use an Abstract Class when you want to share code among closely related classes (an IS-A relationship with shared state). Use an Interface to define a contract or capability (a CAN-DO relationship) across completely unrelated classes.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q2</span>
+            <span class="iq-q">Can you override a static method in Java?</span>
+            <span class="iq-diff diff-h">Hard</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><strong>No.</strong> You cannot override static methods. Static methods are bound to the class, not the instance. </p>
+            <p>If a subclass defines a static method with the exact same signature as a static method in the superclass, the subclass method <em>hides</em> the superclass method. This is called <strong>Method Hiding</strong>, not overriding.</p>
+            <p>Because it's resolved at compile-time (early binding), polymorphism does not apply. If you call the static method via a superclass reference holding a subclass object, the superclass's static method will execute.</p>
+          </div>
+        </div>
+
+        <div class="iq" onclick="tog(this)">
+          <div class="iq-head">
+            <span class="iq-num">Q3</span>
+            <span class="iq-q">What is the difference between Overloading and Overriding?</span>
+            <span class="iq-diff diff-e">Easy</span>
+            <span class="iq-arrow">▼</span>
+          </div>
+          <div class="iq-body">
+            <p><strong>Overloading</strong> happens in the <em>same</em> class. Methods have the same name but different parameters. It is an example of compile-time polymorphism.</p>
+            <p><strong>Overriding</strong> happens between a <em>superclass and subclass</em>. The subclass method has the exact same name, return type, and parameters as the superclass method. It is an example of runtime polymorphism.</p>
+          </div>
+        </div>
+      </div>
+      
+      <button class="next-btn" onclick="nav('lab', document.querySelectorAll('.nav-item')[7])">Start Hands-on Lab →</button>
+    </div>
+
+    <!-- LAB -->
+    <div id="s-lab" class="section">
+      <div class="sec-header">
+        <div class="sec-title">Hands-on Lab: Build an OOP Hierarchy</div>
+        <div class="sec-sub">Let's combine encapsulation, inheritance, and polymorphism into a single script simulating a Bank Account system.</div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">1</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">The Abstract Parent Class</div>
+            <div class="step-text">Create an abstract <code>BankAccount</code> class. Notice the encapsulation on the balance field.</div>
+            <code class="step-cmd"><span class="t-k">abstract class</span> <span class="t-n">BankAccount</span> {
+    <span class="t-k">private String</span> accountNumber;
+    <span class="t-k">protected double</span> balance; <span class="t-c">// protected allows subclasses to access it</span>
+
+    <span class="t-k">public</span> <span class="t-n">BankAccount</span>(<span class="t-k">String</span> accountNumber, <span class="t-k">double</span> initialBalance) {
+        <span class="t-k">this</span>.accountNumber = accountNumber;
+        <span class="t-k">this</span>.balance = initialBalance;
+    }
+
+    <span class="t-k">public double</span> <span class="t-n">getBalance</span>() { <span class="t-k">return</span> balance; }
+    <span class="t-k">public String</span> <span class="t-n">getAccountNumber</span>() { <span class="t-k">return</span> accountNumber; }
+
+    <span class="t-k">public void</span> <span class="t-n">deposit</span>(<span class="t-k">double</span> amount) {
+        <span class="t-k">if</span> (amount > <span class="t-n">0</span>) balance += amount;
+    }
+
+    <span class="t-c">// Abstract method forces subclasses to define withdrawal rules</span>
+    <span class="t-k">public abstract void</span> <span class="t-n">withdraw</span>(<span class="t-k">double</span> amount);
+}</code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">2</div><div class="step-connector"></div></div>
+          <div class="step-body">
+            <div class="step-title">The Concrete Subclass</div>
+            <div class="step-text">Extend the abstract class and implement the abstract method.</div>
+            <code class="step-cmd"><span class="t-k">class</span> <span class="t-n">SavingsAccount</span> <span class="t-k">extends</span> <span class="t-n">BankAccount</span> {
+    <span class="t-k">private double</span> interestRate;
+
+    <span class="t-k">public</span> <span class="t-n">SavingsAccount</span>(<span class="t-k">String</span> accNum, <span class="t-k">double</span> balance, <span class="t-k">double</span> rate) {
+        <span class="t-k">super</span>(accNum, balance); <span class="t-c">// Initialize parent fields</span>
+        <span class="t-k">this</span>.interestRate = rate;
+    }
+
+    <span class="t-a">@Override</span>
+    <span class="t-k">public void</span> <span class="t-n">withdraw</span>(<span class="t-k">double</span> amount) {
+        <span class="t-k">if</span> (amount > <span class="t-n">0</span> && balance - amount >= <span class="t-n">0</span>) {
+            balance -= amount;
+        } <span class="t-k">else</span> {
+            System.out.println(<span class="t-s">"Insufficient funds!"</span>);
+        }
+    }
+}</code>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-line"><div class="step-num" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue);cursor:default">3</div></div>
+          <div class="step-body">
+            <div class="step-title">Testing Polymorphism</div>
+            <div class="step-text">Create an instance of <code>SavingsAccount</code> but store it in a <code>BankAccount</code> reference.</div>
+            <code class="step-cmd"><span class="t-k">public class</span> <span class="t-n">Main</span> {
+    <span class="t-k">public static void</span> <span class="t-n">main</span>(String[] args) {
+        <span class="t-c">// Upcasting: BankAccount reference, SavingsAccount object</span>
+        <span class="t-n">BankAccount</span> myAccount = <span class="t-k">new</span> <span class="t-n">SavingsAccount</span>(<span class="t-s">"SAV123"</span>, <span class="t-n">1000.0</span>, <span class="t-n">0.05</span>);
+        
+        myAccount.deposit(<span class="t-n">500.0</span>);
+        System.out.println(<span class="t-s">"Balance: $"</span> + myAccount.getBalance()); <span class="t-c">// $1500.0</span>
+        
+        <span class="t-c">// Dynamic Method Dispatch calls SavingsAccount.withdraw()</span>
+        myAccount.withdraw(<span class="t-n">2000.0</span>); <span class="t-c">// Prints "Insufficient funds!"</span>
+    }
+}</code>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+function nav(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  
+  const target = document.getElementById('s-' + id);
+  if(target) target.classList.add('active');
+  if(btn) btn.classList.add('active');
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function tog(el) {
+  el.classList.toggle('open');
+}
+</script>
+
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+  </body>
+</html>
