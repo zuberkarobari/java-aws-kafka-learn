@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Security Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0f; /* Deep cyber dark */
+    --surface: #0b121c; 
+    --surface2: #131c2b; 
+    --surface3: #1e293b; 
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --muted2: #64748b;
+    
+    /* Security Colors */
+    --c-client: #0ea5e9; /* Light blue */
+    --c-client-bg: rgba(14, 165, 233, 0.1);
+    --c-authn: #f59e0b; /* Amber */
+    --c-authn-bg: rgba(245, 158, 11, 0.1);
+    --c-authz: #8b5cf6; /* Purple */
+    --c-authz-bg: rgba(139, 92, 246, 0.1);
+    --c-success: #10b981; /* Emerald */
+    --c-danger: #ef4444; /* Rose */
+    --c-spring: #6db33f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif;
+    height: 100vh; overflow: hidden;
+  }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ─── TOP BAR ─── */
+  #topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(5, 10, 15, 0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px; display: flex; align-items: center; height: 52px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px; margin-right: 32px;
+    font-family: 'Lora', serif; font-size: 16px; font-weight: 600; color: var(--text);
+    letter-spacing: 0.5px;
+  }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-danger); box-shadow: 0 0 10px var(--c-danger); }
+  .step-tabs { display: flex; gap: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .step-tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 0 16px; height: 52px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; 
+    border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; user-select: none;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active { color: var(--c-authn); border-bottom-color: var(--c-authn); }
+  .tab.done { color: var(--c-success); }
+  .tab-num {
+    width: 18px; height: 18px; border-radius: 50%; background: var(--surface2); 
+    border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; color: var(--muted); transition: all 0.2s; flex-shrink: 0;
+  }
+  .tab.active .tab-num { background: var(--c-authn); border-color: var(--c-authn); color: #000; }
+  .tab.done .tab-num { background: var(--c-success); border-color: var(--c-success); color: #000; }
+  
+  .nav-btns { display: flex; gap: 8px; margin-left: 16px; }
+  .nav-btn {
+    height: 32px; padding: 0 16px; border-radius: 6px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+    font-family: 'Space Grotesk', sans-serif; text-transform: uppercase;
+  }
+  .nav-btn:hover { background: var(--surface3); border-color: rgba(255,255,255,0.2); }
+  .nav-btn.primary { background: var(--c-authn); border-color: var(--c-authn); color: #000; }
+  .nav-btn.primary:hover { opacity: 0.85; box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);}
+  .nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* ─── MAIN LAYOUT ─── */
+  #main {
+    display: grid; grid-template-columns: 280px 1fr 320px;
+    height: calc(100vh - 52px); overflow: hidden;
+  }
+
+  /* ─── LEFT PANEL ─── */
+  #left {
+    border-right: 1px solid var(--border); overflow-y: auto; padding: 20px 0;
+    background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .left-section-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    color: var(--muted2); text-transform: uppercase; padding: 8px 20px 6px;
+  }
+  .request-block {
+    margin: 0 12px 16px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; transition: all 0.3s;
+  }
+  .req-header {
+    padding: 10px 12px 8px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .method-badge { font-size: 10px; font-weight: 700; font-family: 'JetBrains Mono', monospace; padding: 2px 7px; border-radius: 4px; background: var(--c-client-bg); color: var(--c-client); }
+  .req-path { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text); font-weight: 600;}
+  .req-body { padding: 10px 12px; font-size: 10px; font-family: 'JetBrains Mono', monospace; line-height: 1.6; word-break: break-all; color: var(--muted);}
+  .p-key { color: var(--c-authn); }
+  .p-val { color: var(--c-client); }
+  
+  .divider { height: 1px; background: var(--border); margin: 4px 20px 12px; }
+
+  .phase-list { padding: 0 12px; display: flex; flex-direction: column; gap: 3px; }
+  .phase-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px;
+    font-size: 12px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; font-weight: 500;
+  }
+  .phase-item:hover { background: var(--surface2); }
+  .phase-item.active { background: var(--c-client-bg); border-color: rgba(14, 165, 233, 0.2); color: var(--c-client); }
+  .phase-item.done { color: var(--c-success); }
+  .phase-item.err { color: var(--c-danger); }
+  .phase-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted2); flex-shrink: 0; transition: all 0.2s; }
+  .phase-item.active .phase-dot { background: var(--c-client); box-shadow: 0 0 8px var(--c-client); }
+  .phase-item.done .phase-dot { background: var(--c-success); }
+  .phase-item.err .phase-dot { background: var(--c-danger); box-shadow: 0 0 8px var(--c-danger);}
+  .phase-label { flex: 1; }
+
+  /* ─── CENTER PANEL ─── */
+  #center {
+    position: relative; overflow: hidden; display: flex; flex-direction: column;
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.05) 0%, transparent 60%),
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 100% 100%, 30px 30px, 30px 30px;
+  }
+  
+  .scene {
+    position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 170px); 
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.4s ease; padding: 30px;
+  }
+  .scene.active { opacity: 1; pointer-events: auto; }
+
+  /* The Security Network Canvas */
+  .net-canvas { position: relative; width: 100%; height: 380px; }
+  
+  .node {
+    position: absolute; background: var(--surface); border: 2px solid; padding: 14px 18px;
+    border-radius: 12px; display: flex; flex-direction: column; align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 20; transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+  }
+  .node-icon { font-size: 24px; margin-bottom: 6px;}
+  .node-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; text-align: center;}
+  .node-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 4px; text-transform: uppercase;}
+
+  /* Fixed Spatial Positioning */
+  #n-client { left: 40px; top: 50%; transform: translateY(-50%); border-color: var(--c-client); color: var(--c-client); z-index: 25;}
+  
+  /* Filter Chain Box */
+  .filter-chain {
+    position: absolute; left: 200px; top: 50%; transform: translateY(-50%);
+    width: 220px; height: 260px; border: 2px dashed var(--muted); border-radius: 16px;
+    background: rgba(255,255,255,0.02); display: flex; flex-direction: column; gap: 10px;
+    align-items: center; justify-content: center; padding: 15px; z-index: 10;
+  }
+  .fc-title { font-family: 'Space Grotesk'; font-size: 12px; font-weight: bold; color: var(--muted); position: absolute; top: -10px; background: var(--bg); padding: 0 10px;}
+  
+  .filter-node {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border2); padding: 10px;
+    border-radius: 8px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: #fff; transition: all 0.3s;
+  }
+  .f-authn { border-color: var(--c-authn); color: var(--c-authn); }
+  .f-authz { border-color: var(--c-authz); color: var(--c-authz); }
+  
+  /* Top Nodes (Auth Manager / DB) */
+  #n-auth-mgr { left: 520px; top: 80px; transform: translateX(-50%); border-color: var(--c-authn); background: var(--c-authn-bg); box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);}
+  #n-db { left: 740px; top: 80px; transform: translateX(-50%); border-color: var(--text-muted); opacity: 0;}
+  
+  /* Context Node (ThreadLocal) */
+  #n-context { left: 520px; top: 220px; transform: translateX(-50%); border-style: dotted; border-color: var(--c-success); background: rgba(16, 185, 129, 0.05);}
+  
+  /* Final Controller */
+  #n-controller { right: 40px; top: 50%; transform: translateY(-50%); border-color: var(--c-spring); opacity: 0.3;}
+
+  /* Connection Lines */
+  .net-line { position: absolute; background: var(--border2); z-index: 5;}
+  .l-horz { height: 2px; }
+  .l-vert { width: 2px; }
+
+  /* Dynamic Packets */
+  .packet {
+    position: absolute; padding: 6px 12px; border-radius: 6px; font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700; color: #fff; z-index: 30; opacity: 0; pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3); transform: translate(-50%, -50%); text-align: center;
+  }
+  .pkt-req { background: var(--c-client); color: #000; }
+  .pkt-auth { background: var(--c-authn); color: #000; }
+  .pkt-check { background: var(--c-authz); }
+  .pkt-err { background: var(--c-danger); }
+  .pkt-ok { background: var(--c-success); color: #000;}
+
+  /* Barriers / Errors */
+  .laser-barrier {
+      position: absolute; width: 40px; height: 4px; background: var(--c-danger); box-shadow: 0 0 15px var(--c-danger);
+      transform: rotate(90deg); opacity: 0; z-index: 35; transition: opacity 0.3s;
+  }
+  .error-text {
+      position: absolute; color: var(--c-danger); font-family: 'Space Grotesk'; font-weight: 800; font-size: 14px;
+      text-shadow: 0 0 10px rgba(239,68,68,0.5); opacity: 0; z-index: 40; transition: opacity 0.3s;
+  }
+
+  /* Matrix */
+  .matrix-grid { display: flex; flex-direction: column; gap: 10px; width: 90%; }
+  .m-row { display: flex; background: rgba(255,255,255,0.05); border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; align-items: center; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); backdrop-filter: blur(8px);}
+  .m-anno { flex: 1; font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--text-main);}
+  .m-route { flex: 1.5; font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text-muted); line-height: 1.4;}
+  .m-out { flex: 0.8; font-family: 'JetBrains Mono'; font-size: 12px; font-weight: bold; text-align: right; color: var(--c-authn);}
+
+  /* Bottom Half: Explainer Panel */
+  #bottom-panel {
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 170px;
+    background: rgba(11, 18, 28, 0.95);
+    padding: 20px 32px; z-index: 30;
+    display: flex; flex-direction: column;
+    border-top: 1px solid rgba(245, 158, 11, 0.3); box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    backdrop-filter: blur(12px);
+  }
+  
+  .explainer-content { flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px; }
+  .explainer-content::-webkit-scrollbar { width: 4px; }
+  .explainer-content::-webkit-scrollbar-thumb { background: var(--c-authn); border-radius: 4px; }
+
+  .step-badge {
+    display: inline-block; background: var(--c-authn-bg); color: var(--c-authn);
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 4px 10px; border-radius: 4px; margin-bottom: 10px; border: 1px solid rgba(245, 158, 11, 0.3); align-self: flex-start;
+  }
+
+  .explainer-title {
+    font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 800; color: #fff;
+    margin-bottom: 8px; letter-spacing: -0.5px; line-height: 1.2;
+  }
+
+  .explainer-text { font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+  /* ─── RIGHT PANEL (Telemetry) ─── */
+  #right {
+    border-left: 1px solid var(--border); overflow-y: auto; padding: 24px;
+    background: var(--surface); scrollbar-width: thin; scrollbar-color: var(--surface3) transparent;
+  }
+  .right-section { margin-bottom: 24px; }
+  .right-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted2); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;
+  }
+  .metric-card {
+    background: var(--surface2); border-radius: 8px; padding: 12px 14px;
+    margin-bottom: 8px; border: 1px solid var(--border); transition: all 0.3s;
+  }
+  .metric-label { font-size: 10px; color: var(--muted); font-weight: 600; margin-bottom: 4px; text-transform: uppercase;}
+  .metric-val { font-size: 18px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .metric-sub { font-size: 10px; color: var(--muted2); margin-top: 4px; }
+  
+  .c-cyan { color: var(--c-client); text-shadow: 0 0 10px rgba(14, 165, 233, 0.3);}
+  .c-amber { color: var(--c-authn); text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);}
+  .c-purple { color: var(--c-authz); text-shadow: 0 0 10px rgba(139, 92, 246, 0.3);}
+  .c-rose { color: var(--c-danger); text-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+
+  /* Dynamic State Panel */
+  .state-panel { background: #000; border: 1px solid var(--border2); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 10px; line-height: 1.5; margin-bottom: 15px; color: var(--muted);}
+  .sp-key { color: var(--muted2); }
+  .sp-val { color: var(--c-success); font-weight: bold;}
+  
+  .sys-log { background: #000; border: 1px solid var(--border); padding: 10px; border-radius: 6px; font-family: 'JetBrains Mono'; font-size: 9px; color: var(--muted); margin-top: 10px; overflow-x: auto;}
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    Spring Security Core
+  </div>
+  <div class="step-tabs" id="tabs"></div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
+    <button class="nav-btn primary" id="nextBtn" onclick="navigate(1)">Next →</button>
+  </div>
+</div>
+
+<!-- MAIN 3-PANE LAYOUT -->
+<div id="main">
+
+  <!-- LEFT PANE: Request Pipeline -->
+  <div id="left">
+    <div class="left-section-title">Active Request</div>
+    
+    <div class="request-block" id="req-block">
+      <div class="req-header">
+        <span class="method-badge" id="m-badge">GET</span>
+        <span class="req-path" id="r-path">/admin/dashboard</span>
+      </div>
+      <div class="req-body" id="req-body">
+        <span class="p-key">Authorization:</span> <span class="p-val" id="auth-hdr">None</span><br>
+        <span class="p-key">Accept:</span> <span class="p-val">application/json</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="left-section-title">Security Pipeline</div>
+    <div class="phase-list" id="phaseList">
+      <!-- Generated via JS -->
+    </div>
+  </div>
+
+  <!-- CENTER PANE: Visualizations -->
+  <div id="center">
+    
+    <!-- Persistent Network Canvas -->
+    <div class="scene active" id="scene-arch">
+        <div class="net-canvas" id="network-canvas">
+            
+            <!-- Lines -->
+            <div class="net-line l-horz" style="top: 190px; left: 100px; width: 100px;"></div>
+            <div class="net-line l-horz" style="top: 190px; left: 310px; width: 100px;"></div> <!-- Filter to Ctrl (dashed initially) -->
+            
+            <div class="net-line l-horz" id="l-f-am" style="top: 80px; left: 310px; width: 130px; opacity:0; transition:opacity 0.3s;"></div> <!-- Filter to AuthMgr -->
+            <div class="net-line l-vert" id="l-am-db" style="top: 80px; left: 630px; width: 40px; transform: rotate(0deg); opacity:0;"></div> <!-- AuthMgr to DB -->
+            <div class="net-line l-vert" id="l-am-ctx" style="top: 130px; left: 520px; height: 50px; opacity:0; transition:opacity 0.3s;"></div> <!-- AuthMgr to Context -->
+            <div class="net-line l-horz" id="l-f-ctx" style="top: 220px; left: 310px; width: 130px; opacity:0; transition:opacity 0.3s;"></div> <!-- Filter to Context -->
+
+            <!-- Nodes -->
+            <div class="node" id="n-client">
+                <div class="node-icon">💻</div>
+                <div class="node-title">Client</div>
+                <div class="node-sub">Web Browser</div>
+            </div>
+
+            <div class="filter-chain" id="n-chain">
+                <div class="fc-title">SecurityFilterChain</div>
+                <div class="filter-node" style="opacity: 0.5;">CorsFilter</div>
+                <div class="filter-node" style="opacity: 0.5;">CsrfFilter</div>
+                <div class="filter-node f-authn" id="f-authn">AuthenticationFilter</div>
+                <div class="filter-node f-authz" id="f-authz">AuthorizationFilter</div>
+            </div>
+
+            <div class="node" id="n-auth-mgr" style="opacity:0;">
+                <div class="node-icon">🧠</div>
+                <div class="node-title">AuthManager</div>
+                <div class="node-sub">ProviderManager</div>
+            </div>
+
+            <div class="node" id="n-db" style="opacity:0;">
+                <div class="node-icon">🗄️</div>
+                <div class="node-title">PostgreSQL</div>
+                <div class="node-sub">User Details</div>
+            </div>
+
+            <div class="node" id="n-context" style="opacity:0;">
+                <div class="node-icon">🏷️</div>
+                <div class="node-title">SecurityContext</div>
+                <div class="node-sub">ThreadLocal</div>
+            </div>
+
+            <div class="node" id="n-controller">
+                <div class="node-icon">⚙️</div>
+                <div class="node-title">Controller</div>
+                <div class="node-sub">@RestController</div>
+            </div>
+
+            <!-- Barriers & Packets -->
+            <div class="laser-barrier" id="barrier"></div>
+            <div class="error-text" id="err-text">401 UNAUTHORIZED</div>
+            <div class="packet" id="pkt">Req</div>
+
+        </div>
+    </div>
+
+    <!-- Scene 6: Matrix -->
+    <div class="scene" id="scene-matrix">
+        <div class="matrix-grid">
+            <div class="m-row">
+                <div class="m-anno" style="color: var(--c-authn);">Authentication</div>
+                <div class="m-route">Verifying WHO the user is. (e.g., checking passwords, validating JWTs).</div>
+                <div class="m-out" style="color: var(--c-danger);">401 Unauthorized</div>
+            </div>
+            <div class="m-row">
+                <div class="m-anno" style="color: var(--c-authz);">Authorization</div>
+                <div class="m-route">Verifying WHAT the user can do. (e.g., checking if they have ROLE_ADMIN).</div>
+                <div class="m-out" style="color: var(--c-danger);">403 Forbidden</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Explainer Panel -->
+    <div id="bottom-panel">
+      <div class="explainer-content">
+        <div id="step-badge" class="step-badge">[SECURITY_ARCHITECTURE]</div>
+        <h2 id="explainer-title" class="explainer-title">The Filter Chain Fortress</h2>
+        <p id="explainer-text" class="explainer-text">90% of junior developers manually check passwords and user roles inside their Spring Boot controllers. If you do this, your application is a massive, un-auditable security liability just begging to be hacked. Let's explore the enterprise way.</p>
+      </div>
+    </div>
+
+  </div><!-- end center -->
+
+  <!-- RIGHT PANE (Telemetry) -->
+  <div id="right">
+    <div class="right-title">⚡ Security Context State</div>
+    <div class="state-panel" id="sc-panel">
+      <span class="sp-key">Principal:</span> <span style="color:var(--muted);">null (Anonymous)</span><br>
+      <span class="sp-key">Authenticated:</span> <span style="color:var(--c-danger);">false</span><br>
+      <span class="sp-key">Authorities:</span> <span style="color:var(--muted);">[ROLE_ANONYMOUS]</span>
+    </div>
+
+    <div class="right-title" style="margin-top: 24px;">📈 Active Telemetry</div>
+    
+    <div class="metric-card">
+      <div class="metric-label">Filter Execution Time</div>
+      <div class="metric-val c-cyan" id="m-time">0 ms</div>
+      <div class="metric-sub">Overhead before controller</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Access Denied Rate</div>
+      <div class="metric-val c-rose" id="m-deny">12%</div>
+      <div class="metric-sub">401/403 Responses</div>
+    </div>
+    
+    <div class="code-sm" id="sys-log">
+      [SEC-CORE] System armed. Awaiting traffic...
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- FOOTER -->
+<div id="footer">
+  <div class="footer-dot pulse"></div>
+  <span>Enterprise Security Architecture</span>
+  <span class="separator">|</span>
+  <span>Use <span class="kbd">←</span> <span class="kbd">→</span> to navigate</span>
+</div>
+
+<script>
+  const STAGES = [
+    { id: 'scene-arch', short: 'Overview', phase: 'The Vulnerability' },
+    { id: 'scene-arch', short: 'Filter Chain', phase: '1 · Security Filters' },
+    { id: 'scene-arch', short: 'Authentication', phase: '2 · Who Are You?' },
+    { id: 'scene-arch', short: 'BCrypt & DB', phase: '3 · Password Hashing' },
+    { id: 'scene-arch', short: 'ContextHolder', phase: '4 · ThreadLocal State' },
+    { id: 'scene-arch', short: 'Authorization', phase: '5 · Access Control' },
+    { id: 'scene-matrix', short: 'Summary ✓', phase: 'Complete' }
+  ];
+
+  const PHASES = [
+    { label: 'Ingress Traffic', id: 'p-in' },
+    { label: 'Authentication Filter', id: 'p-authn' },
+    { label: 'ProviderManager', id: 'p-mgr' },
+    { label: 'ThreadLocal Context', id: 'p-ctx' },
+    { label: 'Authorization Filter', id: 'p-authz' },
+    { label: 'DispatcherServlet', id: 'p-disp' }
+  ];
+
+  let currentStep = 0;
+  let isAnimating = false;
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function buildUI() {
+    const tabContainer = document.getElementById('tabs');
+    STAGES.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'tab' + (i === 0 ? ' active' : '');
+      div.innerHTML = `<span class="tab-num">${i}</span>${s.short}`;
+      div.onclick = () => goTo(i);
+      tabContainer.appendChild(div);
+    });
+
+    const pContainer = document.getElementById('phaseList');
+    PHASES.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'phase-item';
+      div.id = 'l-phase-' + i;
+      div.innerHTML = `<div class="phase-dot"></div><span class="phase-label">${p.label}</span>`;
+      pContainer.appendChild(div);
+    });
+  }
+
+  // Animation Helper
+  async function firePacket(startX, startY, endX, endY, type, text, duration = 600) {
+      const pkt = document.getElementById('pkt');
+      pkt.className = `packet ${type}`;
+      pkt.innerText = text;
+      
+      pkt.style.transition = 'none';
+      pkt.style.left = startX + 'px';
+      pkt.style.top = startY + 'px';
+      pkt.style.opacity = '1';
+      
+      void pkt.offsetWidth; // trigger reflow
+      
+      pkt.style.transition = `left ${duration}ms cubic-bezier(0.4, 0, 0.2, 1), top ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+      pkt.style.left = endX + 'px';
+      pkt.style.top = endY + 'px';
+      
+      await sleep(duration);
+  }
+
+  async function updateDynamicContent(idx) {
+    const mTime = document.getElementById('m-time');
+    const sysLog = document.getElementById('sys-log');
+    const scPanel = document.getElementById('sc-panel');
+    const authHdr = document.getElementById('auth-hdr');
+    const fAuthn = document.getElementById('f-authn');
+    const fAuthz = document.getElementById('f-authz');
+    const barrier = document.getElementById('barrier');
+    const errText = document.getElementById('err-text');
+    const pkt = document.getElementById('pkt');
+
+    // Reset left pipeline
+    for(let i=0; i<6; i++) {
+        document.getElementById('l-phase-'+i).className = 'phase-item';
+    }
+
+    if (idx === 0) { // Overview
+        mTime.innerText = "0 ms";
+        sysLog.innerText = "[SEC-CORE] System armed. Awaiting traffic...";
+        scPanel.innerHTML = `<span class="sp-key">Principal:</span> <span style="color:var(--muted);">null (Anonymous)</span><br><span class="sp-key">Authenticated:</span> <span style="color:var(--c-danger);">false</span><br><span class="sp-key">Authorities:</span> <span style="color:var(--muted);">[ROLE_ANONYMOUS]</span>`;
+        authHdr.innerText = "None"; authHdr.style.color = "var(--muted)";
+        
+        pkt.style.opacity = '0';
+        document.getElementById('n-auth-mgr').style.opacity = '0';
+        document.getElementById('n-db').style.opacity = '0';
+        document.getElementById('n-context').style.opacity = '0';
+        document.getElementById('n-controller').style.opacity = '0.3';
+        document.getElementById('l-f-am').style.opacity = '0';
+        document.getElementById('l-am-db').style.opacity = '0';
+        document.getElementById('l-am-ctx').style.opacity = '0';
+        document.getElementById('l-f-ctx').style.opacity = '0';
+        barrier.style.opacity = '0'; errText.style.opacity = '0';
+        fAuthn.style.boxShadow = 'none'; fAuthz.style.boxShadow = 'none';
+    } 
+    else if (idx === 1) { // Filter Chain (Rejection)
+        document.getElementById('l-phase-0').classList.add('done');
+        document.getElementById('l-phase-1').classList.add('active');
+        
+        authHdr.innerText = "None"; authHdr.style.color = "var(--muted)";
+        sysLog.innerText = "[FILTER] Request intercepted by SecurityFilterChain.";
+        
+        // Anim: Client to Chain
+        await firePacket(100, 190, 200, 190, 'pkt-req', 'GET /admin');
+        
+        fAuthn.style.boxShadow = '0 0 15px rgba(245, 158, 11, 0.4)';
+        await sleep(300);
+        
+        // Barrier pops up
+        barrier.style.left = '290px'; barrier.style.top = '190px'; barrier.style.opacity = '1';
+        errText.style.left = '160px'; errText.style.top = '100px'; errText.innerText = '401 UNAUTHORIZED'; errText.style.opacity = '1';
+        
+        sysLog.innerText = "[AUTH] Missing credentials. Request rejected at edge.";
+        document.getElementById('l-phase-1').classList.replace('active', 'err');
+        
+        await sleep(800);
+        pkt.style.opacity = '0'; barrier.style.opacity = '0'; errText.style.opacity = '0';
+        fAuthn.style.boxShadow = 'none';
+    }
+    else if (idx === 2) { // Authentication
+        document.getElementById('l-phase-0').classList.add('done');
+        document.getElementById('l-phase-1').classList.add('done');
+        document.getElementById('l-phase-2').classList.add('active');
+        
+        authHdr.innerText = "Basic emliZXI6cGFzczEyMw=="; authHdr.style.color = "var(--c-client)";
+        sysLog.innerText = "[AUTH] Extracting credentials. Delegating to AuthenticationManager.";
+        
+        document.getElementById('n-auth-mgr').style.opacity = '1';
+        document.getElementById('l-f-am').style.opacity = '1';
+        
+        // Anim: Client to Chain to AuthManager
+        await firePacket(100, 190, 200, 190, 'pkt-req', 'Auth Token');
+        fAuthn.style.boxShadow = '0 0 15px rgba(245, 158, 11, 0.4)';
+        await sleep(200);
+        await firePacket(200, 190, 310, 190, 'pkt-auth', 'Extract'); // Move inside chain
+        await firePacket(310, 190, 310, 80, 'pkt-auth', 'UsernamePasswordToken', 400); // Up to line
+        await firePacket(310, 80, 520, 80, 'pkt-auth', 'Delegating...', 500); // Into Manager
+    }
+    else if (idx === 3) { // DB & BCrypt
+        document.getElementById('l-phase-0').classList.add('done');
+        document.getElementById('l-phase-1').classList.add('done');
+        document.getElementById('l-phase-2').classList.add('done');
+        
+        sysLog.innerText = "[PROVIDER] Querying DB and verifying BCrypt hash.";
+        
+        document.getElementById('n-db').style.opacity = '1';
+        document.getElementById('l-am-db').style.opacity = '1';
+        document.getElementById('l-am-db').style.width = '100px'; // connect AM to DB
+        document.getElementById('l-am-db').style.height = '2px';
+        
+        // Anim: AuthMgr to DB and back
+        await firePacket(520, 80, 740, 80, 'pkt-auth', 'SELECT * FROM users');
+        await sleep(200);
+        await firePacket(740, 80, 520, 80, 'pkt-ok', '$2a$10$xyz...');
+        
+        sysLog.innerText = "[BCRYPT] Hash match successful. User authenticated.";
+        mTime.innerText = "45 ms";
+    }
+    else if (idx === 4) { // ContextHolder
+        for(let i=0; i<=2; i++) document.getElementById('l-phase-'+i).classList.add('done');
+        document.getElementById('l-phase-3').classList.add('active');
+        
+        sysLog.innerText = "[CONTEXT] Saving Authentication object to ThreadLocal.";
+        document.getElementById('n-context').style.opacity = '1';
+        document.getElementById('l-am-ctx').style.opacity = '1';
+        
+        // Anim: AuthMgr down to Context
+        await firePacket(520, 80, 520, 220, 'pkt-ok', 'Set Context');
+        pkt.style.opacity = '0';
+        
+        scPanel.innerHTML = `<span class="sp-key">Principal:</span> <span style="color:var(--text);">"zuber"</span><br><span class="sp-key">Authenticated:</span> <span style="color:var(--c-success); font-weight:bold;">true</span><br><span class="sp-key">Authorities:</span> <span style="color:var(--text);">[ROLE_USER]</span>`;
+        document.getElementById('n-context').style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.4)';
+    }
+    else if (idx === 5) { // Authorization (Fail)
+        for(let i=0; i<=3; i++) document.getElementById('l-phase-'+i).classList.add('done');
+        document.getElementById('l-phase-4').classList.add('active');
+        
+        sysLog.innerText = "[AUTHZ] Evaluating @PreAuthorize(\"hasRole('ADMIN')\")";
+        document.getElementById('l-f-ctx').style.opacity = '1';
+        fAuthz.style.boxShadow = '0 0 15px rgba(139, 92, 246, 0.4)';
+        
+        // Anim: Filter checks context
+        await firePacket(200, 190, 310, 190, 'pkt-check', 'Check Role', 400);
+        await firePacket(310, 190, 310, 220, 'pkt-check', '', 200);
+        await firePacket(310, 220, 520, 220, 'pkt-check', 'Get Authorities', 400);
+        await firePacket(520, 220, 310, 220, 'pkt-err', 'ROLE_USER only!', 400);
+        await firePacket(310, 220, 310, 190, 'pkt-err', '', 200);
+        
+        // Barrier blocks entry to controller
+        barrier.style.left = '310px'; barrier.style.top = '190px'; barrier.style.opacity = '1';
+        errText.style.left = '220px'; errText.style.top = '100px'; errText.innerText = '403 FORBIDDEN'; errText.style.opacity = '1';
+        
+        sysLog.innerText = "[AUTHZ] Access Denied. Requires ROLE_ADMIN.";
+        document.getElementById('l-phase-4').classList.replace('active', 'err');
+        
+        await sleep(1000);
+        pkt.style.opacity = '0';
+    }
+  }
+
+  function goTo(idx) {
+    if (isAnimating) return;
+    const scenes = document.querySelectorAll('.scene');
+    scenes.forEach(s => s.classList.remove('active'));
+    document.getElementById(STAGES[idx].id).classList.add('active');
+
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach((t, i) => {
+      t.classList.remove('active', 'done');
+      if (i < idx) t.classList.add('done');
+      if (i === idx) t.classList.add('active');
+    });
+
+    const expData = [
+        { b: "[SECURITY_ARCHITECTURE]", t: "The Filter Chain Fortress", txt: "90% of junior developers manually check passwords and user roles inside their Spring Boot controllers. If you do this, your application is a massive, un-auditable security liability just begging to be hacked. Let's explore the enterprise way." },
+        { b: "[INGRESS]", t: "The Security Filter Chain", txt: "The moment an HTTP request enters your Spring app, it hits a wall of proxy filters before it ever reaches the DispatcherServlet. If any filter fails (like missing a token), the request is instantly killed at the network edge." },
+        { b: "[AUTHENTICATION]", t: "Who Are You?", txt: "The request hits the <code>AuthenticationFilter</code>. It extracts your credentials and delegates verification to the <code>AuthenticationManager</code>. The Manager asks its Providers: 'Can anyone validate this?'" },
+        { b: "[CRYPTOGRAPHY]", t: "The Database Provider", txt: "The <code>DaoAuthenticationProvider</code> queries the database. But it NEVER compares plain-text passwords. It runs a heavy cryptographic algorithm called <strong>BCrypt</strong> to hash your incoming password and compares the hashes." },
+        { b: "[STATE_MANAGEMENT]", t: "SecurityContextHolder", txt: "Success! Where does Spring store your identity? The <code>SecurityContextHolder</code>. This is a ThreadLocal variable. Your specific API thread is now 'stamped' with your Username and Roles. You are logged in." },
+        { b: "[AUTHORIZATION]", t: "What Can You Do?", txt: "Just because you are in the building doesn't mean you can enter the vault. The <code>AuthorizationFilter</code> evaluates <code>@PreAuthorize(\"hasRole('ADMIN')\")</code> against your Context. If you lack the role, it physically blocks access to the Controller." },
+        { b: "[SUMMARY]", t: "The Design Matrix", txt: "Authentication is verifying WHO you are (401 error). Authorization is verifying WHAT you can do (403 error). By strictly separating these concerns into the Filter Chain, your controllers remain perfectly clean." }
+    ];
+
+    document.getElementById('step-badge').innerText = expData[idx].b;
+    document.getElementById('explainer-title').innerText = expData[idx].t;
+    document.getElementById('explainer-text').innerHTML = expData[idx].txt;
+
+    document.getElementById('prevBtn').disabled = idx === 0;
+    document.getElementById('nextBtn').disabled = idx === STAGES.length - 1;
+    document.getElementById('nextBtn').textContent = idx === STAGES.length - 1 ? 'Done ✓' : 'Next →';
+
+    currentStep = idx;
+    
+    isAnimating = true;
+    updateDynamicContent(idx).then(() => { isAnimating = false; });
+  }
+
+  function navigate(dir) {
+    if (isAnimating) return;
+    const next = Math.max(0, Math.min(STAGES.length - 1, currentStep + dir));
+    goTo(next);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
+  });
+
+  buildUI();
+  updateDynamicContent(0);
+</script>
+</body>
+</html>
