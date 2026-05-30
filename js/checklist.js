@@ -7,11 +7,12 @@ import {
   markVisited, 
   getConfidenceRatings, 
   saveConfidenceRating, 
-  getCheckedItems, 
+  getCheckedItems,
   saveCheckedItems,
   getSavedTheme,
   saveTheme
 } from './utils.js';
+import { initCommandPalette, openCommandPalette } from './command-palette.js';
 
 // Initialize theme immediately to prevent Flash of Unstyled Content (FOUC)
 const theme = getSavedTheme();
@@ -29,6 +30,9 @@ const dayId = getDayIdFromUrl();
 // ─── Document Interactivity Setup ──────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
+  const mainContent = document.querySelector('main');
+  if (mainContent) mainContent.classList.add('animate-page-in');
+  
   initThemeToggle();
   initChecklist();
   initStopwatch();
@@ -444,6 +448,9 @@ const initGlobalQuickActions = () => {
   const fab = document.createElement('div');
   fab.className = 'global-quick-actions';
   fab.innerHTML = `
+    <button class="gqa-btn" id="gqa-notes" title="Scratchpad Notes" aria-label="Notes">
+      <span class="gqa-icon">📝</span>
+    </button>
     <button class="gqa-btn" id="gqa-search" title="Search Topics" aria-label="Search">
       <span class="gqa-icon">🔍</span>
     </button>
@@ -452,6 +459,38 @@ const initGlobalQuickActions = () => {
     </button>
   `;
   document.body.appendChild(fab);
+
+  // Scratchpad Drawer
+  const drawer = document.createElement('div');
+  drawer.className = 'notes-drawer';
+  drawer.innerHTML = `
+    <div class="notes-header">
+      <h3>Scratchpad</h3>
+      <button id="close-notes" aria-label="Close notes">✕</button>
+    </div>
+    <textarea id="notes-textarea" placeholder="Jot down notes, code snippets, or tricky interview answers here. They will automatically save."></textarea>
+  `;
+  document.body.appendChild(drawer);
+
+  const notesBtn = document.getElementById('gqa-notes');
+  const closeNotes = document.getElementById('close-notes');
+  const textarea = document.getElementById('notes-textarea');
+  
+  const notesKey = 'java-learn-notes-' + dayId;
+  textarea.value = localStorage.getItem(notesKey) || '';
+
+  notesBtn.addEventListener('click', () => {
+    drawer.classList.add('open');
+    textarea.focus();
+  });
+
+  closeNotes.addEventListener('click', () => {
+    drawer.classList.remove('open');
+  });
+
+  textarea.addEventListener('input', () => {
+    localStorage.setItem(notesKey, textarea.value);
+  });
 
   // Mobile sidebar toggle
   const sidebarToggle = document.createElement('button');
@@ -477,12 +516,12 @@ const initGlobalQuickActions = () => {
 
   const searchBtn = document.getElementById('gqa-search');
   if (searchBtn) {
-    searchBtn.addEventListener('click', () => {
-      const query = prompt("Search for a Java/Spring topic:");
-      if (query && query.trim()) {
-        window.location.href = '../../index.html?search=' + encodeURIComponent(query.trim());
-      }
+    searchBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      openCommandPalette();
     });
   }
+
+  initCommandPalette();
 };
 

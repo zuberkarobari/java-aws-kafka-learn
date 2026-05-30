@@ -16,6 +16,7 @@ import {
   getActivePathway,
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
+import { initCommandPalette } from './command-palette.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -360,6 +361,8 @@ const init = () => {
       behavior: 'smooth',
     });
   });
+
+  initCommandPalette();
 };
 
 document.addEventListener('DOMContentLoaded', init);

@@ -18,10 +18,14 @@ import {
   calcProgress,
   getStreakHistory,
   calcStreakDays,
-  getGlobalProgress
+  getRecommendation,
+  getPlannerTasks,
+  addPlannerTask,
+  togglePlannerTask,
+  deletePlannerTask,
+  getConfidenceRatings,
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
-import { initCommandPalette } from './command-palette.js';
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -698,6 +702,14 @@ const initSearch = () => {
     setSearchParam('search', query);
     renderCards(query);
   });
+
+  // Keyboard shortcut: / to focus search
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== input) {
+      e.preventDefault();
+      input.focus();
+    }
+  });
 };
 
 // Exposed globally for the "Clear search" button in empty state
@@ -721,7 +733,6 @@ const init = () => {
   renderSidebar();
   renderProgress();
   initSearch();
-  initCommandPalette();
 
   // Re-render on storage changes (e.g., visiting a topic in another tab)
   window.addEventListener('storage', () => {

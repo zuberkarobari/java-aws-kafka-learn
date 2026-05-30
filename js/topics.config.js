@@ -69,6 +69,13 @@ export const PATHWAYS = {
     icon: '🔑',
     description: 'Deep dive into interactive visual simulators, system design masterclasses, and step-by-step animation reels.',
     categories: ['System Design & Architecture', 'Java Memory & Concurrency Reels', 'Design Patterns & Web Masterclasses'],
+  },
+  notes: {
+    id: 'notes',
+    title: 'My Notes',
+    icon: '📝',
+    description: 'Your personal scratchpad notes collected from all study checklists.',
+    categories: ['My Notes'],
   }
 };
 
