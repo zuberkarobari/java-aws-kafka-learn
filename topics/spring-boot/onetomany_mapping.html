@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPA @OneToMany Mapping Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: {
+                            50: '#f0f9eb',
+                            100: '#dbf0cd',
+                            400: '#86c953',
+                            500: '#6db33f', // Official Spring Green
+                            600: '#589b2f',
+                            900: '#234011',
+                            950: '#142609',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="@OneToMany Mapping">@OneToMany Mapping</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: The Danger of Unidirectional
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example: Bidirectional Syncing
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
+            </a>
+            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-sparkle"></i> Entity Relationships
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        @OneToMany <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Mapping</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering parent-child relationships, lazy loading, collection proxies, and preventing the infamous N+1 query problem.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">A relationship where a single "Parent" object is associated with multiple "Child" objects. For example, one Department has many Employees, or one Blog Post has many Comments.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">A 1:N multiplicity association. In a relational database, this is always implemented by placing a Foreign Key constraint on the "Many" table, which points back to the Primary Key of the "One" table.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To easily map hierarchical or grouped data into Java Collections (<code>List</code> or <code>Set</code>). It allows you to fetch, persist, or delete entire clusters of related objects (Parent + Children) through cascading.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The Danger of Unidirectional</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">Understanding how <code>@OneToMany</code> behaves with and without a bidirectional <code>@ManyToOne</code> link.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-12 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full relative z-10">
+                                
+                                <!-- Unidirectional Danger -->
+                                <div class="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-xl relative shadow-lg">
+                                    <div class="absolute -top-3 right-4 bg-red-500 text-red-950 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest">Unidirectional (Bad)</div>
+                                    <h4 class="font-display font-bold text-lg text-red-400 mb-4 flex items-center gap-2"><i class="ph-fill ph-warning text-xl"></i> @OneToMany Only</h4>
+                                    
+                                    <div class="bg-black/40 p-3 rounded-lg font-mono text-sm text-slate-300 mb-4 border border-red-500/30">
+                                        <span class="text-emerald-400">@OneToMany</span> <span class="text-slate-500">// No mappedBy!</span><br>
+                                        <span class="text-blue-400">private</span> List&lt;Comment&gt; comments;
+                                    </div>
+                                    
+                                    <p class="text-xs text-red-200 mb-3"><strong>What Hibernate does:</strong></p>
+                                    <ul class="text-xs text-slate-300 space-y-2 border-l-2 border-red-500/50 pl-3">
+                                        <li>Since there is no "Owner" defined, Hibernate assumes this is an independent relationship.</li>
+                                        <li>It creates a <strong>hidden Join Table</strong> (e.g., <code>post_comment</code>) to link the two tables together.</li>
+                                        <li>Result: 3 tables instead of 2, extra JOIN queries, and terrible performance on inserts (requires 2 INSERTs and 1 UPDATE per child).</li>
+                                    </ul>
+                                </div>
+
+                                <!-- Bidirectional (Best Practice) -->
+                                <div class="bg-emerald-900/20 border-2 border-emerald-500/50 p-6 rounded-xl relative shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                                    <div class="absolute -top-3 right-4 bg-emerald-500 text-emerald-950 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest">Bidirectional (Good)</div>
+                                    <h4 class="font-display font-bold text-lg text-emerald-300 mb-4 flex items-center gap-2"><i class="ph-fill ph-arrows-left-right text-xl"></i> @OneToMany + mappedBy</h4>
+                                    
+                                    <div class="bg-black/40 p-3 rounded-lg font-mono text-sm text-slate-300 mb-4 border border-emerald-500/30">
+                                        <span class="text-emerald-400">@OneToMany</span>(mappedBy=<span class="text-amber-300">"post"</span>)<br>
+                                        <span class="text-blue-400">private</span> List&lt;Comment&gt; comments;
+                                    </div>
+                                    
+                                    <p class="text-xs text-emerald-200 mb-3"><strong>What Hibernate does:</strong></p>
+                                    <ul class="text-xs text-slate-300 space-y-2 border-l-2 border-emerald-500/50 pl-3">
+                                        <li>Hibernate sees <code>mappedBy</code> and understands: "Ah, the <code>Comment</code> entity is managing this relationship via its <code>post</code> field."</li>
+                                        <li>No join table is created. It expects the <code>Comment</code> table to have a <code>post_id</code> Foreign Key column.</li>
+                                        <li>Performance is optimal. Only 2 tables exist.</li>
+                                    </ul>
+                                </div>
+                                
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-article text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">Blog System (Post & Comments)</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Managing memory and cascading in a 1:N hierarchy.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-slate-700 text-slate-300 flex items-center justify-center shrink-0 border border-slate-600"><i class="ph-fill ph-users text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Collection Trap</h4>
+                                    <p class="text-sm text-slate-400 mt-1">Imagine a <code>Post</code> that goes viral and gets 50,000 <code>Comment</code>s. If <code>@OneToMany</code> was loaded EAGERLY, fetching just the Post's title would instantly load 50,000 Comment objects into JVM memory, crashing the server with an <code>OutOfMemoryError</code>. This is why <code>@OneToMany</code> is <strong>LAZY</strong> by default.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-trash text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Cascading Benefit</h4>
+                                    <p class="text-sm text-slate-300 mt-1">When an admin deletes a toxic Blog Post, we don't want to manually write code to query and delete all its Comments first to avoid Foreign Key violation errors. By setting <code>cascade = CascadeType.REMOVE</code> on the <code>@OneToMany</code> mapping, deleting the Post tells Hibernate to automatically issue DELETE statements for all associated comments.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">The "Many" Side is the Owner</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">In relational databases, the "Many" table always holds the Foreign Key. Therefore, in JPA, the <code>@ManyToOne</code> side is always the Owning side. The <code>@OneToMany</code> side is the Inverse side and must use <code>mappedBy</code>.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">LAZY by Default</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Unlike <code>@OneToOne</code> and <code>@ManyToOne</code>, collections (<code>@OneToMany</code>, <code>@ManyToMany</code>) are <code>FetchType.LAZY</code> by default. Accessing the collection initializes a proxy, which executes a separate SQL query to fetch the children.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Helper / Sync Methods</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Because the parent is the inverse side, simply adding a child to the list (<code>post.getComments().add(comment)</code>) will NOT save the foreign key. You must build a <code>addComment()</code> method that also sets the parent on the child.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-amber-100 hover:border-amber-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-amber-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Set vs List (MultipleBagsException)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If you have two `List` based `@OneToMany` relationships and try to `JOIN FETCH` both eagerly, Hibernate throws a <code>MultipleBagFetchException</code>. Using a <code>Set</code> instead of a <code>List</code> avoids this Cartesian product issue.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Orphan Removal</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><code>orphanRemoval = true</code> is powerful. If you execute <code>post.getComments().remove(0)</code>, Hibernate detects that the comment is no longer referenced by the parent collection and executes a SQL <code>DELETE</code> to permanently remove it.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">CascadeType.ALL</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Usually applied on the <code>@OneToMany</code> side. It propagates state transitions (Persist, Merge, Remove) from the Parent down to all Children in the collection, acting as a single aggregate root.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-red-200 hover:border-red-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-red-500 group-hover:text-red-600 group-hover:bg-red-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">The N+1 Query Nightmare</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If you query 100 Posts, and then loop through them calling <code>post.getComments().size()</code>, Hibernate executes 1 query for the Posts, and then <strong>100 separate queries</strong> (one for each post's comments). This is the N+1 problem. It is solved using <code>JOIN FETCH</code> in JPQL or <code>@EntityGraph</code>.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: What happens if I forget `mappedBy` in @OneToMany?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Hibernate will treat it as a unidirectional relationship. Instead of using the foreign key on the child table, it will automatically generate a new mapping/join table (e.g., <code>post_comment</code>) to manage the relationship, leading to highly inefficient SQL and database bloat.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: How is CascadeType.REMOVE different from orphanRemoval = true?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> <code>CascadeType.REMOVE</code> only triggers when you delete the <em>Parent</em> entity (it deletes the parent and cascades delete to the children). <code>orphanRemoval = true</code> handles the scenario where you simply remove a child from the <em>collection</em> (e.g., `list.remove(child)`). It detects the child is orphaned and deletes it from the database.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How do you solve the N+1 problem for a @OneToMany collection?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> You can solve it by writing a custom JPQL query using <code>JOIN FETCH p.comments</code>. Alternatively, you can use Spring Data's <code>@EntityGraph(attributePaths = {"comments"})</code> over your repository method to force an eager join fetch for that specific query.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q4: Why does Pagination fail with a JOIN FETCH on a @OneToMany?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Because of the SQL Cartesian product, the database returns duplicated parent rows (1 for each child). The database's `LIMIT`/`OFFSET` applies to the <em>rows</em>, not the <em>entities</em>. Hibernate detects this, drops the database-level limit, pulls ALL data into RAM, and does pagination in-memory. This causes severe memory warnings. (Solve using `@BatchSize` instead of `JOIN FETCH`).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q5: Should I initialize the collection in the entity?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Yes. Always initialize it: <code>private List&lt;Comment&gt; comments = new ArrayList&lt;&gt;();</code>. This prevents <code>NullPointerException</code> when adding the first child to a transient parent before it is saved.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: Bidirectional Syncing</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">OneToManyDemo.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]">// 1. The Parent (Inverse Side)</span>
+<span class="text-[#4ec9b0]">@Entity</span>
+<span class="text-[#4ec9b0]">@Table</span>(name = <span class="text-[#ce9178]">"posts"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">Post</span> {
+    
+    <span class="text-[#4ec9b0]">@Id</span>
+    <span class="text-[#4ec9b0]">@GeneratedValue</span>(strategy = GenerationType.IDENTITY)
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Long</span> id;
+
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">String</span> title;
+
+    <span class="text-[#6a9955]">// mappedBy = "post" points to the field on the Comment entity.</span>
+    <span class="text-[#6a9955]">// orphanRemoval = true ensures removed comments are deleted from DB.</span>
+    <span class="text-[#4ec9b0]">@OneToMany</span>(mappedBy = <span class="text-[#ce9178]">"post"</span>, cascade = CascadeType.ALL, orphanRemoval = <span class="text-[#569cd6]">true</span>)
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">List</span>&lt;Comment&gt; comments = <span class="text-[#569cd6]">new</span> ArrayList&lt;&gt;(); <span class="text-[#6a9955]">// Initialize to prevent NPE!</span>
+
+    <span class="text-[#6a9955]">// --- CRITICAL: Utility Methods for Bidirectional Sync ---</span>
+    <span class="text-[#569cd6]">public void</span> addComment(<span class="text-[#4ec9b0]">Comment</span> comment) {
+        comments.add(comment);
+        comment.setPost(<span class="text-[#569cd6]">this</span>); <span class="text-[#6a9955]">// Sets the Owning Side!</span>
+    }
+
+    <span class="text-[#569cd6]">public void</span> removeComment(<span class="text-[#4ec9b0]">Comment</span> comment) {
+        comments.remove(comment);
+        comment.setPost(<span class="text-[#569cd6]">null</span>); <span class="text-[#6a9955]">// Triggers Orphan Removal</span>
+    }
+}
+
+<span class="text-[#6a9955]">// 2. The Child (Owning Side)</span>
+<span class="text-[#4ec9b0]">@Entity</span>
+<span class="text-[#4ec9b0]">@Table</span>(name = <span class="text-[#ce9178]">"comments"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">Comment</span> {
+    
+    <span class="text-[#4ec9b0]">@Id</span>
+    <span class="text-[#4ec9b0]">@GeneratedValue</span>(strategy = GenerationType.IDENTITY)
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Long</span> id;
+
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">String</span> text;
+
+    <span class="text-[#4ec9b0]">@ManyToOne</span>(fetch = FetchType.LAZY) <span class="text-[#6a9955]">// Override default EAGER!</span>
+    <span class="text-[#4ec9b0]">@JoinColumn</span>(name = <span class="text-[#ce9178]">"post_id"</span>) <span class="text-[#6a9955]">// The physical Foreign Key column</span>
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Post</span> post;
+    
+    <span class="text-[#6a9955]">// Getters & Setters ...</span>
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "A major red flag I look for in junior code is a unidirectional <code>@OneToMany</code> mapping. Without the <code>mappedBy</code> attribute pointing to a <code>@ManyToOne</code> owner, Hibernate creates a hidden join table, which ruins database performance on inserts and updates. I always mandate strict bidirectional mappings with synchronization methods (e.g., `addComment()`) on the parent entity.
+                            <br><br>
+                            Secondly, managing collection fetching is where most applications fall apart under load. While <code>@OneToMany</code> is <code>LAZY</code> by default (which is good), iterating over that collection causes the N+1 query problem. To fix this, developers often blindly apply <code>JOIN FETCH</code>. 
+                            <br><br>
+                            However, if you attempt to Paginate a query containing a <code>JOIN FETCH</code> on a collection, Hibernate throws an in-memory pagination warning, risking an OutOfMemoryError on the server. In those scenarios, I ensure the team removes the JOIN FETCH and instead uses <code>@BatchSize(size = 50)</code> or executes two separate, optimized queries."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-check-circle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Definition:</strong> 1 Parent maps to N Children.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-key text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Owning Side:</strong> The "Many" side. Holds the FK (<code>@JoinColumn</code>).</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-link-break text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Inverse Side:</strong> The "One" side. MUST use <code>mappedBy="fieldName"</code>.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>No mappedBy:</strong> Causes Hibernate to create an inefficient Join Table.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-clock text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Default Fetch:</strong> <code>LAZY</code> (Collections are lazy by default).</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-arrows-merge text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Sync Method:</strong> Always create <code>addChild(child)</code> to set both sides.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-trash text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Orphan Removal:</strong> Set to true to delete children removed from the list.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-bug text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>N+1 Problem:</strong> Loops trigger massive queries. Fix with <code>JOIN FETCH</code>.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "A <code>@OneToMany</code> mapping in JPA defines a one-to-many relationship, such as a single Blog Post having multiple Comments. 
+                            <br><br>
+                            It is best practice to always make this bidirectional. In relational databases, the 'Many' table always contains the foreign key. Therefore, the <code>@ManyToOne</code> side is the Owner. On the <code>@OneToMany</code> side, we must use the <code>mappedBy</code> attribute to prevent Hibernate from generating a redundant Join Table.
+                            <br><br>
+                            We also utilize <code>cascade = CascadeType.ALL</code> and <code>orphanRemoval = true</code> to manage the lifecycle of the children through the parent. Finally, because collections are LAZY by default, we must be careful of the N+1 query problem when iterating over children, which we can solve using JPQL <code>JOIN FETCH</code> or Entity Graphs."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        
+  
+    </main>
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-spring-50/50');
+                });
+                
+                this.classList.toggle('bg-spring-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-spring-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-spring-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-spring-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic with enhanced feedback
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-spring-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+            // Add overlay backdrop when menu is open on mobile (optional enhancement)
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

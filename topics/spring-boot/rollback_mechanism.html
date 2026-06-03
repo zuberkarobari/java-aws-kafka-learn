@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Rollback Mechanism Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: {
+                            50: '#f0f9eb',
+                            100: '#dbf0cd',
+                            400: '#86c953',
+                            500: '#6db33f', // Official Spring Green
+                            600: '#589b2f',
+                            900: '#234011',
+                            950: '#142609',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="Rollback Mechanism">Rollback Mechanism</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: The Proxy Interception
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example: Good vs Bad Rollbacks
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
+            </a>
+            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-sparkle"></i> Declarative Tx Management
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Rollback <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Mechanism</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Understanding how Spring's AOP proxies intercept exceptions to decide between committing or rolling back a database transaction.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">If something goes wrong (an error occurs) while saving multiple pieces of related data to the database, Spring hits the "undo" button so you don't end up with partially saved, corrupted data.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">It's a feature of Spring's <code>TransactionInterceptor</code>. By default, when a method marked with <code>@Transactional</code> throws an <strong>Unchecked Exception</strong> (<code>RuntimeException</code> or <code>Error</code>), the interceptor catches it and tells the <code>PlatformTransactionManager</code> to issue a <code>ROLLBACK</code> command to the DB.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To guarantee the <strong>Atomicity</strong> property of ACID. Transactions must be "all or nothing." Rollbacks prevent orphaned records and inconsistent system states when sudden failures occur.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The Proxy Interception</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">How Spring intercepts exceptions to decide the fate of a transaction.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-8 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-emerald-400"></i> The TransactionInterceptor Decision Tree
+                            </h3>
+                            
+                            <div class="flex flex-col items-center w-full max-w-xl relative space-y-6">
+                                
+                                <!-- Step 1 -->
+                                <div class="bg-slate-800 border border-slate-600 p-4 rounded-xl shadow-lg w-full relative z-10 flex items-start gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 font-bold border border-blue-500/30">1</div>
+                                    <div>
+                                        <h4 class="font-bold text-white text-sm">Method Execution</h4>
+                                        <p class="text-xs text-slate-400 mt-1">The target service method is executing inside the AOP Proxy.</p>
+                                    </div>
+                                </div>
+
+                                <div class="w-0.5 h-6 bg-slate-600"></div>
+
+                                <!-- Step 2 -->
+                                <div class="bg-amber-900/30 border border-amber-500/50 p-4 rounded-xl shadow-lg w-full relative z-10 flex items-start gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shrink-0 font-bold shadow-[0_0_10px_rgba(245,158,11,0.5)]">2</div>
+                                    <div>
+                                        <h4 class="font-bold text-amber-300 text-sm">Exception Thrown!</h4>
+                                        <p class="text-xs text-slate-300 mt-1">An exception is thrown <em>and crosses the method boundary</em> (it is not caught inside the method).</p>
+                                    </div>
+                                </div>
+
+                                <div class="w-0.5 h-6 bg-slate-600"></div>
+
+                                <!-- Step 3: Decision Branch -->
+                                <div class="bg-slate-800 border border-slate-600 p-4 rounded-xl shadow-lg w-full relative z-10">
+                                    <div class="flex items-start gap-4 mb-3">
+                                        <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 font-bold border border-purple-500/30">3</div>
+                                        <div>
+                                            <h4 class="font-bold text-white text-sm">Proxy Evaluates the Exception Type</h4>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-4 mt-2">
+                                        <div class="bg-red-900/30 border border-red-500/30 p-3 rounded-lg text-xs">
+                                            <div class="font-bold text-red-300 mb-1 flex items-center gap-1"><i class="ph-bold ph-warning"></i> Unchecked</div>
+                                            <div class="text-slate-300 mb-2">(RuntimeException / Error)</div>
+                                            <div class="bg-red-950/50 px-2 py-1 rounded text-red-200 border border-red-500/20 text-center font-bold">ROLLBACK</div>
+                                        </div>
+                                        <div class="bg-emerald-900/30 border border-emerald-500/30 p-3 rounded-lg text-xs">
+                                            <div class="font-bold text-emerald-300 mb-1 flex items-center gap-1"><i class="ph-bold ph-check-circle"></i> Checked</div>
+                                            <div class="text-slate-300 mb-2">(e.g., IOException, SQLException)</div>
+                                            <div class="bg-emerald-950/50 px-2 py-1 rounded text-emerald-200 border border-emerald-500/20 text-center font-bold">COMMIT</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="w-0.5 h-6 bg-slate-600"></div>
+
+                                <!-- Step 4 -->
+                                <div class="bg-slate-800 border border-slate-600 p-4 rounded-xl shadow-lg w-full relative z-10 flex items-start gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-slate-500/20 text-slate-400 flex items-center justify-center shrink-0 font-bold border border-slate-500/30">4</div>
+                                    <div>
+                                        <h4 class="font-bold text-white text-sm">Action Execution</h4>
+                                        <p class="text-xs text-slate-400 mt-1">The <code>TransactionInterceptor</code> instructs the <code>PlatformTransactionManager</code> to execute the decided action against the physical database connection, then throws the exception further up the stack.</p>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-bank text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">Banking Fund Transfer</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Protecting money from disappearing into the void.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30"><i class="ph-fill ph-minus-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Step 1: Debit Account A</h4>
+                                    <p class="text-sm text-slate-300 mt-1">User initiates a transfer of $500. The system deducts $500 from Account A. This change is written to the database but remains uncommitted (locked in the transaction).</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-warning-octagon text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Step 2: The Failure</h4>
+                                    <p class="text-sm text-slate-300 mt-1">The system attempts to credit Account B, but Account B is frozen. The code throws an <code>AccountFrozenException</code> (a RuntimeException).</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-arrow-u-up-left text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Step 3: The Rollback</h4>
+                                    <p class="text-sm text-slate-300 mt-1">Because the exception is Unchecked, Spring intercepts it. Instead of committing the deduction from Account A, Spring issues a <code>ROLLBACK</code>. Account A's balance reverts to its original state. The $500 is saved from disappearing.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">Default Behavior Rule</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">By default, Spring ONLY rolls back on <strong>Unchecked Exceptions</strong> (<code>RuntimeException</code> and <code>Error</code>). If a <strong>Checked Exception</strong> (like <code>IOException</code> or <code>Exception</code>) is thrown, Spring will COMMIT the transaction.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">rollbackFor Override</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">You can override the default behavior using <code>@Transactional(rollbackFor = Exception.class)</code>. This forces Spring to roll back for ALL exceptions, checked or unchecked. This is a highly recommended best practice.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">The Try-Catch Trap</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If you wrap your database logic in a <code>try-catch</code> block and <em>do not rethrow</em> the exception, the AOP Proxy never sees the exception. Because the proxy sees the method complete normally, <strong>it will COMMIT the transaction</strong> despite the error occurring.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Manual / Programmatic Rollback</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If you must catch an exception but still want to roll back, you can manually instruct Spring to do so by calling <code>TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();</code> inside your catch block.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">noRollbackFor</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Sometimes you want a transaction to commit even if a specific Unchecked Exception occurs (like a non-critical notification failing). You can use <code>@Transactional(noRollbackFor = NotificationException.class)</code> to ignore it.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Interaction with Global Exception Handlers</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Using a <code>@RestControllerAdvice</code> to handle exceptions globally does <strong>NOT</strong> prevent rollbacks. The AOP Proxy wraps the Service layer, while the Advice wraps the Controller. The exception hits the Proxy (triggering rollback) before it ever reaches the Controller Advice.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-red-200 hover:border-red-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-red-500 group-hover:text-red-600 group-hover:bg-red-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">The Private Method Proxy Bypass</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Because Spring uses AOP Proxies, if you apply <code>@Transactional</code> to a <code>private</code> method, or if a non-transactional method in the same class calls a transactional method, <strong>the proxy is bypassed</strong>. The transaction is never created, and therefore, no rollback will ever occur.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: Why does Spring default to NOT rolling back on Checked Exceptions?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> This is an architectural legacy from EJB (Enterprise JavaBeans). Checked exceptions were originally intended to represent "alternative business outcomes" (like <code>InsufficientFundsException</code>) rather than system failures, meaning the business process completed normally, just with an alternative result. Therefore, the transaction should commit whatever state changes happened up to that point. Today, modern frameworks treat almost all exceptions as rollbacks, which is why <code>rollbackFor = Exception.class</code> is heavily used.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: I caught the exception, logged it, but the data still saved. Why?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> This is the "Try-Catch Trap." The Spring proxy sits <em>outside</em> your method. If your method catches the exception and doesn't re-throw it, the method returns normally. The proxy assumes everything was successful and issues a COMMIT command.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How can I force a rollback if I MUST catch the exception?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> You must interact with the Transaction manager programmatically. Inside your catch block, you call: <code>TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();</code>.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q4: If a nested method throws an exception but the outer method catches it, does it roll back?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> If both methods use the default <code>REQUIRED</code> propagation, they share the same physical transaction. When the inner method throws the exception, the interceptor marks the shared transaction as "rollback-only". Even if the outer method catches it, when the outer method tries to commit, Spring will throw an <code>UnexpectedRollbackException</code> and roll everything back.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: Good vs Bad Rollbacks</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">RollbackDemoService.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">RollbackDemoService</span> {
+
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">UserRepository</span> userRepository;
+
+    <span class="text-[#569cd6]">public</span> RollbackDemoService(<span class="text-[#4ec9b0]">UserRepository</span> userRepository) {
+        <span class="text-[#569cd6]">this</span>.userRepository = userRepository;
+    }
+
+    <span class="text-[#6a9955]">// ❌ BAD: Won't rollback for Checked Exceptions!</span>
+    <span class="text-[#4ec9b0]">@Transactional</span> 
+    <span class="text-[#569cd6]">public void</span> badSave(<span class="text-[#4ec9b0]">User</span> user) <span class="text-[#569cd6]">throws</span> <span class="text-[#4ec9b0]">IOException</span> {
+        userRepository.save(user);
+        <span class="text-[#569cd6]">throw new</span> IOException(<span class="text-[#ce9178]">"Disk full!"</span>); <span class="text-[#6a9955]">// This is a Checked Exception. Tx will COMMIT!</span>
+    }
+
+    <span class="text-[#6a9955]">// ✅ GOOD: Best Practice. Rolls back for EVERYTHING.</span>
+    <span class="text-[#4ec9b0]">@Transactional</span>(rollbackFor = Exception.<span class="text-[#569cd6]">class</span>)
+    <span class="text-[#569cd6]">public void</span> goodSave(<span class="text-[#4ec9b0]">User</span> user) <span class="text-[#569cd6]">throws</span> <span class="text-[#4ec9b0]">Exception</span> {
+        userRepository.save(user);
+        <span class="text-[#569cd6]">throw new</span> Exception(<span class="text-[#ce9178]">"Any error"</span>); <span class="text-[#6a9955]">// Tx will ROLLBACK.</span>
+    }
+
+    <span class="text-[#6a9955]">// ❌ BAD: The Try-Catch Trap</span>
+    <span class="text-[#4ec9b0]">@Transactional</span>
+    <span class="text-[#569cd6]">public void</span> trappedSave(<span class="text-[#4ec9b0]">User</span> user) {
+        <span class="text-[#569cd6]">try</span> {
+            userRepository.save(user);
+            <span class="text-[#569cd6]">throw new</span> RuntimeException(<span class="text-[#ce9178]">"DB Error"</span>);
+        } <span class="text-[#569cd6]">catch</span> (<span class="text-[#4ec9b0]">Exception</span> e) {
+            log.error(<span class="text-[#ce9178]">"Error happened: "</span>, e);
+            <span class="text-[#6a9955]">// The exception is eaten. The Proxy thinks the method succeeded.</span>
+            <span class="text-[#6a9955]">// Tx will COMMIT!</span>
+        }
+    }
+
+    <span class="text-[#6a9955]">// ✅ FIX: Manual Rollback</span>
+    <span class="text-[#4ec9b0]">@Transactional</span>
+    <span class="text-[#569cd6]">public void</span> manualRollbackSave(<span class="text-[#4ec9b0]">User</span> user) {
+        <span class="text-[#569cd6]">try</span> {
+            userRepository.save(user);
+            <span class="text-[#569cd6]">throw new</span> RuntimeException(<span class="text-[#ce9178]">"DB Error"</span>);
+        } <span class="text-[#569cd6]">catch</span> (<span class="text-[#4ec9b0]">Exception</span> e) {
+            log.error(<span class="text-[#ce9178]">"Error happened: "</span>, e);
+            <span class="text-[#6a9955]">// Manually tell the Transaction Manager to Rollback</span>
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        }
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "One of the strictest rules I enforce during code reviews is the explicit use of <code>@Transactional(rollbackFor = Exception.class)</code>. Spring's default behavior of only rolling back on Unchecked exceptions is a legacy design that catches junior developers off-guard, leading to partial commits if an <code>IOException</code> or custom checked exception is thrown.
+                            <br><br>
+                            Secondly, I constantly watch for the 'Try-Catch Trap'. If a developer wraps a transactional method in a generic try-catch block to suppress errors and doesn't explicitly mark the transaction for rollback via <code>TransactionAspectSupport.currentTransactionStatus().setRollbackOnly()</code>, they unknowingly commit invalid states to the database.
+                            <br><br>
+                            Finally, from an architectural standpoint, I ensure we don't mix slow third-party API calls inside database transaction boundaries. If a transaction is opened, and we then make a 5-second REST call that times out (throwing an exception to trigger a rollback), we have held a database connection hostage for 5 seconds. Transactions should wrap database logic quickly, commit/rollback, and release the connection."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-check-circle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Default:</strong> Rolls back ONLY for Unchecked Exceptions (`RuntimeException`, `Error`).</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Checked Exceptions:</strong> E.g., `IOException`. Transaction WILL COMMIT by default.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-shield-check text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Best Practice:</strong> Use `@Transactional(rollbackFor = Exception.class)`.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-bug text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Try-Catch Trap:</strong> Catching an error and not re-throwing it prevents rollbacks.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-wrench text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Manual Rollback:</strong> Call `TransactionAspectSupport.currentTransactionStatus().setRollbackOnly()`.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-prohibit text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>noRollbackFor:</strong> Instructs Spring to ignore a specific exception and commit anyway.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-arrows-merge text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Controller Advice:</strong> Doesn't affect rollbacks. The proxy evaluates exceptions before the controller.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-ghost text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Private Methods:</strong> Annotating private methods does nothing. The proxy ignores them.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "In Spring, the Transaction rollback mechanism is controlled by AOP Proxies intercepting method executions. By default, Spring will only roll back a transaction if an Unchecked Exception (a <code>RuntimeException</code> or <code>Error</code>) crosses the transactional boundary. If a Checked Exception is thrown, Spring will assume it's an alternative business state and issue a COMMIT.
+                            <br><br>
+                            Because this default behavior often leads to bugs, the enterprise best practice is to explicitly define <code>@Transactional(rollbackFor = Exception.class)</code> to guarantee atomicity regardless of the exception type. 
+                            <br><br>
+                            We must also be careful of the 'try-catch' trap. If a developer catches an exception inside the transactional method and fails to re-throw it or manually call <code>setRollbackOnly()</code>, the AOP Proxy assumes the method completed successfully, and the invalid data will be committed to the database."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        
+  
+    </main>
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-spring-50/50');
+                });
+                
+                this.classList.toggle('bg-spring-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-spring-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-spring-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-spring-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic with enhanced feedback
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-spring-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+            // Add overlay backdrop when menu is open on mobile (optional enhancement)
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

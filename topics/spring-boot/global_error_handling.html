@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@RestControllerAdvice Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: { 50: '#f0f9eb', 100: '#dbf0cd', 400: '#86c953', 500: '#6db33f', 600: '#589b2f', 900: '#234011', 950: '#142609' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .accordion-content { transition: all 0.4s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .accordion-content.open { max-height: 800px; opacity: 1; padding-top: 1rem; padding-bottom: 1.5rem; }
+        .accordion-icon { transition: transform 0.4s ease-in-out; }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+        .mac-window { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="@RestControllerAdvice">@RestControllerAdvice</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: Exception Resolution
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. Key Points
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+        <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+            
+            <!-- Page Title -->
+            <div class="mb-16 pt-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-100 border border-red-200 text-red-700 text-sm font-semibold mb-6">
+                    <i class="ph-fill ph-siren"></i> Global Error Handling
+                </div>
+                <h1 class="text-4xl md:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-amber-500">@RestControllerAdvice</span>
+                </h1>
+                <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                    Mastering AOP-driven, centralized exception handling to build resilient and user-friendly REST APIs.
+                </p>
+            </div>
+
+            <!-- 1. Definition -->
+            <section id="definition" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                        <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                        <p class="text-slate-600 text-sm font-medium">Imagine an office where every worker (Controller) can panic when something goes wrong. <code>@RestControllerAdvice</code> is the dedicated crisis manager who catches all those panics, organizes them into a clean, polite letter, and hands it to the client.</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                        <p class="text-slate-600 text-sm font-medium">It is a composed annotation (<code>@ControllerAdvice</code> + <code>@ResponseBody</code>) based on Aspect-Oriented Programming (AOP). It intercepts exceptions thrown globally by any <code>@RequestMapping</code> method and serializes the returned error object directly into JSON.</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-red-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                        <p class="text-slate-600 text-sm font-medium">To separate business logic from error handling. It eliminates massive <code>try-catch</code> blocks scattered across controllers, preventing raw stack traces from leaking to the frontend while ensuring a consistent JSON error contract.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Internal Working -->
+            <section id="internal-working" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                        <i class="ph-duotone ph-gears text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: Exception Resolution</h2>
+                </div>
+
+                <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-sm border border-slate-100 space-y-8">
+                    <p class="text-slate-600 font-medium">When a controller throws an exception, Spring's <code>DispatcherServlet</code> catches it and delegates it to a chain of <code>HandlerExceptionResolver</code>s. The primary one that handles <code>@ExceptionHandler</code> methods is the <code>ExceptionHandlerExceptionResolver</code>.</p>
+                    
+                    <!-- Custom HTML Diagram -->
+                    <div class="bg-slate-900 rounded-2xl p-6 shadow-inner border border-slate-800 text-center">
+                        <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-6 text-left flex items-center gap-2"><i class="ph-fill ph-git-merge text-red-400"></i> The Exception Interception Flow</h3>
+                        
+                        <div class="w-full flex flex-col items-center text-slate-300 py-4 relative">
+                            
+                            <!-- Step 1 -->
+                            <div class="bg-slate-800 border border-red-500/50 px-6 py-4 rounded-xl shadow-lg w-full max-w-lg z-10 mb-6 flex flex-col items-center relative overflow-hidden group">
+                                <div class="absolute top-0 right-0 w-2 h-full bg-red-500"></div>
+                                <div class="text-red-400 font-bold mb-1 flex items-center gap-2"><i class="ph-bold ph-bug"></i> RestController Method</div>
+                                <div class="font-mono text-xs text-slate-300 bg-slate-900 p-2 rounded w-full border border-slate-700">
+                                    throw new UserNotFoundException("ID 123");
+                                </div>
+                            </div>
+                            
+                            <i class="ph-bold ph-caret-down text-red-500/80 -mt-2 mb-4"></i>
+
+                            <!-- Step 2 -->
+                            <div class="bg-slate-800 border border-slate-600 px-6 py-3 rounded-xl shadow-lg w-full max-w-lg flex justify-between items-center z-10 mb-6">
+                                <div class="text-left">
+                                    <h4 class="font-bold text-white text-sm">DispatcherServlet</h4>
+                                    <p class="text-xs text-slate-400 mt-1">Catches unhandled exception</p>
+                                </div>
+                                <i class="ph-duotone ph-arrows-merge text-2xl text-blue-400"></i>
+                            </div>
+
+                            <i class="ph-bold ph-caret-down text-blue-500/80 -mt-2 mb-4"></i>
+
+                            <!-- Step 3 -->
+                            <div class="bg-blue-900/30 border border-blue-500/30 px-6 py-4 rounded-xl shadow-lg w-full max-w-lg z-10 mb-6 text-left">
+                                <h4 class="font-bold text-blue-300 text-sm mb-2 text-center">ExceptionHandlerExceptionResolver</h4>
+                                <div class="text-xs text-slate-300 space-y-2">
+                                    <div class="flex items-center gap-2"><i class="ph-bold ph-magnifying-glass text-blue-400"></i> Scans for <code>@RestControllerAdvice</code> classes.</div>
+                                    <div class="flex items-center gap-2"><i class="ph-bold ph-check text-emerald-400"></i> Finds matching <code>@ExceptionHandler(UserNotFoundException.class)</code>.</div>
+                                </div>
+                            </div>
+
+                            <i class="ph-bold ph-caret-down text-emerald-500/80 -mt-2 mb-4"></i>
+
+                            <!-- Step 4 -->
+                            <div class="bg-emerald-900/20 border border-emerald-500/50 px-6 py-4 rounded-xl shadow-lg w-full max-w-lg z-10 flex flex-col items-center">
+                                <div class="text-emerald-400 font-bold mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> @RestControllerAdvice executes</div>
+                                <div class="font-mono text-xs text-slate-300 bg-slate-900 p-2 rounded w-full border border-slate-700">
+                                    <span class="text-blue-300">return new</span> ProblemDetail(<span class="text-amber-300">404</span>, <span class="text-emerald-300">"Not Found"</span>);
+                                </div>
+                                <div class="text-[10px] text-slate-400 mt-3 border-t border-slate-700 pt-2 w-full text-center">
+                                    Jackson serializes object to JSON, returns HTTP 404.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Real-World Example -->
+            <section id="real-world" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                        <i class="ph-duotone ph-buildings text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                </div>
+
+                <div class="bg-slate-900 rounded-[2rem] p-8 md:p-10 text-white shadow-xl relative overflow-hidden group">
+                    <h3 class="text-2xl font-display font-bold mb-3 text-red-400">Banking API - Funds Transfer</h3>
+                    <p class="text-slate-300 mb-8 font-medium">Comparing business logic with and without global advice.</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6 relative z-10">
+                        <!-- Bad Way -->
+                        <div class="bg-slate-950 p-6 rounded-2xl border border-red-900/50 shadow-lg">
+                            <h4 class="font-bold text-red-400 text-lg mb-3 border-b border-slate-700 pb-2"><i class="ph-bold ph-x-circle"></i> The Bad Way</h4>
+                            <p class="text-xs text-slate-400 font-mono mb-4 bg-slate-900 p-3 rounded border border-slate-800 overflow-x-auto whitespace-pre">
+@PostMapping("/transfer")
+public ResponseEntity&lt;?&gt; transfer() {
+  try {
+    bankService.transfer(amount);
+    return ResponseEntity.ok("Done");
+  } catch (InsufficientFundsException e) {
+    return ResponseEntity.badRequest().body(new Error("No Money"));
+  } catch (AccountLockedException e) {
+    return ResponseEntity.status(403).body(new Error("Locked"));
+  }
+}</p>
+                            <p class="text-[10px] text-slate-400">Controller is 80% error handling. Hard to maintain and copy-pasted everywhere.</p>
+                        </div>
+                        
+                        <!-- Good Way -->
+                        <div class="bg-slate-800 p-6 rounded-2xl border border-emerald-500/50 shadow-lg relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-500"></div>
+                            <h4 class="font-bold text-emerald-400 text-lg mb-3 border-b border-slate-700 pb-2"><i class="ph-bold ph-check-circle"></i> The Clean Way</h4>
+                            <p class="text-xs text-emerald-200 font-mono mb-4 bg-slate-900 p-3 rounded border border-slate-700 overflow-x-auto whitespace-pre">
+@PostMapping("/transfer")
+public ResponseEntity&lt;String&gt; transfer() {
+  // Pure, happy-path business logic
+  bankService.transfer(amount);
+  return ResponseEntity.ok("Done");
+}</p>
+                            <p class="text-[10px] text-slate-300">If <code>bankService</code> throws, the method exits. The <code>@RestControllerAdvice</code> class catches it globally and translates it into standard JSON.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Key Points -->
+            <section id="key-points" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                        <i class="ph-duotone ph-target text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. Key Points</h2>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-5">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">1. AOP Proxying</h4>
+                        <p class="text-sm text-slate-600 font-medium">It operates via Spring AOP. It weaves cross-cutting exception-handling logic around all methods annotated with <code>@RequestMapping</code>.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">2. The Matcher Method</h4>
+                        <p class="text-sm text-slate-600 font-medium">Inside the advice class, you define methods annotated with <code>@ExceptionHandler(MyException.class)</code>. Spring uses the exception hierarchy to find the closest matching method.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">3. Validation Errors</h4>
+                        <p class="text-sm text-slate-600 font-medium">It perfectly pairs with JSR-380 (Hibernate Validator). You can intercept <code>MethodArgumentNotValidException</code> to extract field-level validation errors to return cleanly to the client.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">4. Global Catch-All</h4>
+                        <p class="text-sm text-slate-600 font-medium">Always include a fallback method annotated with <code>@ExceptionHandler(Exception.class)</code> to catch unexpected errors and prevent Tomcat's ugly default 500 HTML page from bleeding out.</p>
+                    </div>
+                    <div class="md:col-span-2 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">5. Spring Boot 3: Problem Details</h4>
+                        <p class="text-sm text-slate-600 font-medium">In Spring 3.x, you don't need to build custom ErrorDTOs anymore. You can return Spring's native <code>ProblemDetail</code> object, which implements the <strong>RFC 7807</strong> standard for error reporting in HTTP APIs, providing fields like <code>type</code>, <code>title</code>, <code>status</code>, and <code>detail</code> automatically.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. FAQs -->
+            <section id="faqs" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                        <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q1: Can @RestControllerAdvice handle exceptions thrown in a Filter?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-spring-400 pl-4"><strong>Answer:</strong> No. <code>@RestControllerAdvice</code> only intercepts exceptions thrown <em>within</em> the <code>DispatcherServlet</code> lifecycle. Filters execute <em>before</em> the DispatcherServlet, so exceptions there must be handled within the Filter itself.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q2: Does it catch HTTP 404 (Not Found) errors?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-spring-400 pl-4"><strong>Answer:</strong> By default, no. A 404 means the DispatcherServlet couldn't find a mapping, so it never reaches a controller. To catch 404s in an advice class, you must set <code>spring.mvc.throw-exception-if-no-handler-found=true</code> and <code>spring.web.resources.add-mappings=false</code> in properties, then catch <code>NoHandlerFoundException</code>.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Code Example -->
+            <section id="code-example" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                        <i class="ph-duotone ph-code text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example</h2>
+                </div>
+
+                <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                    <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="ml-4 text-xs font-mono text-slate-400">GlobalExceptionHandler.java</span>
+                    </div>
+                    <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code><span class="text-[#c586c0]">import</span> org.springframework.http.HttpStatus;
+<span class="text-[#c586c0]">import</span> org.springframework.http.ProblemDetail;
+<span class="text-[#c586c0]">import</span> org.springframework.web.bind.annotation.ExceptionHandler;
+<span class="text-[#c586c0]">import</span> org.springframework.web.bind.annotation.RestControllerAdvice;
+
+<span class="text-[#4ec9b0]">@RestControllerAdvice</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">GlobalExceptionHandler</span> {
+
+    <span class="text-[#6a9955]">/* 1. Handling Custom Business Exceptions */</span>
+    <span class="text-[#4ec9b0]">@ExceptionHandler</span>(ResourceNotFoundException.class)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">ProblemDetail</span> handleNotFound(<span class="text-[#4ec9b0]">ResourceNotFoundException</span> ex) {
+        <span class="text-[#6a9955]">// Using Spring Boot 3 RFC-7807 standard ProblemDetail</span>
+        <span class="text-[#4ec9b0]">ProblemDetail</span> pd = ProblemDetail.forStatusAndDetail(
+                HttpStatus.NOT_FOUND, ex.getMessage());
+        pd.setTitle(<span class="text-[#ce9178]">"Resource Not Found"</span>);
+        <span class="text-[#569cd6]">return</span> pd;
+    }
+
+    <span class="text-[#6a9955]">/* 2. The Catch-All Fallback (Security: Hide stack traces) */</span>
+    <span class="text-[#4ec9b0]">@ExceptionHandler</span>(Exception.class)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">ProblemDetail</span> handleGenericException(<span class="text-[#4ec9b0]">Exception</span> ex) {
+        <span class="text-[#6a9955]">// Log the actual exception for developers securely</span>
+        <span class="text-[#6a9955]">// log.error("Unhandled Exception caught: ", ex);</span>
+        
+        <span class="text-[#6a9955]">// Return a generic, safe message to the client</span>
+        <span class="text-[#569cd6]">return</span> ProblemDetail.forStatusAndDetail(
+                HttpStatus.INTERNAL_SERVER_ERROR, 
+                <span class="text-[#ce9178]">"An unexpected server error occurred."</span>);
+    }
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 7. Senior Dev Answer -->
+            <section id="senior-answer" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white">
+                        <i class="ph-duotone ph-user-focus text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                </div>
+
+                <div class="bg-slate-50 border-l-4 border-red-500 p-8 rounded-r-3xl shadow-sm">
+                    <p class="text-slate-700 text-lg leading-relaxed font-medium italic">
+                        "In an enterprise Spring Boot application, scattering <code>try-catch</code> blocks throughout the Controller or Service layers is a major anti-pattern. I strictly utilize <code>@RestControllerAdvice</code> to implement global, AOP-driven exception handling. By throwing domain-specific RuntimeExceptions inside the business logic, the code reads cleanly like a 'happy path'. 
+                        <br><br>
+                        Starting with Spring Boot 3, I've moved away from building custom ErrorDTOs and now exclusively return Spring's native <code>ProblemDetail</code> object. This guarantees that our APIs comply with the RFC 7807 standard. Finally, a catch-all <code>Exception.class</code> handler is mandatory in production to ensure raw Java stack traces never leak to the client, preventing critical security vulnerabilities."
+                    </p>
+                </div>
+            </section>
+            
+        </div>
+    
+  
+    </main>
+    <script>
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('bg-slate-50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                } else {
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                    });
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

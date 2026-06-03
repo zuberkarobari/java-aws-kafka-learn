@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPA Entity Lifecycle Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: {
+                            50: '#f0f9eb',
+                            100: '#dbf0cd',
+                            400: '#86c953',
+                            500: '#6db33f', // Official Spring Green
+                            600: '#589b2f',
+                            900: '#234011',
+                            950: '#142609',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="JPA Entity Lifecycle">JPA Entity Lifecycle</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: State Transitions
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example: State Transitions
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
+            </a>
+            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-sparkle"></i> ORM State Machine
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        JPA Entity <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Lifecycle</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering the Transient, Persistent, Detached, and Removed states of objects within the Hibernate Persistence Context.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">It's a timeline of an object's relationship with the database. From being born in memory (new), to being tracked and saved by Hibernate (managed), to being ignored after the session ends (detached), and finally being deleted (removed).</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">The JPA Entity Lifecycle defines 4 distinct states an <code>@Entity</code> instance can inhabit relative to the <code>EntityManager</code> (the Persistence Context): <strong>Transient</strong>, <strong>Persistent (Managed)</strong>, <strong>Detached</strong>, and <strong>Removed</strong>.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To optimize database interactions. By strictly tracking which state an object is in, Hibernate can minimize SQL queries (via Dirty Checking), manage transaction write-behinds efficiently, and utilize the First-Level Cache.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: State Transitions</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">The state machine of an Entity inside the EntityManager (Session).</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-12 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <!-- Grid Layout for States -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-y-12 gap-x-8 w-full max-w-4xl relative">
+                                
+                                <!-- Transient State -->
+                                <div class="col-span-1 flex flex-col items-center relative z-10">
+                                    <div class="bg-slate-800 border-2 border-slate-600 px-6 py-4 rounded-xl shadow-lg text-center w-full">
+                                        <h4 class="font-bold text-slate-300 text-sm uppercase tracking-widest mb-1">Transient</h4>
+                                        <div class="text-xs text-slate-400 font-mono bg-slate-900/50 py-1 px-2 rounded mb-2">new Entity()</div>
+                                        <p class="text-[11px] text-slate-400">Not in DB. Not tracked. No ID.</p>
+                                    </div>
+                                    <!-- Arrow to Managed -->
+                                    <div class="hidden md:flex flex-col items-center absolute -right-6 top-1/2 -translate-y-1/2 w-12 z-0">
+                                        <div class="text-[10px] text-emerald-400 font-bold mb-1">persist()</div>
+                                        <i class="ph-bold ph-arrow-right text-emerald-500"></i>
+                                    </div>
+                                    <div class="md:hidden flex flex-col items-center my-2">
+                                        <div class="text-[10px] text-emerald-400 font-bold">persist()</div>
+                                        <i class="ph-bold ph-arrow-down text-emerald-500"></i>
+                                    </div>
+                                </div>
+
+                                <!-- Persistent (Managed) State -->
+                                <div class="col-span-1 flex flex-col items-center relative z-10">
+                                    <div class="bg-emerald-900/20 border-2 border-emerald-500/50 px-6 py-4 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.15)] text-center w-full h-full flex flex-col justify-center">
+                                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-emerald-950 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">Persistence Context</div>
+                                        <h4 class="font-bold text-emerald-400 text-sm uppercase tracking-widest mb-1 mt-2">Managed</h4>
+                                        <div class="text-xs text-emerald-200 font-mono bg-emerald-950/50 py-1 px-2 rounded mb-2">findById() / save()</div>
+                                        <p class="text-[11px] text-emerald-300">Tracked. Changes auto-sync (Dirty Check). Has ID.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Removed State -->
+                                <div class="col-span-1 flex flex-col items-center relative z-10">
+                                    <!-- Arrow from Managed -->
+                                    <div class="hidden md:flex flex-col items-center absolute -left-6 top-1/2 -translate-y-1/2 w-12 z-0">
+                                        <div class="text-[10px] text-red-400 font-bold mb-1">remove()</div>
+                                        <i class="ph-bold ph-arrow-right text-red-500"></i>
+                                    </div>
+                                    <div class="md:hidden flex flex-col items-center my-2">
+                                        <div class="text-[10px] text-red-400 font-bold">remove()</div>
+                                        <i class="ph-bold ph-arrow-down text-red-500"></i>
+                                    </div>
+                                    <div class="bg-red-900/20 border-2 border-red-500/50 px-6 py-4 rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.1)] text-center w-full">
+                                        <h4 class="font-bold text-red-400 text-sm uppercase tracking-widest mb-1">Removed</h4>
+                                        <div class="text-xs text-red-200 font-mono bg-red-950/50 py-1 px-2 rounded mb-2">delete()</div>
+                                        <p class="text-[11px] text-red-300">Scheduled for SQL DELETE on transaction commit.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Detached State (Bottom Row) -->
+                                <div class="col-span-1 md:col-start-2 flex flex-col items-center relative z-10 mt-4 md:mt-0">
+                                    <!-- Arrows Up/Down from Managed -->
+                                    <div class="hidden md:flex absolute -top-12 left-1/3 flex-col items-center z-0">
+                                        <i class="ph-bold ph-arrow-down text-amber-500"></i>
+                                        <div class="text-[10px] text-amber-400 font-bold mt-1 bg-slate-900 px-1">detach() / close()</div>
+                                    </div>
+                                    <div class="hidden md:flex absolute -top-12 right-1/3 flex-col items-center z-0">
+                                        <div class="text-[10px] text-emerald-400 font-bold mb-1 bg-slate-900 px-1">merge()</div>
+                                        <i class="ph-bold ph-arrow-up text-emerald-500"></i>
+                                    </div>
+
+                                    <div class="bg-amber-900/20 border-2 border-amber-500/50 px-6 py-4 rounded-xl shadow-lg text-center w-full">
+                                        <h4 class="font-bold text-amber-400 text-sm uppercase tracking-widest mb-1">Detached</h4>
+                                        <div class="text-xs text-amber-200 font-mono bg-amber-950/50 py-1 px-2 rounded mb-2">Transaction Ends</div>
+                                        <p class="text-[11px] text-amber-300">Has DB ID. No longer tracked by Session. Changes ignored.</p>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-shopping-cart text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">Shopping Cart Checkout</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Walking an Order through all 4 states.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-slate-700 text-slate-300 flex items-center justify-center shrink-0 border border-slate-600"><i class="ph-fill ph-sparkle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">1. Transient</h4>
+                                    <p class="text-sm text-slate-400 mt-1">User clicks "Checkout". We run <code>Order order = new Order();</code>. It exists in JVM memory, but the database knows nothing about it. It has no ID yet.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-check-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">2. Managed</h4>
+                                    <p class="text-sm text-slate-300 mt-1">We call <code>repository.save(order)</code> inside a <code>@Transactional</code> method. Hibernate generates an ID, inserts it, and keeps watching the object. If we call <code>order.setStatus("PAID")</code> right after, Hibernate auto-updates the DB (Dirty Checking).</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30"><i class="ph-fill ph-link-break text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">3. Detached</h4>
+                                    <p class="text-sm text-slate-400 mt-1">The transaction ends, and the <code>Order</code> is sent to the Frontend as JSON. If the frontend sends it back to update the shipping address, the object is currently Detached. Changing its address in Java won't update the DB unless we reattach it using <code>save() / merge()</code>.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-trash text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">4. Removed</h4>
+                                    <p class="text-sm text-slate-400 mt-1">The user cancels the order. We fetch it (now Managed) and call <code>repository.delete(order)</code>. Hibernate schedules a SQL <code>DELETE</code> command for when the transaction finishes.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">The Persistence Context</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">This is the First-Level Cache managed by the <code>EntityManager</code>. It guarantees that within a single transaction, fetching the same ID twice returns the exact same Java object reference (<code>==</code> is true).</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Dirty Checking Magic</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Hibernate takes a snapshot of a Managed entity. When the transaction commits (flushes), it compares the current object to the snapshot. If fields differ, it automatically generates an <code>UPDATE</code> statement.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">merge() Behavior</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">When you merge a Detached entity, Hibernate doesn't reattach the original object. Instead, it loads a fresh Managed copy from the DB, copies your changes into it, and returns the <em>new</em> Managed instance.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">LazyInitializationException</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">This infamous error occurs when you try to access a Lazy-loaded collection on a <strong>Detached</strong> entity. Because the Session is closed, Hibernate cannot execute the secondary SQL query to fetch the children.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Action Queue (Write-Behind)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Calling <code>remove()</code> or triggering a dirty check does not instantly hit the DB. Hibernate queues these SQL statements and fires them all at once during the <code>flush()</code> phase just before commit, optimizing batching.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Cascade Transitions</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">State transitions can cascade. If a Parent is Managed, and you add a Transient Child to its <code>CascadeType.PERSIST</code> collection, the Child automatically transitions to Managed upon commit.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Spring Data JPA's save()</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Spring Data's <code>save()</code> method is smart. Under the hood, it checks if the entity is new (Transient). If yes, it calls <code>em.persist()</code>. If it already has an ID (Detached), it calls <code>em.merge()</code>.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: What is the exact difference between Transient and Detached?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> A Transient entity is completely new; it has no database ID and has never been associated with a Persistence Context. A Detached entity *does* have a database ID and *was* previously managed by a Persistence Context, but that context has since been closed or cleared.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: What happens if I call setters on a Detached entity?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> The state changes in your JVM memory, but Hibernate completely ignores it. Because it is detached, dirty checking is not active. The changes will never be saved to the database unless you explicitly pass the entity back to <code>repository.save()</code> (which calls <code>merge</code> under the hood).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: Does repository.delete() execute the DELETE query immediately?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> No. It changes the entity state to <strong>Removed</strong> and schedules the DELETE statement in the Action Queue. The actual SQL is executed during the <code>flush()</code> phase right before the transaction commits.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q4: How do you solve the LazyInitializationException?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> You must initialize the required collections <em>while the entity is still Managed</em> (inside the `@Transactional` method). This can be done by using a <code>JOIN FETCH</code> in JPQL, an <code>@EntityGraph</code>, or manually calling <code>Hibernate.initialize(entity.getChildren())</code> before returning the entity.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: State Transitions</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">LifecycleDemoService.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">LifecycleDemoService</span> {
+
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">UserRepository</span> repository;
+    
+    <span class="text-[#6a9955]">// ... constructor omitted ...</span>
+
+    <span class="text-[#4ec9b0]">@Transactional</span>
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">User</span> executeLifecycle() {
+        
+        <span class="text-[#6a9955]">// 1. TRANSIENT STATE</span>
+        <span class="text-[#6a9955]">// Object exists in memory, no DB ID, Hibernate is unaware of it.</span>
+        <span class="text-[#4ec9b0]">User</span> user = <span class="text-[#569cd6]">new</span> User(<span class="text-[#ce9178]">"Alice"</span>); 
+        
+        <span class="text-[#6a9955]">// 2. MANAGED (PERSISTENT) STATE</span>
+        <span class="text-[#6a9955]">// Spring Data calls em.persist(). ID is generated. Hibernate is now tracking it.</span>
+        repository.save(user); 
+
+        <span class="text-[#6a9955]">// Still Managed. </span>
+        <span class="text-[#6a9955]">// Dirty checking detects this change and will fire an UPDATE query on commit!</span>
+        user.setName(<span class="text-[#ce9178]">"Alice Updated"</span>); 
+        
+        <span class="text-[#6a9955]">// Returns the object. The @Transactional method ends here.</span>
+        <span class="text-[#6a9955]">// Transaction commits, Session closes.</span>
+        <span class="text-[#569cd6]">return</span> user; 
+    }
+
+    <span class="text-[#569cd6]">public void</span> processAfterTransaction(<span class="text-[#4ec9b0]">User</span> user) {
+        <span class="text-[#6a9955]">// 3. DETACHED STATE</span>
+        <span class="text-[#6a9955]">// The 'user' object passed here is now Detached.</span>
+        <span class="text-[#6a9955]">// Setting the name here does absolutely NOTHING to the database.</span>
+        user.setName(<span class="text-[#ce9178]">"Ignored Name"</span>); 
+
+        <span class="text-[#6a9955]">// To save this, we must reattach it (which triggers em.merge() under the hood)</span>
+        repository.save(user); 
+    }
+
+    <span class="text-[#4ec9b0]">@Transactional</span>
+    <span class="text-[#569cd6]">public void</span> deleteUser(<span class="text-[#4ec9b0]">Long</span> id) {
+        <span class="text-[#6a9955]">// Fetching makes it Managed</span>
+        <span class="text-[#4ec9b0]">User</span> user = repository.findById(id).orElseThrow();
+        
+        <span class="text-[#6a9955]">// 4. REMOVED STATE</span>
+        <span class="text-[#6a9955]">// Scheduled for deletion. Will be DELETED when method ends/commits.</span>
+        repository.delete(user); 
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "A deep understanding of the Entity Lifecycle is what separates junior developers writing slow ORM code from seniors writing performant, bug-free data layers. The biggest issues I see—memory leaks, N+1 queries, and LazyInitializationExceptions—all stem from misunderstanding the boundary between the Managed and Detached states.
+                            <br><br>
+                            I enforce strict architectural boundaries: Entities should only ever exist within the Service and Repository layers where the Persistence Context (Session) is active. Once data needs to leave the <code>@Transactional</code> boundary (e.g., to be sent to a Controller or serialized to JSON), we must map that Managed Entity into a plain DTO (Data Transfer Object). 
+                            <br><br>
+                            By doing this, we explicitly force all necessary data to be loaded (using JOIN FETCH) while the entity is Managed. This prevents the view layer from accidentally traversing a lazy collection on a Detached entity, which immediately crashes the app, and it ensures we aren't leaking Hibernate proxies to the frontend."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-sparkle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Transient:</strong> Brand new object. Uses <code>new</code>. No DB Identity.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-check-circle text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Managed:</strong> Inside Persistence Context. Tracked by Hibernate. Has DB Identity.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-amber-100 hover:border-amber-300 transition-colors">
+                            <i class="ph-fill ph-link-break text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Detached:</strong> Has DB Identity, but session is closed. Changes are ignored.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-trash text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Removed:</strong> Scheduled for deletion upon flush/commit.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-magic-wand text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Dirty Checking:</strong> Only works on <em>Managed</em> entities. Auto-generates UPDATEs.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-git-merge text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Merge vs Persist:</strong> Persist makes Transient -> Managed. Merge makes Detached -> Managed.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>LazyInitException:</strong> Caused by touching a lazy collection on a <em>Detached</em> entity.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-hard-drives text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Write-Behind:</strong> SQL is delayed and queued until <code>flush()</code> to optimize DB hits.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "The JPA Entity Lifecycle defines four states for an object in relation to the EntityManager's Persistence Context. 
+                            <br><br>
+                            When you instantiate a new object with the `new` keyword, it is in the <strong>Transient</strong> state. Once you save it, or fetch an existing record from the database, it enters the <strong>Managed (Persistent)</strong> state. In this state, Hibernate actively tracks the object, enabling features like Dirty Checking, where modifying setters automatically triggers UPDATE queries upon commit.
+                            <br><br>
+                            When the transaction ends and the Session closes, the object becomes <strong>Detached</strong>. It still holds its database ID, but Hibernate ignores any further modifications to it. Finally, if you call delete, the object enters the <strong>Removed</strong> state, scheduling a DELETE query for the next database flush. Understanding this lifecycle is critical to avoiding common ORM pitfalls like the LazyInitializationException."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        
+  
+    </main>
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-spring-50/50');
+                });
+                
+                this.classList.toggle('bg-spring-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-spring-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-spring-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-spring-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic with enhanced feedback
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-spring-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+            // Add overlay backdrop when menu is open on mobile (optional enhancement)
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

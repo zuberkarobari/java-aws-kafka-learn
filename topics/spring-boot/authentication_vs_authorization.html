@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication vs Authorization Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: {
+                            50: '#f0f9eb',
+                            100: '#dbf0cd',
+                            400: '#86c953',
+                            500: '#6db33f', // Official Spring Green
+                            600: '#589b2f',
+                            900: '#234011',
+                            950: '#142609',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="Authentication vs Authorization">Authentication vs Authorization</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working in Spring
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Analogy
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
+            </a>
+            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-100/80 border border-indigo-200 text-indigo-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-scales"></i> The Golden Rule of Security
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Authentication <span class="text-3xl text-slate-400 font-normal mx-2">vs</span> <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">Authorization</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Decoding the fundamental difference between verifying Identity (Who you are) and assigning Permissions (What you can do).
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-fingerprint text-lg"></i> Authentication (AuthN)</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium mb-3"><strong>"Who are you?"</strong></p>
+                            <p class="text-slate-500 text-sm">The process of verifying an identity. It ensures that the person or system attempting to access the application is genuinely who they claim to be (e.g., checking a username and password, or validating a JWT signature).</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-shield-check text-lg"></i> Authorization (AuthZ)</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium mb-3"><strong>"What are you allowed to do?"</strong></p>
+                            <p class="text-slate-500 text-sm">The process of verifying permissions. Once identity is established, this dictates whether the authenticated user has the necessary rights (Roles/Privileges) to access a specific resource or perform a specific action.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working in Spring</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">Spring Security enforces these concepts strictly in sequence. <strong>Authentication always happens before Authorization.</strong></p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-12 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <div class="flex flex-col items-center w-full max-w-3xl relative">
+                                
+                                <!-- Client -->
+                                <div class="bg-slate-800 border border-slate-600 px-6 py-3 rounded-lg shadow-md mb-6 z-10 w-48 text-center flex items-center justify-center gap-2">
+                                    <i class="ph-fill ph-user text-slate-400"></i> Client Request
+                                </div>
+                                
+                                <div class="h-8 w-0.5 bg-slate-600 mb-6"></div>
+
+                                <!-- Phase 1: Authentication -->
+                                <div class="w-full bg-blue-900/20 border-2 border-blue-500/50 rounded-xl p-6 relative z-10 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                                    <div class="absolute -top-3 left-6 bg-blue-500 text-blue-950 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Phase 1: Authentication</div>
+                                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                                        <div class="flex-1 text-center md:text-left">
+                                            <h4 class="font-bold text-blue-400 mb-2">Authentication Filter</h4>
+                                            <p class="text-xs text-slate-400">Validates Credentials (e.g. JWT Signature, Password).</p>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-center">
+                                                <i class="ph-fill ph-x-circle text-red-500 text-2xl mb-1"></i>
+                                                <div class="text-[10px] text-slate-300">HTTP 401<br>Unauthorized</div>
+                                            </div>
+                                            <i class="ph-bold ph-arrow-right text-slate-600"></i>
+                                            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-center">
+                                                <i class="ph-fill ph-check-circle text-emerald-500 text-2xl mb-1"></i>
+                                                <div class="text-[10px] text-slate-300">Store User in<br>SecurityContext</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="h-8 w-0.5 bg-slate-600 my-6"></div>
+
+                                <!-- Phase 2: Authorization -->
+                                <div class="w-full bg-indigo-900/20 border-2 border-indigo-500/50 rounded-xl p-6 relative z-10 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
+                                    <div class="absolute -top-3 left-6 bg-indigo-500 text-indigo-950 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Phase 2: Authorization</div>
+                                    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                                        <div class="flex-1 text-center md:text-left">
+                                            <h4 class="font-bold text-indigo-400 mb-2">Authorization Filter / AOP</h4>
+                                            <p class="text-xs text-slate-400">Checks User Roles against Route/Method requirements.</p>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-center">
+                                                <i class="ph-fill ph-x-circle text-amber-500 text-2xl mb-1"></i>
+                                                <div class="text-[10px] text-slate-300">HTTP 403<br>Forbidden</div>
+                                            </div>
+                                            <i class="ph-bold ph-arrow-right text-slate-600"></i>
+                                            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-center">
+                                                <i class="ph-fill ph-check-circle text-emerald-500 text-2xl mb-1"></i>
+                                                <div class="text-[10px] text-slate-300">Allow Access<br>to Controller</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Analogy</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-indigo-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-airplane-tilt text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">The Airport Security Check</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">An intuitive way to understand the strict boundary between the two concepts.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30"><i class="ph-fill ph-identification-card text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Authentication: The Passport Control</h4>
+                                    <p class="text-sm text-slate-400 mt-1">When you arrive at the airport, you show your Passport to the security officer. They check the photo, the watermark, and ensure it isn't fake. If it's valid, they let you into the terminal. They now know <strong>who you are</strong>. (If your passport is fake, you get a <strong>401 Unauthorized</strong>).</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/30"><i class="ph-fill ph-ticket text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Authorization: The Boarding Gate</h4>
+                                    <p class="text-sm text-slate-300 mt-1">You are inside the terminal (Authenticated). You walk up to Gate 5 for a flight to Paris, but your boarding pass is for Gate 10 to Tokyo. The gate agent knows exactly who you are, but you do not have <strong>permission</strong> to board this specific plane. You are denied entry. (This is a <strong>403 Forbidden</strong>).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">HTTP 401 Unauthorized</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Returned when <strong>Authentication</strong> fails. The client provided missing, invalid, or expired credentials (like an expired JWT or bad password). The system does not know who the user is.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">HTTP 403 Forbidden</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Returned when <strong>Authorization</strong> fails. The system <em>knows</em> the identity of the user, but the user lacks the necessary roles, scopes, or privileges to perform the requested action.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">OIDC vs OAuth2</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><strong>OpenID Connect (OIDC)</strong> is an Authentication protocol (provides an ID Token). <strong>OAuth2</strong> is strictly an Authorization framework (provides an Access Token granting permission to APIs).</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">SecurityContextHolder</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The link between the two. The Authentication phase populates this ThreadLocal object. The Authorization phase reads from it to determine if the user has the required roles.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">URL-Level Authorization</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Configured in `SecurityFilterChain` (e.g., `requestMatchers("/admin").hasRole("ADMIN")`). This intercepts the request via a Filter before it reaches the DispatcherServlet.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Method-Level Authorization</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Using `@PreAuthorize` or `@Secured` on Service methods. This uses Spring AOP to wrap the bean in a proxy, checking permissions right before method execution.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-500 group-hover:bg-indigo-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Role vs Authority</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">In Spring, a Role is just a coarse-grained Authority with a standard `ROLE_` prefix. `hasRole('ADMIN')` automatically checks for the authority string `"ROLE_ADMIN"`. Authorities are usually fine-grained (e.g., `READ_USER`, `WRITE_DOCUMENT`).</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-indigo-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: Can a user be Authorized but not Authenticated?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-indigo-400 pl-4">
+                                    <strong>Answer:</strong> Generally, no. Authorization depends on identity. You cannot check if someone has permissions if you do not know who they are. The only exception is "Anonymous" access (e.g., `permitAll()`), where the system authorizes unauthenticated users to access public resources.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-indigo-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: Why does an expired JWT return 401, but a valid JWT trying to delete a user return 403?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-indigo-400 pl-4">
+                                    <strong>Answer:</strong> An expired JWT means the system can no longer trust your identity; your session has effectively ended, causing an Authentication failure (401). A valid JWT means your identity is verified, but the server sees you only have the 'USER' role. When you try to call a 'DELETE' endpoint requiring an 'ADMIN' role, Authorization fails (403).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-indigo-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How does Spring Security handle @PreAuthorize under the hood?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-indigo-400 pl-4">
+                                    <strong>Answer:</strong> It uses Spring AOP (Aspect-Oriented Programming). When you annotate a method, Spring wraps the bean in a CGLIB or JDK Proxy. When the method is called, the proxy intercepts the call, retrieves the current `Authentication` object from the `SecurityContextHolder`, evaluates the SpEL expression (like `hasRole('ADMIN')`), and either proceeds or throws an `AccessDeniedException`.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">SecurityImplementation.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-indigo-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]">/* --- 1. FILTER CHAIN (URL-Level Authorization) --- */</span>
+<span class="text-[#4ec9b0]">@Configuration</span>
+<span class="text-[#4ec9b0]">@EnableWebSecurity</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">SecurityConfig</span> {
+
+    <span class="text-[#4ec9b0]">@Bean</span>
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">SecurityFilterChain</span> filterChain(<span class="text-[#4ec9b0]">HttpSecurity</span> http) <span class="text-[#569cd6]">throws</span> Exception {
+        http.authorizeHttpRequests(auth -> auth
+            <span class="text-[#6a9955]">// Public AuthN endpoints</span>
+            .requestMatchers(<span class="text-[#ce9178]">"/api/auth/login"</span>).permitAll() 
+            
+            <span class="text-[#6a9955]">// Strict AuthZ: Requires ADMIN role</span>
+            .requestMatchers(<span class="text-[#ce9178]">"/api/admin/**"</span>).hasRole(<span class="text-[#ce9178]">"ADMIN"</span>) 
+            
+            <span class="text-[#6a9955]">// General AuthZ: Must be authenticated</span>
+            .anyRequest().authenticated() 
+        );
+        <span class="text-[#569cd6]">return</span> http.build();
+    }
+}
+
+<span class="text-[#6a9955]">/* --- 2. METHOD-LEVEL AUTHORIZATION (AOP) --- */</span>
+<span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">DocumentService</span> {
+
+    <span class="text-[#6a9955]">// AuthZ: Must have ADMIN role</span>
+    <span class="text-[#4ec9b0]">@PreAuthorize</span>(<span class="text-[#ce9178]">"hasRole('ADMIN')"</span>)
+    <span class="text-[#569cd6]">public void</span> deleteDocument(<span class="text-[#4ec9b0]">Long</span> docId) {
+        <span class="text-[#6a9955]">// Execution blocked with 403 Forbidden if not Admin</span>
+    }
+
+    <span class="text-[#6a9955]">// AuthZ: SpEL to check if the document belongs to the currently authenticated user</span>
+    <span class="text-[#4ec9b0]">@PreAuthorize</span>(<span class="text-[#ce9178]">"#document.ownerId == authentication.principal.id"</span>)
+    <span class="text-[#569cd6]">public void</span> updateDocument(<span class="text-[#4ec9b0]">Document</span> document) {
+        <span class="text-[#6a9955]">// Business logic here</span>
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-indigo-50 to-white border-l-4 border-indigo-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-indigo-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "The distinction between Authentication and Authorization is fundamental to both security architecture and protocol selection. Authentication is about verifying identity—proving 'who you are'—which is why protocols like OpenID Connect exist. If it fails, we return a 401 Unauthorized. Authorization is about permissions—'what you can do'—which is the domain of OAuth2 scopes and Spring Security Roles. If it fails, we return a 403 Forbidden.
+                            <br><br>
+                            In enterprise applications, I enforce a strict separation of these concerns. Authentication is handled globally, usually delegating to a JWT filter in the <code>SecurityFilterChain</code> that mathematically validates identity without querying a database, then placing that verified user in the <code>SecurityContextHolder</code>.
+                            <br><br>
+                            Authorization, however, is pushed down to the business layer. While I use URL matchers for coarse-grained access control (like securing the <code>/admin/</code> path), the real power is in fine-grained Method Security. I extensively use <code>@PreAuthorize</code> with Spring Expression Language (SpEL) to enforce complex, data-driven authorization rules—such as ensuring a user can only edit records that belong to their specific Tenant ID—right at the boundary of the Service layer."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <i class="ph-fill ph-fingerprint text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>AuthN:</strong> Verifying Identity. "Who are you?"</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <i class="ph-fill ph-shield-check text-indigo-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>AuthZ:</strong> Verifying Permissions. "What can you do?"</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>HTTP 401:</strong> Unauthorized. AuthN failed (Bad/No Token).</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <i class="ph-fill ph-hand-palm text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>HTTP 403:</strong> Forbidden. AuthZ failed (Wrong Role).</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <i class="ph-fill ph-list-magnifying-glass text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Sequence:</strong> Authentication MUST happen before Authorization.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <i class="ph-fill ph-hard-drives text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>SecurityContext:</strong> The thread-local storage holding the authenticated user object.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <i class="ph-fill ph-globe text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Protocols:</strong> OIDC is for AuthN. OAuth2 is for AuthZ.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-indigo-200 transition-colors">
+                            <i class="ph-fill ph-code text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Implementation:</strong> <code>FilterChainProxy</code> for AuthN/URL AuthZ. <code>@PreAuthorize</code> for Method AuthZ.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "Authentication and Authorization are sequential security processes. Authentication answers 'Who are you?' by verifying credentials, such as a password or a JWT signature. If this fails, the system returns an HTTP 401 Unauthorized error. 
+                            <br><br>
+                            Once a user's identity is confirmed, the system moves to Authorization, which answers 'What are you allowed to do?'. This checks the authenticated user's roles or permissions against the requested resource. If the user lacks the required access, the system returns an HTTP 403 Forbidden error.
+                            <br><br>
+                            In Spring Boot, Authentication is typically handled globally within the <code>SecurityFilterChain</code> by intercepting requests and populating the <code>SecurityContextHolder</code>. Authorization is then applied either via URL matchers in the configuration or through fine-grained, AOP-based method security using annotations like <code>@PreAuthorize</code>."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        
+  
+    </main>
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-indigo-50/50');
+                });
+                
+                this.classList.toggle('bg-indigo-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-indigo-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-indigo-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-indigo-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic with enhanced feedback
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-indigo-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-indigo-700', 'bg-indigo-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-indigo-700', 'bg-indigo-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

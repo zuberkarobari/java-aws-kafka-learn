@@ -16,7 +16,7 @@ import {
   getActivePathway,
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
-import { initCommandPalette } from './command-palette.js';
+import { initCommandPalette, openCommandPalette } from './command-palette.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -73,6 +73,9 @@ const injectHeader = () => {
         <a href="${prefix}index.html" class="btn-home" aria-label="Home">
           <span>🏠</span> Home
         </a>
+        <button id="header-search-btn" class="header-search-btn" aria-label="Search topics">
+          <span>🔍</span>
+        </button>
         <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
           <span id="theme-icon">☀️</span>
         </button>
@@ -346,6 +349,9 @@ const init = () => {
     applyTheme(next);
     saveTheme(next);
   });
+
+  // Search toggle
+  document.getElementById('header-search-btn')?.addEventListener('click', openCommandPalette);
 
   initSidebarToggle();
   initSidebarFilter();

@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPA @ManyToMany Mapping Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: {
+                            50: '#f0f9eb',
+                            100: '#dbf0cd',
+                            400: '#86c953',
+                            500: '#6db33f', // Official Spring Green
+                            600: '#589b2f',
+                            900: '#234011',
+                            950: '#142609',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="@ManyToMany Mapping">@ManyToMany Mapping</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: The Join Table
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example: The Best Practice
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
+            </a>
+            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-sparkle"></i> Entity Relationships
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        @ManyToMany <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Mapping</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering Join Tables, the List vs Set deletion flaw, preventing infinite recursion, and knowing when to use an explicit mapped entity instead.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">A relationship where multiple records in one table can relate to multiple records in another. For example, a Student can take many Courses, and a Course can have many Students enrolled in it.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">An N:M multiplicity mapping. Relational databases cannot handle this directly via foreign keys on the main tables. It <strong>strictly requires a Join Table</strong> (a third table) containing foreign keys pointing to both parent tables.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To model complex, many-to-many associations naturally in Java using collections (like <code>Set</code>), without the developer having to manually write SQL <code>INSERT</code> or <code>DELETE</code> statements against the underlying intersection table.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The Join Table</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">How Hibernate maps two entities together using a hidden third table.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-12 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <div class="flex flex-col md:flex-row items-stretch justify-center w-full gap-4 relative z-10">
+                                
+                                <!-- Entity A (Student) -->
+                                <div class="flex-1 bg-emerald-900/20 border-2 border-emerald-500/50 p-5 rounded-xl relative shadow-[0_0_20px_rgba(16,185,129,0.15)] flex flex-col justify-center items-center">
+                                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-emerald-950 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest whitespace-nowrap">Owning Side</div>
+                                    <h4 class="font-display font-bold text-lg text-emerald-300 mb-2 text-center"><i class="ph-fill ph-student text-xl mb-1 block"></i> Student Entity</h4>
+                                    
+                                    <div class="bg-black/40 p-2 rounded-lg font-mono text-[11px] text-slate-300 text-center w-full border border-emerald-500/30">
+                                        <span class="text-emerald-400">@JoinTable</span>(name="student_course",<br>
+                                        joinColumns=@JoinColumn(name="student_id"),<br>
+                                        inverseJoinColumns=@JoinColumn(name="course_id"))
+                                    </div>
+                                </div>
+
+                                <!-- The Join Table (Center) -->
+                                <div class="flex flex-col justify-center items-center relative py-6 md:py-0 px-4">
+                                    <!-- Horizontal Lines (Desktop) -->
+                                    <div class="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-slate-600 -translate-y-1/2 -z-10"></div>
+                                    <!-- Vertical Lines (Mobile) -->
+                                    <div class="md:hidden absolute left-1/2 top-0 w-0.5 h-full bg-slate-600 -translate-x-1/2 -z-10"></div>
+                                    
+                                    <div class="bg-slate-800 border-2 border-amber-500/50 p-4 rounded-xl shadow-lg z-10 text-center">
+                                        <div class="text-[10px] text-amber-400 font-bold uppercase tracking-widest mb-2"><i class="ph-fill ph-table text-lg mb-1 block"></i> Join Table</div>
+                                        <div class="bg-black/40 px-3 py-2 rounded text-xs font-mono text-slate-300 border border-slate-700 text-left">
+                                            <span class="text-amber-300">student_id</span> (FK)<br>
+                                            <span class="text-amber-300">course_id</span> (FK)
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 mt-2 max-w-[120px] leading-tight">Hibernate automatically manages this table.</p>
+                                    </div>
+                                </div>
+
+                                <!-- Entity B (Course) -->
+                                <div class="flex-1 bg-slate-800 border border-slate-600 p-5 rounded-xl relative shadow-lg flex flex-col justify-center items-center">
+                                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest border border-slate-500 whitespace-nowrap">Inverse Side</div>
+                                    <h4 class="font-display font-bold text-lg text-blue-300 mb-2 text-center"><i class="ph-fill ph-books text-xl mb-1 block"></i> Course Entity</h4>
+                                    
+                                    <div class="bg-black/40 p-2 rounded-lg font-mono text-[11px] text-slate-300 text-center w-full border border-slate-700">
+                                        <span class="text-emerald-400">@ManyToMany</span>(<br>
+                                        mappedBy = <span class="text-amber-300">"courses"</span>)
+                                    </div>
+                                </div>
+                                
+                            </div>
+                            
+                            <div class="mt-8 bg-slate-800/80 border border-slate-700 rounded-lg p-4 w-full flex items-start gap-3">
+                                <i class="ph-fill ph-info text-blue-400 text-xl mt-0.5"></i>
+                                <div>
+                                    <p class="text-sm text-slate-300 leading-relaxed">
+                                        Unlike 1:N or 1:1, there is no technical difference between the two sides in the database schema—it's completely symmetrical. However, in Java, JPA strictly requires you to nominate one entity as the <strong>Owner</strong> (using <code>@JoinTable</code>) and the other as the <strong>Inverse</strong> (using <code>mappedBy</code>). Only changes made on the Owning entity's collection will trigger SQL inserts/deletes in the Join Table.
+                                    </p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-identification-badge text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">Security System (Users & Roles)</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Mapping standard Role-Based Access Control (RBAC).</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30"><i class="ph-fill ph-users text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Requirement</h4>
+                                    <p class="text-sm text-slate-400 mt-1">A <code>User</code> (Alice) can have multiple roles: <code>ADMIN</code> and <code>EDITOR</code>. A <code>Role</code> (ADMIN) can belong to multiple users: Alice, Bob, and Charlie. The intersection requires a <code>user_roles</code> table.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-shield-check text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Implementation</h4>
+                                    <p class="text-sm text-slate-300 mt-1">We make <code>User</code> the owning side because usually, we create a User and assign Roles to them, not the other way around. When we do <code>alice.getRoles().add(adminRole)</code> and save, Hibernate automatically runs: <code>INSERT INTO user_roles (user_id, role_id) VALUES (1, 5)</code>.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-warning-octagon text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Limitation</h4>
+                                    <p class="text-sm text-slate-300 mt-1">What if we want to know the <code>assigned_date</code> or <code>assigned_by</code> for a specific user's role? <strong>Standard @ManyToMany cannot handle extra columns in the join table.</strong> We would have to abandon <code>@ManyToMany</code> and create an explicit <code>UserRoleAssignment</code> entity mapping with two <code>@OneToMany</code> relationships.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">@JoinTable Configuration</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">While Hibernate can auto-generate the join table name, you should explicitly define it using <code>@JoinTable(name="table_name", joinColumns=..., inverseJoinColumns=...)</code> to maintain strict schema control and naming conventions.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">The List Deletion Flaw</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If you map the relationship using a <code>List&lt;Course&gt;</code>, when you remove a single course from the list, Hibernate will execute a <code>DELETE FROM join_table WHERE student_id=?</code> (deleting ALL entries for that student), and then re-insert the remaining ones. <strong>Always use <code>Set</code> to prevent this.</strong></p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Always Use Sets</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Using a <code>Set&lt;&gt;</code> instead of a <code>List&lt;&gt;</code> solves the deletion flaw (Hibernate will execute a single DELETE by both IDs) and prevents the dreaded <code>MultipleBagFetchException</code> when fetching multiple collections eagerly.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Beware CascadeType.REMOVE</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">You almost NEVER want <code>CascadeType.REMOVE</code> or <code>CascadeType.ALL</code> in a ManyToMany. If you delete a Student, you want to delete the mapping in the join table, but you do NOT want to delete the actual Course, because other students are still enrolled in it!</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Helper Methods are Mandatory</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Because you are dealing with two collections in memory, simply adding to the Owner's collection is not enough for Java-side consistency. You must provide `addEntity()` and `removeEntity()` methods that update both collections simultaneously.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Equals and HashCode</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Since you MUST use <code>Set</code>, the implementations of <code>equals()</code> and <code>hashCode()</code> on your entities must be rock solid. They should ideally rely only on the business key (a unique natural identifier), not the database generated ID, to avoid issues when adding transient entities to Sets.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">The Hidden Entity Alternative</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If your join table needs a "Created At" timestamp or an "Assigned By" string, the <code>@ManyToMany</code> annotation becomes useless. You must replace it with an explicit mapping entity (e.g., <code>StudentCourseEnrollment</code>) and replace the ManyToMany with two <code>@OneToMany</code> relationships pointing to this new entity.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: Why is using a List in @ManyToMany terrible for performance?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Because Lists are ordered and allow duplicates, JPA cannot efficiently delete a single mapping. If a user has 5 roles and you remove 1, Hibernate deletes ALL 5 rows from the join table and re-inserts the 4 remaining ones. A <code>Set</code> allows Hibernate to execute a single, exact DELETE statement.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: Why should I avoid CascadeType.ALL here?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> <code>CascadeType.ALL</code> includes <code>REMOVE</code>. In a Student/Course scenario, deleting a Student would cascade and delete the Course from the database. But other students are enrolled in that course! Deleting the student should only delete the row in the join table, which Hibernate does automatically without needing a cascade. We only use <code>CascadeType.PERSIST</code> and <code>MERGE</code>.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How do I choose which entity should be the owner?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> At the database level, it doesn't matter. In Java, choose the entity you manipulate most often. For Users and Roles, you typically assign roles to a User, so User should be the owner. For Posts and Tags, you assign tags to a Post, so Post is the owner.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q4: How do I map extra columns like 'enrollment_date' in the join table?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> You can't with <code>@ManyToMany</code>. You must create a new entity class (e.g., <code>StudentCourse</code>) mapped to the join table. This entity will have its own `@Id` (or composite key), the `enrollment_date` field, and two <code>@ManyToOne</code> mappings pointing to Student and Course.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q5: What happens if I forget to initialize the Set in my entity?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> If you do <code>private Set&lt;Course&gt; courses;</code> without <code>= new HashSet&lt;&gt;();</code>, attempting to add a course to a newly instantiated (Transient) Student will throw a <code>NullPointerException</code>. Always initialize collections at definition.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: The Best Practice</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">ManyToManyDemo.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]">// 1. The Owning Side (Student)</span>
+<span class="text-[#4ec9b0]">@Entity</span>
+<span class="text-[#4ec9b0]">@Table</span>(name = <span class="text-[#ce9178]">"students"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">Student</span> {
+    
+    <span class="text-[#4ec9b0]">@Id</span>
+    <span class="text-[#4ec9b0]">@GeneratedValue</span>(strategy = GenerationType.IDENTITY)
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Long</span> id;
+
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">String</span> name;
+
+    <span class="text-[#6a9955]">// Using Set! No CascadeType.REMOVE!</span>
+    <span class="text-[#4ec9b0]">@ManyToMany</span>(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    <span class="text-[#4ec9b0]">@JoinTable</span>(name = <span class="text-[#ce9178]">"student_course"</span>,
+            joinColumns = <span class="text-[#4ec9b0]">@JoinColumn</span>(name = <span class="text-[#ce9178]">"student_id"</span>),
+            inverseJoinColumns = <span class="text-[#4ec9b0]">@JoinColumn</span>(name = <span class="text-[#ce9178]">"course_id"</span>)
+    )
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Set</span>&lt;Course&gt; courses = <span class="text-[#569cd6]">new</span> HashSet&lt;&gt;();
+
+    <span class="text-[#6a9955]">// Helper Methods for Bidirectional Sync</span>
+    <span class="text-[#569cd6]">public void</span> addCourse(<span class="text-[#4ec9b0]">Course</span> course) {
+        <span class="text-[#569cd6]">this</span>.courses.add(course);
+        course.getStudents().add(<span class="text-[#569cd6]">this</span>); <span class="text-[#6a9955]">// Sync inverse side in memory</span>
+    }
+
+    <span class="text-[#569cd6]">public void</span> removeCourse(<span class="text-[#4ec9b0]">Course</span> course) {
+        <span class="text-[#569cd6]">this</span>.courses.remove(course);
+        course.getStudents().remove(<span class="text-[#569cd6]">this</span>); <span class="text-[#6a9955]">// Sync inverse side in memory</span>
+    }
+}
+
+<span class="text-[#6a9955]">// 2. The Inverse Side (Course)</span>
+<span class="text-[#4ec9b0]">@Entity</span>
+<span class="text-[#4ec9b0]">@Table</span>(name = <span class="text-[#ce9178]">"courses"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">Course</span> {
+    
+    <span class="text-[#4ec9b0]">@Id</span>
+    <span class="text-[#4ec9b0]">@GeneratedValue</span>(strategy = GenerationType.IDENTITY)
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Long</span> id;
+
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">String</span> title;
+
+    <span class="text-[#6a9955]">// mappedBy tells Hibernate: "Student entity owns the Join Table"</span>
+    <span class="text-[#4ec9b0]">@ManyToMany</span>(mappedBy = <span class="text-[#ce9178]">"courses"</span>)
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Set</span>&lt;Student&gt; students = <span class="text-[#569cd6]">new</span> HashSet&lt;&gt;();
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "While <code>@ManyToMany</code> provides a clean abstraction in Java, in large-scale enterprise applications, I actively discourage its use for anything beyond simple mapping tables like Users and Roles. 
+                            <br><br>
+                            The primary reason is extensibility. Almost inevitably, business requirements will change to require metadata on the relationship itself—for example, knowing the date a User was assigned a Role, or who authorized it. Native <code>@ManyToMany</code> mappings cannot support extra columns in the join table. Therefore, mapping the join table explicitly as its own entity with two <code>@ManyToOne</code> relationships is much more robust for the long term.
+                            <br><br>
+                            If we do use it, I enforce strict rules: Never use <code>CascadeType.REMOVE</code>, always use <code>Set</code> instead of <code>List</code> to prevent Hibernate's inefficient delete-all-and-reinsert bug, and ensure that helper methods are used to synchronize both sides of the collection in memory to prevent nasty bugs during transaction flushes."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-check-circle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Definition:</strong> N records map to M records. Requires a Join Table.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-key text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Owning Side:</strong> Configures the Join Table via <code>@JoinTable</code>.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-link-break text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Inverse Side:</strong> Uses <code>mappedBy="fieldName"</code>. Read-only for relationships.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>The List Flaw:</strong> Deleting from a List deletes all rows and re-inserts. Use Set.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-table text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Set vs List:</strong> Sets guarantee optimized, targeted DELETE queries.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-trash text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Cascade Danger:</strong> NEVER use `CascadeType.REMOVE`. It deletes shared children.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-arrows-merge text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Helper Methods:</strong> Essential for keeping both Sets synchronized in memory.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-plus-circle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Extra Columns:</strong> If the join table needs extra data, abandon @ManyToMany for explicit entities.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "A <code>@ManyToMany</code> mapping handles complex many-to-many relationships, requiring a third 'Join Table' in the database. 
+                            <br><br>
+                            In JPA, we must nominate one side as the Owner using <code>@JoinTable</code> to define the foreign keys, and the other side as the Inverse using <code>mappedBy</code>. It is crucial to use <code>Set</code> instead of <code>List</code> for collections to avoid Hibernate's deletion flaw, where it drops and recreates the entire join table upon modification. 
+                            <br><br>
+                            We must also avoid <code>CascadeType.REMOVE</code> to prevent accidentally deleting shared entities. Finally, if business requirements dictate that the join table requires extra metadata, like a timestamp, the standard <code>@ManyToMany</code> abstraction falls short, and we must transition to an explicit Join Entity mapped with two <code>@ManyToOne</code> relationships."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        
+  
+    </main>
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-spring-50/50');
+                });
+                
+                this.classList.toggle('bg-spring-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-spring-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-spring-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-spring-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic with enhanced feedback
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-spring-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+            // Add overlay backdrop when menu is open on mobile (optional enhancement)
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

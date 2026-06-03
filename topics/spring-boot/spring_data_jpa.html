@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Data JPA Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: {
+                            50: '#f0f9eb',
+                            100: '#dbf0cd',
+                            400: '#86c953',
+                            500: '#6db33f', // Official Spring Green
+                            600: '#589b2f',
+                            900: '#234011',
+                            950: '#142609',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="Spring Data JPA">Spring Data JPA</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: Dynamic Proxies
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Complete Code Example
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
+            </a>
+            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-100/80 border border-emerald-200 text-emerald-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-database"></i> Database Abstraction
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Spring Data JPA</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering Repository proxies, query derivation, projections, and solving the infamous N+1 problem.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Instead of writing dozens of lines of code to connect to a database, open a session, write a SQL query, and map the results back to an object, Spring Data JPA acts like a smart assistant. You just tell it "Find a user by their email," and it writes and executes the database query for you automatically.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Spring Data JPA is an abstraction layer built on top of the Java Persistence API (JPA) provider (like Hibernate). It generates repository implementations at runtime dynamically using JDK proxies, interpreting method names to build JPQL queries via the <code>EntityManager</code>.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To radically reduce the boilerplate code required to implement data access layers (DAOs). It provides out-of-the-box support for CRUD operations, pagination, sorting, and auditable entities, drastically speeding up development.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: Dynamic Proxies</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">You only write an <code>interface</code>. You never write an implementing class. How does it work? Spring uses <strong>JDK Dynamic Proxies</strong> at runtime to intercept your method calls and generate the database interactions on the fly.</p>
+                        
+                        <!-- Pure HTML/Tailwind Custom Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-8 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-magic-wand text-spring-400"></i> The Repository Proxy Flow
+                            </h3>
+                            
+                            <div class="flex flex-col items-center w-full max-w-2xl relative">
+                                
+                                <!-- Step 1: Interface Method Call -->
+                                <div class="bg-slate-800 border border-emerald-500/50 px-6 py-4 rounded-xl shadow-lg w-full flex flex-col items-center z-10 mb-6">
+                                    <div class="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">Your Code (Interface)</div>
+                                    <div class="font-mono text-emerald-300 bg-slate-900 px-4 py-2 rounded text-sm w-full text-center border border-slate-700">
+                                        userRepository.findByEmailAndActiveTrue(email);
+                                    </div>
+                                </div>
+                                
+                                <div class="w-0.5 h-6 bg-slate-600"></div>
+                                <i class="ph-bold ph-caret-down text-slate-600 -mt-2 mb-4"></i>
+
+                                <!-- Step 2: JDK Proxy Interception -->
+                                <div class="bg-blue-900/30 border border-blue-500/30 px-6 py-4 rounded-xl shadow-lg w-full z-10 mb-6 text-center">
+                                    <h4 class="font-bold text-blue-300 text-sm mb-1">Spring AOP Proxy Interceptor</h4>
+                                    <p class="text-xs text-slate-400">Catches the method call at runtime. Doesn't find an implementation, so it routes to the Query Derivation Engine.</p>
+                                </div>
+                                
+                                <div class="w-0.5 h-6 bg-blue-500/50"></div>
+                                <div class="w-full max-w-md border-t border-blue-500/50"></div>
+                                
+                                <!-- Step 3: Query Generation -->
+                                <div class="grid grid-cols-2 w-full gap-6 pt-6 mb-6">
+                                    <!-- Path A: Derivation -->
+                                    <div class="flex flex-col items-center">
+                                        <div class="bg-slate-800 border border-slate-700 px-4 py-3 rounded-lg text-xs w-full text-center">
+                                            <strong class="text-purple-400 block mb-1">Method Name Parser (PartTree)</strong>
+                                            Parses "findBy", "Email", "And", "ActiveTrue"
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Path B: @Query -->
+                                    <div class="flex flex-col items-center">
+                                        <div class="bg-slate-800 border border-slate-700 px-4 py-3 rounded-lg text-xs w-full text-center">
+                                            <strong class="text-amber-400 block mb-1">@Query Extractor</strong>
+                                            If annotation exists, skips parsing and extracts raw JPQL/SQL.
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="w-0.5 h-6 bg-slate-600"></div>
+                                <i class="ph-bold ph-caret-down text-slate-600 -mt-2 mb-4"></i>
+                                
+                                <!-- Step 4: EntityManager Execution -->
+                                <div class="bg-slate-800 border border-emerald-500/30 px-6 py-4 rounded-xl shadow-lg w-full z-10 flex items-center justify-between">
+                                    <div>
+                                        <h4 class="font-bold text-white text-sm">JPA EntityManager</h4>
+                                        <p class="text-xs text-slate-400 mt-1">Executes the generated query via Hibernate.</p>
+                                    </div>
+                                    <div class="font-mono text-[10px] text-slate-400 text-right">
+                                        SELECT u FROM User u<br>WHERE u.email = ?1<br>AND u.active = true
+                                    </div>
+                                </div>
+
+                                <div class="w-0.5 h-6 bg-emerald-500/50"></div>
+                                <i class="ph-bold ph-caret-down text-emerald-500/80 -mt-2 mb-2"></i>
+
+                                <!-- Step 5: Database -->
+                                <div class="bg-emerald-950/40 border border-emerald-900 p-3 rounded-full text-center text-emerald-500">
+                                    <i class="ph-fill ph-database text-3xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-shopping-bag text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">E-Commerce Product Search</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Building a robust search filter without writing a single line of SQL.</p>
+                        
+                        <div class="space-y-4 relative z-10">
+                            <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
+                                <div class="text-xs text-slate-400 mb-1 uppercase tracking-widest font-bold">Goal 1: Find by Category</div>
+                                <div class="font-mono text-sm text-emerald-300">
+                                    List&lt;Product&gt; <span class="text-white font-bold">findByCategory</span>(String category);
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
+                                <div class="text-xs text-slate-400 mb-1 uppercase tracking-widest font-bold">Goal 2: In-Stock items under $50</div>
+                                <div class="font-mono text-sm text-emerald-300">
+                                    List&lt;Product&gt; <span class="text-white font-bold">findByInStockTrueAndPriceLessThan</span>(BigDecimal price);
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700 relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                                <div class="text-xs text-slate-400 mb-1 uppercase tracking-widest font-bold ml-2">Goal 3: Paginated Search (Page 2, 10 items)</div>
+                                <div class="font-mono text-sm text-emerald-300 ml-2">
+                                    Page&lt;Product&gt; <span class="text-white font-bold">findByCategory</span>(String cat, <span class="text-blue-300">Pageable pageable</span>);
+                                </div>
+                                <div class="text-xs text-slate-400 mt-2 ml-2 italic">Spring automatically executes a COUNT query and adds LIMIT/OFFSET to the main query.</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">Repository Hierarchy</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><code>CrudRepository</code> provides basic save/find/delete. <code>PagingAndSortingRepository</code> adds pagination. <code>JpaRepository</code> extends both and adds JPA-specific methods like <code>flush()</code> and batch deletes.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Query Method Derivation</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Spring parses the method name (e.g., <code>findByNameAndAgeGreaterThan</code>). It checks the entity properties, verifies types, and builds a JPQL query at startup (failing fast if you make a typo).</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">@Query Annotation</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">When derivation gets too complex (e.g., deeply nested joins), use <code>@Query("SELECT u FROM User u WHERE u.org.id = ?1")</code>. You can also execute raw SQL via <code>nativeQuery = true</code>.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Projections (Performance)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Don't fetch all 50 columns if you only need the ID and Name. Create an interface or a Java <code>record</code> with just those fields, and Spring Data will optimize the SQL <code>SELECT</code> clause automatically.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">The N+1 Problem</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The most common JPA performance killer. If you fetch 100 users, and then loop through them to get their addresses, JPA executes 101 queries. Solve it by using <code>@EntityGraph</code> to force a SQL <code>JOIN FETCH</code>.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Auditing</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Add <code>@EnableJpaAuditing</code> to your main class, and annotate entity fields with <code>@CreatedDate</code> and <code>@LastModifiedDate</code>. Spring will automatically populate these timestamps on save/update.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Modifying Queries</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">By default, <code>@Query</code> is read-only. If you write an UPDATE or DELETE query, you must add the <code>@Modifying</code> annotation, and ideally <code>clearAutomatically = true</code> to flush the Persistence Context cache.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: What is the difference between save() and saveAndFlush()?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> <code>save()</code> queues the entity in the Hibernate Persistence Context (L1 Cache). The actual SQL INSERT/UPDATE might not hit the database until the transaction ends (commit). <code>saveAndFlush()</code> forces Hibernate to execute the SQL against the database immediately, which is useful if you need database triggers to fire or need to catch constraint violations immediately.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: When should I use nativeQuery = true?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Use native SQL only as a last resort. It breaks database portability (e.g., your query might work in PostgreSQL but fail in MySQL). Use it when you need to leverage vendor-specific database features, complex window functions, or highly optimized recursive CTEs that JPQL doesn't support.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How do you solve the N+1 problem in Spring Data JPA?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> The best way is to use the <code>@EntityGraph(attributePaths = {"addresses", "orders"})</code> annotation directly on your repository method. This overrides the default LAZY fetching behavior and instructs Hibernate to execute a single <code>LEFT OUTER JOIN</code> SQL query to fetch the requested relations upfront.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q4: Why does my update method not update the database?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> If you wrote a custom <code>@Query("UPDATE...")</code>, you forgot to add the <code>@Modifying</code> annotation. Alternatively, if you are relying on JPA's Dirty Checking (fetching an entity and modifying its setters), you likely forgot to put <code>@Transactional</code> on your Service method, so the Persistence Context never flushed the changes.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Complete Code Example</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">UserRepository.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#c586c0]">import</span> org.springframework.data.jpa.repository.*;
+<span class="text-[#c586c0]">import</span> org.springframework.data.domain.*;
+<span class="text-[#c586c0]">import</span> org.springframework.stereotype.Repository;
+
+<span class="text-[#6a9955]">/* 1. Java Record Projection (Highly Performant)
+   Only fetches ID and Email from DB, ignoring heavy columns. */</span>
+<span class="text-[#569cd6]">public record</span> <span class="text-[#4ec9b0]">UserSummary</span>(<span class="text-[#4ec9b0]">Long</span> id, <span class="text-[#4ec9b0]">String</span> email) {}
+
+<span class="text-[#6a9955]">/* 2. The Repository Interface */</span>
+<span class="text-[#4ec9b0]">@Repository</span>
+<span class="text-[#569cd6]">public interface</span> <span class="text-[#4ec9b0]">UserRepository</span> <span class="text-[#569cd6]">extends</span> <span class="text-[#4ec9b0]">JpaRepository</span>&lt;<span class="text-[#4ec9b0]">User</span>, <span class="text-[#4ec9b0]">Long</span>&gt; {
+
+    <span class="text-[#6a9955]">/* A. Method Derivation */</span>
+    <span class="text-[#4ec9b0]">Optional</span>&lt;<span class="text-[#4ec9b0]">User</span>&gt; findByEmail(<span class="text-[#4ec9b0]">String</span> email);
+
+    <span class="text-[#6a9955]">/* B. Derivation + Pagination + Projection */</span>
+    <span class="text-[#4ec9b0]">Page</span>&lt;<span class="text-[#4ec9b0]">UserSummary</span>&gt; findByStatus(<span class="text-[#4ec9b0]">String</span> status, <span class="text-[#4ec9b0]">Pageable</span> pageable);
+
+    <span class="text-[#6a9955]">/* C. Custom JPQL Query */</span>
+    <span class="text-[#4ec9b0]">@Query</span>(<span class="text-[#ce9178]">"SELECT u FROM User u WHERE u.age >= ?1 AND u.city = ?2"</span>)
+    <span class="text-[#4ec9b0]">List</span>&lt;<span class="text-[#4ec9b0]">User</span>&gt; findAdultsInCity(<span class="text-[#569cd6]">int</span> age, <span class="text-[#4ec9b0]">String</span> city);
+
+    <span class="text-[#6a9955]">/* D. Solving N+1 Problem
+       Automatically JOIN FETCHes the 'roles' collection. */</span>
+    <span class="text-[#4ec9b0]">@EntityGraph</span>(<span class="text-[#9cdcfe]">attributePaths</span> = {<span class="text-[#ce9178]">"roles"</span>})
+    <span class="text-[#4ec9b0]">List</span>&lt;<span class="text-[#4ec9b0]">User</span>&gt; findByDepartment(<span class="text-[#4ec9b0]">String</span> department);
+
+    <span class="text-[#6a9955]">/* E. Modifying Query (Bulk Update) */</span>
+    <span class="text-[#4ec9b0]">@Modifying</span>
+    <span class="text-[#4ec9b0]">@Query</span>(<span class="text-[#ce9178]">"UPDATE User u SET u.active = false WHERE u.lastLogin < ?1"</span>)
+    <span class="text-[#569cd6]">int</span> deactivateOldUsers(<span class="text-[#4ec9b0]">LocalDateTime</span> cutoffDate);
+}
+
+<span class="text-[#6a9955]">/* 3. The Service Layer executing Pagination */</span>
+<span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">UserService</span> {
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">UserRepository</span> repo;
+    
+    <span class="text-[#569cd6]">public</span> UserService(<span class="text-[#4ec9b0]">UserRepository</span> repo) { <span class="text-[#569cd6]">this</span>.repo = repo; }
+
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">Page</span>&lt;<span class="text-[#4ec9b0]">UserSummary</span>&gt; getActiveUsers(<span class="text-[#569cd6]">int</span> page, <span class="text-[#569cd6]">int</span> size) {
+        <span class="text-[#6a9955]">// Page 0, 20 items per page, Sort by email descending</span>
+        <span class="text-[#4ec9b0]">Pageable</span> paging = PageRequest.of(page, size, Sort.by(<span class="text-[#ce9178]">"email"</span>).descending());
+        <span class="text-[#569cd6]">return</span> repo.findByStatus(<span class="text-[#ce9178]">"ACTIVE"</span>, paging);
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "Spring Data JPA is an incredible productivity multiplier, but it is also the source of the most severe performance bottlenecks I see in enterprise applications. 
+                            <br><br>
+                            Developers often treat it like magic, ignoring the underlying Hibernate mechanisms. To use it responsibly at scale, you must understand the Persistence Context. I mandate the use of DTO/Record Projections for heavy reads to prevent pulling entire Entity graphs into the L1 cache. Furthermore, the N+1 select problem is pervasive; anytime we fetch collections, we explicitly define an <code>@EntityGraph</code> to force a single SQL JOIN.
+                            <br><br>
+                            For extremely high-throughput systems, I actually advocate for CQRS (Command Query Responsibility Segregation). We use Spring Data JPA exclusively for write operations (Commands) to leverage dirty-checking and transactional integrity, but we bypass it entirely for complex, read-heavy dashboards (Queries), opting instead for Spring Data JDBC or jOOQ to execute highly optimized, native SQL directly."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-database text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Core:</strong> Abstraction over JPA provider (Hibernate). Reduces boilerplate.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-magic-wand text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Mechanism:</strong> Generates implementations at runtime via JDK Dynamic Proxies.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-blue-100 hover:border-blue-300 transition-colors">
+                            <i class="ph-fill ph-text-aa text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Derivation:</strong> Parses method names (<code>findByXAndY</code>) into JPQL automatically.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-blue-100 hover:border-blue-300 transition-colors">
+                            <i class="ph-fill ph-code text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>@Query:</strong> Overrides derivation for complex JPQL or native SQL.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-amber-100 hover:border-amber-300 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>N+1 Problem:</strong> Fix by overriding lazy fetch with <code>@EntityGraph</code> or <code>JOIN FETCH</code>.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-check-circle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Projections:</strong> Return interfaces/records instead of Entities for faster SELECTs.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-list-numbers text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Pagination:</strong> Pass a <code>Pageable</code> param; returns a <code>Page&lt;T&gt;</code> with metadata.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-pencil-simple text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Updates:</strong> Custom update queries require the <code>@Modifying</code> annotation.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "Spring Data JPA is an abstraction layer over JPA providers like Hibernate. It significantly reduces boilerplate by allowing developers to simply write repository interfaces without implementing them.
+                            <br><br>
+                            Under the hood, Spring creates dynamic proxies for these interfaces at runtime. It features a powerful query derivation engine that parses method names, like <code>findByEmail</code>, and automatically translates them into SQL via the EntityManager.
+                            <br><br>
+                            When working with it, I heavily rely on <code>JpaRepository</code> for built-in pagination and sorting. However, for complex enterprise systems, performance is critical. Therefore, I ensure we use interface or record Projections to avoid fetching unused columns, and I actively monitor for the N+1 select problem, resolving it by applying <code>@EntityGraph</code> annotations to force proper SQL joins."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        
+  
+    </main>
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-spring-50/50');
+                });
+                
+                this.classList.toggle('bg-spring-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-spring-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-spring-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-spring-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-spring-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

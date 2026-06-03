@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 19 — SQS, SNS & EventBridge</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #161b27;
+  --surface2: #1e2535;
+  --border: #2a3347;
+  --border2: #3a4a63;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --accent: #38bdf8;
+  --accent-dim: #0c4a6e;
+  --green: #4ade80;
+  --green-dim: #14532d;
+  --amber: #fbbf24;
+  --amber-dim: #451a03;
+  --coral: #f87171;
+  --coral-dim: #450a0a;
+  --purple: #a78bfa;
+  --purple-dim: #2e1065;
+  --radius: 10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;min-height:100vh}
+
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.day-badge{background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:.5px}
+.header-title{font-size:15px;font-weight:600}
+.header-sub{font-size:12px;color:var(--text3);margin-left:auto}
+
+.progress-row{display:flex;align-items:center;gap:10px;padding:1rem 1.5rem .75rem}
+.progress-label{font-size:11px;color:var(--text3);white-space:nowrap}
+.progress-bar{flex:1;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#0ea5e9,#6366f1);border-radius:4px;width:63%}
+
+.layout{display:flex;min-height:calc(100vh - 100px)}
+
+.sidebar{width:220px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:1.25rem 0;position:sticky;top:100px;height:calc(100vh - 100px);overflow-y:auto}
+.sidebar-section{padding:0 .75rem;margin-bottom:1.25rem}
+.sidebar-label{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--text3);text-transform:uppercase;padding:0 .5rem;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--text2);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .15s;font-family:inherit}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0}
+.nav-item.active .nav-dot{background:var(--accent)}
+
+.main{flex:1;padding:2rem;max-width:780px;overflow-x:hidden}
+.section{display:none}.section.active{display:block}
+
+.topic-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:1rem}
+.ttab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border:1px solid transparent;background:none;font-family:inherit;transition:all .15s}
+.ttab:hover{color:var(--text2);border-color:var(--border2)}
+.ttab.active{background:var(--surface2);color:var(--text);border-color:var(--border2);font-weight:600}
+.topic{display:none}.topic.active{display:block}
+
+.sec-header{margin-bottom:1.5rem}
+.sec-title{font-size:22px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.sec-sub{font-size:13px;color:var(--text3);line-height:1.6}
+.sec-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.sec-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);color:var(--text3)}
+
+.prose{font-size:13.5px;color:var(--text2);line-height:1.8}
+.prose p{margin-bottom:1rem}.prose p:last-child{margin-bottom:0}
+.prose strong{color:var(--text);font-weight:600}
+
+.callout{border-radius:var(--radius);padding:1rem 1.25rem;margin:1rem 0;font-size:13px;line-height:1.75}
+.callout strong{font-weight:700;display:block;margin-bottom:4px;font-size:11px;letter-spacing:.5px;text-transform:uppercase}
+.callout.how{background:var(--surface2);border-left:3px solid var(--accent);color:var(--text2)}
+.callout.how strong{color:var(--accent)}
+.callout.fail{background:#1a0f0f;border-left:3px solid var(--coral);color:#fca5a5}
+.callout.fail strong{color:var(--coral)}
+.callout.prod{background:#0a1f14;border-left:3px solid var(--green);color:#86efac}
+.callout.prod strong{color:var(--green)}
+.callout.warn{background:#1a1200;border-left:3px solid var(--amber);color:#fde68a}
+.callout.warn strong{color:var(--amber)}
+
+code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:11.5px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;color:var(--accent)}
+
+.code-wrap{margin:1rem 0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border2)}
+.code-header{background:var(--surface2);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border2)}
+.code-lang{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}
+pre{background:#090d14;padding:1rem 1.25rem;overflow-x:auto;margin:0}
+pre code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;background:none;border:none;padding:0;color:#abb2bf;line-height:1.7;display:block;white-space:pre}
+.t-k{color:#c678dd}.t-s{color:#98c379}.t-c{color:#5c6370;font-style:italic}.t-n{color:#e5c07b}.t-f{color:#61afef}.t-p{color:#56b6c2}.t-v{color:#e06c75}
+
+.compare{display:grid;gap:10px;margin:1rem 0}
+.compare.two{grid-template-columns:1fr 1fr}
+.compare.three{grid-template-columns:1fr 1fr 1fr}
+.compare-card{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem}
+.compare-card.accent{border-color:var(--accent);background:#0c1e2e}
+.compare-card.accent .compare-title{color:var(--accent)}
+.compare-card.green{border-color:var(--green);background:#0a1f14}
+.compare-card.green .compare-title{color:var(--green)}
+.compare-card.amber{border-color:var(--amber);background:var(--amber-dim)}
+.compare-card.amber .compare-title{color:var(--amber)}
+.compare-title{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.compare-body{font-size:12px;color:var(--text2);line-height:1.65}
+.compare-body strong{color:var(--text);font-weight:600}
+
+.steps{display:flex;flex-direction:column;gap:0;margin:1rem 0}
+.step{display:flex;gap:0}
+.step-line{display:flex;flex-direction:column;align-items:center;width:32px;flex-shrink:0}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--surface2);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3);flex-shrink:0;cursor:pointer}
+.step.done .step-num{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.step-connector{width:1px;background:var(--border);flex:1;min-height:12px}
+.step-body{padding:0 0 1.25rem 12px;flex:1}
+.step-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
+.step-text{font-size:13px;color:var(--text2);line-height:1.7}
+.step-cmd{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#090d14;border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin-top:8px;color:#abb2bf;white-space:pre-wrap;word-break:break-all;line-height:1.65;display:block}
+.step-note{font-size:11px;color:var(--text3);margin-top:6px;font-style:italic;line-height:1.5}
+.step-btn{margin-top:8px;font-size:12px;padding:5px 14px;border-radius:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text3);cursor:pointer;font-family:inherit;transition:all .15s}
+.step-btn:hover{border-color:var(--green);color:var(--green)}
+.step.done .step-btn{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+
+.iq-list{display:flex;flex-direction:column;gap:8px}
+.iq{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color .15s}
+.iq:hover{border-color:var(--border2)}.iq.open{border-color:var(--border2)}
+.iq-head{display:flex;align-items:flex-start;gap:10px;padding:12px 16px}
+.iq-num{font-size:10px;font-weight:700;color:var(--text3);min-width:20px;padding-top:2px}
+.iq-q{font-size:13px;font-weight:600;flex:1;line-height:1.45;color:var(--text)}
+.iq-diff{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;flex-shrink:0}
+.diff-e{background:var(--green-dim);color:var(--green)}
+.diff-m{background:var(--amber-dim);color:var(--amber)}
+.diff-h{background:var(--coral-dim);color:var(--coral)}
+.iq-arrow{font-size:12px;color:var(--text3);transition:transform .2s;flex-shrink:0;margin-top:2px}
+.iq.open .iq-arrow{transform:rotate(180deg)}
+.iq-body{display:none;padding:1rem 1.25rem;border-top:1px solid var(--border);background:var(--surface2)}
+.iq.open .iq-body{display:block}
+.iq-body p{font-size:13px;color:var(--text2);line-height:1.8;margin-bottom:10px}
+.iq-body p:last-child{margin-bottom:0}
+.iq-body strong{color:var(--text);font-weight:600}
+.iq-tip{background:var(--green-dim);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--green);margin-top:10px;line-height:1.6}
+
+.cs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:1.5rem}
+.cs-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;transition:border-color .15s}
+.cs-card:hover{border-color:var(--border2)}
+.cs-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px}
+.cs-desc{font-size:11.5px;color:var(--text3);line-height:1.55}
+
+.rules{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem 1.25rem}
+.rule{display:flex;gap:10px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.5}
+.rule:last-child{border-bottom:none}
+.rule-n{font-size:11px;font-weight:700;color:var(--accent);min-width:18px;padding-top:1px}
+
+.metric-table{width:100%;border-collapse:collapse;font-size:12px;margin:1rem 0}
+.metric-table th{text-align:left;padding:8px 12px;background:var(--surface2);color:var(--text3);font-weight:600;border-bottom:1px solid var(--border2)}
+.metric-table td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;line-height:1.5}
+.metric-table td:first-child{color:var(--text);font-weight:600;white-space:nowrap;font-family:monospace;font-size:11px}
+.metric-table tr:last-child td{border-bottom:none}
+
+.divider{border:none;border-top:1px solid var(--border);margin:1.5rem 0}
+.next-btn{width:100%;margin-top:1.5rem;padding:12px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.next-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+@media(max-width:680px){.sidebar{display:none}.main{padding:1.25rem;max-width:100%}.compare.two,.compare.three{grid-template-columns:1fr}}
+</style>
+    <link rel="stylesheet" href="../../css/styles.css" />
+    <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content" class="flex-1 overflow-y-auto scroll-smooth relative bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-spring-50/50 via-white to-slate-50/80">
+
+
+<!-- ══════════════════════════════════════════ -->
+<!-- SQS INTERNALS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-sqs" class="section active">
+  <div class="sec-header">
+    <div class="sec-title">SQS — how it actually works</div>
+    <div class="sec-sub">SQS is a fully managed message queue. Understanding the storage model, visibility timeout mechanics, and polling behaviour explains every SQS failure mode and drives the configuration choices that determine whether your system handles load correctly under failure.</div>
+    <div class="sec-tags">
+      <span class="sec-tag">at-least-once delivery</span>
+      <span class="sec-tag">visibility timeout</span>
+      <span class="sec-tag">long polling</span>
+      <span class="sec-tag">message retention</span>
+    </div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('sq',0,this)">Storage & delivery model</button>
+    <button class="ttab" onclick="topic('sq',1,this)">Visibility timeout</button>
+    <button class="ttab" onclick="topic('sq',2,this)">Polling mechanics</button>
+    <button class="ttab" onclick="topic('sq',3,this)">Message lifecycle</button>
+  </div>
+
+  <div id="sq0" class="topic active">
+    <div class="prose">
+      <p>SQS stores messages across multiple redundant servers in multiple AZs within a region. Every ReceiveMessage call can return messages from different servers — there is no guarantee that messages are returned in order (for Standard queues), and you may occasionally receive the same message twice. This is the <strong>at-least-once delivery</strong> model.</p>
+      <p>At-least-once delivery is not a bug — it is a deliberate trade-off that allows SQS to scale horizontally without distributed coordination. To achieve exactly-once delivery, SQS offers FIFO queues with a different internal architecture at the cost of lower throughput.</p>
+    </div>
+
+    <div class="callout how">
+      <strong>Why duplicate delivery happens in Standard queues</strong>
+      SQS stores each message on multiple redundant servers. When you call ReceiveMessage, SQS picks a server and returns the message from it. After you successfully process the message and call DeleteMessage, SQS deletes it from all servers. If the DeleteMessage call arrives at server A before server B syncs, a concurrent ReceiveMessage call from another consumer might get the message again from server B before the delete propagates. This window is typically milliseconds, but under high load or network partitions it can be seconds. Your consumer code must be <strong>idempotent</strong> — processing the same message twice produces the same outcome as processing it once.
+    </div>
+
+    <div class="prose">
+      <p><strong>Message attributes and limits:</strong> Each SQS message can carry up to 256KB of payload. For larger payloads, use the Extended Client Library — it stores the message body in S3 and puts only the S3 reference in the SQS message. Messages are retained for a configurable period (4 days default, 1 minute to 14 days). After the retention period, unprocessed messages are permanently deleted.</p>
+      <p><strong>Throughput:</strong> Standard queues: virtually unlimited throughput (nearly unlimited transactions per second). FIFO queues: 300 TPS default, 3,000 TPS with high throughput mode enabled.</p>
+    </div>
+
+    <div class="callout fail">
+      <strong>The 4-day message retention that loses data over a long weekend</strong>
+      Your consumer application goes down on Friday evening. SQS retains messages for 4 days (default). The outage lasts until Tuesday morning — 4 days. When the consumer recovers, messages queued before Tuesday are already deleted by SQS's retention policy. Data loss without any error — messages were received by SQS successfully, just never processed before expiry. For business-critical operations (payment events, job application notifications): set retention to 14 days. Alert when the queue depth grows (messages older than 1 hour still in queue = consumer is down). The retention period is not a recovery window — it is the last line of defence before data disappears.
+    </div>
+  </div>
+
+  <div id="sq1" class="topic">
+    <div class="prose">
+      <p>The visibility timeout is the most important SQS configuration parameter. When a consumer calls ReceiveMessage, the message becomes invisible to all other consumers for the duration of the visibility timeout. The consumer is expected to process the message and call DeleteMessage within the timeout. If it doesn't — because the consumer crashed, took too long, or had an exception — the message becomes visible again and another consumer picks it up.</p>
+    </div>
+
+    <div class="callout how">
+      <strong>The visibility timeout mechanics in a Spring Boot consumer</strong>
+      Your Spring Boot service calls <code>receiveMessage</code> and gets a job application event. The visibility timeout is 30 seconds (the default). Processing involves: validating the application (5s), writing to RDS (10s), sending a notification email via SES (8s) = 23 seconds total. Fine. But if the SES call takes 35 seconds due to a SES rate limit, the visibility timeout expires at 30 seconds. Before your consumer finishes, another instance of the same Spring Boot service receives the same message, starts processing it, writes a duplicate application record to RDS, and sends a duplicate notification email. The first consumer then finishes and calls DeleteMessage — but so does the second. You have two records for one job application and two emails sent to the user. Set visibility timeout to at least 6× your average processing time. Use <code>ChangeMessageVisibility</code> to extend the timeout programmatically if a specific message takes longer than expected.
+    </div>
+
+    <table class="metric-table">
+      <thead><tr><th>Scenario</th><th>Recommended timeout</th><th>Reasoning</th></tr></thead>
+      <tbody>
+        <tr><td>Simple DB write</td><td>30–60 seconds</td><td>6× of typical 5-10s DB operation</td></tr>
+        <tr><td>External API call (SES, payment)</td><td>120–300 seconds</td><td>External APIs can be slow under load; 6× of worst-case</td></tr>
+        <tr><td>Image processing / ML inference</td><td>300–900 seconds</td><td>CPU-intensive work takes minutes</td></tr>
+        <tr><td>DLQ consumer</td><td>120 seconds</td><td>DLQ messages are being replayed — give more time for investigation</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout fail">
+      <strong>The visibility timeout set too high — the hidden cost</strong>
+      Setting visibility timeout to 12 hours "to be safe" has a real cost: if a consumer crashes after receiving a message, that message is invisible for 12 hours. No other consumer can pick it up. The user's job application just disappeared for half a day. Find the balance: long enough that a single message never times out during normal processing, short enough that a crashed consumer releases messages in a reasonable time.
+    </div>
+  </div>
+
+  <div id="sq2" class="topic">
+    <div class="prose">
+      <p>SQS supports two polling modes. Short polling (the default) queries a subset of SQS's distributed servers and returns immediately — even if no messages are available. Long polling queries all servers and waits up to 20 seconds for a message to arrive before returning empty.</p>
+    </div>
+
+    <div class="compare two">
+      <div class="compare-card">
+        <div class="compare-title">Short polling (avoid in production)</div>
+        <div class="compare-body">
+          Returns immediately. If the queue is empty: returns empty response. Your consumer immediately polls again. At high poll frequency: hundreds of empty API calls per minute per consumer instance. Each API call costs $0.0000004 — negligible individually, but 10 consumers × 100 empty polls/minute × 525,600 min/year = $220/year in wasted API calls. More importantly, empty polls waste CPU and network bandwidth on your EC2/ECS instances.<br><br>
+          <strong>When short polling occurs:</strong> by default on SQS SDK calls, or when WaitTimeSeconds = 0.
+        </div>
+      </div>
+      <div class="compare-card accent">
+        <div class="compare-title">Long polling (always use)</div>
+        <div class="compare-body">
+          Waits up to 20 seconds (WaitTimeSeconds=20) for a message to arrive. If a message arrives within the wait window, returns immediately. If no message arrives in 20 seconds, returns empty. Dramatically reduces empty polls — from hundreds per minute to 3 per minute per idle consumer.<br><br>
+          <strong>In Spring Cloud AWS:</strong> <code>spring.cloud.aws.sqs.listener.max-messages-per-poll=10</code> and <code>spring.cloud.aws.sqs.listener.poll-timeout-seconds=20</code>.<br><br>
+          Result: 95%+ reduction in API calls for idle queues.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sq3" class="topic">
+    <div class="prose">
+      <p>A message moves through four states during its lifecycle. Understanding each state explains the SQS metrics that matter for monitoring.</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-line"><div class="step-num" style="background:var(--accent-dim);border-color:var(--accent);color:var(--accent);cursor:default">1</div><div class="step-connector"></div></div>
+        <div class="step-body">
+          <div class="step-title" style="color:var(--accent)">Available — visible in queue</div>
+          <div class="step-text">Message is in the queue, visible to consumers. CloudWatch metric: <code>ApproximateNumberOfMessagesVisible</code>. Rising count = consumer throughput is less than producer throughput. Critical alarm: this metric growing over time indicates consumer can't keep up — scale out consumers or investigate processing slowdowns.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-line"><div class="step-num" style="background:var(--amber-dim);border-color:var(--amber);color:var(--amber);cursor:default">2</div><div class="step-connector"></div></div>
+        <div class="step-body">
+          <div class="step-title" style="color:var(--amber)">In-flight — being processed</div>
+          <div class="step-text">Message received by a consumer, currently invisible. CloudWatch metric: <code>ApproximateNumberOfMessagesNotVisible</code>. High in-flight with low visible = healthy processing. High in-flight and visibility timeouts expiring frequently = consumers are too slow or crashing.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-line"><div class="step-num" style="background:var(--coral-dim);border-color:var(--coral);color:var(--coral);cursor:default">3</div><div class="step-connector"></div></div>
+        <div class="step-body">
+          <div class="step-title" style="color:var(--coral)">Dead-lettered — failed after max retries</div>
+          <div class="step-text">Message reached the maxReceiveCount (e.g. 5 retries) without successful processing. Moved to the Dead Letter Queue (DLQ). CloudWatch metric: <code>ApproximateNumberOfMessagesVisible</code> on the DLQ. Any message in the DLQ requires human investigation. Alarm: DLQ depth > 0 triggers a Slack alert.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-line"><div class="step-num" style="background:var(--green-dim);border-color:var(--green);color:var(--green);cursor:default">4</div></div>
+        <div class="step-body">
+          <div class="step-title" style="color:var(--green)">Deleted — processing complete</div>
+          <div class="step-text">Consumer called DeleteMessage after successful processing. Message is permanently removed from all SQS servers. The deletion is idempotent — calling DeleteMessage twice on the same receipt handle is safe (second call returns an error but doesn't cause issues).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('sqstypes',null)">Standard vs FIFO queues →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- STANDARD VS FIFO -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-sqstypes" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Standard vs FIFO queues</div>
+    <div class="sec-sub">The most common SQS architectural decision. Standard queues are the default and handle most use cases. FIFO queues solve specific ordering and deduplication requirements but at the cost of significantly lower throughput.</div>
+  </div>
+
+  <div class="compare two">
+    <div class="compare-card accent">
+      <div class="compare-title">Standard Queue</div>
+      <div class="compare-body">
+        <strong>Ordering:</strong> Best-effort — messages may be received in a different order than sent. Under high load, messages from the same producer can arrive in different orders.<br><br>
+        <strong>Delivery:</strong> At-least-once — same message may be delivered more than once. Your consumer must be idempotent.<br><br>
+        <strong>Throughput:</strong> Virtually unlimited — SQS auto-scales internally. No per-account or per-queue TPS limit in practice.<br><br>
+        <strong>Use when:</strong> Processing order doesn't matter (sending emails, resizing images, triggering notifications, async background jobs). The vast majority of SQS use cases. GetWork job match notifications, worker availability updates, image processing.
+      </div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-title">FIFO Queue</div>
+      <div class="compare-body">
+        <strong>Ordering:</strong> Strict first-in, first-out within each message group. Message group ID groups related messages that must be ordered relative to each other.<br><br>
+        <strong>Delivery:</strong> Exactly-once — SQS deduplicates by deduplication ID (content hash or explicit ID) within a 5-minute window. Same message sent twice → delivered once.<br><br>
+        <strong>Throughput:</strong> 300 TPS default. 3,000 TPS with high-throughput mode enabled. Named with .fifo suffix.<br><br>
+        <strong>Use when:</strong> Ordering matters (financial transactions where debit must precede credit), or you need guaranteed exactly-once delivery (audit logs that must not have duplicates, sequential state machine transitions).
+      </div>
+    </div>
+  </div>
+
+  <div class="callout how">
+    <strong>FIFO message group IDs — the ordering unit</strong>
+    A FIFO queue processes messages in strict order within a message group. Messages from different groups can be processed concurrently. This is the key to FIFO scalability: if you use a single message group ID for all messages, only one consumer processes the queue at a time (strict global ordering, but throughput limited to one concurrent consumer). If you use per-entity group IDs — e.g. <code>workerId</code> as the group ID for a worker's activity events — messages for the same worker are ordered, but messages for different workers are processed concurrently by different consumers. This gets you both ordering (per worker) and scalability (parallel processing across workers).
+  </div>
+
+  <div class="callout warn">
+    <strong>The FIFO deduplication window — a 5-minute idempotency guarantee, not permanent</strong>
+    FIFO deduplication checks if a message with the same deduplication ID has been sent within the last 5 minutes. If yes, the duplicate is discarded. If the same message is sent again after 5 minutes, it is treated as a new unique message and delivered. This is not a database-level deduplication — it's a short-window cache. If exactly-once semantics must hold beyond 5 minutes (e.g. a payment event that must never be processed twice regardless of when it's retried), implement idempotency at the application level using a database unique constraint or DynamoDB conditional write on the transaction ID.
+  </div>
+
+  <button class="next-btn" onclick="nav('dlq',null)">Dead Letter Queues →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- DLQ & VISIBILITY -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-dlq" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Dead Letter Queues — handling processing failures</div>
+    <div class="sec-sub">A DLQ captures messages that consistently fail to process. It is your safety net against poison pill messages — malformed messages that crash your consumer repeatedly, consuming retries and blocking healthy message processing.</div>
+  </div>
+
+  <div class="prose">
+    <p>The DLQ is a separate SQS queue you create and configure as the dead-letter destination for your primary queue. When a message's receive count exceeds the <code>maxReceiveCount</code> threshold (typically 3–5), SQS automatically moves it to the DLQ rather than continuing to retry.</p>
+    <p>A message in the DLQ stays there until you process it or its retention period expires. The DLQ gives you time to: investigate the failed message's content, fix the bug in the consumer that caused failures, and redrive the message back to the source queue after the fix is deployed.</p>
+  </div>
+
+  <div class="callout how">
+    <strong>The poison pill message and why maxReceiveCount matters</strong>
+    A job application event arrives with a malformed JSON body — the workerCity field contains a SQL injection string that crashes your Jackson ObjectMapper. The consumer throws an exception. The visibility timeout expires. The message becomes visible again. Another consumer picks it up and crashes. After maxReceiveCount (5) attempts: the message moves to the DLQ. Without a DLQ, the message would retry forever, consuming 5 visibility timeout cycles per day, keeping your consumer workers busy processing a message that will never succeed. With a DLQ and maxReceiveCount=5: after 5 attempts, the poison pill is quarantined in the DLQ. Your consumers process the healthy messages. You get an alert (DLQ depth > 0), investigate the DLQ message, fix the bug in production, and redrive.
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">CLI — DLQ setup and message redrive</span></div>
+    <pre><code><span class="t-c"># Create the DLQ first</span>
+DLQ_URL=$(aws sqs create-queue \
+  --queue-name getwork-job-events-dlq \
+  --attributes MessageRetentionPeriod=1209600 \  <span class="t-c"># 14 days — max</span>
+  --query QueueUrl --output text --region ap-south-1)
+
+DLQ_ARN=$(aws sqs get-queue-attributes \
+  --queue-url $DLQ_URL \
+  --attribute-names QueueArn \
+  --query Attributes.QueueArn --output text --region ap-south-1)
+
+<span class="t-c"># Create source queue with DLQ configured</span>
+aws sqs create-queue \
+  --queue-name getwork-job-events \
+  --attributes "{
+    \"VisibilityTimeout\": \"120\",
+    \"MessageRetentionPeriod\": \"345600\",
+    \"ReceiveMessageWaitTimeSeconds\": \"20\",
+    \"RedrivePolicy\": \"{\\\"deadLetterTargetArn\\\":\\\"$DLQ_ARN\\\",\\\"maxReceiveCount\\\":\\\"5\\\"}\"
+  }" --region ap-south-1
+
+<span class="t-c"># After fixing the bug — redrive DLQ messages back to source</span>
+<span class="t-c"># SQS console: Start DLQ Redrive, or use the API:</span>
+aws sqs start-message-move-task \
+  --source-arn $DLQ_ARN \
+  --destination-arn SOURCE_QUEUE_ARN \
+  --max-number-of-messages-per-second 1 \   <span class="t-c"># Throttle redrive rate</span>
+  --region ap-south-1</code></pre>
+  </div>
+
+  <div class="callout prod">
+    <strong>The DLQ alarm that wakes your on-call engineer at the right time</strong>
+    An alarm on <code>ApproximateNumberOfMessagesVisible > 0</code> on the DLQ fires immediately when any message fails processing. But at 3AM, a single malformed test message from development shouldn't page the on-call engineer. Better threshold: <code>ApproximateNumberOfMessagesVisible > 5</code> for 5 consecutive minutes — indicating a systematic failure, not a one-off bad message. Separately, alarm on <code>ApproximateAgeOfOldestMessage > 3600</code> on the source queue — this fires when the oldest message has been sitting unprocessed for an hour, regardless of depth. This catches the case where the queue has many messages but they're all new, vs a stuck single message from an hour ago.
+  </div>
+
+  <button class="next-btn" onclick="nav('sqsspring',null)">Spring Boot + SQS →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- SQS + SPRING BOOT -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-sqsspring" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Spring Boot + SQS — the complete integration</div>
+    <div class="sec-sub">Spring Cloud AWS provides a listener model for SQS that hides the ReceiveMessage/DeleteMessage polling loop. Understanding what it does under the hood determines how you configure timeouts, error handling, and concurrency correctly.</div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — SQS listener in Spring Boot</span></div>
+    <pre><code><span class="t-c">// pom.xml dependency</span>
+<span class="t-c">// io.awspring.cloud:spring-cloud-aws-starter-sqs:3.x</span>
+
+<span class="t-c">// application.properties</span>
+<span class="t-p">spring.cloud.aws.sqs.listener.max-messages-per-poll</span>=10
+<span class="t-p">spring.cloud.aws.sqs.listener.poll-timeout-seconds</span>=20    <span class="t-c"># Long polling</span>
+<span class="t-p">spring.cloud.aws.sqs.listener.acknowledgement-mode</span>=ON_SUCCESS
+<span class="t-c"># ON_SUCCESS: auto-delete message on successful return from @SqsListener method</span>
+<span class="t-c"># MANUAL: you explicitly call Acknowledgement.acknowledge() or fail()</span>
+
+<span class="t-c">// Listener — receives and processes job application events</span>
+<span class="t-k">@Component</span>
+<span class="t-k">@Slf4j</span>
+<span class="t-k">public class</span> <span class="t-n">JobApplicationListener</span> {
+
+    <span class="t-k">private final</span> <span class="t-n">ApplicationService</span> applicationService;
+
+    <span class="t-c">// Spring Cloud AWS calls this method for each SQS message</span>
+    <span class="t-c">// Automatic deserialization from JSON to JobApplicationEvent</span>
+    <span class="t-k">@SqsListener</span>(value = <span class="t-s">"getwork-job-events"</span>,
+                  acknowledgementMode = <span class="t-n">SqsListenerAcknowledgementMode</span>.ON_SUCCESS)
+    <span class="t-k">public void</span> <span class="t-f">handleJobApplication</span>(<span class="t-n">JobApplicationEvent</span> event,
+                                         <span class="t-k">@Header</span>(<span class="t-s">"MessageId"</span>) <span class="t-n">String</span> messageId) {
+        <span class="t-n">log</span>.info(<span class="t-s">"Processing application: jobId={} workerId={} messageId={}"</span>,
+            event.getJobId(), event.getWorkerId(), messageId);
+
+        <span class="t-c">// Idempotency check — what if this message was already processed?</span>
+        <span class="t-k">if</span> (applicationService.<span class="t-f">alreadyProcessed</span>(messageId)) {
+            <span class="t-n">log</span>.info(<span class="t-s">"Duplicate message {} — skipping"</span>, messageId);
+            <span class="t-k">return</span>;  <span class="t-c">// Return success to delete from queue — we handled it before</span>
+        }
+
+        <span class="t-k">try</span> {
+            applicationService.<span class="t-f">processApplication</span>(event);
+            applicationService.<span class="t-f">markProcessed</span>(messageId);
+            <span class="t-n">log</span>.info(<span class="t-s">"Application processed: jobId={}"</span>, event.getJobId());
+            <span class="t-c">// Method returns normally → ON_SUCCESS → message deleted from SQS</span>
+        } <span class="t-k">catch</span> (<span class="t-n">RetryableException</span> e) {
+            <span class="t-c">// Transient failure — throw to keep message visible for retry</span>
+            <span class="t-n">log</span>.warn(<span class="t-s">"Retryable failure: {} — will retry"</span>, e.getMessage());
+            <span class="t-k">throw</span> e;  <span class="t-c">// Message stays in queue, visibility timeout expires, redelivered</span>
+        } <span class="t-k">catch</span> (<span class="t-n">PermanentException</span> e) {
+            <span class="t-c">// Permanent failure — log and return success to remove from queue</span>
+            <span class="t-c">// DLQ handles this case after maxReceiveCount retries</span>
+            <span class="t-n">log</span>.error(<span class="t-s">"Permanent failure for message {}: {}"</span>, messageId, e.getMessage());
+            <span class="t-k">throw</span> e;  <span class="t-c">// Let SQS count the receive, eventually route to DLQ</span>
+        }
+    }
+}
+
+<span class="t-c">// Event class — must match the JSON structure of SQS messages</span>
+<span class="t-k">@Data</span>
+<span class="t-k">public class</span> <span class="t-n">JobApplicationEvent</span> {
+    <span class="t-k">private</span> <span class="t-n">Long</span> jobId;
+    <span class="t-k">private</span> <span class="t-n">Long</span> workerId;
+    <span class="t-k">private</span> <span class="t-n">String</span> applicationNote;
+    <span class="t-k">private</span> <span class="t-n">Instant</span> appliedAt;
+}</code></pre>
+  </div>
+
+  <div class="callout fail">
+    <strong>The listener that deletes messages on exception — silent data loss</strong>
+    Spring Cloud AWS's ON_SUCCESS mode deletes messages when the listener method returns normally. But some teams configure acknowledgement incorrectly or use try-catch blocks that swallow exceptions and return normally. The message is deleted from SQS. The processing failed silently. No DLQ entry. No retry. No record of the failure. Always: let exceptions propagate out of the listener method for failures you want retried. Only return normally (or explicitly acknowledge) when processing succeeded. The DLQ is only populated when SQS sees enough receive attempts — if you swallow exceptions and return success, the DLQ never fires.
+  </div>
+
+  <div class="callout prod">
+    <strong>Idempotency implementation with DynamoDB for SQS consumers</strong>
+    The MessageId header (a UUID assigned by SQS per message send) is stable — the same physical message always has the same MessageId on every redelivery. Use it as the idempotency key: before processing, write the MessageId to a DynamoDB table with a conditional put (condition: item doesn't exist). If the conditional put succeeds, you're the first to process this message. If it fails with ConditionalCheckFailedException, this message was already processed by a previous attempt — skip it and return success to delete from queue. TTL the DynamoDB entry at message retention period + 1 day. This implements exactly-once processing semantics on top of SQS's at-least-once delivery guarantee.
+  </div>
+
+  <button class="next-btn" onclick="nav('sns',null)">SNS — pub/sub at scale →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- SNS INTERNALS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-sns" class="section">
+  <div class="sec-header">
+    <div class="sec-title">SNS — publisher/subscriber at scale</div>
+    <div class="sec-sub">SNS is a push-based pub/sub service. A publisher sends a message to an SNS topic once. SNS delivers it to all subscribers simultaneously — SQS queues, Lambda functions, HTTP endpoints, email, SMS, mobile push. Understanding SNS delivery semantics, retry behaviour, and filter policies is what makes SNS reliable in production.</div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('sn',0,this)">Delivery model</button>
+    <button class="ttab" onclick="topic('sn',1,this)">Message filtering</button>
+    <button class="ttab" onclick="topic('sn',2,this)">Delivery retries</button>
+  </div>
+
+  <div id="sn0" class="topic active">
+    <div class="prose">
+      <p>SNS topics are the broadcast channel. A publisher calls <code>sns.publish(topicArn, message)</code> once. SNS fans out the message to all subscribed endpoints simultaneously. The publisher doesn't know how many subscribers there are or whether they succeed — it fires and forgets.</p>
+      <p>SNS supports the following subscription types: <strong>SQS</strong> (message placed in a queue — the most reliable combination), <strong>Lambda</strong> (function invoked directly), <strong>HTTP/HTTPS</strong> (webhook to any endpoint), <strong>Email</strong> (sent as email — for human notification, not machine processing), <strong>SMS</strong> (text message), <strong>Kinesis Data Firehose</strong> (real-time data streaming), and <strong>Application</strong> (mobile push notification via APNS, FCM).</p>
+    </div>
+
+    <div class="callout how">
+      <strong>SNS message format — what your SQS consumer actually receives</strong>
+      When SNS delivers to an SQS subscription, the SQS message body is NOT your original message. It is a JSON envelope from SNS containing: Type, MessageId, TopicArn, Subject, Message (your original message body as a string), Timestamp, and Signature. Your Spring Boot SQS consumer must unwrap this envelope. Configure <code>rawMessageDelivery=true</code> on the SNS-to-SQS subscription to tell SNS to put only your original message in the SQS body — not the JSON wrapper. Without raw message delivery, you need to parse the SNS envelope and extract the Message field before deserializing your actual event payload. Enable raw message delivery for SQS subscriptions unless you specifically need the SNS envelope metadata.
+    </div>
+  </div>
+
+  <div id="sn1" class="topic">
+    <div class="prose">
+      <p>SNS subscription filter policies route messages to specific subscribers based on message attributes. Without filter policies, every subscriber receives every message published to the topic. With filter policies, a subscriber only receives messages whose attributes match its filter.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JSON — SNS filter policy</span></div>
+      <pre><code><span class="t-c">// Topic: getwork-job-events</span>
+<span class="t-c">// Published with message attributes: {"eventType": "JOB_APPLICATION", "city": "Mumbai"}</span>
+
+<span class="t-c">// Subscription 1: Analytics SQS queue — receives all events</span>
+<span class="t-c">// Filter policy: none (receives everything)</span>
+
+<span class="t-c">// Subscription 2: Notification Lambda — only JOB_APPLICATION events</span>
+{
+  <span class="t-s">"eventType"</span>: [<span class="t-s">"JOB_APPLICATION"</span>, <span class="t-s">"JOB_ACCEPTED"</span>]
+}
+
+<span class="t-c">// Subscription 3: Mumbai operations SQS — only Mumbai events</span>
+{
+  <span class="t-s">"city"</span>: [<span class="t-s">"Mumbai"</span>, <span class="t-s">"Pune"</span>, <span class="t-s">"Nashik"</span>]
+}
+
+<span class="t-c">// Subscription 4: High-priority handler — numeric filter</span>
+{
+  <span class="t-s">"jobCount"</span>: [{ <span class="t-s">"numeric"</span>: [<span class="t-s">">"</span>, <span class="t-n">10</span>] }]
+}
+
+<span class="t-c">// Apply filter policy to subscription:</span>
+aws sns set-subscription-attributes \
+  --subscription-arn SUB_ARN \
+  --attribute-name FilterPolicy \
+  --attribute-value '{"eventType":["JOB_APPLICATION","JOB_ACCEPTED"]}' \
+  --region ap-south-1</code></pre>
+    </div>
+
+    <div class="callout fail">
+      <strong>Messages dropped when filter policy has no matching subscriber</strong>
+      You publish a message with <code>eventType=JOB_DELETED</code> to the topic. Every subscriber has a filter policy that doesn't match JOB_DELETED. SNS delivers to zero subscribers — the message is silently discarded. No error is returned to the publisher. The publisher gets a success response (the publish to SNS succeeded). The message simply reaches nobody. If you add a new event type, ensure at least one subscriber (e.g. an analytics catch-all queue with no filter) receives every message type, acting as an audit trail. Alternatively, add the new event type to relevant filter policies before publishing any messages of that type.
+    </div>
+  </div>
+
+  <div id="sn2" class="topic">
+    <div class="prose">
+      <p>SNS delivery retries depend on the subscription type. For SQS and Lambda subscribers, SNS retries delivery with exponential backoff for up to 23 days if the endpoint is unavailable. For HTTP/HTTPS endpoints, SNS retries with backoff but gives up after 3 retries within 30 minutes by default (configurable). For email and SMS, there is typically only one delivery attempt.</p>
+      <p><strong>SNS Dead Letter Queue:</strong> For Lambda and SQS subscriptions, you can configure a DLQ on the subscription itself (not the topic). If SNS exhausts all retries and still can't deliver to the subscriber, the undeliverable message goes to the subscription's DLQ. This captures messages that SNS could not deliver at all — different from the SQS DLQ which captures messages the consumer received but failed to process.</p>
+    </div>
+
+    <div class="callout warn">
+      <strong>The two DLQ tiers in SNS → SQS architectures</strong>
+      In a SNS → SQS → Lambda pipeline, there are potentially two DLQ tiers. SNS subscription DLQ: catches messages SNS couldn't deliver to the SQS queue (SQS was down, wrong permissions). SQS queue DLQ: catches messages the Lambda consumer received but failed to process after maxReceiveCount retries. Both DLQs need alarms. The first is rare (SQS is highly available) but catastrophic when it fires — it means messages were permanently lost before even entering your processing pipeline.
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('fanout',null)">Fan-out patterns →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- FAN-OUT PATTERNS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-fanout" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Fan-out — SNS + SQS for parallel async processing</div>
+    <div class="sec-sub">The SNS + SQS fan-out pattern decouples producers from multiple consumers, allows each consumer to process at its own pace, and provides durable buffering so a slow or temporarily unavailable consumer doesn't block others or lose messages.</div>
+  </div>
+
+  <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin:1rem 0">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:1rem">GetWork fan-out — job posting event triggers three independent processing flows</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="background:var(--accent-dim);border:1.5px solid var(--accent);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--accent)">Spring Boot<br><span style="font-weight:400;font-size:11px">POST /jobs</span></div>
+        <div style="color:var(--text3)">→ publish →</div>
+        <div style="background:var(--surface);border:1.5px solid var(--border2);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text)">SNS Topic<br><span style="font-weight:400;font-size:11px">getwork-job-events</span></div>
+        <div style="color:var(--text3)">→ fan-out →</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="background:var(--green-dim);border:1px solid var(--green);border-radius:6px;padding:6px 12px;font-size:11px;color:var(--green)">SQS → Worker matching service</div>
+          <div style="background:var(--amber-dim);border:1px solid var(--amber);border-radius:6px;padding:6px 12px;font-size:11px;color:var(--amber)">SQS → Push notification service</div>
+          <div style="background:var(--purple-dim);border:1px solid var(--purple);border-radius:6px;padding:6px 12px;font-size:11px;color:var(--purple)">SQS → Analytics ingestion service</div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-top:1rem;line-height:1.6">Each SQS queue buffers messages independently. If the analytics service is slow or down, messages queue up in the analytics SQS without affecting the matching or notification services. The Spring Boot API returns success immediately after publishing to SNS — it doesn't wait for any downstream processing.</div>
+  </div>
+
+  <div class="prose">
+    <p><strong>Why SQS between SNS and the consumer, not direct SNS-to-Lambda?</strong> A direct SNS → Lambda subscription invokes Lambda immediately for every message. If Lambda is rate-limited (concurrency exhausted), SNS retries and eventually routes to the Lambda DLQ. There is no buffering — Lambda either handles it now or the message is queued in the SNS retry mechanism. With SQS in between: messages buffer durably in SQS regardless of Lambda's current concurrency. Lambda processes them at a sustainable rate. Backpressure is handled naturally — SQS depth grows when Lambda is slow, and you can scale Lambda concurrency to drain the backlog. SQS also enables batch processing (Lambda reads 10 messages at once from SQS) which is more efficient than SNS's one-message-per-invocation model.</p>
+  </div>
+
+  <div class="callout prod">
+    <strong>The GetWork job posting flow with fan-out</strong>
+    When an employer posts a job in Mumbai: the API handler saves to RDS (synchronous, must succeed) and publishes one event to the <code>getwork-job-events</code> SNS topic. SNS fans out to three SQS queues simultaneously in milliseconds. The API returns 201 Created to the employer. Worker matching runs asynchronously (5-30 seconds to query and score workers). Push notifications fire asynchronously (1-5 seconds via FCM). Analytics records the job posting (1-2 seconds). Total API response time: ~50ms (just RDS write + SNS publish). The employer sees an immediate response. Everything else happens behind the scenes.
+  </div>
+
+  <button class="next-btn" onclick="nav('eb',null)">EventBridge — the event router →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- EVENTBRIDGE INTERNALS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-eb" class="section">
+  <div class="sec-header">
+    <div class="sec-title">EventBridge — event routing at the AWS service level</div>
+    <div class="sec-sub">EventBridge is an event bus that routes events between AWS services, your applications, and SaaS partners. Unlike SQS (queue) and SNS (topic), EventBridge is a router — it evaluates events against rules and routes matching events to targets. It's the backbone of event-driven architecture with AWS-native services.</div>
+    <div class="sec-tags">
+      <span class="sec-tag">event bus</span>
+      <span class="sec-tag">event routing</span>
+      <span class="sec-tag">AWS service events</span>
+      <span class="sec-tag">scheduler</span>
+    </div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('eb',0,this)">Event bus types</button>
+    <button class="ttab" onclick="topic('eb',1,this)">Event structure</button>
+    <button class="ttab" onclick="topic('eb',2,this)">Delivery guarantees</button>
+  </div>
+
+  <div id="eb0" class="topic active">
+    <div class="prose">
+      <p>EventBridge has three types of event buses.</p>
+      <p><strong>Default event bus:</strong> automatically exists in every AWS account. AWS services (EC2, RDS, CodePipeline, ECS, GuardDuty, Health, and 90+ others) publish their state change events here. You don't publish to this bus directly — AWS does. You create rules to catch specific AWS service events and route them to targets.</p>
+      <p><strong>Custom event bus:</strong> you create and publish application events to it. Your Spring Boot service publishes <code>JobCreated</code>, <code>WorkerRegistered</code>, <code>PaymentProcessed</code> events. Rules route matching events to SQS queues, Lambda functions, Step Functions, or cross-account buses.</p>
+      <p><strong>Partner event bus:</strong> SaaS applications (Stripe, Zendesk, Shopify, GitHub) can publish directly to your account's partner event bus. You create rules to respond to SaaS events — e.g. route Stripe payment events to your payment processing Lambda.</p>
+    </div>
+
+    <div class="callout how">
+      <strong>The default bus events that are already flowing — you just need to listen</strong>
+      Right now, your AWS account's default EventBridge bus is receiving: every EC2 instance state change (running, stopped, terminated), every RDS instance state change (available, backing-up, failing-over), every ECS task state change (RUNNING, STOPPED), every CodePipeline pipeline execution state change (STARTED, SUCCEEDED, FAILED), every AWS Health event (service degradation notifications), every GuardDuty finding. You pay nothing for these events — they arrive on the default bus automatically. Creating a rule to catch them and route to a Lambda (that posts to Slack) gives you real-time operational awareness at essentially zero cost.
+    </div>
+  </div>
+
+  <div id="eb1" class="topic">
+    <div class="prose">
+      <p>Every EventBridge event is a JSON object with a fixed envelope structure. Understanding the structure is what allows you to write accurate rule patterns.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">JSON — EventBridge event structure</span></div>
+      <pre><code>{
+  <span class="t-s">"version"</span>: <span class="t-s">"0"</span>,
+  <span class="t-s">"id"</span>: <span class="t-s">"abc123"</span>,                          <span class="t-c">// Unique event ID</span>
+  <span class="t-s">"source"</span>: <span class="t-s">"aws.ecs"</span>,                     <span class="t-c">// Which service published it</span>
+  <span class="t-s">"account"</span>: <span class="t-s">"123456789012"</span>,
+  <span class="t-s">"time"</span>: <span class="t-s">"2024-03-15T10:30:00Z"</span>,
+  <span class="t-s">"region"</span>: <span class="t-s">"ap-south-1"</span>,
+  <span class="t-s">"resources"</span>: [<span class="t-s">"arn:aws:ecs:..."</span>],
+  <span class="t-s">"detail-type"</span>: <span class="t-s">"ECS Task State Change"</span>,   <span class="t-c">// Human-readable event type</span>
+  <span class="t-s">"detail"</span>: {                              <span class="t-c">// Event-specific payload</span>
+    <span class="t-s">"clusterArn"</span>: <span class="t-s">"arn:aws:ecs:..."</span>,
+    <span class="t-s">"taskArn"</span>: <span class="t-s">"arn:aws:ecs:..."</span>,
+    <span class="t-s">"lastStatus"</span>: <span class="t-s">"STOPPED"</span>,
+    <span class="t-s">"desiredStatus"</span>: <span class="t-s">"STOPPED"</span>,
+    <span class="t-s">"stoppedReason"</span>: <span class="t-s">"Essential container exited"</span>
+  }
+}
+
+<span class="t-c">// Your custom application event — published via sdk.publish()</span>
+{
+  <span class="t-s">"source"</span>: <span class="t-s">"getwork.api"</span>,             <span class="t-c">// Your custom source identifier</span>
+  <span class="t-s">"detail-type"</span>: <span class="t-s">"JobCreated"</span>,
+  <span class="t-s">"detail"</span>: {
+    <span class="t-s">"jobId"</span>: <span class="t-n">789</span>,
+    <span class="t-s">"city"</span>: <span class="t-s">"Mumbai"</span>,
+    <span class="t-s">"category"</span>: <span class="t-s">"Construction"</span>,
+    <span class="t-s">"employerId"</span>: <span class="t-n">42</span>
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <div id="eb2" class="topic">
+    <div class="prose">
+      <p>EventBridge delivery guarantees depend on the target type. For targets that support it, EventBridge retries delivery with exponential backoff for up to 24 hours. For Lambda: invokes asynchronously, retries on failure, routes to DLQ after exhausted retries. For SQS: puts the message in the queue durably. For HTTP endpoints: retries with backoff.</p>
+      <p>EventBridge targets each have an independent retry policy configurable per rule target. You can configure the maximum retry attempts (0–185) and maximum event age (1 minute to 24 hours). You can also configure a DLQ on the rule target — events that EventBridge fails to deliver after all retries go to this DLQ.</p>
+    </div>
+
+    <div class="callout fail">
+      <strong>EventBridge "at-least-once" — rules can match the same event twice</strong>
+      EventBridge guarantees at-least-once delivery. Under rare circumstances (EventBridge infrastructure retry on transient error), a rule can trigger its targets more than once for the same event. Your Lambda or SQS consumer must be idempotent. The event's <code>id</code> field is a unique identifier for the event — use it as the idempotency key. This is the same pattern as SQS: design consumers to handle duplicate events gracefully rather than assuming each event is delivered exactly once.
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('ebrules',null)">EventBridge rules and patterns →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- EB RULES & PATTERNS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-ebrules" class="section">
+  <div class="sec-header">
+    <div class="sec-title">EventBridge rules — filtering and routing events</div>
+    <div class="sec-sub">Rules evaluate every event on the bus and route matching events to configured targets. The event pattern is the filter. Understanding the pattern language lets you write precise rules that route exactly the right events.</div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">JSON — EventBridge rule patterns for GetWork</span></div>
+    <pre><code><span class="t-c">// Rule 1: Notify when any ECS task stops unexpectedly</span>
+<span class="t-c">// Route to Lambda → Slack alert</span>
+{
+  <span class="t-s">"source"</span>: [<span class="t-s">"aws.ecs"</span>],
+  <span class="t-s">"detail-type"</span>: [<span class="t-s">"ECS Task State Change"</span>],
+  <span class="t-s">"detail"</span>: {
+    <span class="t-s">"clusterArn"</span>: [<span class="t-s">"arn:aws:ecs:ap-south-1:ACCOUNT:cluster/getwork-cluster"</span>],
+    <span class="t-s">"lastStatus"</span>: [<span class="t-s">"STOPPED"</span>],
+    <span class="t-s">"stoppedReason"</span>: [{ <span class="t-s">"prefix"</span>: <span class="t-s">"Essential container"</span> }]
+  }
+}
+
+<span class="t-c">// Rule 2: Trigger downstream processing on job creation (custom bus)</span>
+<span class="t-c">// Route to three SQS queues simultaneously (multiple targets per rule)</span>
+{
+  <span class="t-s">"source"</span>: [<span class="t-s">"getwork.api"</span>],
+  <span class="t-s">"detail-type"</span>: [<span class="t-s">"JobCreated"</span>],
+  <span class="t-s">"detail"</span>: {
+    <span class="t-s">"city"</span>: [<span class="t-s">"Mumbai"</span>, <span class="t-s">"Bangalore"</span>, <span class="t-s">"Hyderabad"</span>]  <span class="t-c">// Only specific cities</span>
+  }
+}
+
+<span class="t-c">// Rule 3: RDS failover notification</span>
+{
+  <span class="t-s">"source"</span>: [<span class="t-s">"aws.rds"</span>],
+  <span class="t-s">"detail-type"</span>: [<span class="t-s">"RDS DB Instance Event"</span>],
+  <span class="t-s">"detail"</span>: {
+    <span class="t-s">"EventCategories"</span>: [<span class="t-s">"failover"</span>]
+  }
+}
+
+<span class="t-c">// Rule 4: CodePipeline deployment completed — trigger post-deploy validation</span>
+{
+  <span class="t-s">"source"</span>: [<span class="t-s">"aws.codepipeline"</span>],
+  <span class="t-s">"detail-type"</span>: [<span class="t-s">"CodePipeline Pipeline Execution State Change"</span>],
+  <span class="t-s">"detail"</span>: {
+    <span class="t-s">"pipeline"</span>: [<span class="t-s">"getwork-pipeline"</span>],
+    <span class="t-s">"state"</span>: [<span class="t-s">"SUCCEEDED"</span>]
+  }
+}
+
+<span class="t-c">// Pattern features: prefix matching, anything-but, numeric ranges</span>
+<span class="t-s">"stoppedReason"</span>: [{ <span class="t-s">"prefix"</span>: <span class="t-s">"Essential"</span> }]    <span class="t-c">// String prefix</span>
+<span class="t-s">"status"</span>: [{ <span class="t-s">"anything-but"</span>: [<span class="t-s">"SUCCESS"</span>] }]  <span class="t-c">// Negation</span>
+<span class="t-s">"responseCode"</span>: [{ <span class="t-s">"numeric"</span>: [<span class="t-s">">="</span>, <span class="t-n">400</span>] }]      <span class="t-c">// Numeric comparison</span></code></pre>
+  </div>
+
+  <div class="callout how">
+    <strong>Up to 5 targets per rule — route the same event to multiple destinations</strong>
+    A single EventBridge rule can route matched events to up to 5 targets simultaneously. One JobCreated event → SQS matching queue + SQS notification queue + SQS analytics queue + a Step Functions execution for complex matching logic + a Lambda for real-time dashboard update. Each target receives the full event. Each target can have input transformers that reshape the event before delivery — so the analytics SQS receives only the fields the analytics service needs, not the full event payload.
+  </div>
+
+  <div class="callout fail">
+    <strong>Overly broad rules that match too many events</strong>
+    A rule with pattern <code>{ "source": ["aws.ec2"] }</code> matches every EC2 event — instance launches, terminations, state changes, volume attachments, security group changes. If your account has 100 EC2 instances with active churn, this rule fires hundreds of times per minute. Each firing invokes its target (Lambda, SQS). Lambda invocations cost $0.0000002 each — negligible per invocation, but 100 invocations/minute × 525,600 minutes/year = $10.51/year per Lambda. More importantly, the Lambda log group in CloudWatch gets flooded with logs for events you don't care about. Always be specific in EventBridge rules. Add detail-level filters to narrow the event set to exactly what you need.
+  </div>
+
+  <button class="next-btn" onclick="nav('ebpipes',null)">EventBridge Pipes & Scheduler →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- EB PIPES & SCHEDULER -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-ebpipes" class="section">
+  <div class="sec-header">
+    <div class="sec-title">EventBridge Pipes and Scheduler</div>
+    <div class="sec-sub">Pipes connect event sources to targets with optional filtering and enrichment — without the glue code. Scheduler replaces cron-based solutions with a fully managed scheduled event system that handles retries, time zones, and flexible recurrence.</div>
+  </div>
+
+  <div class="compare two">
+    <div class="compare-card accent">
+      <div class="compare-title">EventBridge Pipes</div>
+      <div class="compare-body">
+        Connects a source (SQS, Kinesis, DynamoDB Streams, Kafka, MQ) to a target (Lambda, SQS, SNS, EventBridge bus, Step Functions, API Gateway) with optional filtering and enrichment.<br><br>
+        <strong>Without Pipes:</strong> Write a Lambda that polls SQS, optionally calls an enrichment API to augment the message, and publishes to EventBridge. 50+ lines of boilerplate polling, error handling, retry logic.<br><br>
+        <strong>With Pipes:</strong> Configure source=SQS, filter={"status":"ACTIVE"}, enrichment=Lambda (optional), target=EventBridge bus. Zero boilerplate. AWS manages the polling, filtering, and routing. The enrichment Lambda only receives filtered events and transforms them — no infrastructure concerns.<br><br>
+        <strong>GetWork use case:</strong> DynamoDB Streams → Pipe → filter only JOB_STATUS_CHANGED events → enrich with employer details → publish to EventBridge custom bus.
+      </div>
+    </div>
+    <div class="compare-card">
+      <div class="compare-title">EventBridge Scheduler</div>
+      <div class="compare-body">
+        Triggers AWS targets (Lambda, SQS, Step Functions, ECS tasks, and 270+ more) on a schedule — one-time or recurring. Replaces: CloudWatch Events cron rules, scheduled Lambda functions, manual EC2 cron jobs.<br><br>
+        <strong>Supports:</strong> Cron expressions, rate expressions (every 5 minutes), one-time schedules with exact timestamp, flexible time windows (fire within a 15-minute window of the scheduled time to distribute load).<br><br>
+        <strong>At-least-once with retries:</strong> If the target fails, Scheduler retries with configurable backoff. DLQ for failed invocations. Unlike Lambda scheduled events which silently drop failed invocations.<br><br>
+        <strong>GetWork use case:</strong> Every night at 11PM IST → start ECS task → run job matching batch → stop task. One Scheduler rule, no running EC2 cron server.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout prod">
+    <strong>EventBridge Scheduler vs CloudWatch Events cron — the migration</strong>
+    CloudWatch Events (the legacy name for EventBridge) supports cron rules that trigger Lambda or other targets. EventBridge Scheduler is the modern replacement with two key improvements: it supports one-time schedules (schedule exactly one invocation at a specific timestamp — useful for "send this reminder in 24 hours"), and it has a dedicated retry policy with DLQ rather than the "best effort" delivery of CloudWatch Events cron. For new scheduled workloads, use Scheduler. For existing CloudWatch cron rules — migrate opportunistically when you're touching the infrastructure anyway.
+  </div>
+
+  <button class="next-btn" onclick="nav('comparison',null)">SQS vs SNS vs EventBridge →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- COMPARISON -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-comparison" class="section">
+  <div class="sec-header">
+    <div class="sec-title">SQS vs SNS vs EventBridge — choosing the right tool</div>
+    <div class="sec-sub">These three services are often used together, not instead of each other. Understanding what each one does and doesn't do determines the correct architecture for each integration requirement.</div>
+  </div>
+
+  <table class="metric-table">
+    <thead><tr><th style="min-width:130px">Dimension</th><th>SQS</th><th>SNS</th><th>EventBridge</th></tr></thead>
+    <tbody>
+      <tr><td>Paradigm</td><td>Queue (pull)</td><td>Topic (push)</td><td>Event bus (route)</td></tr>
+      <tr><td>Consumer model</td><td>One consumer per message (competing consumers)</td><td>All subscribers get every message (fan-out)</td><td>Matching rules route to targets</td></tr>
+      <tr><td>Message buffering</td><td>Yes — durable buffer up to 14 days</td><td>No — deliver now or retry/fail</td><td>No — route now or retry/fail</td></tr>
+      <tr><td>Message ordering</td><td>FIFO: guaranteed. Standard: best-effort</td><td>Not guaranteed</td><td>Not guaranteed</td></tr>
+      <tr><td>Max message size</td><td>256KB (S3 extended: 2GB)</td><td>256KB</td><td>256KB</td></tr>
+      <tr><td>Filtering</td><td>None (consumer filters after receiving)</td><td>Subscription filter policies on attributes</td><td>Flexible pattern matching on any JSON field</td></tr>
+      <tr><td>AWS service events</td><td>No</td><td>Some (via CloudWatch Alarms → SNS)</td><td>Yes — 90+ AWS services publish natively</td></tr>
+      <tr><td>Cross-account</td><td>Via queue policy</td><td>Via topic policy</td><td>Native cross-account event bus</td></tr>
+      <tr><td>Backpressure</td><td>Yes — queue depth grows, consumers pace themselves</td><td>No</td><td>No</td></tr>
+      <tr><td>Throughput</td><td>Standard: unlimited. FIFO: 3,000 TPS</td><td>100,000 publishes/second</td><td>~10,000 events/second default (quota increase available)</td></tr>
+      <tr><td>Use for</td><td>Work queue, async job processing, decoupling request/response</td><td>Broadcast, fan-out to multiple consumers</td><td>Reacting to AWS service events, cross-service routing, scheduled events</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout how">
+    <strong>The decision tree — which service for which problem</strong>
+    <strong>One consumer processes each item:</strong> SQS. The job application queue — each application is processed by exactly one worker-matching service instance.<br>
+    <strong>Multiple consumers need the same event:</strong> SNS → SQS fan-out. Job posted event → matching SQS + notification SQS + analytics SQS.<br>
+    <strong>React to something that happened in AWS:</strong> EventBridge default bus. ECS task stopped → Slack alert. CodePipeline succeeded → post-deploy validation Lambda.<br>
+    <strong>Custom application events with complex routing:</strong> EventBridge custom bus. Route JobCreated to matching service, route PaymentProcessed to accounting service, route UserRegistered to onboarding workflow.<br>
+    <strong>Schedule a task:</strong> EventBridge Scheduler.<br>
+    <strong>Rate-limit processing:</strong> SQS. Lambda reads at a controlled rate from SQS regardless of how fast messages arrive.
+  </div>
+
+  <button class="next-btn" onclick="nav('patterns',null)">Event-driven patterns →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- EVENT-DRIVEN PATTERNS -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-patterns" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Event-driven architecture patterns</div>
+    <div class="sec-sub">How SQS, SNS, and EventBridge compose into the event-driven patterns that senior engineers are expected to design — outbox pattern, saga choreography, and event sourcing fundamentals.</div>
+  </div>
+
+  <div class="topic-tabs">
+    <button class="ttab active" onclick="topic('pat',0,this)">Transactional outbox</button>
+    <button class="ttab" onclick="topic('pat',1,this)">Saga choreography</button>
+    <button class="ttab" onclick="topic('pat',2,this)">Event sourcing basics</button>
+  </div>
+
+  <div id="pat0" class="topic active">
+    <div class="prose">
+      <p>The transactional outbox pattern solves the dual-write problem: how do you atomically write to a database AND publish an event to SQS/SNS/EventBridge? If you write to the database first and then publish the event, the publish can fail — your database has the record but no event was published, and downstream services never process it. If you publish first and then write to the database, the write can fail — an event was published for a record that doesn't exist.</p>
+      <p><strong>The outbox solution:</strong> Write to the database AND write to an "outbox" table in the same database transaction. An outbox poller (a separate thread or process) reads from the outbox table and publishes events to SQS/SNS. The outbox entry is deleted after successful publishing. This uses the database's ACID transaction as the atomicity guarantee — either both the record and the outbox entry are committed, or neither is.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — transactional outbox in Spring Boot</span></div>
+      <pre><code><span class="t-c">// In the service layer — one transaction writes both the record and outbox entry</span>
+<span class="t-k">@Transactional</span>
+<span class="t-k">public</span> <span class="t-n">Job</span> <span class="t-f">createJob</span>(<span class="t-n">CreateJobRequest</span> request) {
+    <span class="t-n">Job</span> job = jobRepository.<span class="t-f">save</span>(<span class="t-k">new</span> <span class="t-n">Job</span>(request));
+
+    <span class="t-c">// Write outbox entry in the SAME transaction</span>
+    <span class="t-n">OutboxEvent</span> outboxEvent = <span class="t-n">OutboxEvent</span>.builder()
+        .aggregateId(job.getId())
+        .eventType(<span class="t-s">"JOB_CREATED"</span>)
+        .payload(objectMapper.<span class="t-f">writeValueAsString</span>(job))
+        .status(<span class="t-n">OutboxStatus</span>.PENDING)
+        .createdAt(<span class="t-n">Instant</span>.now())
+        .build();
+    outboxRepository.<span class="t-f">save</span>(outboxEvent);
+
+    <span class="t-c">// Both committed atomically, or both rolled back on failure</span>
+    <span class="t-k">return</span> job;
+}
+
+<span class="t-c">// Outbox poller — runs every 5 seconds in a separate @Scheduled thread</span>
+<span class="t-k">@Scheduled</span>(fixedDelay = 5000)
+<span class="t-k">public void</span> <span class="t-f">pollAndPublishOutbox</span>() {
+    <span class="t-n">List</span>&lt;<span class="t-n">OutboxEvent</span>&gt; pending = outboxRepository.<span class="t-f">findByStatus</span>(<span class="t-n">OutboxStatus</span>.PENDING);
+    <span class="t-k">for</span> (<span class="t-n">OutboxEvent</span> event : pending) {
+        <span class="t-k">try</span> {
+            snsClient.<span class="t-f">publish</span>(topicArn, event.getPayload());
+            outboxRepository.<span class="t-f">delete</span>(event);
+        } <span class="t-k">catch</span> (<span class="t-n">Exception</span> e) {
+            <span class="t-c">// Leave in PENDING — will retry on next poll cycle</span>
+            log.<span class="t-f">error</span>(<span class="t-s">"Failed to publish outbox event {}"</span>, event.getId(), e);
+        }
+    }
+}</code></pre>
+    </div>
+
+    <div class="callout prod">
+      <strong>When to use the outbox pattern vs direct publishing</strong>
+      Direct publish (write to DB, then publish to SNS) is sufficient for most use cases where losing an event is acceptable — analytics events, logging, non-critical notifications. The outbox pattern is required when: missing an event causes data inconsistency, financial transactions where downstream services (accounting, invoicing) must receive every event, compliance events that must be auditable. For GetWork: job application events → use outbox (missing one could mean a worker's application is never processed). Job view analytics events → direct publish is fine (missing a view count event is acceptable).
+    </div>
+  </div>
+
+  <div id="pat1" class="topic">
+    <div class="prose">
+      <p>The saga pattern manages distributed transactions across multiple services — each step of a multi-service workflow is triggered by an event, and failures trigger compensating events that undo previous steps. Choreography means no central coordinator — services react to events and emit their own events.</p>
+    </div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1.25rem;margin:1rem 0;font-size:12px;color:var(--text2);line-height:1.8">
+      <div style="font-weight:700;color:var(--text);margin-bottom:10px">GetWork payment saga — choreography via EventBridge</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;gap:8px;align-items:center"><div style="background:var(--accent-dim);border:1px solid var(--accent);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--accent);white-space:nowrap">1. API publishes</div><div>→ <code>JobAccepted</code> event → EventBridge</div></div>
+        <div style="display:flex;gap:8px;align-items:center"><div style="background:var(--amber-dim);border:1px solid var(--amber);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--amber);white-space:nowrap">2. Payment service</div><div>→ receives <code>JobAccepted</code> → charges employer → publishes <code>PaymentSucceeded</code> OR <code>PaymentFailed</code></div></div>
+        <div style="display:flex;gap:8px;align-items:center"><div style="background:var(--green-dim);border:1px solid var(--green);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--green);white-space:nowrap">3. Worker service</div><div>→ receives <code>PaymentSucceeded</code> → confirms worker booking → publishes <code>BookingConfirmed</code></div></div>
+        <div style="display:flex;gap:8px;align-items:center"><div style="background:var(--coral-dim);border:1px solid var(--coral);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--coral);white-space:nowrap">On PaymentFailed</div><div>→ Job service receives → publishes <code>JobRejected</code> → worker service releases booking</div></div>
+      </div>
+      <div style="margin-top:10px;color:var(--text3)">Each service is autonomous — knows only its event in/event out. No service calls another directly. Failure in payment triggers compensation events. EventBridge routes each event to the appropriate service's SQS queue.</div>
+    </div>
+
+    <div class="callout fail">
+      <strong>Choreography complexity — the hidden coupling</strong>
+      Choreography appears decoupled but creates implicit coupling through event contracts. When the payment service changes its <code>PaymentSucceeded</code> event schema (adds a field, renames a field), every downstream service that consumes it must be updated. With many services in a saga, tracing why a booking was never confirmed requires reconstructing the event flow across multiple service logs. EventBridge's event archive feature (store all events for replay and investigation) is essential for debugging choreographed sagas in production. Enable archive on your custom event bus from day one.
+    </div>
+  </div>
+
+  <div id="pat2" class="topic">
+    <div class="prose">
+      <p>Event sourcing stores state as a sequence of events rather than as the current value. Instead of <code>UPDATE jobs SET status='FILLED' WHERE id=123</code>, you append an event <code>JobFilled{jobId:123, workerId:42, timestamp:...}</code> to an append-only event log. The current state is derived by replaying the event sequence.</p>
+      <p><strong>Why it matters for messaging:</strong> In a pure event-sourced system, SQS/SNS/EventBridge carry the events. The event log (typically DynamoDB Streams or Kinesis) is the source of truth. Services subscribe to the event log and maintain their own read models (materialized views). A new service can replay the entire event history to build its initial state without needing a data migration.</p>
+      <p><strong>For GetWork, full event sourcing is overkill.</strong> But the pattern is worth understanding for the interview: event sourcing provides complete auditability (every state change is recorded as an event with who/what/when), time travel (replay events up to any point in time), and decoupled projections (multiple views of the same data without schema coupling). The complexity cost is significant — event schema evolution, snapshot management, and eventual consistency make it harder to build and reason about than CRUD with direct database writes.</p>
+    </div>
+  </div>
+
+  <button class="next-btn" onclick="nav('interview',null)">Interview prep →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- INTERVIEW -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-interview" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Interview prep</div>
+    <div class="sec-sub">SQS/SNS/EventBridge questions test architectural decision-making and failure mode awareness. They're almost always phrased as design scenarios, not "what is X."</div>
+  </div>
+
+  <div class="iq-list">
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q1</span>
+        <span class="iq-q">Your Spring Boot service processes job applications from an SQS queue. After a deployment, you notice the same application is being processed twice, creating duplicate records. What caused this and how do you fix it?</span>
+        <span class="iq-diff diff-h">Hard</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>The root cause is almost certainly a visibility timeout misconfiguration combined with non-idempotent processing logic.</p>
+        <p><strong>Diagnosing the visibility timeout issue:</strong> The deployment introduced a slower code path — perhaps a new external API call (Aadhaar verification, payment gateway). Processing now takes longer than the visibility timeout. When processing exceeds the timeout, the message becomes visible again. Another consumer picks it up and starts processing. The original consumer finishes and deletes the message. The second consumer also writes a duplicate record and then tries to delete the same message (getting a harmless error since it was already deleted). You have one application processed twice.</p>
+        <p><strong>Immediate fix — extend the visibility timeout:</strong> Set it to at least 6× the worst-case processing time. If the new code path can take up to 30 seconds, set the timeout to 180 seconds. Use <code>ChangeMessageVisibility</code> to extend dynamically for messages that are taking longer than expected. Monitor the <code>ApproximateNumberOfMessagesNotVisible</code> metric — if it consistently grows, consumers are hitting the timeout.</p>
+        <p><strong>Permanent fix — implement idempotent processing:</strong> The visibility timeout fix reduces duplicates but doesn't eliminate them (SQS Standard delivers at-least-once regardless). The correct permanent solution: before creating the application record, check whether a record with the same messageId already exists. Store the messageId alongside the application record. If it exists, return success (to delete from queue) without writing a duplicate. This makes the consumer idempotent — processing the same message twice produces exactly one record.</p>
+        <p><strong>Additional monitoring:</strong> Add a CloudWatch metric for duplicate detections. If idempotency checks fire more than 0.1% of the time, investigate whether the visibility timeout is still too short or whether the application is restarting and re-processing messages from its startup batch.</p>
+        <div class="iq-tip">Why this works: identifies two distinct problems (visibility timeout causing re-delivery, and non-idempotent code causing duplicate writes), fixes both at the correct layer, and adds monitoring to detect if the fix is holding.</div>
+      </div>
+    </div>
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q2</span>
+        <span class="iq-q">When would you use SNS + SQS fan-out instead of just publishing directly to multiple SQS queues?</span>
+        <span class="iq-diff diff-m">Medium</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>The answer is about coupling and extensibility, not just current functionality.</p>
+        <p><strong>Direct multi-queue publishing:</strong> The publisher knows about every queue it needs to write to. <code>sqsClient.sendMessage(matchingQueue); sqsClient.sendMessage(notificationQueue); sqsClient.sendMessage(analyticsQueue);</code>. Adding a new consumer requires changing the publisher code, redeploying it, and coordinating the deployment. If publishing to one queue fails (permissions error, throttling), you have partial delivery — some consumers got the event, others didn't. The publisher must implement retry logic for each queue independently.</p>
+        <p><strong>SNS + SQS fan-out:</strong> The publisher knows about one SNS topic. It publishes once. SNS delivers to all subscribed SQS queues atomically — either all get the message or none do (within SNS's delivery guarantee). Adding a new consumer means adding a new SQS subscription to the SNS topic — zero change to the publisher code, zero redeployment. A new team can subscribe their SQS queue to the topic without involving the publishing team at all. This is genuine decoupling — the publisher has no knowledge of who consumes its events.</p>
+        <p><strong>When direct multi-queue is acceptable:</strong> if the number of consumers is small, stable, and within your team's control (two queues that you own, unlikely to change). If SNS is adding latency you can't afford (rare — SNS adds ~10ms typically). If you need per-destination ordering (SNS doesn't preserve message order across destinations).</p>
+        <div class="iq-tip">Why this works: frames the comparison around coupling and operational consequences (who must change when a new consumer is added), not just feature list.</div>
+      </div>
+    </div>
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q3</span>
+        <span class="iq-q">Design the event-driven architecture for GetWork's job posting flow: employer posts a job, and multiple services need to respond (match workers, send notifications, update analytics, and trigger billing).</span>
+        <span class="iq-diff diff-h">Hard</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>This is a fan-out + saga scenario. I'd use a combination of SNS fan-out for parallel independent processing and EventBridge for the orchestrated billing saga.</p>
+        <p><strong>The synchronous API layer:</strong> The Spring Boot <code>POST /jobs</code> endpoint does two things: saves the job to RDS in a transaction that also writes to the outbox table, and returns 201 Created to the employer. This is the only synchronous part — the employer sees an immediate response.</p>
+        <p><strong>The outbox poller publishes to SNS:</strong> The outbox poller picks up the <code>JobCreated</code> outbox entry and publishes it to an SNS topic. This guarantees the event is published even if the poller restarts or SNS has a temporary hiccup — the outbox retries until successful. The SNS fan-out:</p>
+        <p>→ <strong>SQS worker-matching-queue:</strong> Worker matching service consumes this queue. Runs the matching algorithm, identifies the top 20 available workers for this job. At-least-once is fine here — if matching runs twice, the second run produces the same matches (idempotent). Visibility timeout: 5 minutes (matching is CPU-intensive).</p>
+        <p>→ <strong>SQS notification-queue:</strong> Notification service sends push notifications to matched workers. Idempotent via FCM message deduplication ID. Short visibility timeout: 30 seconds (push notification is fast).</p>
+        <p>→ <strong>SQS analytics-queue:</strong> Analytics ingestion. At-least-once is fine — duplicate events in analytics is acceptable. No DLQ needed for analytics (data loss is acceptable; duplicate is not a problem).</p>
+        <p><strong>The billing saga via EventBridge:</strong> When the matching service successfully matches workers, it publishes <code>WorkersMatched</code> to the EventBridge custom bus. EventBridge routes this to the billing service's SQS queue. The billing service charges the employer's credit card and publishes either <code>BillingSucceeded</code> or <code>BillingFailed</code>. On BillingFailed: EventBridge routes to the matching service which marks the job matches as cancelled, and to the notification service which sends a "job not confirmed" message to workers.</p>
+        <p><strong>Key design decisions:</strong> Outbox pattern for the initial event to guarantee delivery. SNS fan-out for parallel, independent processing. DLQ on every SQS queue with alarm. Idempotency at the consumer level using MessageId. EventBridge for the billing saga because it provides rich event routing, retry policies, and audit trail for financial events.</p>
+        <div class="iq-tip">Why this works: uses multiple patterns correctly (outbox, fan-out, saga), explains why each service uses a different SQS configuration (visibility timeout, DLQ), and addresses the financial transaction requirement with EventBridge specifically.</div>
+      </div>
+    </div>
+
+    <div class="iq" onclick="tog(this)">
+      <div class="iq-head">
+        <span class="iq-num">Q4</span>
+        <span class="iq-q">What is the difference between SQS and Kafka? When would you use one over the other?</span>
+        <span class="iq-diff diff-m">Medium</span>
+        <span class="iq-arrow">▼</span>
+      </div>
+      <div class="iq-body">
+        <p>SQS and Kafka are both message queuing systems but with fundamentally different designs that suit different use cases.</p>
+        <p><strong>SQS is a consumption queue:</strong> Messages are received, processed, and deleted. Once a message is consumed and deleted, it's gone — you can't replay it. Multiple consumer groups reading the same SQS queue compete for messages (each message goes to one consumer). SQS is fully managed — no servers, no broker configuration, no partition management. It scales automatically and is available in every AWS region and account with zero setup.</p>
+        <p><strong>Kafka is a distributed commit log:</strong> Messages are retained for a configurable period (days, weeks, indefinitely) regardless of consumption. Multiple consumer groups each maintain their own offset and read independently — consumer group A and consumer group B both receive every message without competing. Kafka is ideal for event sourcing (replay the log to rebuild state), event streaming (real-time analytics with Kafka Streams), and audit trails (every event is permanently recorded). Kafka requires operational management — brokers, partitions, replication, consumer group lag monitoring — unless you use AWS MSK (managed Kafka).</p>
+        <p><strong>For your JP Morgan project:</strong> Your Kafka usage (from your experience at Deloitte) is for the real-time payment processing pipeline — high throughput, strict ordering per payment entity, message replay capability for reconciliation. SQS is for the simpler async job queuing (background notifications, image processing, email sending) where replay isn't needed and operational simplicity matters. Knowing both tools and the correct use case for each is what makes you valuable — "use Kafka for everything" and "use SQS for everything" are both wrong.</p>
+        <div class="iq-tip">Why this works: the commit log vs consumption queue distinction is the conceptual core. The replay capability as the key differentiator. The JP Morgan connection shows you've applied both in practice.</div>
+      </div>
+    </div>
+
+  </div>
+  <button class="next-btn" onclick="nav('lab',null)">Start the lab →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- LAB -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-lab" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Lab — SQS + SNS fan-out + EventBridge rule</div>
+    <div class="sec-sub">Build the messaging backbone for GetWork: SQS queues with DLQ, SNS topic with fan-out to multiple queues, and an EventBridge rule that reacts to ECS task state changes. Verify messages flow correctly through all three services.</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n1" onclick="markDone(1)">1</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create SQS queues with DLQ configuration</div>
+        <div class="step-text">Create a DLQ first, then the source queues configured to route to it after 5 failed attempts. Create three queues: matching, notifications, and analytics.</div>
+        <code class="step-cmd">REGION=ap-south-1
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+# Create DLQs for each service
+for SERVICE in matching notifications analytics; do
+  DLQ_URL=$(aws sqs create-queue \
+    --queue-name getwork-${SERVICE}-dlq \
+    --attributes MessageRetentionPeriod=1209600 \
+    --query QueueUrl --output text --region $REGION)
+  DLQ_ARN=$(aws sqs get-queue-attributes \
+    --queue-url $DLQ_URL --attribute-names QueueArn \
+    --query Attributes.QueueArn --output text --region $REGION)
+  echo "DLQ created for $SERVICE: $DLQ_ARN"
+
+  # Create source queue with DLQ + long polling + visibility timeout
+  aws sqs create-queue \
+    --queue-name getwork-${SERVICE}-queue \
+    --attributes "{
+      \"VisibilityTimeout\": \"120\",
+      \"MessageRetentionPeriod\": \"345600\",
+      \"ReceiveMessageWaitTimeSeconds\": \"20\",
+      \"RedrivePolicy\": \"{\\\"deadLetterTargetArn\\\":\\\"$DLQ_ARN\\\",\\\"maxReceiveCount\\\":\\\"5\\\"}\"
+    }" --region $REGION
+  echo "Queue created: getwork-${SERVICE}-queue"
+done
+
+# Verify queue attributes
+aws sqs get-queue-attributes \
+  --queue-url $(aws sqs get-queue-url --queue-name getwork-matching-queue \
+    --query QueueUrl --output text --region $REGION) \
+  --attribute-names All \
+  --query 'Attributes.{Visibility:VisibilityTimeout,LongPoll:ReceiveMessageWaitTimeSeconds,Redrive:RedrivePolicy}' \
+  --output json --region $REGION</code>
+        <div class="step-note">Three source queues, each with its own DLQ. The DLQ retention is 14 days (maximum) — you want failed messages held as long as possible for investigation. Source queue retention is 4 days (default 4 days = 345600 seconds).</div>
+        <button class="step-btn" onclick="markDone(1)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n2" onclick="markDone(2)">2</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create SNS topic and subscribe all three queues</div>
+        <div class="step-text">Create the job events SNS topic and subscribe each SQS queue to it. Configure raw message delivery so consumers receive clean JSON without the SNS envelope wrapper.</div>
+        <code class="step-cmd"># Create the SNS topic
+TOPIC_ARN=$(aws sns create-topic \
+  --name getwork-job-events \
+  --query TopicArn --output text --region $REGION)
+echo "Topic: $TOPIC_ARN"
+
+# Subscribe each SQS queue to the topic
+for SERVICE in matching notifications analytics; do
+  QUEUE_URL=$(aws sqs get-queue-url \
+    --queue-name getwork-${SERVICE}-queue \
+    --query QueueUrl --output text --region $REGION)
+  QUEUE_ARN=$(aws sqs get-queue-attributes \
+    --queue-url $QUEUE_URL --attribute-names QueueArn \
+    --query Attributes.QueueArn --output text --region $REGION)
+
+  # Subscribe queue to SNS topic
+  SUB_ARN=$(aws sns subscribe \
+    --topic-arn $TOPIC_ARN \
+    --protocol sqs \
+    --notification-endpoint $QUEUE_ARN \
+    --query SubscriptionArn --output text --region $REGION)
+
+  # Enable raw message delivery (no SNS envelope wrapper)
+  aws sns set-subscription-attributes \
+    --subscription-arn $SUB_ARN \
+    --attribute-name RawMessageDelivery \
+    --attribute-value true --region $REGION
+
+  echo "Subscribed $SERVICE queue ($QUEUE_ARN) to topic"
+
+  # Grant SNS permission to write to this SQS queue
+  aws sqs set-queue-attributes \
+    --queue-url $QUEUE_URL \
+    --attributes "{\"Policy\":\"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Statement\\\":[{\\\"Effect\\\":\\\"Allow\\\",\\\"Principal\\\":{\\\"Service\\\":\\\"sns.amazonaws.com\\\"},\\\"Action\\\":\\\"sqs:SendMessage\\\",\\\"Resource\\\":\\\"$QUEUE_ARN\\\",\\\"Condition\\\":{\\\"ArnEquals\\\":{\\\"aws:SourceArn\\\":\\\"$TOPIC_ARN\\\"}}}]}\"}" \
+    --region $REGION
+done
+
+echo "Fan-out configured: 1 SNS topic → 3 SQS queues"</code>
+        <div class="step-note">The SQS queue policy is critical — without it SNS can't send to the queue and messages are silently dropped. The policy restricts delivery to only your specific SNS topic (SourceArn condition), not all SNS topics in the account.</div>
+        <button class="step-btn" onclick="markDone(2)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n3" onclick="markDone(3)">3</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Test the fan-out — publish one message, verify all three queues receive it</div>
+        <div class="step-text">Publish a test job creation event to the SNS topic and verify the message appears in all three SQS queues simultaneously.</div>
+        <code class="step-cmd"># Publish a test message to SNS
+TOPIC_ARN=$(aws sns list-topics \
+  --query 'Topics[?ends_with(TopicArn,`getwork-job-events`)].TopicArn' \
+  --output text --region $REGION)
+
+aws sns publish \
+  --topic-arn $TOPIC_ARN \
+  --message '{
+    "jobId": 789,
+    "city": "Mumbai",
+    "category": "Construction",
+    "employerId": 42,
+    "wage": 800,
+    "currency": "INR"
+  }' \
+  --subject "JobCreated" \
+  --message-attributes '{
+    "eventType": {"DataType":"String","StringValue":"JOB_CREATED"},
+    "city": {"DataType":"String","StringValue":"Mumbai"}
+  }' \
+  --region $REGION
+
+echo "Message published to SNS"
+sleep 2  # Allow SNS delivery (typically <1s)
+
+# Verify all three queues received the message
+for SERVICE in matching notifications analytics; do
+  QUEUE_URL=$(aws sqs get-queue-url \
+    --queue-name getwork-${SERVICE}-queue \
+    --query QueueUrl --output text --region $REGION)
+
+  MSG=$(aws sqs receive-message \
+    --queue-url $QUEUE_URL \
+    --max-number-of-messages 1 \
+    --wait-time-seconds 5 \
+    --query 'Messages[0].Body' \
+    --output text --region $REGION)
+
+  if [ "$MSG" != "None" ] && [ -n "$MSG" ]; then
+    echo "✓ $SERVICE queue received: $(echo $MSG | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("jobId","?"))')"
+  else
+    echo "✗ $SERVICE queue: no message received"
+  fi
+done</code>
+        <div class="step-note">One SNS publish → three simultaneous SQS deliveries. Each queue independently holds its copy of the message — one slow consumer doesn't affect the others. After verifying, call DeleteMessage on each received message to clean up.</div>
+        <button class="step-btn" onclick="markDone(3)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n4" onclick="markDone(4)">4</div><div class="step-connector"></div></div>
+      <div class="step-body">
+        <div class="step-title">Create an EventBridge rule that reacts to ECS task failures</div>
+        <div class="step-text">Create an EventBridge rule on the default bus that catches ECS task stopped events from your cluster and routes them to the notifications SQS queue — simulating an operational alert pipeline.</div>
+        <code class="step-cmd">NOTIF_QUEUE_ARN=$(aws sqs get-queue-attributes \
+  --queue-url $(aws sqs get-queue-url --queue-name getwork-notifications-queue \
+    --query QueueUrl --output text --region $REGION) \
+  --attribute-names QueueArn \
+  --query Attributes.QueueArn --output text --region $REGION)
+
+# Add EventBridge permission to send to this SQS queue
+aws sqs set-queue-attributes \
+  --queue-url $(aws sqs get-queue-url --queue-name getwork-notifications-queue \
+    --query QueueUrl --output text --region $REGION) \
+  --attributes "{\"Policy\":\"{\\\"Version\\\":\\\"2012-10-17\\\",\\\"Statement\\\":[{\\\"Effect\\\":\\\"Allow\\\",\\\"Principal\\\":{\\\"Service\\\":[\\\"sns.amazonaws.com\\\",\\\"events.amazonaws.com\\\"]},\\\"Action\\\":\\\"sqs:SendMessage\\\",\\\"Resource\\\":\\\"$NOTIF_QUEUE_ARN\\\"}]}\"}" \
+  --region $REGION
+
+# Create EventBridge rule for ECS task stopped events
+aws events put-rule \
+  --name getwork-ecs-task-stopped \
+  --event-pattern '{
+    "source": ["aws.ecs"],
+    "detail-type": ["ECS Task State Change"],
+    "detail": {
+      "lastStatus": ["STOPPED"],
+      "stoppedReason": [{"prefix": "Essential container"}]
+    }
+  }' \
+  --description "Alert when ECS container exits unexpectedly" \
+  --state ENABLED \
+  --region $REGION
+
+# Add SQS as the rule target (with input transformer to simplify the message)
+aws events put-targets \
+  --rule getwork-ecs-task-stopped \
+  --targets "[{
+    \"Id\": \"NotificationQueue\",
+    \"Arn\": \"$NOTIF_QUEUE_ARN\",
+    \"InputTransformer\": {
+      \"InputPathsMap\": {
+        \"taskArn\": \"$.detail.taskArn\",
+        \"reason\": \"$.detail.stoppedReason\",
+        \"cluster\": \"$.detail.clusterArn\"
+      },
+      \"InputTemplate\": \"{\\\"alertType\\\": \\\"ECS_TASK_STOPPED\\\", \\\"taskArn\\\": \\\"<taskArn>\\\", \\\"reason\\\": \\\"<reason>\\\", \\\"cluster\\\": \\\"<cluster>\\\"}\"
+    }
+  }]" --region $REGION
+
+echo "EventBridge rule created"
+echo "Any ECS task that stops with 'Essential container' reason will appear in getwork-notifications-queue"</code>
+        <div class="step-note">The InputTransformer reshapes the full ECS event (which has dozens of fields) into a compact alert message containing only what the notification service needs. This reduces SQS message size and simplifies the consumer code — the consumer receives a clean alert object, not raw ECS event JSON.</div>
+        <button class="step-btn" onclick="markDone(4)">Mark complete ✓</button>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-line"><div class="step-num" id="n5" onclick="markDone(5)">5</div></div>
+      <div class="step-body">
+        <div class="step-title">Clean up all messaging resources</div>
+        <div class="step-text">Delete all SQS queues, the SNS topic with subscriptions, and the EventBridge rule. Messaging resources have minimal cost but clean up maintains account hygiene.</div>
+        <code class="step-cmd">REGION=ap-south-1
+
+# Delete EventBridge rule (remove targets first)
+aws events remove-targets \
+  --rule getwork-ecs-task-stopped \
+  --ids NotificationQueue \
+  --region $REGION 2>/dev/null || true
+
+aws events delete-rule \
+  --name getwork-ecs-task-stopped \
+  --region $REGION 2>/dev/null || true
+
+# Delete SNS subscriptions and topic
+TOPIC_ARN=$(aws sns list-topics \
+  --query 'Topics[?ends_with(TopicArn,`getwork-job-events`)].TopicArn' \
+  --output text --region $REGION)
+
+aws sns list-subscriptions-by-topic \
+  --topic-arn $TOPIC_ARN \
+  --query 'Subscriptions[*].SubscriptionArn' \
+  --output text --region $REGION | \
+tr '\t' '\n' | while read SUB; do
+  [ -n "$SUB" ] && aws sns unsubscribe --subscription-arn $SUB --region $REGION
+done
+
+aws sns delete-topic --topic-arn $TOPIC_ARN --region $REGION 2>/dev/null || true
+
+# Delete all SQS queues
+for QUEUE in matching-queue matching-dlq notifications-queue notifications-dlq analytics-queue analytics-dlq; do
+  URL=$(aws sqs get-queue-url \
+    --queue-name getwork-${QUEUE} \
+    --query QueueUrl --output text --region $REGION 2>/dev/null || echo "")
+  [ -n "$URL" ] && aws sqs delete-queue --queue-url $URL --region $REGION && echo "Deleted: getwork-$QUEUE"
+done
+
+echo ""
+echo "Lab cleanup complete"
+echo "Cost summary while running:"
+echo "  SQS: \$0.0000004/API call (negligible for lab volume)"
+echo "  SNS: \$0.0000005/publish (1 publish = 3 deliveries = \$0.0000015)"
+echo "  EventBridge: \$1/million custom events"
+echo "  Total lab cost: < \$0.01"</code>
+        <div class="step-note">SQS, SNS, and EventBridge have no fixed hourly costs — you pay only per API call and per event. A lab with a few dozen messages costs fractions of a cent. This is one of the reasons messaging services are easy to prototype with.</div>
+        <button class="step-btn" onclick="markDone(5)">Mark complete ✓</button>
+      </div>
+    </div>
+
+  </div>
+  <button class="next-btn" onclick="nav('cheatsheet',null)">Day 19 cheatsheet →</button>
+</div>
+
+<!-- ══════════════════════════════════════════ -->
+<!-- CHEATSHEET -->
+<!-- ══════════════════════════════════════════ -->
+<div id="s-cheatsheet" class="section">
+  <div class="sec-header">
+    <div class="sec-title">Day 19 cheatsheet</div>
+    <div class="sec-sub">SQS, SNS, and EventBridge production mechanics at a glance.</div>
+  </div>
+
+  <div class="cs-grid">
+    <div class="cs-card"><div class="cs-title">SQS at-least-once</div><div class="cs-desc">Standard queues may deliver the same message twice. Consumer code must be idempotent. Use MessageId as the idempotency key in a DynamoDB conditional write.</div></div>
+    <div class="cs-card"><div class="cs-title">Visibility timeout</div><div class="cs-desc">Set to 6× worst-case processing time. If processing exceeds timeout, message becomes visible again → another consumer picks it up → duplicate processing. Extend dynamically with ChangeMessageVisibility.</div></div>
+    <div class="cs-card"><div class="cs-title">Long polling always</div><div class="cs-desc">WaitTimeSeconds=20 on all ReceiveMessage calls. Reduces empty API calls from hundreds/minute to 3/minute for idle queues. Saves cost and CPU. spring.cloud.aws.sqs.listener.poll-timeout-seconds=20</div></div>
+    <div class="cs-card"><div class="cs-title">DLQ maxReceiveCount</div><div class="cs-desc">Set to 3–5 for most queues. After this many failed receives, message routes to DLQ. Alarm: DLQ depth > 0. DLQ retention: 14 days. Source queue: 4 days.</div></div>
+    <div class="cs-card"><div class="cs-title">FIFO deduplication window</div><div class="cs-desc">5-minute window only. Same deduplication ID sent 6 minutes apart = two deliveries. For permanent exactly-once semantics: implement application-level idempotency, not just FIFO.</div></div>
+    <div class="cs-card"><div class="cs-title">SNS raw delivery</div><div class="cs-desc">Enable RawMessageDelivery=true on SQS subscriptions. Without it, SQS message body is SNS JSON envelope. Consumers must unwrap. Raw delivery puts your message directly in SQS body.</div></div>
+    <div class="cs-card"><div class="cs-title">SNS filter → silent drop</div><div class="cs-desc">If no subscriber's filter matches a published message, it's silently discarded. No error returned to publisher. Always have one catch-all subscriber (no filter) for audit purposes.</div></div>
+    <div class="cs-card"><div class="cs-title">SQS policy for SNS/EB</div><div class="cs-desc">SQS queue must have a resource policy allowing SNS or EventBridge to SendMessage. Without it: SNS/EB publish succeeds, SQS silently rejects, messages disappear. Common misconfiguration.</div></div>
+    <div class="cs-card"><div class="cs-title">EventBridge default bus</div><div class="cs-desc">AWS services publish natively: EC2, RDS, ECS, CodePipeline, GuardDuty, 90+ more. Already flowing in your account — create rules to react. Free to receive, cost per matched event forwarded to targets.</div></div>
+    <div class="cs-card"><div class="cs-title">EventBridge InputTransformer</div><div class="cs-desc">Reshape event before delivery to target. Extract only needed fields. Reduces message size, simplifies consumer code. Best practice: consumers should not need to parse raw AWS event envelopes.</div></div>
+    <div class="cs-card"><div class="cs-title">Transactional outbox</div><div class="cs-desc">Write event to outbox table in the same DB transaction as the record. Poller publishes from outbox to SNS/SQS. Guarantees no event is lost even if publish fails. Required for financial-critical events.</div></div>
+    <div class="cs-card"><div class="cs-title">Fan-out vs direct publish</div><div class="cs-desc">SNS fan-out: publisher writes once, zero knowledge of consumers, add consumers without touching publisher. Direct multi-queue: tight coupling, partial delivery risk on failure, requires publisher code change for new consumers.</div></div>
+  </div>
+
+  <hr class="divider">
+  <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px">Production rules for messaging</div>
+  <div class="rules">
+    <div class="rule"><span class="rule-n">1</span><span>Every SQS consumer must be idempotent. At-least-once delivery is the contract — processing the same message twice must produce the same outcome as processing it once.</span></div>
+    <div class="rule"><span class="rule-n">2</span><span>Visibility timeout = 6× worst-case processing time. Monitor ApproximateNumberOfMessagesNotVisible. Rising count = consumers are hitting the timeout.</span></div>
+    <div class="rule"><span class="rule-n">3</span><span>Every production SQS queue must have a DLQ configured. Alarm on DLQ depth > 0. DLQ messages require human investigation and action.</span></div>
+    <div class="rule"><span class="rule-n">4</span><span>Always use long polling (WaitTimeSeconds=20). Never short poll in production — it wastes API calls, CPU, and money.</span></div>
+    <div class="rule"><span class="rule-n">5</span><span>Enable RawMessageDelivery on all SNS → SQS subscriptions. Consumers should not be responsible for unwrapping SNS envelopes.</span></div>
+    <div class="rule"><span class="rule-n">6</span><span>Set explicit SQS queue resource policies for SNS and EventBridge senders. The default deny policy silently drops messages — there is no error visible to the sender.</span></div>
+    <div class="rule"><span class="rule-n">7</span><span>Use the transactional outbox pattern for events tied to database writes. Direct publish (write then publish) risks message loss if publish fails. The outbox guarantees delivery.</span></div>
+    <div class="rule"><span class="rule-n">8</span><span>EventBridge rule patterns must be as specific as possible. Overly broad rules (source: aws.ec2 with no detail filter) fire on every EC2 event, flooding Lambda logs and increasing costs.</span></div>
+    <div class="rule"><span class="rule-n">9</span><span>Alarm on ApproximateAgeOfOldestMessage on source queues in addition to depth. A single stuck message from an hour ago needs attention even if the queue only has 1 message total.</span></div>
+    <div class="rule"><span class="rule-n">10</span><span>Enable EventBridge event archive on custom event buses. Required for debugging choreographed sagas — without it, tracing a failed workflow across multiple services is nearly impossible.</span></div>
+  </div>
+
+  <hr class="divider">
+  <div style="background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:1rem;font-size:13px;color:var(--text2);line-height:1.9">
+    <span style="font-weight:700;color:var(--text)">Day 20 next — GuardDuty, Security Hub, and WAF.</span><br>
+    AWS threat detection with GuardDuty (finds crypto mining, credential theft, unusual network patterns). Security Hub for centralised security posture across services. WAF for application-layer protection — SQL injection, XSS, rate limiting, bot detection. The security layer that JP Morgan and every financial services customer requires.
+  </div>
+</div>
+
+
+  </main>
+  <script>
+const sections={
+  sqs:'s-sqs', sqstypes:'s-sqstypes', dlq:'s-dlq', sqsspring:'s-sqsspring',
+  sns:'s-sns', fanout:'s-fanout', eb:'s-eb', ebrules:'s-ebrules',
+  ebpipes:'s-ebpipes', comparison:'s-comparison', patterns:'s-patterns',
+  interview:'s-interview', lab:'s-lab', cheatsheet:'s-cheatsheet'
+};
+function nav(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const sec=document.getElementById(sections[id]);
+  if(sec)sec.classList.add('active');
+  if(btn)btn.classList.add('active');
+  else document.querySelectorAll('.nav-item').forEach(n=>{
+    const oc=n.getAttribute('onclick');
+    if(oc&&oc.includes(`'${id}'`))n.classList.add('active');
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function topic(prefix,idx,btn){
+  const panel=btn.closest('.section');
+  panel.querySelectorAll('.topic').forEach(t=>t.classList.remove('active'));
+  panel.querySelectorAll('.ttab').forEach(t=>t.classList.remove('active'));
+  const t=document.getElementById(prefix+idx);
+  if(t)t.classList.add('active');
+  btn.classList.add('active');
+}
+function tog(el){el.classList.toggle('open')}
+function markDone(n){
+  const node=document.getElementById('n'+n);
+  if(!node)return;
+  node.closest('.step').classList.add('done');
+  node.textContent='✓';
+}
+</script>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

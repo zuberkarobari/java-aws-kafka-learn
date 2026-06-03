@@ -18,10 +18,16 @@ import {
   calcProgress,
   getStreakHistory,
   calcStreakDays,
-  getGlobalProgress
+  getGlobalProgress,
+  getRecommendation,
+  getPlannerTasks,
+  addPlannerTask,
+  togglePlannerTask,
+  deletePlannerTask,
+  getConfidenceRatings
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
-import { initCommandPalette } from './command-palette.js';
+import { initCommandPalette, openCommandPalette } from './command-palette.js';
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -722,6 +728,8 @@ const init = () => {
   renderProgress();
   initSearch();
   initCommandPalette();
+
+  document.getElementById('header-search-btn')?.addEventListener('click', openCommandPalette);
 
   // Re-render on storage changes (e.g., visiting a topic in another tab)
   window.addEventListener('storage', () => {

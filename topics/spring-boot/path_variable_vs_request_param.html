@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@PathVariable vs @RequestParam Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: { 50: '#f0f9eb', 100: '#dbf0cd', 400: '#86c953', 500: '#6db33f', 600: '#589b2f', 900: '#234011', 950: '#142609' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .accordion-content { transition: all 0.4s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .accordion-content.open { max-height: 800px; opacity: 1; padding-top: 1rem; padding-bottom: 1.5rem; }
+        .accordion-icon { transition: transform 0.4s ease-in-out; }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+        .mac-window { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="@PathVariable vs @RequestParam">@PathVariable vs @RequestParam</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: URL Dissection
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. Key Points
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+        <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+            
+            <!-- Page Title -->
+            <div class="mb-16 pt-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                    <i class="ph-fill ph-sparkle"></i> Extracting HTTP Data
+                </div>
+                <h1 class="text-4xl md:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                    @PathVariable <span class="text-3xl text-slate-400 font-normal">vs</span> <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">@RequestParam</span>
+                </h1>
+                <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                    Mastering the differences between URL Path mapping, Query Strings, and RESTful design conventions.
+                </p>
+            </div>
+
+            <!-- 1. Definition -->
+            <section id="definition" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                        <p class="text-slate-600 text-sm font-medium">Imagine looking for a specific file in a filing cabinet. <code>@PathVariable</code> is the exact folder name pointing to the file (e.g., folder #123). <code>@RequestParam</code> acts like a search filter applied to that folder (e.g., "only show me active files").</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                        <p class="text-slate-600 text-sm font-medium">Both are parameter-binding annotations in Spring MVC. <code>@PathVariable</code> extracts values embedded directly within the URI path segments. <code>@RequestParam</code> extracts values from the query string (the part of the URL after the <code>?</code> mark).</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                        <p class="text-slate-600 text-sm font-medium">They serve fundamentally different architectural roles. <code>@PathVariable</code> is used to uniquely identify a specific REST resource. <code>@RequestParam</code> is used to filter, sort, paginate, or modify the query for that resource.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Internal Working -->
+            <section id="internal-working" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-gears text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: URL Dissection</h2>
+                </div>
+
+                <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-sm border border-slate-100 space-y-8">
+                    <p class="text-slate-600 font-medium">When a request arrives, the <code>HandlerMethodArgumentResolver</code> component is responsible for parsing the URL string, converting the string data into correct Java types (like Long or Integer), and injecting them into the method parameters.</p>
+                    
+                    <!-- Custom HTML Diagram -->
+                    <div class="bg-slate-900 rounded-2xl p-6 shadow-inner border border-slate-800 text-center">
+                        <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-6 text-left flex items-center gap-2"><i class="ph-fill ph-scissors text-spring-400"></i> Dissecting the HTTP Request</h3>
+                        
+                        <div class="w-full flex flex-col items-center text-slate-300 py-4 relative">
+                            
+                            <!-- The URL Bar -->
+                            <div class="w-full bg-slate-950 border border-slate-700 rounded-lg p-4 flex items-center justify-center text-lg md:text-xl font-mono shadow-xl relative z-10 mb-8">
+                                <span class="text-slate-500">https://api.app.com</span>
+                                <span class="text-slate-300">/users/</span>
+                                <span class="text-emerald-400 font-bold bg-emerald-900/30 px-1 rounded mx-0.5 border border-emerald-500/30">123</span>
+                                <span class="text-slate-300">?</span>
+                                <span class="text-blue-300 font-bold bg-blue-900/30 px-1 rounded mx-0.5 border border-blue-500/30">status=active</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-8 w-full">
+                                <!-- PathVariable Path -->
+                                <div class="flex flex-col items-center">
+                                    <div class="bg-emerald-900/20 border border-emerald-500/40 p-4 rounded-xl w-full text-center shadow-lg">
+                                        <div class="text-emerald-400 font-mono text-sm font-bold mb-2">@PathVariable("id")</div>
+                                        <div class="text-xs text-slate-400 bg-slate-950/50 p-2 rounded border border-slate-700/50 text-left mb-3">
+                                            <i class="ph-bold ph-magnifying-glass text-emerald-500 inline-block mr-1"></i>
+                                            Extracts from: <code>/users/{id}</code>
+                                        </div>
+                                        <div class="font-mono bg-emerald-900/50 px-2 py-1 rounded text-emerald-200 border border-emerald-700 text-sm">
+                                            Long id = 123;
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- RequestParam Path -->
+                                <div class="flex flex-col items-center">
+                                    <div class="bg-blue-900/20 border border-blue-500/40 p-4 rounded-xl w-full text-center shadow-lg">
+                                        <div class="text-blue-400 font-mono text-sm font-bold mb-2">@RequestParam("status")</div>
+                                        <div class="text-xs text-slate-400 bg-slate-950/50 p-2 rounded border border-slate-700/50 text-left mb-3">
+                                            <i class="ph-bold ph-funnel text-blue-500 inline-block mr-1"></i>
+                                            Parses Query String after <code>?</code>
+                                        </div>
+                                        <div class="font-mono bg-blue-900/50 px-2 py-1 rounded text-blue-200 border border-blue-700 text-sm">
+                                            String status = "active";
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Real-World Example -->
+            <section id="real-world" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-buildings text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                </div>
+
+                <div class="bg-slate-900 rounded-[2rem] p-8 md:p-10 text-white shadow-xl relative overflow-hidden group">
+                    <h3 class="text-2xl font-display font-bold mb-3 text-spring-400">E-Commerce Product Catalog</h3>
+                    <p class="text-slate-300 mb-8 font-medium">How these annotations handle different parts of a complex API query.</p>
+                    
+                    <div class="space-y-6 relative z-10">
+                        <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700 font-mono text-sm shadow-inner overflow-x-auto text-slate-300">
+                            <span class="text-blue-400">GET</span> /api/products/<span class="text-emerald-400 font-bold">electronics</span>?sort=<span class="text-amber-400">price</span>&amp;limit=<span class="text-amber-400">10</span>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-6 mt-4">
+                            <div class="bg-emerald-950/30 border border-emerald-900 p-5 rounded-xl">
+                                <h4 class="font-bold text-emerald-400 text-lg mb-2 flex items-center gap-2">
+                                    <i class="ph-bold ph-folder-open"></i> @PathVariable
+                                </h4>
+                                <p class="text-sm text-slate-300 leading-relaxed">
+                                    Extracts <code class="bg-emerald-900/50 text-emerald-200 px-1 rounded">"electronics"</code>. This identifies the <strong>Core Resource</strong> we are querying. Without knowing the category, the request makes no sense. It is mandatory for routing.
+                                </p>
+                            </div>
+
+                            <div class="bg-amber-950/30 border border-amber-900 p-5 rounded-xl">
+                                <h4 class="font-bold text-amber-400 text-lg mb-2 flex items-center gap-2">
+                                    <i class="ph-bold ph-funnel"></i> @RequestParam
+                                </h4>
+                                <p class="text-sm text-slate-300 leading-relaxed">
+                                    Extracts <code class="bg-amber-900/50 text-amber-200 px-1 rounded">"price"</code> and <code class="bg-amber-900/50 text-amber-200 px-1 rounded">10</code>. These <strong>Modify</strong> the query. The client is filtering and organizing the resource. If they don't provide them, the API falls back to defaults.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Key Points -->
+            <section id="key-points" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-target text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. Key Points</h2>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-5">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">1. RESTful Conventions</h4>
+                        <p class="text-sm text-slate-600 font-medium">Use PathVariables to identify a specific resource (<code>/users/123</code>). Use RequestParams for non-resource actions like sorting, filtering, and pagination (<code>?page=2&amp;sort=asc</code>).</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">2. Missing Values Behavior</h4>
+                        <p class="text-sm text-slate-600 font-medium">If a <code>@PathVariable</code> is missing, it changes the URI entirely, resulting in a <strong>404 Not Found</strong>. If a required <code>@RequestParam</code> is missing, Spring throws a <strong>400 Bad Request</strong>.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">3. Making them Optional</h4>
+                        <p class="text-sm text-slate-600 font-medium">Both support <code>required = false</code>. However, making a PathVariable optional is highly discouraged as it makes route mapping ambiguous.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">4. Default Values</h4>
+                        <p class="text-sm text-slate-600 font-medium"><code>@RequestParam</code> supports a <code>defaultValue</code> attribute (e.g., <code>defaultValue="10"</code>). <code>@PathVariable</code> does not support default values.</p>
+                    </div>
+                    <div class="md:col-span-2 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">5. Dynamic Mapping</h4>
+                        <p class="text-sm text-slate-600 font-medium">If you have multiple unknown query parameters, you can inject them all at once using <code>@RequestParam Map&lt;String, String&gt; allParams</code>.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. FAQs -->
+            <section id="faqs" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q1: How do I handle an optional @PathVariable?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-spring-400 pl-4"><strong>Answer:</strong> While you <em>can</em> use <code>@PathVariable(required = false)</code>, it creates route mapping issues. The cleanest way is to map the method to an array of URIs: <code>@GetMapping({"/users", "/users/{id}"})</code>, and then use <code>Optional&lt;Long&gt; id</code> in the method signature.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q2: Can @RequestParam map to a list or array?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-spring-400 pl-4"><strong>Answer:</strong> Yes. If a client sends <code>?ids=1&amp;ids=2&amp;ids=3</code> or <code>?ids=1,2,3</code>, you can simply declare <code>@RequestParam List&lt;Long&gt; ids</code> and Spring will parse the CSV or multiple variables into the list automatically.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Code Example -->
+            <section id="code-example" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-code text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example</h2>
+                </div>
+
+                <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                    <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="ml-4 text-xs font-mono text-slate-400">SearchController.java</span>
+                    </div>
+                    <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code><span class="text-[#c586c0]">import</span> org.springframework.web.bind.annotation.*;
+<span class="text-[#c586c0]">import</span> java.util.Optional;
+<span class="text-[#c586c0]">import</span> java.util.Map;
+
+<span class="text-[#4ec9b0]">@RestController</span>
+<span class="text-[#4ec9b0]">@RequestMapping</span>(<span class="text-[#ce9178]">"/api/v1/search"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">SearchController</span> {
+
+    <span class="text-[#6a9955]">/* 1. Standard Combination of Both
+       URL: GET /api/v1/search/books?sortBy=price&amp;limit=20 */</span>
+    <span class="text-[#4ec9b0]">@GetMapping</span>(<span class="text-[#ce9178]">"/{category}"</span>)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">String</span> search(
+            <span class="text-[#6a9955]">// Identifies the resource group</span>
+            <span class="text-[#4ec9b0]">@PathVariable</span>(<span class="text-[#ce9178]">"category"</span>) <span class="text-[#4ec9b0]">String</span> category, 
+            
+            <span class="text-[#6a9955]">// Optional filter with default</span>
+            <span class="text-[#4ec9b0]">@RequestParam</span>(<span class="text-[#9cdcfe]">defaultValue</span> = <span class="text-[#ce9178]">"relevance"</span>) <span class="text-[#4ec9b0]">String</span> sortBy,
+            
+            <span class="text-[#6a9955]">// Optional filter</span>
+            <span class="text-[#4ec9b0]">@RequestParam</span>(<span class="text-[#9cdcfe]">required</span> = <span class="text-[#569cd6]">false</span>) <span class="text-[#4ec9b0]">Integer</span> limit) {
+            
+        <span class="text-[#569cd6]">return</span> <span class="text-[#ce9178]">"Searching "</span> + category + <span class="text-[#ce9178]">" sorted by "</span> + sortBy;
+    }
+
+    <span class="text-[#6a9955]">/* 2. Handling Optional Path Variables (The safe way)
+       URL: GET /api/v1/search/users  OR  /api/v1/search/users/123 */</span>
+    <span class="text-[#4ec9b0]">@GetMapping</span>({<span class="text-[#ce9178]">"/users"</span>, <span class="text-[#ce9178]">"/users/{id}"</span>})
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">String</span> getUserOrAll(
+            <span class="text-[#4ec9b0]">@PathVariable</span> <span class="text-[#4ec9b0]">Optional</span>&lt;<span class="text-[#4ec9b0]">Long</span>&gt; id) {
+        
+        <span class="text-[#569cd6]">if</span> (id.isPresent()) {
+            <span class="text-[#569cd6]">return</span> <span class="text-[#ce9178]">"Fetching user "</span> + id.get();
+        }
+        <span class="text-[#569cd6]">return</span> <span class="text-[#ce9178]">"Fetching all users"</span>;
+    }
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 7. Senior Dev Answer -->
+            <section id="senior-answer" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white">
+                        <i class="ph-duotone ph-user-focus text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                </div>
+
+                <div class="bg-slate-50 border-l-4 border-spring-500 p-8 rounded-r-3xl shadow-sm">
+                    <p class="text-slate-700 text-lg leading-relaxed font-medium italic">
+                        "The distinction between @PathVariable and @RequestParam goes far beyond Spring Boot mechanics; it dictates your API's alignment with RESTful design principles and directly impacts infrastructure caching.
+                        <br><br>
+                        I enforce a strict rule: if a parameter is required to uniquely identify a resource, it must be a Path Variable. Path variables are cache-friendly at the CDN layer (like Cloudflare or AWS CloudFront) because the URL itself represents a unique object. 
+                        <br><br>
+                        Conversely, if a parameter is used to alter the state of the result—such as pagination, sorting, or complex filtering—it must be a Request Param. Furthermore, from a security and logging perspective, query strings are notoriously easy to log inadvertently in access logs. Therefore, sensitive data should never be passed in either, but rather secured inside the HTTP request body."
+                    </p>
+                </div>
+            </section>
+            
+        </div>
+    
+  
+    </main>
+    <script>
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('bg-slate-50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                } else {
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                    });
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

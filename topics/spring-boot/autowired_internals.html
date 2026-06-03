@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@Autowired Internals Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: { 50: '#f0f9eb', 100: '#dbf0cd', 400: '#86c953', 500: '#6db33f', 600: '#589b2f', 900: '#234011', 950: '#142609' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .accordion-content { transition: all 0.4s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .accordion-content.open { max-height: 800px; opacity: 1; padding-top: 1rem; padding-bottom: 1.5rem; }
+        .accordion-icon { transition: transform 0.4s ease-in-out; }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+        .mac-window { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="@Autowired Internals">@Autowired Internals</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: The Resolution Engine
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. Key Points
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+        <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+            
+            <!-- Page Title -->
+            <div class="mb-16 pt-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                    <i class="ph-fill ph-sparkle"></i> Under the Hood
+                </div>
+                <h1 class="text-4xl md:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">@Autowired</span> Internals
+                </h1>
+                <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                    Decoding the AutowiredAnnotationBeanPostProcessor, resolution algorithms, and injection strategies.
+                </p>
+            </div>
+
+            <!-- 1. Definition -->
+            <section id="definition" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                        <p class="text-slate-600 text-sm font-medium">It's a magnet. When you put <code>@Autowired</code> on a field or constructor, it tells the Spring engine, "Please search the application for the exact tool (Bean) I need and glue it onto this class automatically."</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                        <p class="text-slate-600 text-sm font-medium"><code>@Autowired</code> is an annotation that marks a constructor, field, or setter to be autowired by Spring's dependency injection facilities. It triggers the <code>AutowiredAnnotationBeanPostProcessor</code>.</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                        <p class="text-slate-600 text-sm font-medium">To automate Dependency Injection (DI). It eliminates the need for boilerplate XML wire-up or manual factory configurations, automatically resolving dependencies by Type at runtime.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Internal Working -->
+            <section id="internal-working" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-gears text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The Resolution Engine</h2>
+                </div>
+
+                <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-sm border border-slate-100 space-y-8">
+                    <p class="text-slate-600 font-medium">When a Bean is instantiated, a specific post-processor orchestrates the entire search-and-inject operation following a strict fallback algorithm.</p>
+                    
+                    <!-- Custom HTML Flowchart -->
+                    <div class="bg-slate-900 rounded-2xl p-6 shadow-inner text-center border border-slate-800">
+                        <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-6 text-left flex items-center gap-2"><i class="ph-fill ph-git-merge text-spring-400"></i> Autowiring Decision Tree</h3>
+                        
+                        <div class="w-full flex flex-col items-center text-slate-300 py-4 relative">
+                            <!-- Step 1 -->
+                            <div class="bg-slate-800 border border-slate-600 px-6 py-3 rounded-lg font-mono text-sm shadow-lg mb-4 z-10 text-center w-full max-w-sm">
+                                <div class="text-spring-400 mb-1">AutowiredAnnotationBeanPostProcessor</div>
+                                locates @Autowired
+                            </div>
+                            
+                            <i class="ph-bold ph-arrow-down text-slate-600 mb-4"></i>
+                            
+                            <!-- Step 2: Match by Type -->
+                            <div class="bg-blue-900/40 border border-blue-700/50 px-6 py-3 rounded-lg shadow-lg text-sm mb-6 z-10 w-full max-w-sm">
+                                Search BeanFactory by <strong class="text-blue-400">TYPE</strong>
+                            </div>
+                            
+                            <!-- 3 Columns for outcomes -->
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl">
+                                <!-- Zero Found -->
+                                <div class="flex flex-col items-center">
+                                    <div class="text-xs bg-slate-800 px-3 py-1 rounded border border-slate-700 mb-3">0 Found</div>
+                                    <i class="ph-bold ph-arrow-down text-slate-600 mb-3"></i>
+                                    <div class="bg-red-900/50 border border-red-700 px-4 py-3 rounded-lg text-xs w-full text-red-300 shadow-sm">
+                                        <i class="ph-fill ph-warning-circle text-red-500"></i> NoSuchBean<br>DefinitionException
+                                    </div>
+                                </div>
+                                
+                                <!-- One Found -->
+                                <div class="flex flex-col items-center">
+                                    <div class="text-xs bg-slate-800 px-3 py-1 rounded border border-slate-700 mb-3">1 Found</div>
+                                    <i class="ph-bold ph-arrow-down text-slate-600 mb-3"></i>
+                                    <div class="bg-emerald-900/50 border border-emerald-700 px-4 py-3 rounded-lg text-xs w-full text-emerald-300 shadow-sm">
+                                        <i class="ph-fill ph-check-circle text-emerald-500"></i> Inject Bean<br>(Reflection or Constructor)
+                                    </div>
+                                </div>
+                                
+                                <!-- Multiple Found -->
+                                <div class="flex flex-col items-center">
+                                    <div class="text-xs bg-slate-800 px-3 py-1 rounded border border-slate-700 mb-3">> 1 Found</div>
+                                    <i class="ph-bold ph-arrow-down text-slate-600 mb-3"></i>
+                                    <div class="bg-amber-900/30 border border-amber-700/50 px-4 py-3 rounded-lg text-xs w-full text-left text-amber-200">
+                                        <strong>Resolve Ambiguity:</strong><br>
+                                        1. Check <span class="text-spring-400">@Qualifier</span><br>
+                                        2. Check <span class="text-spring-400">@Primary</span><br>
+                                        3. Match <span class="text-blue-400">Variable Name</span><br>
+                                        <span class="text-red-400 text-[10px] mt-1 block">Else: NoUniqueBeanException</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Real-World Example -->
+            <section id="real-world" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-buildings text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                </div>
+
+                <div class="bg-slate-900 rounded-[2rem] p-8 md:p-10 text-white shadow-xl relative overflow-hidden group">
+                    <h3 class="text-2xl font-display font-bold mb-3 text-spring-400">E-Commerce Checkout Pipeline</h3>
+                    <p class="text-slate-300 mb-8 font-medium">A service needing specific, multiple, and optional dependencies.</p>
+                    
+                    <div class="space-y-6">
+                        <div class="flex gap-5 items-start">
+                            <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30"><i class="ph-fill ph-credit-card text-xl"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white text-lg font-display">1. Exact Matching (@Qualifier)</h4>
+                                <p class="text-sm text-slate-300 mt-1">The CheckoutService needs a payment gateway. Both Stripe and PayPal exist. Using <code>@Qualifier("stripeGateway")</code> explicitly resolves the ambiguity.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-5 items-start">
+                            <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30"><i class="ph-fill ph-stack text-xl"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white text-lg font-display">2. Collection Autowiring</h4>
+                                <p class="text-sm text-slate-300 mt-1">Declaring <code>@Autowired List&lt;FraudRule&gt; rules</code> makes Spring dynamically find ALL beans implementing the FraudRule interface and injects the entire list.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-5 items-start">
+                            <div class="mt-1 w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30"><i class="ph-fill ph-bell-ringing text-xl"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white text-lg font-display">3. Optional Injection</h4>
+                                <p class="text-sm text-slate-300 mt-1">Using <code>@Autowired(required = false)</code> prevents the app from crashing on local dev machines where an SmsService bean might not exist.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Key Points -->
+            <section id="key-points" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-target text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. Key Points</h2>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-5">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">1. Resolution by Type First</h4>
+                        <p class="text-sm text-slate-600 font-medium">Spring always resolves dependencies primarily by their Type (Interface or Class). It only falls back to names or qualifiers if there is ambiguity.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">2. Implicit Constructor DI</h4>
+                        <p class="text-sm text-slate-600 font-medium">Since Spring 4.3, if a class only has a single constructor, you do not need to explicitly declare <code>@Autowired</code>.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">3. Field Injection Flaws</h4>
+                        <p class="text-sm text-slate-600 font-medium">Field injection uses Java Reflection API to bypass private modifiers. This makes isolated unit testing extremely difficult.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">4. Standard Equivalents</h4>
+                        <p class="text-sm text-slate-600 font-medium"><code>@Autowired</code> is Spring-specific. <code>@Inject</code> is the JSR-330 standard. <code>@Resource</code> resolves by Name first, then Type.</p>
+                    </div>
+                    <div class="md:col-span-2 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">5. Proxy Injection</h4>
+                        <p class="text-sm text-slate-600 font-medium">If the target dependency is marked with <code>@Transactional</code> or <code>@Async</code>, Spring does not autowire the raw class instance. It injects a dynamically generated CGLIB Proxy subclass.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. FAQs -->
+            <section id="faqs" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q1: Can we autowire static fields?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-spring-400 pl-4"><strong>Answer:</strong> No directly. Spring manages instances, not classes. Workaround: annotate a non-static setter method with @Autowired and have it assign to the static field.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q2: Can you inject an Optional dependency safely in Java 8+?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-spring-400 pl-4"><strong>Answer:</strong> Yes. Instead of using required=false, declare the dependency as <code>Optional&lt;MyService&gt;</code> in the constructor. Spring handles this gracefully.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Code Example -->
+            <section id="code-example" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-code text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example</h2>
+                </div>
+
+                <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                    <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="ml-4 text-xs font-mono text-slate-400">AutowiredDemo.java</span>
+                    </div>
+                    <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code><span class="text-[#c586c0]">import</span> org.springframework.beans.factory.annotation.Autowired;
+<span class="text-[#c586c0]">import</span> org.springframework.beans.factory.annotation.Qualifier;
+<span class="text-[#c586c0]">import</span> org.springframework.stereotype.Service;
+<span class="text-[#c586c0]">import</span> java.util.Optional;
+<span class="text-[#c586c0]">import</span> java.util.List;
+
+<span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">AdvancedCheckoutService</span> {
+
+    <span class="text-[#6a9955]">// GOOD PRACTICE: Constructor Injection (Final fields)</span>
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">PaymentGateway</span> paymentGateway;
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">List&lt;FraudRule&gt;</span> fraudRules;
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">Optional&lt;SmsService&gt;</span> smsService;
+
+    <span class="text-[#6a9955]">// @Autowired is implicit here in modern Spring</span>
+    <span class="text-[#4ec9b0]">@Autowired</span>
+    <span class="text-[#569cd6]">public</span> AdvancedCheckoutService(
+            <span class="text-[#6a9955]">// Resolving ambiguity</span>
+            <span class="text-[#4ec9b0]">@Qualifier</span>(<span class="text-[#ce9178]">"stripeGateway"</span>) <span class="text-[#4ec9b0]">PaymentGateway</span> paymentGateway,
+            
+            <span class="text-[#6a9955]">// Injecting ALL beans implementing an interface</span>
+            <span class="text-[#4ec9b0]">List&lt;FraudRule&gt;</span> fraudRules,
+            
+            <span class="text-[#6a9955]">// Optional injection</span>
+            <span class="text-[#4ec9b0]">Optional&lt;SmsService&gt;</span> smsService) {
+        
+        <span class="text-[#569cd6]">this</span>.paymentGateway = paymentGateway;
+        <span class="text-[#569cd6]">this</span>.fraudRules = fraudRules;
+        <span class="text-[#569cd6]">this</span>.smsService = smsService;
+    }
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 7. Senior Dev Answer -->
+            <section id="senior-answer" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white">
+                        <i class="ph-duotone ph-user-focus text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                </div>
+
+                <div class="bg-slate-50 border-l-4 border-spring-500 p-8 rounded-r-3xl shadow-sm">
+                    <p class="text-slate-700 text-lg leading-relaxed font-medium italic">
+                        "Behind the scenes, @Autowired is powered by the AutowiredAnnotationBeanPostProcessor. It resolves dependencies strictly by Type first, falling back to @Qualifier or variable names if ambiguity exists. In enterprise settings, I consider field injection an anti-pattern because it relies on aggressive reflection to mutate private state. I strictly enforce Constructor Injection, which guarantees immutability, thread-safety, and allows us to test the class without booting the Spring Context."
+                    </p>
+                </div>
+            </section>
+            
+        </div>
+    
+  
+    </main>
+    <script>
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('bg-slate-50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                } else {
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                    });
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT Authentication Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: {
+                            50: '#f0f9eb',
+                            100: '#dbf0cd',
+                            400: '#86c953',
+                            500: '#6db33f', // Official Spring Green
+                            600: '#589b2f',
+                            900: '#234011',
+                            950: '#142609',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="JSON Web Tokens">JSON Web Tokens</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example: The JWT Filter
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
+            </a>
+            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-100/80 border border-purple-200 text-purple-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-lock-key"></i> Stateless Security
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        JSON Web <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-500">Tokens</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering stateless authentication, cryptographic signatures, custom security filters, and the "Revocation Problem".
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">It's a digital VIP wristband. You show your ID once (username/password), the server gives you an unforgeable wristband (JWT). For the rest of your visit, the server just checks your wristband instead of asking for your ID again.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">JSON Web Token (RFC 7519) is an open standard that defines a compact, self-contained way of securely transmitting information between parties as a JSON object. This information is verified and trusted because it is cryptographically signed.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To achieve stateless scalability. By embedding the user's identity and roles directly into a signed token, the server doesn't need to store session states in memory or query the database on every single API request.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">In Spring Security, JWT implementation requires intercepting the HTTP request before the standard authorization filters. Here is the full lifecycle.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-12 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-purple-400"></i> The Two Phases of JWT
+                            </h3>
+
+                            <div class="grid md:grid-cols-2 gap-10 w-full relative z-10">
+                                
+                                <!-- Phase 1: Issuance -->
+                                <div class="flex flex-col bg-slate-800/50 border border-slate-700 rounded-xl p-5">
+                                    <h4 class="text-purple-400 font-bold mb-4 flex items-center gap-2"><i class="ph-bold ph-key"></i> 1. Token Issuance (Login)</h4>
+                                    
+                                    <div class="space-y-3">
+                                        <div class="bg-slate-800 p-3 rounded border border-slate-600 text-xs">
+                                            <span class="text-blue-400 font-bold">1. Client</span> POSTs {user, pass}
+                                        </div>
+                                        <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-slate-500"></i></div>
+                                        <div class="bg-slate-800 p-3 rounded border border-slate-600 text-xs">
+                                            <span class="text-amber-400 font-bold">2. AuthManager</span> verifies in DB
+                                        </div>
+                                        <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-slate-500"></i></div>
+                                        <div class="bg-purple-900/30 p-3 rounded border border-purple-500/50 text-xs text-purple-200 font-mono">
+                                            <span class="font-bold text-white">3. JwtService</span> generates JWT<br>
+                                            <span class="text-[10px] text-slate-400">Header + Payload + Signature</span>
+                                        </div>
+                                        <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-slate-500"></i></div>
+                                        <div class="bg-emerald-900/30 p-3 rounded border border-emerald-500/50 text-xs">
+                                            <span class="text-emerald-400 font-bold">4. Return</span> JSON {"token": "eyJ..."}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Phase 2: Verification -->
+                                <div class="flex flex-col bg-slate-800/50 border border-slate-700 rounded-xl p-5 relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 w-1 h-full bg-purple-500"></div>
+                                    <h4 class="text-purple-400 font-bold mb-4 flex items-center gap-2"><i class="ph-bold ph-shield-check"></i> 2. Token Verification (API Call)</h4>
+                                    
+                                    <div class="space-y-3">
+                                        <div class="bg-slate-800 p-3 rounded border border-slate-600 text-xs font-mono">
+                                            <span class="text-blue-400 font-bold">1. Client</span> GET /api/data<br>
+                                            <span class="text-[10px] text-slate-400">Authorization: Bearer eyJ...</span>
+                                        </div>
+                                        <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-slate-500"></i></div>
+                                        <div class="bg-purple-900/30 p-3 rounded border border-purple-500/50 text-xs text-purple-200">
+                                            <span class="font-bold text-white">2. JwtAuthFilter</span> intercepts.<br>
+                                            Extracts token, checks mathematically if Signature is valid & Not Expired.
+                                        </div>
+                                        <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-slate-500"></i></div>
+                                        <div class="bg-slate-800 p-3 rounded border border-slate-600 text-xs">
+                                            <span class="text-amber-400 font-bold">3. SecurityContext</span><br>
+                                            Filter saves UserDetails in ThreadLocal context.
+                                        </div>
+                                        <div class="flex justify-center"><i class="ph-bold ph-arrow-down text-slate-500"></i></div>
+                                        <div class="bg-emerald-900/30 p-3 rounded border border-emerald-500/50 text-xs">
+                                            <span class="text-emerald-400 font-bold">4. DispatcherServlet</span> processes logic.
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-purple-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-network text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300">Microservices Architecture</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Why JWTs are the industry standard for distributed systems.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-slate-700 text-slate-300 flex items-center justify-center shrink-0 border border-slate-600"><i class="ph-fill ph-database text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Old Way: Stateful Sessions</h4>
+                                    <p class="text-sm text-slate-400 mt-1">Imagine you have 5 Order microservices. If you use Sessions (JSESSIONID), Service A stores your session in memory. If the load balancer routes your next request to Service B, Service B doesn't know who you are. You must set up a shared Redis cluster just to store sessions, adding network latency and infrastructure cost.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30"><i class="ph-fill ph-certificate text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The JWT Way: Decentralized Trust</h4>
+                                    <p class="text-sm text-slate-300 mt-1">An API Gateway or Auth Service verifies your login and issues a JWT signed with a Private Key. You send that token to the Order Service. The Order Service <strong>does not call the database</strong> and <strong>does not call the Auth Service</strong>. It simply uses a Public Key to mathematically verify the signature. If the math checks out, it inherently trusts the token and processes your order. Infinite scalability.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-purple-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:bg-purple-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">JWT Anatomy</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">It consists of three parts separated by dots: <code>Header.Payload.Signature</code>. The Header and Payload are just Base64Url encoded JSON. The Signature is the cryptographic hash of the first two parts.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-amber-100 hover:border-amber-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-amber-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Signed, Not Encrypted</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Standard JWTs (JWS) are <em>signed</em>, not encrypted. Anyone who intercepts the token can decode the Base64 payload and read its contents. <strong>Never put passwords or sensitive PII inside a JWT payload.</strong></p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-purple-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:bg-purple-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">HS256 vs RS256</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><strong>HS256 (Symmetric):</strong> Uses one secret key to both sign and verify. Faster, but if the key leaks, the system is compromised. <strong>RS256 (Asymmetric):</strong> Uses a Private key to sign, and a Public key to verify. Essential for microservices.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-purple-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:bg-purple-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">The Revocation Problem</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Because JWT verification is mathematically stateless, if an admin bans a user, their valid JWT will continue to work until it naturally expires. You cannot instantly "logout" a stateless token.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-purple-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:bg-purple-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Access & Refresh Tokens</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">To mitigate the Revocation Problem, Access Tokens must be short-lived (e.g., 15 mins). When they expire, the client uses a secure, long-lived Refresh Token (stored in HttpOnly cookies) to ask the Auth server for a new Access Token.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-purple-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:bg-purple-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">OncePerRequestFilter</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">In Spring, the custom JWT filter must extend <code>OncePerRequestFilter</code> and be injected into the <code>SecurityFilterChain</code> before the <code>UsernamePasswordAuthenticationFilter</code>.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-purple-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-purple-500 group-hover:bg-purple-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Stateless Configuration</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">You must explicitly configure Spring Security to not create HTTP sessions: <code>sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)</code>. If you forget this, Spring will fallback to JSESSIONID cookies, defeating the purpose of JWT.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-purple-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: How do you actually implement a "Logout" with stateless JWTs?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-purple-400 pl-4">
+                                    <strong>Answer:</strong> True stateless logout is impossible without state. The standard solution is to delete the token from the client's local storage. To prevent a stolen token from being used, you must implement a <strong>Token Blacklist</strong> on the server (usually using Redis with a TTL matching the token's expiration). The JwtFilter checks Redis on every request to ensure the token hasn't been logged out.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-purple-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: Where should the client store the JWT?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-purple-400 pl-4">
+                                    <strong>Answer:</strong> Storing it in <code>LocalStorage</code> is common but highly vulnerable to XSS (Cross-Site Scripting) attacks, as JavaScript can read it. The most secure approach is for the server to return the token inside an <code>HttpOnly, Secure, SameSite=Strict</code> Cookie. This makes it immune to XSS, though you must then re-enable CSRF protection.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-purple-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: What happens if your HS256 secret key is leaked?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-red-400 pl-4">
+                                    <strong>Answer:</strong> Total system compromise. An attacker can use the leaked secret key to forge a perfectly valid token, setting the payload to <code>{"username":"admin", "role":"ADMIN"}</code>. The server will mathematically verify it as legitimate and grant them full access. Keys must be stored in secure vaults (like AWS Secrets Manager) and rotated regularly.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: The JWT Filter</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">JwtAuthenticationFilter.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-purple-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#c586c0]">import</span> jakarta.servlet.FilterChain;
+<span class="text-[#c586c0]">import</span> org.springframework.security.core.context.SecurityContextHolder;
+<span class="text-[#c586c0]">import</span> org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+<span class="text-[#c586c0]">import</span> org.springframework.web.filter.OncePerRequestFilter;
+<span class="text-[#c586c0]">import</span> org.springframework.stereotype.Component;
+
+<span class="text-[#4ec9b0]">@Component</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">JwtAuthenticationFilter</span> <span class="text-[#569cd6]">extends</span> <span class="text-[#4ec9b0]">OncePerRequestFilter</span> {
+
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">JwtService</span> jwtService;
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">UserDetailsService</span> userDetailsService;
+
+    <span class="text-[#6a9955]">// Constructor injection omitted for brevity</span>
+
+    <span class="text-[#4ec9b0]">@Override</span>
+    <span class="text-[#569cd6]">protected void</span> doFilterInternal(
+            <span class="text-[#4ec9b0]">HttpServletRequest</span> request,
+            <span class="text-[#4ec9b0]">HttpServletResponse</span> response,
+            <span class="text-[#4ec9b0]">FilterChain</span> filterChain
+    ) <span class="text-[#569cd6]">throws</span> ServletException, IOException {
+        
+        <span class="text-[#6a9955]">// 1. Extract Header</span>
+        <span class="text-[#569cd6]">final</span> <span class="text-[#4ec9b0]">String</span> authHeader = request.getHeader(<span class="text-[#ce9178]">"Authorization"</span>);
+        <span class="text-[#569cd6]">final</span> <span class="text-[#4ec9b0]">String</span> jwt;
+        <span class="text-[#569cd6]">final</span> <span class="text-[#4ec9b0]">String</span> username;
+
+        <span class="text-[#6a9955]">// 2. Check if valid Bearer token exists</span>
+        <span class="text-[#569cd6]">if</span> (authHeader == <span class="text-[#569cd6]">null</span> || !authHeader.startsWith(<span class="text-[#ce9178]">"Bearer "</span>)) {
+            filterChain.doFilter(request, response);
+            <span class="text-[#569cd6]">return</span>;
+        }
+
+        <span class="text-[#6a9955]">// 3. Extract Token and Username</span>
+        jwt = authHeader.substring(7);
+        username = jwtService.extractUsername(jwt); <span class="text-[#6a9955]">// Throws exception if signature is bad</span>
+
+        <span class="text-[#6a9955]">// 4. If user isn't already authenticated in this thread</span>
+        <span class="text-[#569cd6]">if</span> (username != <span class="text-[#569cd6]">null</span> && SecurityContextHolder.getContext().getAuthentication() == <span class="text-[#569cd6]">null</span>) {
+            
+            <span class="text-[#6a9955]">// Load user from DB (or optionally directly from token claims to avoid DB hit)</span>
+            <span class="text-[#4ec9b0]">UserDetails</span> userDetails = <span class="text-[#569cd6]">this</span>.userDetailsService.loadUserByUsername(username);
+
+            <span class="text-[#6a9955]">// 5. Validate Expiration and Username match</span>
+            <span class="text-[#569cd6]">if</span> (jwtService.isTokenValid(jwt, userDetails)) {
+                
+                <span class="text-[#6a9955]">// 6. Create Authentication Object</span>
+                <span class="text-[#4ec9b0]">UsernamePasswordAuthenticationToken</span> authToken = <span class="text-[#569cd6]">new</span> UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        <span class="text-[#569cd6]">null</span>, <span class="text-[#6a9955]">// No credentials needed anymore</span>
+                        userDetails.getAuthorities()
+                );
+                
+                <span class="text-[#6a9955]">// 7. Save to Security Context</span>
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        }
+        
+        <span class="text-[#6a9955]">// 8. Continue down the filter chain</span>
+        filterChain.doFilter(request, response);
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-purple-50 to-white border-l-4 border-purple-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-purple-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "JWT is the backbone of modern, distributed stateless architectures. By embedding user identity and authorities directly into a cryptographically signed payload, we entirely eliminate the need for server-side HTTP Sessions and Redis-backed session clustering.
+                            <br><br>
+                            However, statelessness introduces the 'Revocation Problem'. Because the token is mathematically verified, it remains valid until it expires, making immediate logout or user banning difficult. To mitigate this in enterprise systems, I implement a dual-token strategy: a short-lived Access Token (e.g., 10 minutes) and a long-lived Refresh Token stored securely in an HttpOnly cookie. For immediate revocation, I maintain a high-performance JWT Blacklist in Redis.
+                            <br><br>
+                            Furthermore, for microservices, I transition away from symmetric HS256 signatures and use asymmetric RS256 (Public/Private Key pairs). The Auth Server signs the token with a Private Key, and all downstream microservices verify it using a publicly distributed Public Key (usually fetched via a JWKS endpoint). This guarantees zero-trust security without sharing secrets across teams."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-100 to-indigo-50 flex items-center justify-center text-purple-600 shadow-sm border border-purple-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-purple-200 transition-colors">
+                            <i class="ph-fill ph-code text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Structure:</strong> Header, Payload (Claims), Signature. Joined by dots.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-purple-200 transition-colors">
+                            <i class="ph-fill ph-lock-key text-purple-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Encoding:</strong> Base64Url encoded. NOT encrypted. Do not store secrets.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-purple-200 transition-colors">
+                            <i class="ph-fill ph-database text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Stateless:</strong> Server stores no session. Validation is purely mathematical.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-purple-200 transition-colors">
+                            <i class="ph-fill ph-arrows-merge text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Symmetric (HS256):</strong> One secret key for signing and verifying.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-purple-200 transition-colors">
+                            <i class="ph-fill ph-key text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Asymmetric (RS256):</strong> Private key signs, Public key verifies. Safe for microservices.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-purple-200 transition-colors">
+                            <i class="ph-fill ph-arrows-clockwise text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Refresh Tokens:</strong> Used to obtain new Access Tokens without forcing re-login.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-purple-200 transition-colors">
+                            <i class="ph-fill ph-funnel text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Filter:</strong> Extending <code>OncePerRequestFilter</code> ensures it fires precisely once per API call.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-purple-200 transition-colors">
+                            <i class="ph-fill ph-shield-warning text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Revocation:</strong> Handled via short lifespans or a Redis Blacklist.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "A JSON Web Token (JWT) is an open standard for securely transmitting identity and authorization claims between a client and a server in a stateless manner.
+                            <br><br>
+                            In a Spring Boot application, instead of relying on server-side HTTP sessions, the server verifies the user's login credentials once and issues a JWT. This token contains a Base64-encoded header, a payload containing user claims like username and roles, and a cryptographic signature. On subsequent requests, the client sends this token in the Authorization header. 
+                            <br><br>
+                            We intercept this request using a custom <code>OncePerRequestFilter</code> placed early in the <code>SecurityFilterChain</code>. The filter mathematically verifies the signature using a Secret or Public Key. If valid, it extracts the user details and populates the <code>SecurityContextHolder</code>, granting access. This stateless approach is highly scalable and perfectly suited for microservice architectures."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        
+  
+    </main>
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-purple-50/50');
+                });
+                
+                this.classList.toggle('bg-purple-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-purple-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-purple-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-purple-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic with enhanced feedback
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-purple-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-purple-700', 'bg-purple-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-purple-700', 'bg-purple-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Mapping Annotations Interview Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: { 50: '#f0f9eb', 100: '#dbf0cd', 400: '#86c953', 500: '#6db33f', 600: '#589b2f', 900: '#234011', 950: '#142609' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .accordion-content { transition: all 0.4s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .accordion-content.open { max-height: 800px; opacity: 1; padding-top: 1rem; padding-bottom: 1.5rem; }
+        .accordion-icon { transition: transform 0.4s ease-in-out; }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+        .mac-window { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="Request Mapping">Request Mapping</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: Handler Mapping
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. Key Points
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+        <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+            
+            <div class="mb-16 pt-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                    <i class="ph-fill ph-sparkle"></i> Routing Engine
+                </div>
+                <h1 class="text-4xl md:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Request Mapping</span>
+                </h1>
+                <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                    Mastering @RequestMapping, composed shortcuts like @GetMapping, and the mechanics of URL routing.
+                </p>
+            </div>
+
+            <section id="definition" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                        <p class="text-slate-600 text-sm font-medium">Imagine an office building's receptionist. When you say "I have a package for IT," they direct you to Room 101. Request mappings are the "receptionists" of Spring Boot—they look at the incoming HTTP request and direct it to the exact Java method designed to handle it.</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                        <p class="text-slate-600 text-sm font-medium"><code>@RequestMapping</code> and its specialized variants (<code>@GetMapping</code>, <code>@PostMapping</code>, etc.) map web requests to specific handler classes and/or handler methods in a Controller, populating the <code>RequestMappingHandlerMapping</code> registry.</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                        <p class="text-slate-600 text-sm font-medium">To define the exact API Contract. These annotations dictate the URL path, the allowed HTTP methods, what Content-Type headers the method accepts, and what format it returns.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="internal-working" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-gears text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: Handler Mapping</h2>
+                </div>
+
+                <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-sm border border-slate-100 space-y-8">
+                    <p class="text-slate-600 font-medium">At startup, Spring scans your Controllers, reads all mapping annotations, and builds a massive registry inside the <code>RequestMappingHandlerMapping</code> component. Here is how a request is routed at runtime.</p>
+                    
+                    <div class="bg-slate-900 rounded-2xl p-6 shadow-inner text-center border border-slate-800">
+                        <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-6 text-left flex items-center gap-2"><i class="ph-fill ph-git-merge text-spring-400"></i> Request Routing Engine</h3>
+                        
+                        <div class="w-full flex flex-col items-center text-slate-300 py-4 relative">
+                            <div class="bg-slate-800 border border-slate-600 px-6 py-4 rounded-xl shadow-lg w-full flex justify-between items-center z-10 mb-6 max-w-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="bg-blue-500/20 text-blue-400 font-mono text-xs px-2 py-1 rounded">POST</div>
+                                    <div class="font-mono text-sm">/api/users</div>
+                                </div>
+                                <div class="text-xs text-slate-400">Incoming HTTP Request</div>
+                            </div>
+                            
+                            <i class="ph-bold ph-caret-down text-slate-600 -mt-2 mb-4"></i>
+
+                            <div class="bg-slate-800 border border-slate-600 px-6 py-4 rounded-xl shadow-lg w-full z-10 mb-6 max-w-lg">
+                                <div class="text-white font-bold mb-1">DispatcherServlet</div>
+                                <div class="text-xs text-slate-400">Queries HandlerMapping: "Who handles this?"</div>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-4 w-full max-w-2xl mt-4">
+                                <div class="flex flex-col items-center opacity-50">
+                                    <div class="bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg text-xs w-full text-center font-mono">
+                                        @GetMapping<br>"/api/users"
+                                    </div>
+                                    <i class="ph-bold ph-x text-red-500 mt-2"></i>
+                                    <span class="text-[10px] text-slate-500 mt-1">Method mismatch</span>
+                                </div>
+                                
+                                <div class="flex flex-col items-center relative">
+                                    <div class="bg-emerald-900/40 border border-emerald-500/50 px-3 py-2 rounded-lg text-xs w-full text-center font-mono text-emerald-300 shadow-md">
+                                        @PostMapping<br>"/api/users"
+                                    </div>
+                                    <i class="ph-bold ph-check text-emerald-500 mt-2"></i>
+                                    <span class="text-[10px] text-emerald-400 mt-1">Exact Match!</span>
+                                </div>
+                                
+                                <div class="flex flex-col items-center opacity-50">
+                                    <div class="bg-slate-800 border border-slate-700 px-3 py-2 rounded-lg text-xs w-full text-center font-mono">
+                                        @PostMapping<br>"/api/orders"
+                                    </div>
+                                    <i class="ph-bold ph-x text-red-500 mt-2"></i>
+                                    <span class="text-[10px] text-slate-500 mt-1">URI mismatch</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="real-world" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-buildings text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                </div>
+
+                <div class="bg-slate-900 rounded-[2rem] p-8 md:p-10 text-white shadow-xl relative overflow-hidden group">
+                    <h3 class="text-2xl font-display font-bold mb-3 text-spring-400">E-Commerce Cart API</h3>
+                    <p class="text-slate-300 mb-8 font-medium">Standard RESTful mapping conventions mapped to HTTP verbs.</p>
+                    
+                    <div class="space-y-4 relative z-10">
+                        <div class="flex gap-4 items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                            <div class="w-16 text-center text-xs font-bold font-mono bg-blue-500/20 text-blue-400 py-1 rounded">GET</div>
+                            <div class="font-mono text-sm flex-1">/cart</div>
+                            <div class="text-sm text-slate-400"><code class="text-blue-300">@GetMapping</code> (Fetch the cart)</div>
+                        </div>
+                        <div class="flex gap-4 items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                            <div class="w-16 text-center text-xs font-bold font-mono bg-emerald-500/20 text-emerald-400 py-1 rounded">POST</div>
+                            <div class="font-mono text-sm flex-1">/cart/items</div>
+                            <div class="text-sm text-slate-400"><code class="text-emerald-300">@PostMapping</code> (Add new item)</div>
+                        </div>
+                        <div class="flex gap-4 items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                            <div class="w-16 text-center text-xs font-bold font-mono bg-amber-500/20 text-amber-400 py-1 rounded">PUT</div>
+                            <div class="font-mono text-sm flex-1">/cart/items/{id}</div>
+                            <div class="text-sm text-slate-400"><code class="text-amber-300">@PutMapping</code> (Update quantity)</div>
+                        </div>
+                        <div class="flex gap-4 items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                            <div class="w-16 text-center text-xs font-bold font-mono bg-red-500/20 text-red-400 py-1 rounded">DELETE</div>
+                            <div class="font-mono text-sm flex-1">/cart/items/{id}</div>
+                            <div class="text-sm text-slate-400"><code class="text-red-300">@DeleteMapping</code> (Remove item)</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="key-points" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-target text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. Key Points</h2>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-5">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">1. Class-Level Mapping</h4>
+                        <p class="text-sm text-slate-600 font-medium">You can place <code>@RequestMapping("/api/users")</code> at the class level to establish a base URI. All method-level mappings are appended to this base path.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">2. Composed Annotations</h4>
+                        <p class="text-sm text-slate-600 font-medium"><code>@GetMapping</code> is just a shortcut for <code>@RequestMapping(method = RequestMethod.GET)</code>. Introduced in Spring 4.3 to reduce boilerplate.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">3. Consumes & Produces</h4>
+                        <p class="text-sm text-slate-600 font-medium">You can restrict requests. <code>consumes = "application/json"</code> requires the client to send JSON. <code>produces = "application/xml"</code> tells the client this method returns XML.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">4. Ambiguous Mappings</h4>
+                        <p class="text-sm text-slate-600 font-medium">If two methods map to the exact same URI and HTTP method, Spring throws an <code>AmbiguousHandlerResolutionException</code> and crashes on startup.</p>
+                    </div>
+                    <div class="md:col-span-2 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">5. Wildcards and Ant-style Paths</h4>
+                        <p class="text-sm text-slate-600 font-medium">Mappings support Ant-style patterns. <code>@GetMapping("/users/*")</code> matches one path segment (<code>/users/123</code>). <code>@GetMapping("/users/**")</code> matches zero or more recursively (<code>/users/123/profile</code>).</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="faqs" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q1: What happens if I use @RequestMapping without specifying a method?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-spring-400 pl-4"><strong>Answer:</strong> By default, it will map to <strong>all</strong> HTTP methods (GET, POST, PUT, DELETE, etc.) for that URI. This violates REST principles. You should always specify the method.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q2: If there is a GET to `/api/users/123`, but I only mapped a POST to `/api/users`, what error happens?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-spring-400 pl-4"><strong>Answer:</strong> The client receives an HTTP <strong>405 Method Not Allowed</strong> error. Spring found the path, but the HTTP verb (GET) did not match the registered handler (POST).</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="code-example" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-spring-100 flex items-center justify-center text-spring-600">
+                        <i class="ph-duotone ph-code text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example</h2>
+                </div>
+
+                <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                    <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="ml-4 text-xs font-mono text-slate-400">ProductController.java</span>
+                    </div>
+                    <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code><span class="text-[#c586c0]">import</span> org.springframework.web.bind.annotation.*;
+<span class="text-[#c586c0]">import</span> org.springframework.http.ResponseEntity;
+
+<span class="text-[#4ec9b0]">@RestController</span>
+<span class="text-[#6a9955]">/* 1. CLASS-LEVEL MAPPING: Pre-pends "/api/v1/products" to all methods below */</span>
+<span class="text-[#4ec9b0]">@RequestMapping</span>(<span class="text-[#ce9178]">"/api/v1/products"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">ProductController</span> {
+
+    <span class="text-[#6a9955]">/* 2. COMPOSED ANNOTATION (GET) */</span>
+    <span class="text-[#4ec9b0]">@GetMapping</span>
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">ResponseEntity</span>&lt;<span class="text-[#4ec9b0]">List</span>&lt;<span class="text-[#4ec9b0]">Product</span>&gt;&gt; getProducts() {
+        <span class="text-[#569cd6]">return</span> ResponseEntity.ok(productList);
+    }
+
+    <span class="text-[#6a9955]">/* 3. PATH VARIABLE extraction */</span>
+    <span class="text-[#4ec9b0]">@GetMapping</span>(<span class="text-[#ce9178]">"/{id}"</span>)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">ResponseEntity</span>&lt;<span class="text-[#4ec9b0]">Product</span>&gt; getProductById(<span class="text-[#4ec9b0]">@PathVariable</span>(<span class="text-[#ce9178]">"id"</span>) <span class="text-[#4ec9b0]">Long</span> productId) {
+        <span class="text-[#569cd6]">return</span> ResponseEntity.ok(product);
+    }
+
+    <span class="text-[#6a9955]">/* 4. CONTENT NEGOTIATION (consumes/produces) */</span>
+    <span class="text-[#4ec9b0]">@PostMapping</span>(<span class="text-[#9cdcfe]">consumes</span> = <span class="text-[#ce9178]">"application/json"</span>, <span class="text-[#9cdcfe]">produces</span> = <span class="text-[#ce9178]">"application/json"</span>)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">ResponseEntity</span>&lt;<span class="text-[#4ec9b0]">Product</span>&gt; createProduct(<span class="text-[#4ec9b0]">@RequestBody</span> <span class="text-[#4ec9b0]">ProductRequest</span> req) {
+        <span class="text-[#569cd6]">return</span> ResponseEntity.status(201).body(newProduct);
+    }
+}</code></pre>
+                </div>
+            </section>
+
+            <section id="senior-answer" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white">
+                        <i class="ph-duotone ph-user-focus text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                </div>
+
+                <div class="bg-slate-50 border-l-4 border-spring-500 p-8 rounded-r-3xl shadow-sm">
+                    <p class="text-slate-700 text-lg leading-relaxed font-medium italic">
+                        "Request mappings define the exact API contracts of our system. I strictly enforce the use of composed annotations like @GetMapping and @PostMapping to ensure endpoints map perfectly to HTTP verbs and prevent developers from exposing broad, unconstrained endpoints. In an enterprise architecture, I use the advanced attributes of these annotations extensively. Specifically, I leverage the 'produces' and 'consumes' attributes to strictly enforce Content-Type negotiation, and the 'headers' attribute for robust API versioning (e.g., mapping X-API-VERSION=2 to a newer Java method) to maintain backwards compatibility seamlessly."
+                    </p>
+                </div>
+            </section>
+            
+        </div>
+    
+  
+    </main>
+    <script>
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('bg-slate-50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                } else {
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                    });
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

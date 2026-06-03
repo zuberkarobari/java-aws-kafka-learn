@@ -26,7 +26,7 @@ export const PATHWAYS = {
     title: 'Spring Boot',
     icon: '🌱',
     description: 'Build enterprise-grade REST APIs, data layers with JPA, and secure endpoints with JWT.',
-    categories: ['Spring Boot', 'Spring Boot Interview Q&A'],
+    categories: ['Spring Boot', 'Spring Boot Core Concepts', 'Web & REST API', 'Data & JPA', 'Transactions', 'Security', 'Cloud & Messaging', 'Spring Boot Interview Q&A'],
   },
   aws: {
     id: 'aws',
@@ -54,7 +54,7 @@ export const PATHWAYS = {
     title: 'Interview Prep',
     icon: '💼',
     description: 'Crack senior backend interviews with 150+ high-frequency Q&As in Java, Spring Boot, Microservices, and DSA.',
-    categories: ['Java Interview Q&A', 'Spring Boot Interview Q&A', 'Microservices Interview Q&A', 'DSA Interview Q&A'],
+    categories: ['Java Interview Q&A', 'Spring Boot Core Concepts', 'Web & REST API', 'Data & JPA', 'Transactions', 'Security', 'Cloud & Messaging', 'Spring Boot Interview Q&A', 'Microservices Interview Q&A', 'DSA Interview Q&A'],
   },
   studyplan: {
     id: 'studyplan',
@@ -114,12 +114,33 @@ export const TOPIC_ORDER = [
 
   // ── Spring Boot ───────────────────────────────────────────────
   'springboot',
-  'spring-rest-api',
-  'spring-data-jpa',
-  'spring-security',
 
   // ── Spring Boot Interview Q&A ──────────────────────────────────
   'questions and answers/spring boot/springboot_qa_p1',
+  'spring-boot/spring_boot_internals',
+  'spring-boot/stereotypes',
+  'spring-boot/stereotype_annotations',
+  'spring-boot/bean_scopes',
+  'spring-boot/autowired_internals',
+  'spring-boot/ambiguity_resolution',
+  'spring-boot/request_lifecycle',
+  'spring-boot/restcontroller',
+  'spring-boot/request_mapping_annotations',
+  'spring-boot/path_variable_vs_request_param',
+  'spring-boot/global_error_handling',
+  'spring-boot/spring_data_jpa',
+  'spring-boot/jpa_lifecycle',
+  'spring-boot/onetoone_mapping',
+  'spring-boot/onetomany_mapping',
+  'spring-boot/manytomany_mapping',
+  'spring-boot/transactional_guide',
+  'spring-boot/transaction_propagation',
+  'spring-boot/rollback_mechanism',
+  'spring-boot/spring_security',
+  'spring-boot/authentication_vs_authorization',
+  'spring-boot/jwt_authentication',
+  'spring-boot/aws_day19_sqs_sns_eventbridge',
+
 
   // ── AWS Cloud ─────────────────────────────────────────────────
   'aws/aws_day1_full_session',
@@ -208,6 +229,7 @@ export const TOPIC_ORDER = [
   'key-topics/microservice_communication_masterclass',
   'key-topics/saga_pattern_flow',
   'key-topics/spring_cloud_gateway_flow',
+  'key-topics/system_design_sandbox',
 
   // ── Key Topics: Java Memory & Concurrency Reels ──────────────
   'key-topics/concurrenthashmap_internals_reel',
@@ -290,21 +312,7 @@ export const TOPIC_META = {
     icon: '🌱',
     description: 'Auto-configuration, starters, and building your first Spring app.',
   },
-  'spring-rest-api': {
-    category: 'Spring Boot',
-    icon: '🔗',
-    description: 'REST controllers, request mapping, and response handling.',
-  },
-  'spring-data-jpa': {
-    category: 'Spring Boot',
-    icon: '🗄️',
-    description: 'Repositories, entities, JPQL queries, and database integration.',
-  },
-  'spring-security': {
-    category: 'Spring Boot',
-    icon: '🛡️',
-    description: 'Authentication, authorization, JWT, and securing REST endpoints.',
-  },
+
 
   // ─── AWS Cloud ─────────────────────────────────────────────────
   'aws/aws_day1_full_session': {
@@ -464,6 +472,144 @@ export const TOPIC_META = {
     icon: '🌱',
     title: 'Spring Boot 50 Q&A',
     description: 'Deep-dive Q&As covering auto-configuration, WebFlux, security, and JPA.',
+  },
+'spring-boot/ambiguity_resolution': {
+    category: 'Spring Boot Interview Q&A',
+    icon: '🌱',
+    title: 'Ambiguity Resolution',
+    description: 'Learn about Ambiguity Resolution in Spring Boot.',
+  },
+  'spring-boot/authentication_vs_authorization': {
+    category: 'Security',
+    icon: '🌱',
+    title: 'Authentication Vs Authorization',
+    description: 'Learn about Authentication Vs Authorization in Spring Boot.',
+  },
+  'spring-boot/autowired_internals': {
+    category: 'Spring Boot Core Concepts',
+    icon: '🌱',
+    title: 'Autowired Internals',
+    description: 'Learn about Autowired Internals in Spring Boot.',
+  },
+  'spring-boot/aws_day19_sqs_sns_eventbridge': {
+    category: 'Cloud & Messaging',
+    icon: '🌱',
+    title: 'Aws Day19 Sqs Sns Eventbridge',
+    description: 'Learn about Aws Day19 Sqs Sns Eventbridge in Spring Boot.',
+  },
+  'spring-boot/bean_scopes': {
+    category: 'Spring Boot Core Concepts',
+    icon: '🌱',
+    title: 'Bean Scopes',
+    description: 'Learn about Bean Scopes in Spring Boot.',
+  },
+  'spring-boot/global_error_handling': {
+    category: 'Web & REST API',
+    icon: '🌱',
+    title: 'Global Error Handling',
+    description: 'Learn about Global Error Handling in Spring Boot.',
+  },
+  'spring-boot/jpa_lifecycle': {
+    category: 'Data & JPA',
+    icon: '🌱',
+    title: 'Jpa Lifecycle',
+    description: 'Learn about Jpa Lifecycle in Spring Boot.',
+  },
+  'spring-boot/jwt_authentication': {
+    category: 'Security',
+    icon: '🌱',
+    title: 'Jwt Authentication',
+    description: 'Learn about Jwt Authentication in Spring Boot.',
+  },
+  'spring-boot/manytomany_mapping': {
+    category: 'Data & JPA',
+    icon: '🌱',
+    title: 'Manytomany Mapping',
+    description: 'Learn about Manytomany Mapping in Spring Boot.',
+  },
+  'spring-boot/onetomany_mapping': {
+    category: 'Data & JPA',
+    icon: '🌱',
+    title: 'Onetomany Mapping',
+    description: 'Learn about Onetomany Mapping in Spring Boot.',
+  },
+  'spring-boot/onetoone_mapping': {
+    category: 'Data & JPA',
+    icon: '🌱',
+    title: 'Onetoone Mapping',
+    description: 'Learn about Onetoone Mapping in Spring Boot.',
+  },
+  'spring-boot/path_variable_vs_request_param': {
+    category: 'Web & REST API',
+    icon: '🌱',
+    title: 'Path Variable Vs Request Param',
+    description: 'Learn about Path Variable Vs Request Param in Spring Boot.',
+  },
+  'spring-boot/request_lifecycle': {
+    category: 'Web & REST API',
+    icon: '🌱',
+    title: 'Request Lifecycle',
+    description: 'Learn about Request Lifecycle in Spring Boot.',
+  },
+  'spring-boot/request_mapping_annotations': {
+    category: 'Web & REST API',
+    icon: '🌱',
+    title: 'Request Mapping Annotations',
+    description: 'Learn about Request Mapping Annotations in Spring Boot.',
+  },
+  'spring-boot/restcontroller': {
+    category: 'Web & REST API',
+    icon: '🌱',
+    title: 'Restcontroller',
+    description: 'Learn about Restcontroller in Spring Boot.',
+  },
+  'spring-boot/rollback_mechanism': {
+    category: 'Transactions',
+    icon: '🌱',
+    title: 'Rollback Mechanism',
+    description: 'Learn about Rollback Mechanism in Spring Boot.',
+  },
+  'spring-boot/spring_boot_internals': {
+    category: 'Spring Boot Core Concepts',
+    icon: '🌱',
+    title: 'Spring Boot Internals',
+    description: 'Learn about Spring Boot Internals in Spring Boot.',
+  },
+  'spring-boot/spring_data_jpa': {
+    category: 'Data & JPA',
+    icon: '🌱',
+    title: 'Spring Data Jpa',
+    description: 'Learn about Spring Data Jpa in Spring Boot.',
+  },
+  'spring-boot/spring_security': {
+    category: 'Security',
+    icon: '🌱',
+    title: 'Spring Security',
+    description: 'Learn about Spring Security in Spring Boot.',
+  },
+  'spring-boot/stereotype_annotations': {
+    category: 'Spring Boot Core Concepts',
+    icon: '🌱',
+    title: 'Stereotype Annotations',
+    description: 'Learn about Stereotype Annotations in Spring Boot.',
+  },
+  'spring-boot/stereotypes': {
+    category: 'Spring Boot Core Concepts',
+    icon: '🌱',
+    title: 'Stereotypes',
+    description: 'Learn about Stereotypes in Spring Boot.',
+  },
+  'spring-boot/transaction_propagation': {
+    category: 'Transactions',
+    icon: '🌱',
+    title: 'Transaction Propagation',
+    description: 'Learn about Transaction Propagation in Spring Boot.',
+  },
+  'spring-boot/transactional_guide': {
+    category: 'Transactions',
+    icon: '🌱',
+    title: 'Transactional Guide',
+    description: 'Learn about Transactional Guide in Spring Boot.',
   },
 
   // ─── Microservices Interview Q&A ────────────────────────────────
@@ -836,6 +982,12 @@ export const TOPIC_META = {
     icon: '🛡️',
     title: 'Spring Cloud Gateway Flow',
     description: 'Explore filters, predicates, load balancing, and routing tables.',
+  },
+  'key-topics/system_design_sandbox': {
+    category: 'System Design & Architecture',
+    icon: '🏗️',
+    title: 'System Design Sandbox',
+    description: 'Interactive architecture builder. Drag 30 AWS/backend components, draw connections, run the resilience analyzer, and export your diagram as JSON.',
   },
 
   // ── Key Topics: Java Memory & Concurrency Reels ──────────────

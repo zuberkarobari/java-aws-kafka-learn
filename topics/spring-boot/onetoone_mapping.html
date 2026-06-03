@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPA @OneToOne Mapping Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: {
+                            50: '#f0f9eb',
+                            100: '#dbf0cd',
+                            400: '#86c953',
+                            500: '#6db33f', // Official Spring Green
+                            600: '#589b2f',
+                            900: '#234011',
+                            950: '#142609',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="@OneToOne Mapping">@OneToOne Mapping</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: Owning vs Inverse
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example: The Best Practice
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
+            </a>
+            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-sparkle"></i> Entity Relationships
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        @OneToOne <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Mapping</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering bidirectional links, the owning side vs inverse side, @MapsId, and the infamous lazy-loading proxy issue.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">A relationship where one row in a table is linked to exactly one row in another table. For example, a User has exactly one UserProfile, and that UserProfile belongs to exactly one User.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">An association defining a 1:1 multiplicity. At the database level, it is enforced by adding a UNIQUE constraint to a Foreign Key column, or by sharing the identical Primary Key across both tables.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To normalize data, secure sensitive columns, or achieve <strong>vertical partitioning</strong>. It allows you to separate heavy, rarely accessed data (like a BLOB photo or huge Bio text) from the frequently accessed main entity.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: Owning vs Inverse</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">Understanding who holds the Foreign Key is the most critical part of bidirectional mappings.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-12 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <div class="flex flex-col md:flex-row items-stretch justify-center w-full gap-8 relative z-10">
+                                
+                                <!-- Inverse Side (User) -->
+                                <div class="flex-1 bg-slate-800 border border-slate-600 p-6 rounded-xl relative shadow-lg">
+                                    <div class="absolute -top-3 right-4 bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest border border-slate-500">Inverse Side</div>
+                                    <h4 class="font-display font-bold text-lg text-emerald-400 mb-4 flex items-center gap-2"><i class="ph-fill ph-user text-xl"></i> User Entity</h4>
+                                    
+                                    <div class="bg-black/40 p-3 rounded-lg font-mono text-sm text-slate-300 mb-4 border border-slate-700">
+                                        <span class="text-emerald-400">@OneToOne</span>(mappedBy = <span class="text-amber-300">"user"</span>)<br>
+                                        <span class="text-blue-400">private</span> UserProfile profile;
+                                    </div>
+                                    
+                                    <ul class="text-xs text-slate-400 space-y-2">
+                                        <li class="flex items-start gap-2"><i class="ph-bold ph-x text-red-400 mt-0.5"></i> Does NOT contain the Foreign Key in DB.</li>
+                                        <li class="flex items-start gap-2"><i class="ph-bold ph-info text-blue-400 mt-0.5"></i> Uses <code>mappedBy</code> to tell Hibernate: "Look at the 'user' field in UserProfile to find the mapping rules."</li>
+                                    </ul>
+                                </div>
+
+                                <!-- Connection Line -->
+                                <div class="flex flex-col justify-center items-center relative">
+                                    <div class="hidden md:block w-16 h-0.5 bg-emerald-500 relative">
+                                        <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 border-t-2 border-r-2 border-emerald-500 transform rotate-45"></div>
+                                    </div>
+                                    <div class="md:hidden h-8 w-0.5 bg-emerald-500 relative my-2">
+                                        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 border-b-2 border-r-2 border-emerald-500 transform rotate-45"></div>
+                                    </div>
+                                    <span class="bg-slate-900 border border-emerald-500/50 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded absolute whitespace-nowrap shadow-lg z-10">Foreign Key</span>
+                                </div>
+
+                                <!-- Owning Side (UserProfile) -->
+                                <div class="flex-1 bg-emerald-900/20 border-2 border-emerald-500/50 p-6 rounded-xl relative shadow-[0_0_20px_rgba(16,185,129,0.15)]">
+                                    <div class="absolute -top-3 right-4 bg-emerald-500 text-emerald-950 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest shadow-sm">Owning Side</div>
+                                    <h4 class="font-display font-bold text-lg text-emerald-300 mb-4 flex items-center gap-2"><i class="ph-fill ph-identification-card text-xl"></i> UserProfile Entity</h4>
+                                    
+                                    <div class="bg-black/40 p-3 rounded-lg font-mono text-sm text-slate-300 mb-4 border border-emerald-500/30">
+                                        <span class="text-emerald-400">@OneToOne</span><br>
+                                        <span class="text-emerald-400">@JoinColumn</span>(name = <span class="text-amber-300">"user_id"</span>)<br>
+                                        <span class="text-blue-400">private</span> User user;
+                                    </div>
+                                    
+                                    <ul class="text-xs text-emerald-100 space-y-2">
+                                        <li class="flex items-start gap-2"><i class="ph-bold ph-check text-emerald-400 mt-0.5"></i> Contains the physical Foreign Key column (<code>user_id</code>).</li>
+                                        <li class="flex items-start gap-2"><i class="ph-bold ph-key text-emerald-400 mt-0.5"></i> Is responsible for updating the relationship in the database.</li>
+                                    </ul>
+                                </div>
+                                
+                            </div>
+                            
+                            <div class="mt-8 bg-amber-900/20 border border-amber-500/30 rounded-lg p-4 w-full flex items-start gap-3">
+                                <i class="ph-fill ph-warning text-amber-500 text-xl mt-0.5"></i>
+                                <div>
+                                    <h5 class="text-amber-400 text-sm font-bold font-display">The Golden Rule of Bidirectional Mapping</h5>
+                                    <p class="text-xs text-amber-200/80 mt-1">If you only call <code>user.setProfile(profile)</code> and save, the database Foreign Key will be <strong>NULL</strong>. You MUST call <code>profile.setUser(user)</code> because the <strong>Owning Side</strong> is the only side Hibernate looks at when generating SQL <code>UPDATE/INSERT</code> statements for foreign keys.</p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-shield-check text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">Banking KYC System (Vertical Partitioning)</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Why we don't put everything in one table.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-slate-700 text-slate-300 flex items-center justify-center shrink-0 border border-slate-600"><i class="ph-fill ph-database text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Problem</h4>
+                                    <p class="text-sm text-slate-400 mt-1">In a banking app, the <code>Customer</code> table is queried 100 times a second just to show the name and balance. However, the customer also has KYC documents (Passport PDF blob, massive biography text, SSN). If we put the BLOB in the <code>Customer</code> table, every simple query pulls massive amounts of unnecessary data into memory.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-arrows-split text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The @OneToOne Solution</h4>
+                                    <p class="text-sm text-slate-300 mt-1">We split it into two tables: <code>Customer</code> and <code>KycDetails</code>. We link them with a <code>@OneToOne(fetch = FetchType.LAZY)</code>. Now, querying the customer is lightning fast. The massive KYC data is only fetched from the database when a bank admin explicitly clicks "View KYC Documents" and the code calls <code>customer.getKycDetails()</code>.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">Owning Side Rules</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The side with <code>@JoinColumn</code> is the Owner. Hibernate only looks at the owner object to determine if a foreign key should be inserted or updated in the database.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">@MapsId (Shared PK)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The absolute best practice for 1:1. Instead of creating a separate <code>id</code> and a <code>user_id</code> FK on the child table, <code>@MapsId</code> tells the child to use the exact same Primary Key value as its Parent. It saves an index and enforces strict 1:1.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Default FetchType</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">By default, <code>@OneToOne</code> is <strong>EAGER</strong>. This means fetching the parent will always execute a SQL JOIN to fetch the child. You should almost always override this to <code>fetch = FetchType.LAZY</code>.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">CascadeType.ALL</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Highly common in 1:1 relationships. If you save the Parent, you usually want the Profile saved automatically. If you delete the Parent, the Profile must be deleted.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Orphan Removal</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Setting <code>orphanRemoval = true</code> means if you set the child reference to <code>null</code> (e.g., <code>user.setProfile(null)</code>), Hibernate will actually execute a SQL <code>DELETE</code> to remove the orphaned profile row.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Infinite Recursion</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Bidirectional links cause `StackOverflowError` if you call <code>toString()</code> or serialize to JSON. Use `@JsonIgnore` on the inverse side, or avoid including the relationship in Lombok's <code>@ToString</code>.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-red-200 hover:border-red-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-red-500 group-hover:text-red-600 group-hover:bg-red-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">The Inverse Lazy Loading Flaw</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Even if you set <code>fetch = FetchType.LAZY</code> on the <strong>Inverse side</strong>, it won't work out-of-the-box. Hibernate must query the DB to check if the child exists (to decide whether to assign a Proxy object or <code>null</code>). Because it hits the DB anyway, it eagerly fetches. To fix this, you need build-time bytecode enhancement.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: Why is `mappedBy` needed in a bidirectional relationship?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Without <code>mappedBy</code>, Hibernate thinks you have two separate, unrelated unidirectional relationships. It would create two foreign key columns (or a join table) to manage both sides. <code>mappedBy</code> tells Hibernate: "This relationship is already mapped by the field on the other side. Ignore this side when generating SQL updates."
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: What is the difference between @OneToOne and @ManyToOne with a Unique Constraint?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> At the database level, they result in the exact same schema (a Foreign Key with a UNIQUE constraint). The difference is purely in the Java domain model semantic. <code>@OneToOne</code> returns a single object. <code>@ManyToOne</code> implies the parent could have many children, but the DB uniquely constrains it to one, which is semantically confusing.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: Why should we use @MapsId for OneToOne?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Using a separate primary key (e.g., <code>profile_id</code>) and a foreign key (<code>user_id</code>) on the child table is a waste of index space. <code>@MapsId</code> instructs the child table to use the Parent's Primary Key as its own Primary Key. This guarantees a perfect 1:1 match and optimizes DB storage/indexing.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q4: Does FetchType.LAZY always work on OneToOne?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> No. On the <strong>Owning side</strong>, it works perfectly because Hibernate sees the FK column. On the <strong>Inverse side</strong>, Hibernate doesn't know if the child row exists. To decide whether to inject a Proxy object or `null` into the field, Hibernate is forced to execute a SELECT query, rendering LAZY useless. (Fix requires bytecode enhancement).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q5: What happens if I save the Inverse side entity?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> The entity will be saved, but the Foreign Key linking the two tables will be NULL or unchanged. Hibernate ignores the inverse side when calculating relationship updates. You must set the parent on the owning side and save it.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: The Best Practice</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">OneToOneMappingDemo.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]">// 1. The Inverse Side (Parent)</span>
+<span class="text-[#4ec9b0]">@Entity</span>
+<span class="text-[#4ec9b0]">@Table</span>(name = <span class="text-[#ce9178]">"users"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">User</span> {
+    
+    <span class="text-[#4ec9b0]">@Id</span>
+    <span class="text-[#4ec9b0]">@GeneratedValue</span>(strategy = GenerationType.IDENTITY)
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Long</span> id;
+
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">String</span> username;
+
+    <span class="text-[#6a9955]">// mappedBy = "user" means: look at the 'user' field in UserProfile</span>
+    <span class="text-[#6a9955]">// CascadeType.ALL means saving/deleting User saves/deletes Profile</span>
+    <span class="text-[#4ec9b0]">@OneToOne</span>(mappedBy = <span class="text-[#ce9178]">"user"</span>, cascade = CascadeType.ALL, orphanRemoval = <span class="text-[#569cd6]">true</span>, fetch = FetchType.LAZY)
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">UserProfile</span> profile;
+
+    <span class="text-[#6a9955]">// Helper method to keep both sides of the bidirectional link in sync!</span>
+    <span class="text-[#569cd6]">public void</span> addProfile(<span class="text-[#4ec9b0]">UserProfile</span> profile) {
+        <span class="text-[#569cd6]">this</span>.profile = profile;
+        profile.setUser(<span class="text-[#569cd6]">this</span>); <span class="text-[#6a9955]">// CRITICAL: Sets the owning side!</span>
+    }
+}
+
+<span class="text-[#6a9955]">// 2. The Owning Side (Child) - Using Best Practice @MapsId</span>
+<span class="text-[#4ec9b0]">@Entity</span>
+<span class="text-[#4ec9b0]">@Table</span>(name = <span class="text-[#ce9178]">"user_profiles"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">UserProfile</span> {
+    
+    <span class="text-[#4ec9b0]">@Id</span>
+    <span class="text-[#6a9955]">// Notice: NO @GeneratedValue here! It shares the User's ID.</span>
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">Long</span> id;
+
+    <span class="text-[#4ec9b0]">@Lob</span>
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">String</span> massiveBiography;
+
+    <span class="text-[#4ec9b0]">@OneToOne</span>(fetch = FetchType.LAZY)
+    <span class="text-[#4ec9b0]">@MapsId</span> <span class="text-[#6a9955]">// Tells Hibernate: Share the PK of the 'user' object as my PK.</span>
+    <span class="text-[#4ec9b0]">@JoinColumn</span>(name = <span class="text-[#ce9178]">"user_id"</span>) <span class="text-[#6a9955]">// Optional naming</span>
+    <span class="text-[#569cd6]">private</span> <span class="text-[#4ec9b0]">User</span> user;
+    
+    <span class="text-[#6a9955]">// Getters & Setters ...</span>
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "When mapping 1:1 relationships in JPA, junior developers often default to creating two separate auto-generated IDs and linking them with a Foreign Key. As a senior, I mandate the use of <code>@MapsId</code>. This forces the child table to share the exact same Primary Key as the parent, skipping the overhead of a unique index on a foreign key and guaranteeing strict one-to-one integrity at the database level.
+                            <br><br>
+                            Secondly, I always ensure developers override the default <code>FetchType.EAGER</code> to <code>LAZY</code> to prevent N+1 issues. However, I always ask in code reviews if they are aware of the 'Inverse Lazy Loading Flaw'. Because Hibernate cannot know if a child profile exists when loading the parent User, it is forced to run a query anyway to decide if it should inject a proxy or <code>null</code>. 
+                            <br><br>
+                            If this flaw causes a performance bottleneck in our system, I either utilize Hibernate bytecode enhancement to enable true lazy loading, or I architect the domain to use Unidirectional mapping from the child to the parent, removing the inverse mapping entirely."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-check-circle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Definition:</strong> 1 row in Table A maps to 1 row in Table B.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-key text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Owning Side:</strong> Holds the FK. Uses <code>@JoinColumn</code>.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-link-break text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Inverse Side:</strong> No FK. Uses <code>mappedBy="fieldName"</code>.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Default Fetch:</strong> Always <code>EAGER</code>. Should be overridden to <code>LAZY</code>.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-fingerprint text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>@MapsId:</strong> Best practice. Child table shares Parent's Primary Key.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-arrows-merge text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Sync Method:</strong> Always set both sides of relationship in Java memory.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-bug text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Lazy Flaw:</strong> Inverse side <code>LAZY</code> fails and eagerly queries DB anyway.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-infinity text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Recursion:</strong> Fix `toString()` and JSON serialization loops (`@JsonIgnore`).</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "A <code>@OneToOne</code> mapping in JPA defines a strict one-to-one relationship between two entities, often used for vertical table partitioning. 
+                            <br><br>
+                            In a bidirectional mapping, one side must be the 'Owner' containing the <code>@JoinColumn</code> (the actual foreign key in the database), while the other is the 'Inverse' side containing the <code>mappedBy</code> attribute. The most crucial rule is that Hibernate only checks the Owning side to update the foreign key, so we must always keep both sides in sync in Java memory.
+                            <br><br>
+                            To optimize this, I prefer using <code>@MapsId</code> on the owning side. This ensures the child table uses the exact same Primary Key as the parent, saving an index and guaranteeing data integrity. Furthermore, I always override the default <code>EAGER</code> fetch type to <code>LAZY</code>, while keeping in mind that the inverse side cannot truly be lazy without bytecode enhancement."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        
+  
+    </main>
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-spring-50/50');
+                });
+                
+                this.classList.toggle('bg-spring-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-spring-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-spring-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-spring-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic with enhanced feedback
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-spring-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+            // Add overlay backdrop when menu is open on mobile (optional enhancement)
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-spring-700', 'bg-spring-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

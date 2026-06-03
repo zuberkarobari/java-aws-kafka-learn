@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Lifecycle Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        spring: { 50: '#f0f9eb', 100: '#dbf0cd', 400: '#86c953', 500: '#6db33f', 600: '#589b2f', 900: '#234011', 950: '#142609' }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .accordion-content { transition: all 0.4s ease-in-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .accordion-content.open { max-height: 800px; opacity: 1; padding-top: 1rem; padding-bottom: 1.5rem; }
+        .accordion-icon { transition: transform 0.4s ease-in-out; }
+        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
+        .mac-window { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+    </style>
+    </head>
+<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
+        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
+                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
+                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="Filters, Interceptors & ResponseEntity">Filters, Interceptors & ResponseEntity</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+            
+            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+            </a>
+            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: The Onion Architecture
+            </a>
+            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
+            </a>
+            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. Key Points
+            </a>
+            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
+            </a>
+            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example
+            </a>
+            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
+                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
+
+
+        <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+            
+            <!-- Page Title -->
+            <div class="mb-16 pt-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-100 border border-blue-200 text-blue-700 text-sm font-semibold mb-6">
+                    <i class="ph-fill ph-path"></i> The Boundary Layers
+                </div>
+                <h1 class="text-4xl md:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                    Filters, Interceptors & <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-500">ResponseEntity</span>
+                </h1>
+                <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                    Mastering the HTTP request journey from the Servlet Container to the Spring MVC Controller and back.
+                </p>
+            </div>
+
+            <!-- 1. Definition -->
+            <section id="definition" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
+                        <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-funnel text-lg"></i> Filter</h3>
+                        <p class="text-slate-600 text-sm font-medium">A low-level Servlet concept. It is the outermost shield of your application. It intercepts HTTP requests <em>before</em> they enter the Spring framework, making it perfect for global tasks like CORS, raw request logging, and payload compression.</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-wall text-lg"></i> Interceptor</h3>
+                        <p class="text-slate-600 text-sm font-medium">A Spring MVC concept. It sits <em>inside</em> the Spring context, intercepting the request between the <code>DispatcherServlet</code> and your Controller. It has access to your beans and target methods, ideal for Auth and tenancy checks.</p>
+                    </div>
+                    <div class="bg-white p-7 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-envelope-simple text-lg"></i> ResponseEntity</h3>
+                        <p class="text-slate-600 text-sm font-medium">The payload sent back. It is a wrapper object representing the entire HTTP response. It grants explicit control over the HTTP Status Code (e.g., 201 Created), custom HTTP Headers, and the final JSON Body.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Internal Working -->
+            <section id="internal-working" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
+                        <i class="ph-duotone ph-gears text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The Onion Architecture</h2>
+                </div>
+
+                <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-sm border border-slate-100 space-y-8">
+                    <p class="text-slate-600 font-medium">A request travels through multiple layers before executing business logic, and the response travels back through those same layers in reverse. Understanding this "onion" is key to choosing the right tool.</p>
+                    
+                    <!-- Custom HTML Diagram -->
+                    <div class="bg-slate-900 rounded-2xl p-8 shadow-inner border border-slate-800 text-center">
+                        <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-6 text-left flex items-center gap-2"><i class="ph-fill ph-git-commit text-blue-400"></i> The Request/Response Pipeline</h3>
+                        
+                        <div class="w-full flex flex-col items-center py-4 relative space-y-2">
+                            
+                            <!-- Client -->
+                            <div class="flex justify-between items-center w-full px-8 relative z-10">
+                                <div class="bg-slate-800 text-slate-300 border border-slate-600 px-4 py-2 rounded shadow-md text-sm"><i class="ph-fill ph-user text-blue-400"></i> Client</div>
+                                <div class="text-[10px] text-slate-500 font-mono flex-1 px-4">
+                                    <div class="flex items-center"><div class="h-px bg-slate-600 flex-1"></div><i class="ph-bold ph-caret-right text-slate-600 -ml-1"></i></div>
+                                    HTTP Request
+                                </div>
+                                <div class="w-24"></div> <!-- Spacer -->
+                            </div>
+
+                            <!-- Filter Layer -->
+                            <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 w-full relative z-10 max-w-xl text-left">
+                                <div class="text-[10px] text-blue-400 uppercase tracking-widest font-bold mb-2">Servlet Container (Tomcat) Layer</div>
+                                <div class="bg-blue-950/50 border border-blue-800 px-4 py-3 rounded-lg text-sm text-blue-200 flex justify-between">
+                                    <span><i class="ph-fill ph-funnel text-blue-500 mr-2"></i><strong>Filter</strong> (doFilter)</span>
+                                    <span class="text-xs text-slate-400">No Spring Context</span>
+                                </div>
+                            </div>
+
+                            <!-- Dispatcher Servlet -->
+                            <div class="w-full flex justify-center py-1 relative z-10">
+                                <div class="bg-slate-800 border border-slate-600 px-4 py-1 rounded-full text-xs font-mono text-slate-300">DispatcherServlet</div>
+                            </div>
+
+                            <!-- Interceptor Layer -->
+                            <div class="bg-purple-900/20 border border-purple-500/30 rounded-xl p-4 w-full relative z-10 max-w-xl text-left">
+                                <div class="text-[10px] text-purple-400 uppercase tracking-widest font-bold mb-2">Spring MVC Layer</div>
+                                <div class="bg-purple-950/50 border border-purple-800 px-4 py-3 rounded-lg text-sm text-purple-200 flex justify-between mb-2">
+                                    <span><i class="ph-fill ph-wall text-purple-500 mr-2"></i><strong>Interceptor</strong> (preHandle)</span>
+                                    <span class="text-xs text-slate-400">Has Bean Access</span>
+                                </div>
+                            </div>
+
+                            <!-- Controller Layer -->
+                            <div class="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-6 w-full relative z-10 max-w-xl text-center shadow-[0_0_20px_rgba(16,185,129,0.05)]">
+                                <div class="text-emerald-400 font-bold mb-2"><i class="ph-fill ph-cpu"></i> @RestController</div>
+                                <div class="text-xs text-slate-400 mb-4">Executes Business Logic</div>
+                                <div class="bg-emerald-950/80 border border-emerald-700/50 px-4 py-2 rounded text-sm font-mono text-emerald-200 inline-block shadow-inner">
+                                    return <span class="font-bold text-white">ResponseEntity</span>.ok(data);
+                                </div>
+                            </div>
+
+                            <!-- Interceptor Return -->
+                            <div class="bg-purple-900/20 border border-purple-500/30 rounded-xl p-4 w-full relative z-10 max-w-xl text-left">
+                                <div class="bg-purple-950/50 border border-purple-800 px-4 py-3 rounded-lg text-sm text-purple-200 flex justify-between">
+                                    <span class="text-xs text-slate-400">Modify Response</span>
+                                    <span>(postHandle) <strong>Interceptor</strong> <i class="ph-fill ph-wall text-purple-500 ml-2"></i></span>
+                                </div>
+                            </div>
+
+                            <!-- Client Return -->
+                            <div class="flex justify-between items-center w-full px-8 relative z-10 pt-2">
+                                <div class="w-24"></div> <!-- Spacer -->
+                                <div class="text-[10px] text-slate-500 font-mono flex-1 px-4 text-right">
+                                    HTTP Response (JSON, 201 Created)
+                                    <div class="flex items-center"><i class="ph-bold ph-caret-left text-spring-500 -mr-1 z-10"></i><div class="h-px bg-spring-500/50 flex-1"></div></div>
+                                </div>
+                                <div class="bg-slate-800 text-spring-400 border border-slate-600 px-4 py-2 rounded shadow-md text-sm"><i class="ph-fill ph-device-mobile"></i> Client</div>
+                            </div>
+
+                            <!-- Center line -->
+                            <div class="absolute left-1/2 top-4 bottom-4 w-px bg-slate-700 -translate-x-1/2 z-0 opacity-50"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Real-World Example -->
+            <section id="real-world" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
+                        <i class="ph-duotone ph-buildings text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                </div>
+
+                <div class="bg-slate-900 rounded-[2rem] p-8 md:p-10 text-white shadow-xl relative overflow-hidden group">
+                    <h3 class="text-2xl font-display font-bold mb-3 text-blue-400">Multi-Tenant SaaS Application</h3>
+                    <p class="text-slate-300 mb-8 font-medium">How the layers work together securely.</p>
+                    
+                    <div class="space-y-6 relative z-10">
+                        <div class="flex gap-5 items-start">
+                            <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30"><i class="ph-fill ph-funnel text-xl"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white text-lg font-display">1. The Filter (MDC Logging)</h4>
+                                <p class="text-sm text-slate-300 mt-1">A request arrives. The <code>RequestLoggingFilter</code> intercepts the raw HTTP request, generates a unique <code>traceId</code>, and puts it in the thread's MDC context so all logs across the app include this ID.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-5 items-start">
+                            <div class="mt-1 w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30"><i class="ph-fill ph-identification-card text-xl"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white text-lg font-display">2. The Interceptor (Tenant Auth)</h4>
+                                <p class="text-sm text-slate-300 mt-1">The <code>TenantInterceptor</code> extracts a JWT, autowires the <code>TenantService</code> to verify the user, and sets the Tenant Context. If suspended, it immediately returns HTTP 403, blocking the Controller.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-5 items-start">
+                            <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30"><i class="ph-fill ph-envelope-simple text-xl"></i></div>
+                            <div>
+                                <h4 class="font-bold text-white text-lg font-display">3. ResponseEntity (The Controller)</h4>
+                                <p class="text-sm text-slate-300 mt-1">The Controller creates a resource. Instead of just returning the object (HTTP 200), it returns <code>ResponseEntity.created(uri).body(data)</code> to explicitly send HTTP 201 along with a Location header.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. Key Points -->
+            <section id="key-points" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
+                        <i class="ph-duotone ph-target text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. Key Points</h2>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-5">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">1. Filter Implementation</h4>
+                        <p class="text-sm text-slate-600 font-medium">Filters implement <code>jakarta.servlet.Filter</code>. They must explicitly call <code>chain.doFilter(request, response)</code> to pass control to the next layer.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">2. Interceptor Methods</h4>
+                        <p class="text-sm text-slate-600 font-medium">Interceptors implement <code>HandlerInterceptor</code> with 3 hooks: <code>preHandle</code>, <code>postHandle</code>, and <code>afterCompletion</code>.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">3. Context Awareness</h4>
+                        <p class="text-sm text-slate-600 font-medium">Interceptors are Spring-aware. <code>preHandle</code> receives the target <code>Object handler</code> (the Controller method), allowing reflection on custom annotations.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">4. OncePerRequestFilter</h4>
+                        <p class="text-sm text-slate-600 font-medium">Spring provides <code>OncePerRequestFilter</code>. It guarantees the filter executes exactly once per request, solving internal forward multi-execution issues.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2">5. Interceptor Registration</h4>
+                        <p class="text-sm text-slate-600 font-medium">Unlike Filters (which use <code>@Component</code>), Interceptors must be explicitly registered via <code>WebMvcConfigurer.addInterceptors()</code>.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-red-100 shadow-sm">
+                        <h4 class="font-bold text-slate-800 font-display mb-2 text-red-600">6. The Body Reading Trap</h4>
+                        <p class="text-sm text-slate-600 font-medium">If you read the HTTP Request body inside a Filter, the InputStream is consumed. The Controller will fail to read it later unless you use a <code>ContentCachingRequestWrapper</code>.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. FAQs -->
+            <section id="faqs" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
+                        <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q1: Should I use a Filter or Interceptor for JWT checking?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-blue-400 pl-4"><strong>Answer:</strong> Filters (via Spring Security) are preferred for Authentication to block unauthenticated requests early. Interceptors are better for fine-grained Authorization (checking method permissions) since they access the handler method.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                        <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                            <span class="font-display font-semibold text-slate-800">Q2: How do I stop a request from proceeding in an Interceptor?</span>
+                            <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                        </button>
+                        <div class="accordion-content bg-slate-50 px-6">
+                            <p class="text-slate-600 font-medium text-sm border-l-2 border-blue-400 pl-4"><strong>Answer:</strong> In the <code>preHandle</code> method, return <code>false</code>. Before returning false, manually write the error code to the response (e.g., <code>response.setStatus(401)</code>).</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. Code Example -->
+            <section id="code-example" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600">
+                        <i class="ph-duotone ph-code text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example</h2>
+                </div>
+
+                <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                    <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span class="ml-4 text-xs font-mono text-slate-400">LifecycleDemo.java</span>
+                    </div>
+                    <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code><span class="text-[#c586c0]">import</span> org.springframework.web.filter.OncePerRequestFilter;
+<span class="text-[#c586c0]">import</span> org.springframework.web.servlet.HandlerInterceptor;
+<span class="text-[#c586c0]">import</span> org.springframework.web.bind.annotation.*;
+<span class="text-[#c586c0]">import</span> org.springframework.http.ResponseEntity;
+<span class="text-[#c586c0]">import</span> jakarta.servlet.FilterChain;
+
+<span class="text-[#6a9955]">/* 1. FILTER (Outermost Layer) */</span>
+<span class="text-[#4ec9b0]">@Component</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">LogFilter</span> <span class="text-[#569cd6]">extends</span> <span class="text-[#4ec9b0]">OncePerRequestFilter</span> {
+    <span class="text-[#4ec9b0]">@Override</span>
+    <span class="text-[#569cd6]">protected void</span> doFilterInternal(request, response, <span class="text-[#4ec9b0]">FilterChain</span> chain) {
+        System.out.println(<span class="text-[#ce9178]">"Filter: Incoming request"</span>);
+        chain.doFilter(request, response); <span class="text-[#6a9955]">// MUST call this to continue</span>
+    }
+}
+
+<span class="text-[#6a9955]">/* 2. INTERCEPTOR (Inner Spring Layer) */</span>
+<span class="text-[#4ec9b0]">@Component</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">AuthInterceptor</span> <span class="text-[#569cd6]">implements</span> <span class="text-[#4ec9b0]">HandlerInterceptor</span> {
+    <span class="text-[#4ec9b0]">@Override</span>
+    <span class="text-[#569cd6]">public boolean</span> preHandle(request, response, <span class="text-[#4ec9b0]">Object</span> handler) {
+        <span class="text-[#569cd6]">if</span> (request.getHeader(<span class="text-[#ce9178]">"Token"</span>) == <span class="text-[#569cd6]">null</span>) {
+            response.setStatus(401);
+            <span class="text-[#569cd6]">return false</span>; <span class="text-[#6a9955]">// Blocks request</span>
+        }
+        <span class="text-[#569cd6]">return true</span>; <span class="text-[#6a9955]">// Proceeds to controller</span>
+    }
+}
+
+<span class="text-[#6a9955]">/* 3. CONTROLLER + RESPONSE ENTITY */</span>
+<span class="text-[#4ec9b0]">@RestController</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">UserController</span> {
+    <span class="text-[#4ec9b0]">@PostMapping</span>(<span class="text-[#ce9178]">"/api/users"</span>)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">ResponseEntity</span>&lt;<span class="text-[#4ec9b0]">String</span>&gt; create() {
+        <span class="text-[#6a9955]">// Full control over HTTP Status and Headers</span>
+        <span class="text-[#569cd6]">return</span> ResponseEntity
+                .status(201)
+                .header(<span class="text-[#ce9178]">"Location"</span>, <span class="text-[#ce9178]">"/api/users/99"</span>)
+                .body(<span class="text-[#ce9178]">"User created."</span>);
+    }
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- 7. Senior Dev Answer -->
+            <section id="senior-answer" class="scroll-mt-24">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white">
+                        <i class="ph-duotone ph-user-focus text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                </div>
+
+                <div class="bg-slate-50 border-l-4 border-blue-500 p-8 rounded-r-3xl shadow-sm">
+                    <p class="text-slate-700 text-lg leading-relaxed font-medium italic">
+                        "I strictly compartmentalize concerns based on the request lifecycle. If I need to log raw HTTP requests, compress responses, or handle CORS, I use a <code>Filter</code> because it operates at the highly efficient Tomcat/Servlet layer, blocking bad traffic before it touches the Spring framework. 
+                        <br><br>
+                        If I need to verify user permissions or establish tenant context, I use an <code>Interceptor</code>. Because Interceptors execute inside the DispatcherServlet, they have full access to my Spring Beans and can use Reflection to inspect the specific Controller method being called. 
+                        <br><br>
+                        Finally, at the Controller layer, I mandate the use of <code>ResponseEntity</code>. Default 200 OKs are sloppy REST design; ResponseEntity gives us the semantic control needed to return 201 Created for POSTs, 204 No Content for DELETEs, and to inject essential HTTP headers."
+                    </p>
+                </div>
+            </section>
+            
+        </div>
+    
+  
+    </main>
+    <script>
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('bg-slate-50');
+                const content = this.nextElementSibling;
+                if (content.classList.contains('open')) {
+                    content.classList.remove('open');
+                } else {
+                    document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
+                    content.classList.add('open');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
