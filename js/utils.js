@@ -4,6 +4,79 @@
  */
 
 import { TOPIC_ORDER, TOPIC_META, PATHWAYS } from './topics.config.js';
+import { saveUserData, getCurrentUser } from './firebase-service.js';
+
+// ─── Firebase In-Memory State & Sync ─────────────────────────────────────────
+
+export let inMemoryState = {
+  visited: null,
+  streakDates: null,
+  plannerTasks: null,
+  checklistConfidence: null,
+  checklistItems: null,
+  timers: null,
+  notes: null
+};
+
+export const setInMemoryState = (data) => {
+  inMemoryState = { ...inMemoryState, ...data };
+};
+
+export const clearInMemoryState = () => {
+  inMemoryState = {
+    visited: null,
+    streakDates: null,
+    plannerTasks: null,
+    checklistConfidence: null,
+    checklistItems: null,
+    timers: null,
+    notes: null
+  };
+};
+
+export const triggerSync = () => {
+  if (getCurrentUser()) {
+    saveUserData({
+      visited: inMemoryState.visited || Array.from(getVisited()),
+      streakDates: inMemoryState.streakDates || getStreakHistory(),
+      plannerTasks: inMemoryState.plannerTasks || getPlannerTasks(),
+      checklistConfidence: inMemoryState.checklistConfidence || getConfidenceRatings(),
+      checklistItems: inMemoryState.checklistItems || Array.from(getCheckedItems()),
+      timers: inMemoryState.timers || {},
+      notes: inMemoryState.notes || {}
+    });
+  }
+};
+
+export const clearAllLearningData = () => {
+  if (!confirm("Are you sure you want to clear all your learning progress? This action cannot be undone.")) {
+    return;
+  }
+  
+  clearInMemoryState();
+  
+  const keysToRemove = [
+    'java-learn-visited',
+    'java-learn-streak-dates',
+    'java-learn-planner-tasks',
+    'java-learn-checklist-confidence',
+    'java-learn-checklist-items'
+  ];
+  
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  
+  const keys = Object.keys(localStorage);
+  keys.forEach(key => {
+    if (key.startsWith('java-learn-timer-elapsed-') || 
+        key.startsWith('java-learn-timer-running-') || 
+        key.startsWith('java-learn-notes-')) {
+      localStorage.removeItem(key);
+    }
+  });
+
+  triggerSync();
+  window.location.reload();
+};
 
 // ─── Path & Navigation Prefixes ──────────────────────────────────────────────
 
@@ -180,6 +253,7 @@ const STORAGE_KEYS = {
  * @returns {Set<string>}
  */
 export const getVisited = () => {
+  if (inMemoryState.visited) return new Set(inMemoryState.visited);
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.VISITED);
     return new Set(raw ? JSON.parse(raw) : []);
@@ -195,8 +269,11 @@ export const getVisited = () => {
 export const markVisited = (id) => {
   const visited = getVisited();
   visited.add(id);
+  const arr = [...visited];
+  inMemoryState.visited = arr;
+  triggerSync();
   try {
-    localStorage.setItem(STORAGE_KEYS.VISITED, JSON.stringify([...visited]));
+    localStorage.setItem(STORAGE_KEYS.VISITED, JSON.stringify(arr));
     addStreakDate(); // Automatically log study day!
   } catch {
     // storage unavailable — silently fail
@@ -272,6 +349,7 @@ export const getGlobalProgress = () => {
 // ─── Study Streak Tracker ────────────────────────────────────────────────────
 
 export const getStreakHistory = () => {
+  if (inMemoryState.streakDates) return [...inMemoryState.streakDates];
   try {
     const raw = localStorage.getItem('java-learn-streak-dates');
     return raw ? JSON.parse(raw) : [];
@@ -289,6 +367,8 @@ export const addStreakDate = () => {
 
   if (!dates.includes(today)) {
     dates.push(today);
+    inMemoryState.streakDates = dates;
+    triggerSync();
     try {
       localStorage.setItem('java-learn-streak-dates', JSON.stringify(dates));
     } catch {}
@@ -347,6 +427,7 @@ export const getRecommendation = () => {
 // ─── Study Planner (TODO Tasks) API ───────────────────────────────────────────
 
 export const getPlannerTasks = () => {
+  if (inMemoryState.plannerTasks) return JSON.parse(JSON.stringify(inMemoryState.plannerTasks));
   try {
     const raw = localStorage.getItem('java-learn-planner-tasks');
     if (!raw) {
@@ -366,6 +447,8 @@ export const getPlannerTasks = () => {
 };
 
 export const savePlannerTasks = (tasks) => {
+  inMemoryState.plannerTasks = tasks;
+  triggerSync();
   try {
     localStorage.setItem('java-learn-planner-tasks', JSON.stringify(tasks));
   } catch {}
@@ -401,6 +484,7 @@ export const deletePlannerTask = (taskId) => {
 // ─── Study Plan Checklist State API ──────────────────────────────────────────
 
 export const getConfidenceRatings = () => {
+  if (inMemoryState.checklistConfidence) return { ...inMemoryState.checklistConfidence };
   try {
     const raw = localStorage.getItem('java-learn-checklist-confidence');
     return raw ? JSON.parse(raw) : {};
@@ -412,12 +496,15 @@ export const getConfidenceRatings = () => {
 export const saveConfidenceRating = (dayId, rating) => {
   const ratings = getConfidenceRatings();
   ratings[dayId] = rating;
+  inMemoryState.checklistConfidence = ratings;
+  triggerSync();
   try {
     localStorage.setItem('java-learn-checklist-confidence', JSON.stringify(ratings));
   } catch {}
 };
 
 export const getCheckedItems = () => {
+  if (inMemoryState.checklistItems) return new Set(inMemoryState.checklistItems);
   try {
     const raw = localStorage.getItem('java-learn-checklist-items');
     return new Set(raw ? JSON.parse(raw) : []);
@@ -427,7 +514,76 @@ export const getCheckedItems = () => {
 };
 
 export const saveCheckedItems = (checkedSet) => {
+  const arr = [...checkedSet];
+  inMemoryState.checklistItems = arr;
+  triggerSync();
   try {
-    localStorage.setItem('java-learn-checklist-items', JSON.stringify([...checkedSet]));
+    localStorage.setItem('java-learn-checklist-items', JSON.stringify(arr));
   } catch {}
+};
+
+// ─── Timers and Notes State API ──────────────────────────────────────────────
+
+export const getTimerState = (dayId) => {
+  if (inMemoryState.timers && inMemoryState.timers[dayId]) {
+    return { ...inMemoryState.timers[dayId] };
+  }
+  return {
+    elapsed: parseInt(localStorage.getItem(`java-learn-timer-elapsed-${dayId}`)) || 0,
+    running: localStorage.getItem(`java-learn-timer-running-${dayId}`) === 'true'
+  };
+};
+
+export const saveTimerState = (dayId, elapsed, running) => {
+  if (!inMemoryState.timers) inMemoryState.timers = {};
+  inMemoryState.timers[dayId] = { elapsed, running };
+  triggerSync();
+  try {
+    localStorage.setItem(`java-learn-timer-elapsed-${dayId}`, elapsed);
+    localStorage.setItem(`java-learn-timer-running-${dayId}`, running ? 'true' : 'false');
+  } catch {}
+};
+
+export const getNote = (dayId) => {
+  if (inMemoryState.notes && inMemoryState.notes[dayId] !== undefined) {
+    return inMemoryState.notes[dayId];
+  }
+  return localStorage.getItem(`java-learn-notes-${dayId}`) || '';
+};
+
+export const saveNote = (dayId, content) => {
+  if (!inMemoryState.notes) inMemoryState.notes = {};
+  inMemoryState.notes[dayId] = content;
+  triggerSync();
+  try {
+    localStorage.setItem(`java-learn-notes-${dayId}`, content);
+  } catch {}
+};
+export const getAllTimers = () => {
+  if (inMemoryState.timers) return JSON.parse(JSON.stringify(inMemoryState.timers));
+  const timers = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('java-learn-timer-elapsed-')) {
+      const dayId = key.replace('java-learn-timer-elapsed-', '');
+      timers[dayId] = {
+        elapsed: parseInt(localStorage.getItem(key)) || 0,
+        running: false
+      };
+    }
+  }
+  return timers;
+};
+
+export const getAllNotes = () => {
+  if (inMemoryState.notes) return { ...inMemoryState.notes };
+  const notes = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('java-learn-notes-')) {
+      const dayId = key.replace('java-learn-notes-', '');
+      notes[dayId] = localStorage.getItem(key) || '';
+    }
+  }
+  return notes;
 };

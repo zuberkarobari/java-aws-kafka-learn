@@ -24,8 +24,12 @@ import {
   addPlannerTask,
   togglePlannerTask,
   deletePlannerTask,
-  getConfidenceRatings
+  getConfidenceRatings,
+  setInMemoryState,
+  clearInMemoryState
 } from './utils.js';
+import { listenToAuthChanges, loginWithGoogle, logout, getUserData } from './firebase-service.js';
+import { profileComponent } from './components/ProfileComponent.js';
 import { PATHWAYS } from './topics.config.js';
 import { initCommandPalette, openCommandPalette } from './command-palette.js';
 
@@ -603,6 +607,11 @@ const renderCards = (filterText = '') => {
     return;
   }
 
+  if (activePathway === 'profile') {
+    profileComponent.render(container);
+    return;
+  }
+
   const visited = getVisited();
   const byCategory = getTopicsByCategoryAndPathway(activePathway);
   const query = filterText.toLowerCase().trim();
@@ -719,20 +728,73 @@ window.clearSearch = () => {
 const slugify = (str) =>
   str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
+// ─── Authentication ─────────────────────────────────────────────────────────────
+
+const initAuthUI = () => {
+  const authBtn = document.getElementById('auth-btn');
+  if (authBtn) {
+    authBtn.addEventListener('click', async () => {
+      const authText = document.getElementById('auth-text');
+      if (authText.textContent === 'Login') {
+        authText.textContent = '...';
+        try {
+          await loginWithGoogle();
+        } catch (e) {
+          authText.textContent = 'Login';
+        }
+      } else {
+        authText.textContent = '...';
+        try {
+          await logout();
+        } catch (e) {
+          authText.textContent = 'Logout';
+        }
+      }
+    });
+  }
+};
+
+const updateAuthUI = (user) => {
+  const authText = document.getElementById('auth-text');
+  if (authText) {
+    authText.textContent = user ? 'Logout' : 'Login';
+  }
+};
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
+
+let appInitialized = false;
 
 const init = () => {
   initTheme();
-  initPathwayTabs();
-  renderSidebar();
-  renderProgress();
-  initSearch();
-  initCommandPalette();
+  initAuthUI();
 
-  document.getElementById('header-search-btn')?.addEventListener('click', openCommandPalette);
+  listenToAuthChanges(async (user) => {
+    if (user) {
+      const data = await getUserData();
+      setInMemoryState(data);
+      updateAuthUI(user);
+    } else {
+      clearInMemoryState();
+      updateAuthUI(null);
+    }
+    
+    // Only init DOM listeners once
+    if (!appInitialized) {
+      appInitialized = true;
+      initPathwayTabs();
+      initSearch();
+      initCommandPalette();
+      document.getElementById('header-search-btn')?.addEventListener('click', openCommandPalette);
+      
+      window.addEventListener('storage', () => {
+        renderProgress();
+        renderCards(getSearchParam('search'));
+      });
+    }
 
-  // Re-render on storage changes (e.g., visiting a topic in another tab)
-  window.addEventListener('storage', () => {
+    // Always re-render on auth change
+    renderSidebar();
     renderProgress();
     renderCards(getSearchParam('search'));
   });

@@ -76,6 +76,13 @@ export const PATHWAYS = {
     icon: '📝',
     description: 'Your personal scratchpad notes collected from all study checklists.',
     categories: ['My Notes'],
+  },
+  profile: {
+    id: 'profile',
+    title: 'My Profile',
+    icon: '👤',
+    description: 'View your account details, global progress, and synced data.',
+    categories: []
   }
 };
 

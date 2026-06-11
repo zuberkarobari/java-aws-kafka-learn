@@ -10,7 +10,11 @@ import {
   getCheckedItems,
   saveCheckedItems,
   getSavedTheme,
-  saveTheme
+  saveTheme,
+  getTimerState,
+  saveTimerState,
+  getNote,
+  saveNote
 } from './utils.js';
 import { initCommandPalette, openCommandPalette } from './command-palette.js';
 
@@ -298,8 +302,9 @@ const initStopwatch = () => {
   if (!toggleBtn || !resetBtn) return;
 
   // Restore state
-  elapsedSeconds = parseInt(localStorage.getItem(`java-learn-timer-elapsed-${dayId}`)) || 0;
-  isTimerRunning = localStorage.getItem(`java-learn-timer-running-${dayId}`) === 'true';
+  const timerState = getTimerState(dayId);
+  elapsedSeconds = timerState.elapsed;
+  isTimerRunning = timerState.running;
 
   updateStopwatchDisplay();
 
@@ -328,25 +333,25 @@ const initStopwatch = () => {
 
 const startTimer = () => {
   isTimerRunning = true;
-  localStorage.setItem(`java-learn-timer-running-${dayId}`, 'true');
+  saveTimerState(dayId, elapsedSeconds, true);
   
   timerInterval = setInterval(() => {
     elapsedSeconds++;
-    localStorage.setItem(`java-learn-timer-elapsed-${dayId}`, elapsedSeconds);
+    saveTimerState(dayId, elapsedSeconds, true);
     updateStopwatchDisplay();
   }, 1000);
 };
 
 const pauseTimer = () => {
   isTimerRunning = false;
-  localStorage.setItem(`java-learn-timer-running-${dayId}`, 'false');
+  saveTimerState(dayId, elapsedSeconds, false);
   clearInterval(timerInterval);
 };
 
 const resetTimer = () => {
   pauseTimer();
   elapsedSeconds = 0;
-  localStorage.setItem(`java-learn-timer-elapsed-${dayId}`, '0');
+  saveTimerState(dayId, 0, false);
   updateStopwatchDisplay();
 };
 
@@ -476,8 +481,7 @@ const initGlobalQuickActions = () => {
   const closeNotes = document.getElementById('close-notes');
   const textarea = document.getElementById('notes-textarea');
   
-  const notesKey = 'java-learn-notes-' + dayId;
-  textarea.value = localStorage.getItem(notesKey) || '';
+  textarea.value = getNote(dayId);
 
   notesBtn.addEventListener('click', () => {
     drawer.classList.add('open');
@@ -489,7 +493,7 @@ const initGlobalQuickActions = () => {
   });
 
   textarea.addEventListener('input', () => {
-    localStorage.setItem(notesKey, textarea.value);
+    saveNote(dayId, textarea.value);
   });
 
   // Mobile sidebar toggle
