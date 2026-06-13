@@ -1,205 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spring Boot Request Flow - Claude Aesthetic</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
-
-    :root {
-        /* Anthropic Claude Inspired Palette */
-        --bg-canvas: #F8F7F4; /* Warm off-white */
-        --bg-panel: #FFFFFF; /* Pure white for contrast */
-        --text-main: #23221F; /* Soft black/charcoal */
-        --text-muted: #737373; /* Warm gray */
-        --accent-rust: #D97757; /* Claude rust/terracotta */
-        --accent-sand: #D3C4B1; /* Warm sand border */
-        --accent-sage: #6B7D6A; /* Muted sage green */
-        --accent-blue: #5C7B99; /* Muted slate blue */
-        --border-light: #E8E5DF; /* Subtle border */
-        
-        /* Flow Diagram Specific Colors */
-        --node-bg: #F0EEEA;
-        --node-border: #C2BBAE;
-        --line-color: #A3A3A3;
-    }
-
-    body {
-        margin: 0; padding: 0; background-color: #E5E0D8; color: var(--text-main);
-        font-family: 'Inter', sans-serif;
-        display: flex; justify-content: center; align-items: center;
-        min-height: 100vh; overflow: hidden;
-    }
-
-    /* 9:16 Aspect Ratio Container - Strict Flex Layout */
-    #reel-container {
-        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
-        background: var(--bg-canvas); position: relative;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08); border: 1px solid var(--border-light);
-        display: flex; flex-direction: column; overflow: hidden;
-        border-radius: 20px;
-    }
-
-    /* Minimalist Background Grid */
-    .grid-bg {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background-image: 
-            linear-gradient(var(--border-light) 1px, transparent 1px),
-            linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
-        background-size: 30px 30px;
-        opacity: 0.6; z-index: 0;
-    }
-
-    /* Header */
-    .header { padding: 30px 24px 5px; text-align: center; z-index: 10; flex-shrink: 0;}
-    .header h1 {
-        font-family: 'Lora', serif; font-size: 22px; font-weight: 600;
-        color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;
-    }
-    .header p {
-        color: var(--accent-rust); font-size: 11px; font-family: 'JetBrains Mono', monospace;
-        font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin: 0;
-    }
-
-    /* Top Half: Visual Canvas Area */
-    .canvas {
-        flex: 1.3; position: relative; z-index: 5; display: flex;
-        flex-direction: column; align-items: center; justify-content: center; min-height: 0;
-        padding: 10px 0;
-    }
-
-    /* Vertical Flow Layout */
-    .flow-pipeline {
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 30px; /* Space between nodes */
-        width: 100%;
-        padding-top: 10px;
-    }
-
-    /* Central connecting line */
-    .pipeline-track {
-        position: absolute;
-        top: 20px; bottom: 20px; left: 50%;
-        width: 2px; transform: translateX(-50%);
-        background: var(--border-light);
-        z-index: 1;
-    }
-
-    .node-wrap {
-        position: relative; z-index: 10; display: flex; align-items: center; justify-content: center;
-    }
-
-    .node {
-        background: var(--node-bg); border: 2px solid var(--node-border);
-        padding: 12px 20px; border-radius: 8px; font-family: 'Inter', sans-serif;
-        font-weight: 600; font-size: 13px; color: var(--text-main);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-        transition: all 0.4s ease; text-align: center; width: 140px;
-    }
-    
-    .node span { display: block; font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 4px; text-transform: uppercase;}
-
-    /* Special Nodes */
-    .client-node { background: var(--bg-panel); border-style: dashed; border-radius: 20px;}
-    .db-node { background: rgba(92, 123, 153, 0.1); border-color: var(--accent-blue); border-radius: 50% 50% 8px 8px;}
-    .model-node { 
-        position: absolute; right: -100px; top: -10px; 
-        background: rgba(107, 125, 106, 0.1); border-color: var(--accent-sage);
-        width: 80px; padding: 8px;
-    }
-    
-    /* Model connection branch */
-    .model-branch {
-        position: absolute; right: -30px; top: 15px; width: 30px; height: 2px; background: var(--border-light);
-    }
-
-    /* Node Active States */
-    .node.active { transform: scale(1.1); border-color: var(--accent-rust); background: var(--bg-panel); box-shadow: 0 8px 25px rgba(217, 119, 87, 0.15);}
-    .node.active span { color: var(--accent-rust); }
-
-    /* Animated Data Packet */
-    .packet {
-        position: absolute; width: 16px; height: 16px; background: var(--accent-rust);
-        border-radius: 50%; border: 3px solid var(--bg-canvas);
-        top: 0; left: 50%; transform: translateX(-50%);
-        z-index: 20; opacity: 0; transition: top 0.6s ease-in-out, opacity 0.3s;
-        box-shadow: 0 0 10px rgba(217, 119, 87, 0.4);
-    }
-
-    /* Packet States */
-    .pkt-req { background: var(--accent-rust); }
-    .pkt-res { background: var(--accent-sage); box-shadow: 0 0 10px rgba(107, 125, 106, 0.4);}
-    .pkt-model { background: var(--accent-blue); box-shadow: 0 0 10px rgba(92, 123, 153, 0.4);}
-
-    /* Floating Labels beside pipeline */
-    .flow-label {
-        position: absolute; left: 50%; transform: translateX(20px);
-        font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted);
-        opacity: 0; transition: opacity 0.3s; font-weight: 500;
-    }
-
-    /* Bottom Half: Explainer Panel */
-    .explainer-panel {
-        background: var(--bg-panel);
-        padding: 24px; position: relative; width: 100%; z-index: 30;
-        flex: 1; display: flex; flex-direction: column; min-height: 0;
-        border-top: 1px solid var(--border-light);
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
-    }
-    
-    .explainer-content {
-        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
-    }
-    .explainer-content::-webkit-scrollbar { width: 4px; }
-    .explainer-content::-webkit-scrollbar-thumb { background: var(--accent-sand); border-radius: 4px; }
-
-    .step-badge {
-        display: inline-block; background: var(--bg-canvas); color: var(--accent-rust);
-        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500;
-        padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; text-transform: uppercase;
-        border: 1px solid var(--accent-sand); align-self: flex-start;
-    }
-
-    .explainer-title {
-        font-family: 'Lora', serif; font-size: 19px; font-weight: 600; color: var(--text-main);
-        margin-bottom: 10px; letter-spacing: -0.5px; line-height: 1.2;
-    }
-
-    .explainer-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 15px; }
-
-    /* Code Block in Explainer */
-    .code-block {
-        background: #F9F8F6; border: 1px solid var(--border-light); border-radius: 8px;
-        padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
-        line-height: 1.6; color: #3A3A3A; margin-bottom: 10px; overflow-x: auto;
-    }
-    
-    .c-kw { color: #8F5E4D; font-weight: 500; } /* Earthy brown/purple */
-    .c-ty { color: #5C7B99; } /* Muted blue */
-    .c-st { color: #6B7D6A; } /* Sage green */
-    .c-cm { color: #A3A3A3; font-style: italic; } /* Gray comment */
-    .c-an { color: #D97757; } /* Rust annotation */
-
-    .btn-next {
-        background: var(--text-main); color: var(--bg-canvas);
-        border: none; padding: 14px 24px; border-radius: 8px;
-        font-weight: 500; font-size: 13px; cursor: pointer;
-        transition: all 0.2s; width: 100%; font-family: 'Inter', sans-serif;
-        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring Boot Request Flow - Claude Aesthetic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
 </head>
 <body>
-
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
 <div id="reel-container">
     <div class="grid-bg"></div>
 
@@ -267,6 +85,9 @@
     </div>
 </div>
 
+
+    </div>
+  </main>
 <script>
     const badge = document.getElementById('step-badge');
     const title = document.getElementById('explainer-title');
@@ -523,5 +344,6 @@
         btnNext.disabled = false;
     }
 </script>
+  <script type="module" src="../../js/topic.js"></script>
 </body>
 </html>

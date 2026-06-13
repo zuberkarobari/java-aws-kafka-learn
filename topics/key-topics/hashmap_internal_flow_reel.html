@@ -1,312 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HashMap Internals Reel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;500&display=swap');
-
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #020617; 
-            color: white;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-
-        /* 9:16 Aspect Ratio Container */
-        #reel-container {
-            width: 100%;
-            max-width: 420px;
-            height: 100vh;
-            max-height: 880px;
-            background: #0b1120;
-            position: relative;
-            box-shadow: 0 0 50px rgba(0,0,0,0.9);
-            border: 1px solid #1e293b;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            background-image: 
-                linear-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
-            background-size: 20px 20px;
-            background-position: center center;
-        }
-
-        /* Header */
-        .header {
-            padding: 25px 20px 5px;
-            text-align: center;
-            z-index: 10;
-        }
-        
-        .header h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 22px;
-            font-weight: 700;
-            background: linear-gradient(to right, #f472b6, #fb923c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 2px;
-            letter-spacing: -0.5px;
-        }
-
-        .header p {
-            color: #94a3b8;
-            font-size: 11px;
-            font-family: 'Fira Code', monospace;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Visualization Area */
-        .canvas {
-            flex: 1;
-            position: relative;
-            z-index: 5;
-        }
-
-        /* Hash Function Box */
-        #hash-function {
-            position: absolute;
-            top: 10%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.95);
-            border: 2px solid #fb923c;
-            border-radius: 8px;
-            padding: 10px 20px;
-            text-align: center;
-            box-shadow: 0 0 15px rgba(251, 146, 60, 0.4);
-            z-index: 20;
-            transition: all 0.3s ease;
-        }
-
-        .hf-title {
-            font-size: 11px;
-            font-weight: 800;
-            color: #fb923c;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .hf-math {
-            font-family: 'Fira Code', monospace;
-            font-size: 10px;
-            color: #cbd5e1;
-            margin-top: 4px;
-        }
-
-        /* The Array of Buckets */
-        #array-container {
-            position: absolute;
-            top: 28%;
-            left: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            z-index: 10;
-            transition: all 0.5s ease;
-        }
-
-        .bucket-slot {
-            width: 40px;
-            height: 40px;
-            background: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Fira Code', monospace;
-            font-size: 12px;
-            color: #94a3b8;
-            position: relative;
-        }
-        
-        .bucket-index {
-            position: absolute;
-            left: -20px;
-            font-size: 10px;
-            color: #64748b;
-        }
-
-        /* Map Nodes (Key-Value pairs) */
-        .map-node {
-            position: absolute;
-            width: 70px;
-            height: 36px;
-            background: #3b82f6;
-            border: 1px solid #60a5fa;
-            border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
-            z-index: 15;
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 0;
-        }
-
-        .node-key {
-            font-size: 10px;
-            font-weight: 700;
-            color: white;
-        }
-        .node-val {
-            font-family: 'Fira Code', monospace;
-            font-size: 9px;
-            color: #bfdbfe;
-        }
-
-        /* Connecting lines for Linked List */
-        .ll-line {
-            position: absolute;
-            height: 2px;
-            background: #60a5fa;
-            top: 17px; /* middle of 36px node */
-            right: -20px;
-            width: 20px;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        /* Tree Nodes */
-        .tree-node {
-            background: #ef4444 !important;
-            border-color: #f87171 !important;
-            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4) !important;
-            border-radius: 50% !important; /* Circle for tree */
-            width: 40px !important;
-            height: 40px !important;
-        }
-
-        /* Explainer Panel at Bottom */
-        .explainer-panel {
-            background: linear-gradient(to top, rgba(2, 6, 23, 1) 75%, rgba(2, 6, 23, 0.95) 90%, transparent);
-            padding: 30px 24px 30px;
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            z-index: 30;
-            min-height: 280px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            backdrop-filter: blur(4px);
-            border-top: 1px solid rgba(30, 41, 59, 0.5);
-        }
-
-        .step-badge {
-            display: inline-block;
-            background: rgba(15, 23, 42, 0.8);
-            color: #fb923c;
-            font-family: 'Fira Code', monospace;
-            font-size: 10px;
-            font-weight: 600;
-            padding: 5px 12px;
-            border-radius: 4px;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border: 1px solid #334155;
-            align-self: flex-start;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
-
-        .explainer-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 19px;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 8px;
-            letter-spacing: -0.5px;
-        }
-
-        .explainer-text {
-            font-size: 13px;
-            color: #cbd5e1;
-            line-height: 1.6;
-            margin-bottom: 24px;
-            min-height: 70px;
-        }
-        
-        .explainer-text code {
-            background: #1e293b;
-            color: #f472b6;
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-family: 'Fira Code', monospace;
-            font-size: 11px;
-            border: 1px solid #334155;
-        }
-
-        .btn-next {
-            background: linear-gradient(135deg, #f472b6, #fb923c);
-            color: white;
-            border: none;
-            padding: 14px 24px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-            box-shadow: 0 4px 20px rgba(244, 114, 182, 0.4);
-            transition: all 0.2s;
-            width: 100%;
-            font-family: 'Space Grotesk', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn-next:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 10px rgba(244, 114, 182, 0.4);
-        }
-        
-        .btn-next:disabled {
-            background: #1e293b;
-            color: #64748b;
-            box-shadow: none;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Highlight animation for hash box */
-        @keyframes hashPulse {
-            0% { transform: translateX(-50%) scale(1); box-shadow: 0 0 15px rgba(251, 146, 60, 0.4); }
-            50% { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 30px rgba(251, 146, 60, 0.8); }
-            100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 15px rgba(251, 146, 60, 0.4); }
-        }
-        .hashing {
-            animation: hashPulse 0.5s ease;
-        }
-
-        .query-beam {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #fcd34d;
-            border-radius: 50%;
-            box-shadow: 0 0 15px 5px rgba(252, 211, 77, 0.8);
-            opacity: 0;
-            z-index: 40;
-            pointer-events: none;
-        }
-
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HashMap Internals Reel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
 </head>
 <body>
-
-    <div id="reel-container">
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div id="reel-container">
         <!-- Header -->
         <div class="header" style="position: relative;">
     <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
@@ -345,7 +57,10 @@
         </div>
     </div>
 
-    <script>
+    
+    </div>
+  </main>
+<script>
         // DOM Elements
         const arrayContainer = document.getElementById('array-container');
         const nodesContainer = document.getElementById('nodes-container');
@@ -605,5 +320,6 @@
             btnNext.disabled = false;
         }
     </script>
+  <script type="module" src="../../js/topic.js"></script>
 </body>
 </html>

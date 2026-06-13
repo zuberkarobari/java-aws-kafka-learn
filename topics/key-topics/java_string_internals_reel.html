@@ -1,302 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Java String Internals Reel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #030014; /* Deep space black/purple */
-            color: white;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            overflow: hidden;
-        }
-
-        #reel-container {
-            width: 100%;
-            max-width: 420px;
-            height: 100vh;
-            max-height: 880px;
-            background: #09090b;
-            position: relative;
-            box-shadow: 0 0 60px rgba(124, 58, 237, 0.4); /* Nebula glow */
-            border: 1px solid #2e1065;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* Deep Space Background with Stars */
-        .space-bg {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 50% 20%, #2e1065 0%, #030014 60%);
-            z-index: 0;
-        }
-        
-        .stars {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image: 
-                radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 200px 50px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 250px 90px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 300px 150px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 380px 40px, #ffffff, rgba(0,0,0,0));
-            background-repeat: repeat;
-            background-size: 400px 200px;
-            opacity: 0.4;
-            animation: drift 60s linear infinite;
-        }
-
-        @keyframes drift {
-            from { background-position: 0 0; }
-            to { background-position: 0 400px; }
-        }
-
-        /* Header */
-        .header {
-            padding: 30px 20px 10px;
-            text-align: center;
-            z-index: 10;
-        }
-        
-        .header h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 24px;
-            font-weight: 800;
-            background: linear-gradient(to right, #22d3ee, #a855f7, #f472b6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 4px;
-            letter-spacing: -0.5px;
-            text-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
-        }
-
-        .header p {
-            color: #22d3ee;
-            font-size: 11px;
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Canvas Area */
-        .canvas {
-            flex: 1;
-            position: relative;
-            z-index: 5;
-            perspective: 1000px;
-        }
-
-        .scene {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 10px;
-        }
-        
-        .scene.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        /* Generic Neon Box */
-        .neon-box {
-            background: rgba(9, 9, 11, 0.8);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: 12px;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.15), inset 0 0 10px rgba(139, 92, 246, 0.05);
-            padding: 15px;
-            width: 85%;
-        }
-
-        /* Scene 1: Immutability */
-        .tri-force {
-            display: flex; justify-content: center; gap: 15px; margin-top: 20px;
-        }
-        .force-node {
-            width: 80px; height: 80px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: rgba(9, 9, 11, 0.9); border: 1px solid #22d3ee; box-shadow: 0 0 15px rgba(34, 211, 238, 0.2);
-            font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; color: #a5f3fc; text-align: center;
-        }
-        .f-icon { font-size: 24px; margin-bottom: 5px; }
-
-        /* Scene 2: String Pool */
-        .memory-zone {
-            width: 90%; border-radius: 12px; border: 1px dashed #64748b; margin-top: 10px; padding: 10px; position: relative;
-        }
-        .pool-zone {
-            width: 60%; background: rgba(168, 85, 247, 0.1); border: 1px solid #a855f7; border-radius: 8px; padding: 10px; margin-left: auto; margin-right: auto; text-align: center; box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
-        }
-        .string-obj {
-            background: #a855f7; color: white; padding: 4px 12px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px; display: inline-block; font-weight: bold;
-        }
-        .heap-obj {
-            background: #3f3f46; color: white; padding: 4px 12px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 12px; display: inline-block; position: absolute; left: 10px; bottom: 10px; border: 1px solid #94a3b8;
-        }
-        .pointer-var { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #22d3ee; font-weight: bold; position: absolute;}
-        
-        .p-s1 { top: 20px; left: 20px; }
-        .p-s2 { top: 60px; left: 20px; }
-        .p-s3 { top: 100px; left: 20px; }
-        
-        .line-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
-        .stroke-line { stroke: #22d3ee; stroke-width: 2; fill: none; stroke-dasharray: 4; animation: dash 1s linear infinite; }
-        .stroke-line-bad { stroke: #f43f5e; stroke-width: 2; fill: none; stroke-dasharray: 4; }
-        @keyframes dash { to { stroke-dashoffset: -8; } }
-
-        /* Scene 4: Garbage Loop */
-        .black-hole {
-            width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, #000 40%, #7c3aed 80%, #f472b6 100%);
-            box-shadow: 0 0 40px #f472b6, inset 0 0 20px #000; display: flex; align-items: center; justify-content: center; margin: 30px auto; position: relative;
-        }
-        .garbage {
-            position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #f43f5e; opacity: 0;
-        }
-        @keyframes suck {
-            0% { transform: scale(0.5) translate(0, 0); opacity: 1; }
-            100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; }
-        }
-
-        /* Scene 5: Builders */
-        .spaceship {
-            width: 85%; padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;
-        }
-        .ship-fast { background: rgba(34, 211, 238, 0.1); border: 1px solid #22d3ee; box-shadow: 0 0 20px rgba(34, 211, 238, 0.2);}
-        .ship-slow { background: rgba(244, 63, 94, 0.1); border: 1px solid #f43f5e; box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);}
-        .ship-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px;}
-        .ship-desc { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #94a3b8;}
-
-        /* Scene 6: Compact Strings */
-        .memory-blocks { display: flex; gap: 2px; margin-top: 10px; justify-content: center;}
-        .m-block { width: 24px; height: 30px; border: 1px solid #64748b; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #e2e8f0; background: #1e293b; transition: all 0.5s;}
-        .m-empty { color: #475569; background: #0f172a;}
-        
-        /* Scene 7: Java 11 */
-        .api-pill { background: rgba(168, 85, 247, 0.15); border: 1px solid #a855f7; padding: 8px 12px; border-radius: 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #e9d5ff; margin: 5px; display: inline-block; box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);}
-
-        /* Explainer Panel at Bottom */
-        .explainer-panel {
-            background: rgba(9, 9, 11, 0.85);
-            padding: 30px 24px 30px;
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            z-index: 30;
-            min-height: 420px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            backdrop-filter: blur(12px);
-            border-top: 1px solid rgba(139, 92, 246, 0.4);
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
-            transition: all 0.3s ease;
-        }
-
-        .step-badge {
-            display: inline-block;
-            background: rgba(34, 211, 238, 0.1);
-            color: #22d3ee;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 5px 12px;
-            border-radius: 4px;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border: 1px solid rgba(34, 211, 238, 0.4);
-            box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
-        }
-
-        .explainer-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 21px;
-            font-weight: 800;
-            color: #f8fafc;
-            margin-bottom: 12px;
-            letter-spacing: -0.5px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.1);
-        }
-
-        .explainer-text {
-            font-size: 13px;
-            color: #cbd5e1;
-            line-height: 1.6;
-            margin-bottom: 16px;
-            flex-grow: 1;
-        }
-        
-        .code-block {
-            background: #000000;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 14px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            line-height: 1.6;
-            color: #e2e8f0;
-            margin-bottom: 20px;
-            overflow-x: auto;
-            box-shadow: inset 0 0 20px rgba(0,0,0,1);
-        }
-        
-        /* Synthwave Syntax Highlighting */
-        .c-kw { color: #c084fc; font-weight: bold; } /* Keyword purple */
-        .c-ty { color: #22d3ee; } /* Type cyan */
-        .c-st { color: #f472b6; } /* String pink */
-        .c-cm { color: #64748b; font-style: italic; } /* Comment slate */
-        .c-hi { background: rgba(34, 211, 238, 0.15); padding: 0 4px; border-radius: 3px; border-bottom: 1px solid #22d3ee;} /* Highlight */
-        .c-err{ background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-bottom: 1px solid #f43f5e; color: #fecdd3;} 
-
-        .btn-next {
-            background: linear-gradient(135deg, #a855f7, #ec4899);
-            color: white;
-            border: 1px solid #f472b6;
-            padding: 14px 24px;
-            border-radius: 8px;
-            font-weight: 800;
-            font-size: 13px;
-            cursor: pointer;
-            box-shadow: 0 4px 20px rgba(236, 72, 153, 0.4);
-            transition: all 0.2s;
-            width: 100%;
-            font-family: 'Space Grotesk', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: auto;
-        }
-
-        .btn-next:active {
-            transform: translateY(2px);
-            box-shadow: 0 2px 10px rgba(236, 72, 153, 0.4);
-        }
-
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Java String Internals Reel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
 </head>
 <body>
-
-    <div id="reel-container">
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div id="reel-container">
         <!-- Space Background -->
         <div class="space-bg"></div>
         <div class="stars"></div>
@@ -458,7 +180,10 @@
         </div>
     </div>
 
-    <script>
+    
+    </div>
+  </main>
+<script>
         const badge = document.getElementById('step-badge');
         const title = document.getElementById('explainer-title');
         const text = document.getElementById('explainer-text');
@@ -694,5 +419,6 @@ b = b.intern();
             btnNext.disabled = false;
         }
     </script>
+  <script type="module" src="../../js/topic.js"></script>
 </body>
 </html>

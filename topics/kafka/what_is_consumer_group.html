@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What is a Consumer Group in Kafka?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<div class="wrap">
+  <h1>What is a Consumer Group in Kafka?</h1>
+
+  <h2>1. Definition</h2>
+  <p><strong>In Simple English:</strong> A consumer group is a team of worker applications cooperating to read and process messages from Kafka efficiently.</p>
+  <p><strong>Technical Definition:</strong> A Consumer Group is a collection of Kafka Consumer instances that share the same <code>group.id</code>. Kafka load balances the partitions of a topic across all the active consumers in the group.</p>
+  <p><strong>Purpose:</strong> It provides parallel processing, high throughput, and fault tolerance. If one consumer fails, Kafka automatically reassigns its partitions to other surviving consumers in the group (Rebalancing).</p>
+
+  <h2>2. Internal Working</h2>
+  <p><strong>Step-by-Step Flow:</strong></p>
+  <pre>
+[Consumer] --(1. Connects)--> [Kafka Broker]
+[Consumer] --(2. JoinGroup Request)--> [Group Coordinator]
+[Group Coordinator] --(3. Elects Leader)--> [Consumer Leader]
+[Consumer Leader] --(4. Assigns Partitions)--> [All Consumers in Group]
+[Consumers] --(5. Poll Data & Heartbeats)--> [Kafka Broker]
+  </pre>
+  <p><strong>Framework Internals & Spring Involvement:</strong></p>
+  <ul>
+    <li>When using Spring Boot, the <code>@KafkaListener</code> annotation represents a consumer.</li>
+    <li>The Spring Container manages the lifecycle of the <code>ConcurrentMessageListenerContainer</code>, automatically handling threads for consumers based on concurrency settings.</li>
+    <li>Spring handles the connection to the Group Coordinator (a Kafka broker designated to manage this group) and transparently manages the polling loop and offset committing.</li>
+  </ul>
+
+  <h2>3. Real-World Project Example (Banking System)</h2>
+  <p>Consider a Core Banking System processing credit card transactions.</p>
+  <p>All card swipes are published to a topic named <code>card-transactions</code> (10 partitions).</p>
+  <ul>
+    <li><strong>Fraud Detection Service (group.id="fraud-group"):</strong> We deploy 5 instances of this microservice. Kafka assigns 2 partitions to each instance. They work in parallel to check for fraud.</li>
+    <li><strong>SMS Notification Service (group.id="sms-group"):</strong> We deploy 3 instances. Kafka assigns 4 partitions to one instance and 3 each to the others. They send SMS alerts independently.</li>
+  </ul>
+  <p>Both groups receive <em>all</em> the messages, but within each group, the workload is distributed.</p>
+
+  <h2>4. 7 Key Points to Impress the Interviewer</h2>
+  <ol>
+    <li><strong>Partition Exclusivity:</strong> A single partition is read by exactly <em>one</em> consumer within the same consumer group.</li>
+    <li><strong>Idle Consumers:</strong> If you have more consumers in a group than partitions in the topic, the extra consumers will sit idle (hot standby).</li>
+    <li><strong>Publish-Subscribe Model:</strong> Multiple distinct consumer groups reading the same topic act as Pub-Sub. Each group gets a complete copy of the data.</li>
+    <li><strong>Message Queuing Model:</strong> Consumers within the <em>same</em> group act as a traditional queue—messages are load-balanced and processed only once per group.</li>
+    <li><strong>Offset Management:</strong> Kafka tracks read progress (offsets) on a per-Consumer-Group basis, not globally.</li>
+    <li><strong>Rebalancing:</strong> Triggered when a consumer joins, leaves, crashes (missed heartbeats), or when topic partitions are modified.</li>
+    <li><strong>Group Coordinator:</strong> A specific broker responsible for receiving heartbeats and triggering rebalances for a specific consumer group.</li>
+  </ol>
+
+  <h2>5. Frequently Asked Follow-Up Questions</h2>
+  
+  <div class="qa-box">
+    <div class="qa-q">Q1: What happens if there are 4 partitions and 5 consumers in a group?</div>
+    <div class="qa-a">4 consumers will read from 1 partition each, and the 5th consumer will remain completely idle. It will only take over if one of the active 4 consumers fails.</div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">Q2: How does Kafka detect a consumer has failed?</div>
+    <div class="qa-a">Through Heartbeats. Consumers periodically send heartbeats to the Group Coordinator. If the coordinator doesn't receive a heartbeat within the <code>session.timeout.ms</code>, it considers the consumer dead and triggers a rebalance.</div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">Q3: What is "Rebalancing"? Is it good or bad?</div>
+    <div class="qa-a">Rebalancing is the process of redistributing partitions among consumers. While essential for fault tolerance, it temporarily pauses consumption (Stop-The-World) in standard rebalancing, leading to brief latency spikes. Modern Kafka supports "Cooperative Sticky Rebalancing" to minimize this.</div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">Q4: How can we scale our consumer processing?</div>
+    <div class="qa-a">You can scale out by adding more consumer instances to the group, up to the maximum number of partitions. If you need even more concurrency, you must increase the topic's partition count first.</div>
+  </div>
+
+  <div class="qa-box">
+    <div class="qa-q">Q5: Can two consumers in the same group read the same partition?</div>
+    <div class="qa-a">No. Kafka guarantees ordering within a partition by ensuring only one consumer in a group reads from a specific partition at any given time.</div>
+  </div>
+
+  <h2>6. Code Example (Spring Boot)</h2>
+  <pre><code>import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Service;
+
+@Service
+public class TransactionConsumer {
+
+    // The groupId parameter binds this listener to the "fraud-detection-group"
+    @KafkaListener(topics = "card-transactions", groupId = "fraud-detection-group")
+    public void consumeTransaction(String transactionMessage) {
+        System.out.println("Processing transaction: " + transactionMessage);
+        // Fraud check logic here...
+    }
+}
+</code></pre>
+
+  <h2>7. Senior Developer Interview Answer</h2>
+  <p><em>"At a senior level, I look at consumer groups not just for parallelization, but for fault tolerance and deployment strategy. In production, I monitor consumer lag per group using tools like Burrow or Prometheus. When dealing with consumer groups, I always configure <code>session.timeout.ms</code> and <code>max.poll.interval.ms</code> carefully to prevent unnecessary rebalances caused by long-running processing logic. To minimize rebalance downtime, I prefer configuring the <code>CooperativeStickyAssignor</code> over the default Range assignor. I also ensure idempotency in consumer logic because rebalances can cause duplicate message delivery (at-least-once semantics)."</em></p>
+
+  <h2>8. Quick Revision Notes</h2>
+  <ul>
+    <li>Collection of consumers sharing <code>group.id</code>.</li>
+    <li>Enables parallel message processing.</li>
+    <li>1 Partition = 1 Consumer (within a group).</li>
+    <li>Consumers &gt; Partitions = Idle consumers.</li>
+    <li>Consumers &lt; Partitions = Consumers handle multiple partitions.</li>
+    <li>Offsets are committed per Consumer Group.</li>
+    <li>Multiple groups = Pub/Sub (broadcast).</li>
+    <li>Same group = Point-to-Point (load balanced).</li>
+    <li>Heartbeats keep consumers "alive" to the Coordinator.</li>
+    <li>Rebalancing redistributes partitions on scale up/down or crash.</li>
+  </ul>
+
+  <h2>9. Interview Answer Template</h2>
+  <p><strong>"A Consumer Group in Kafka is</strong> a collection of application instances that share the same <code>group.id</code> and work together to consume messages from a topic. <br><br>
+  <strong>Its main purpose is</strong> to provide load balancing and fault tolerance. Kafka automatically distributes the topic's partitions exclusively among the consumers in the group. This means exactly one consumer reads from a specific partition. <br><br>
+  <strong>For example, in a banking system,</strong> if we have a transactions topic with 10 partitions, we can deploy 5 instances of a Fraud Service sharing the same consumer group. Kafka will assign 2 partitions to each instance, allowing us to process transactions in parallel. If one instance crashes, Kafka automatically detects missing heartbeats and triggers a 'rebalance', redistributing its partitions to the remaining 4 instances to ensure processing continues."</p>
+
+</div>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kafka Streams Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-funnel"></i> Real-Time Data Processing
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Kafka <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-blue-600">Streams API</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering KStreams, KTables, RocksDB State Stores, Windowing, and Exactly-Once Semantics (EOS).
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Instead of just passing messages from A to B (like standard Kafka), Kafka Streams is a factory assembly line. It takes an endless river of raw materials (messages), filters them, groups them, combines them, and outputs finished products to a new river in real-time.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Kafka Streams is a client library for building applications and microservices where the input and output data are stored in Kafka clusters. It combines the simplicity of standard Java apps with the core primitives of stream processing: time, state, and distributed fault tolerance.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To provide a lightweight, embeddable stream processing framework. Unlike Apache Spark or Flink, Kafka Streams does not require a dedicated processing cluster. You just deploy it as a normal Docker container or Spring Boot app.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: Topology & State</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">A Kafka Streams application defines a <strong>Processor Topology</strong>—a graph of stream processors (nodes) connected by streams (edges). When doing stateful operations (like aggregations), it relies on local storage (RocksDB) backed by internal Kafka changelog topics.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-brand-400"></i> Stream Processing Architecture
+                            </h3>
+
+                            <div class="flex flex-col items-center w-full relative z-10 pt-2 pb-6 gap-6 max-w-3xl">
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                                    
+                                    <!-- Input Topic -->
+                                    <div class="flex flex-col items-center justify-center">
+                                        <div class="bg-slate-800 border-2 border-slate-600 p-4 rounded-xl text-center shadow-md w-full">
+                                            <i class="ph-fill ph-folder-open text-brand-400 text-2xl mb-2"></i>
+                                            <div class="font-bold text-slate-300 text-sm mb-1">Input Topic</div>
+                                            <div class="text-[10px] text-slate-400 font-mono bg-slate-900 p-1.5 rounded">e.g., raw-clicks</div>
+                                        </div>
+                                        <i class="ph-bold ph-arrow-down md:ph-arrow-right text-slate-500 text-2xl mt-4 md:mt-0 md:absolute md:left-[30%] md:top-1/2 md:-translate-y-1/2 hidden md:block"></i>
+                                    </div>
+
+                                    <!-- Stream Task (Topology) -->
+                                    <div class="bg-blue-900/20 border-2 border-blue-500/50 p-5 rounded-xl w-full text-center shadow-[0_0_20px_rgba(6,182,212,0.15)] relative">
+                                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">Kafka Streams App</div>
+                                        
+                                        <!-- Topology Nodes -->
+                                        <div class="flex flex-col gap-3 mt-3 relative z-10">
+                                            <div class="bg-slate-800 p-2 rounded border border-slate-600 text-xs font-mono text-blue-300">
+                                                .filter(isValid)
+                                            </div>
+                                            <i class="ph-bold ph-arrow-down text-slate-500"></i>
+                                            <div class="bg-slate-800 p-2 rounded border border-slate-600 text-xs font-mono text-blue-300">
+                                                .map(enrichData)
+                                            </div>
+                                            <i class="ph-bold ph-arrow-down text-slate-500"></i>
+                                            <div class="bg-slate-800 p-2 rounded border border-brand-500 text-xs font-mono text-brand-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                                                .groupByKey().count()
+                                            </div>
+                                        </div>
+
+                                        <!-- Local State Store -->
+                                        <div class="mt-4 pt-4 border-t border-blue-500/30 flex items-center justify-between bg-slate-950/50 p-2 rounded-lg">
+                                            <div class="text-left">
+                                                <div class="text-[10px] font-bold text-amber-400"><i class="ph-fill ph-database"></i> RocksDB</div>
+                                                <div class="text-[9px] text-slate-400 leading-tight">Local State Store<br>(Sub-millisecond reads)</div>
+                                            </div>
+                                            <i class="ph-duotone ph-arrows-left-right text-amber-500/50 text-xl"></i>
+                                        </div>
+                                    </div>
+
+                                    <!-- Output & Changelog Topics -->
+                                    <div class="flex flex-col justify-between gap-4 h-full relative">
+                                        <i class="ph-bold ph-arrow-down md:ph-arrow-right text-slate-500 text-2xl mb-4 md:mb-0 md:absolute md:right-[100%] md:top-1/4 md:-translate-y-1/2 hidden md:block"></i>
+                                        
+                                        <!-- Output Topic -->
+                                        <div class="bg-slate-800 border-2 border-slate-600 p-4 rounded-xl text-center shadow-md w-full">
+                                            <i class="ph-fill ph-folder-open text-emerald-400 text-2xl mb-2"></i>
+                                            <div class="font-bold text-slate-300 text-sm mb-1">Output Topic</div>
+                                            <div class="text-[10px] text-slate-400 font-mono bg-slate-900 p-1.5 rounded">e.g., click-counts</div>
+                                        </div>
+
+                                        <i class="ph-bold ph-arrow-down md:ph-arrow-right text-slate-500 text-2xl md:absolute md:right-[100%] md:top-[85%] md:-translate-y-1/2 hidden md:block"></i>
+
+                                        <!-- Changelog Topic -->
+                                        <div class="bg-slate-800 border-2 border-dashed border-amber-500/50 p-4 rounded-xl text-center shadow-md w-full opacity-80">
+                                            <i class="ph-fill ph-clock-counter-clockwise text-amber-400 text-2xl mb-2"></i>
+                                            <div class="font-bold text-slate-300 text-sm mb-1">Changelog Topic</div>
+                                            <div class="text-[9px] text-slate-400 leading-tight">Hidden internal topic.<br>Backs up RocksDB state.</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-[10px] text-slate-400 italic text-center w-full max-w-xl">
+                                    *If the app crashes, a new instance starts, downloads the Changelog Topic to rebuild its local RocksDB, and resumes processing seamlessly.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-chart-bar text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-blue-300">Live Gaming Leaderboard</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">How stateful streaming replaces expensive database queries.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-database text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Old Way (Batch/DB)</h4>
+                                    <p class="text-sm text-slate-400 mt-1">Players generate millions of "Kill" events per minute. In a traditional architecture, you save all these events to PostgreSQL. To show the leaderboard, you run a massive <code>SELECT SUM(kills) GROUP BY player_id</code> query. The database CPU hits 100%, latency spikes to 5 seconds, and the app crashes under load.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 border border-brand-500/30"><i class="ph-fill ph-lightning text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Kafka Streams Way</h4>
+                                    <p class="text-sm text-slate-300 mt-1">Players send "Kill" events to a Kafka topic. A Kafka Streams app consumes this topic. Using a <code>.groupByKey().count()</code> operation, it maintains the running total score for every player in its <strong>local RocksDB memory</strong>. As events stream in, it instantly updates the local score and publishes only the updated score to a <code>leaderboard</code> topic. The UI consumes this topic for sub-millisecond, real-time updates.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Features -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Features <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border-2 border-brand-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-brand-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-500 font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">KStream vs KTable Duality</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">A <strong>KStream</strong> is an insert-only log (e.g., Alice moved 5m, Alice moved 3m). A <strong>KTable</strong> is an upsert changelog where keys are overwritten (e.g., Alice's current position is 8m). You can seamlessly convert between them.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Local State Stores (RocksDB)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Stateful operations (joins, aggregations) need to remember past events. Instead of calling an external Redis/Postgres (which adds latency), Kafka Streams embeds RocksDB locally, allowing sub-millisecond state lookups.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Changelog Topics</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If an app instance crashes, its local RocksDB is lost. To fix this, every state store is backed by a hidden, compacted "Changelog Topic" in Kafka. The new instance simply replays the changelog to rebuild its state.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Exactly-Once Semantics (EOS)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">By setting <code>processing.guarantee="exactly_once_v2"</code>, Kafka Streams ensures that a read-process-write cycle happens atomically. Even if the app crashes mid-processing, no duplicate results are ever written to the output topic.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Time Windowing</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Supports aggregating events over time. Includes <strong>Tumbling</strong> windows (fixed, non-overlapping), <strong>Hopping</strong> windows (fixed, overlapping), <strong>Sliding</strong> windows, and <strong>Session</strong> windows (based on user activity bursts).</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Event-Time Processing</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Stream processors can handle "late-arriving data" out of order by looking at the timestamp embedded in the event (Event Time) rather than the time the message arrived at the server (Ingestion Time).</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Library vs Framework (No Cluster needed)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Unlike Apache Spark or Flink, which require you to submit jobs to a dedicated processing cluster (YARN, Mesos), Kafka Streams is just a standard Java library. You package it into a Spring Boot JAR and run it anywhere (Docker, Kubernetes, EC2). It leverages Kafka's native Consumer Group protocol for load balancing and fault tolerance.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: What is the difference between Kafka Streams and normal Kafka Consumer/Producer APIs?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> The Consumer/Producer APIs are low-level. If you want to join two topics together, window data by time, or keep a running aggregate score, you have to write thousands of lines of complex, stateful, thread-safe Java code. Kafka Streams provides a high-level DSL (Domain Specific Language) that does all of this natively in a few lines of code.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: How does it achieve Exactly-Once Semantics (EOS)?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> EOS is achieved by combining Idempotent Producers with the Kafka Transactions API. When a Streams app reads an offset, updates its local state, and writes a result to the output topic, all three actions are wrapped in a single Kafka Transaction. If the app crashes before the transaction commits, the output is rolled back and the read offset isn't advanced, ensuring no duplicates.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: Co-partitioning Requirement for Joins?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> To join a KStream to another KStream, both topics MUST have the exact same number of partitions, and the data must be partitioned by the same key (e.g., UserId). If they aren't, the stream task reading Partition 1 of Topic A won't have the matching data from Partition 1 of Topic B, and the join will fail.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: Word Count</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">WordCountTopology.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-brand-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#c586c0]">import</span> org.apache.kafka.streams.StreamsBuilder;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.streams.kstream.KStream;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.streams.kstream.KTable;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.streams.kstream.Materialized;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.streams.kstream.Produced;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.common.serialization.Serdes;
+<span class="text-[#c586c0]">import</span> java.util.Arrays;
+
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">WordCountTopology</span> {
+
+    <span class="text-[#569cd6]">public static void</span> buildTopology(<span class="text-[#4ec9b0]">StreamsBuilder</span> builder) {
+        
+        <span class="text-[#6a9955]">// 1. Consume from input topic (stateless stream)</span>
+        <span class="text-[#4ec9b0]">KStream</span>&lt;<span class="text-[#4ec9b0]">String</span>, <span class="text-[#4ec9b0]">String</span>&gt; textLines = builder.stream(<span class="text-[#ce9178]">"input-text-topic"</span>);
+
+        <span class="text-[#6a9955]">// 2. Build the Processor Topology</span>
+        <span class="text-[#4ec9b0]">KTable</span>&lt;<span class="text-[#4ec9b0]">String</span>, <span class="text-[#4ec9b0]">Long</span>&gt; wordCounts = textLines
+            <span class="text-[#6a9955]">// Map a single sentence into multiple individual words</span>
+            .flatMapValues(textLine -> Arrays.asList(textLine.toLowerCase().split(<span class="text-[#ce9178]">"\\\\W+"</span>)))
+            
+            <span class="text-[#6a9955]">// Group the stream by the word itself</span>
+            .groupBy((key, word) -> word)
+            
+            <span class="text-[#6a9955]">// Stateful operation: Count occurrences. </span>
+            <span class="text-[#6a9955]">// Materialized.as stores the running total in a local RocksDB instance.</span>
+            .count(Materialized.as(<span class="text-[#ce9178]">"word-counts-store"</span>));
+
+        <span class="text-[#6a9955]">// 3. Output the changelog stream to a new Kafka topic</span>
+        wordCounts.toStream()
+                 .to(<span class="text-[#ce9178]">"output-wordcount-topic"</span>, 
+                     Produced.with(Serdes.String(), Serdes.Long()));
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-brand-50 to-white border-l-4 border-brand-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-brand-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "Kafka Streams fundamentally alters how we approach real-time data processing. Instead of pulling data out of Kafka into a heavy external cluster like Apache Spark or Flink, Kafka Streams allows us to embed powerful stream processing directly within our lightweight Spring Boot microservices.
+                            <br><br>
+                            The true power lies in how it handles state. When performing aggregations or windowing, Kafka Streams utilizes RocksDB to maintain state locally on the application node. This provides sub-millisecond access times without the network latency of querying an external Redis or PostgreSQL database. To ensure fault tolerance, this local state is constantly backed up to an internal Kafka changelog topic. If a Kubernetes pod dies, the new pod seamlessly reconstructs the state store from the changelog and resumes processing.
+                            <br><br>
+                            Furthermore, for enterprise financial applications, we configure Kafka Streams with Exactly-Once Semantics (EOS). By leveraging Kafka's Transaction API, it guarantees that the read-process-write cycle occurs atomically, ensuring no duplicated aggregations or data loss even during severe network partitions or application crashes."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-brand-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

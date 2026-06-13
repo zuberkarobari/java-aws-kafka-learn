@@ -1,236 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spring MVC Routing Engine - Deep Tech Reel</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
-    :root {
-        --bg-color: #020617; /* Deep Slate */
-        --neon-cyan: #2dd4bf; /* Teal */
-        --neon-pink: #f472b6; /* Pink */
-        --neon-purple: #818cf8; /* Indigo */
-        --neon-red: #f43f5e; /* Rose */
-        --neon-green: #34d399; /* Emerald */
-        --neon-orange: #fb923c; /* Orange */
-        --panel-bg: rgba(15, 23, 42, 0.7);
-        --spring-green: #6db33f;
-    }
-
-    body {
-        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
-        font-family: 'Plus Jakarta Sans', sans-serif;
-        display: flex; justify-content: center; align-items: center;
-        min-height: 100vh; overflow: hidden;
-    }
-
-    /* 9:16 Aspect Ratio Container - Strict Flex Layout */
-    #reel-container {
-        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
-        background: var(--bg-color); position: relative;
-        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255,255,255,0.1);
-        display: flex; flex-direction: column; overflow: hidden;
-        border-radius: 16px;
-    }
-
-    /* Aurora Background Engine */
-    .aurora-bg {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        overflow: hidden; z-index: 0; background: var(--bg-color);
-        background-image: 
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-        background-size: 20px 20px;
-    }
-    
-    .orb {
-        position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.4;
-        animation: float 15s infinite ease-in-out alternate;
-    }
-    .orb-1 { width: 300px; height: 300px; background: #3b82f6; top: -50px; left: -100px; }
-    .orb-2 { width: 350px; height: 350px; background: #8b5cf6; bottom: -50px; right: -100px; animation-delay: -5s; }
-
-    @keyframes float {
-        0% { transform: translate(0, 0) scale(1); }
-        100% { transform: translate(20px, -20px) scale(1.1); }
-    }
-
-    /* Header */
-    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
-    .header h1 {
-        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
-        background: linear-gradient(135deg, #ffffff, var(--spring-green));
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        margin-bottom: 4px; letter-spacing: -0.5px;
-    }
-    .header p {
-        color: var(--neon-cyan); font-size: 11px; font-family: 'JetBrains Mono', monospace;
-        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
-    }
-
-    /* Top Half: Visual Canvas Area */
-    .canvas {
-        flex: 1.3; position: relative; z-index: 5; display: flex;
-        align-items: center; justify-content: center; min-height: 0; padding: 10px 0;
-    }
-
-    .scene-container {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
-    }
-    .scene-container.active { opacity: 1; pointer-events: auto; }
-
-    /* The Dispatcher Engine Visuals */
-    .engine-core {
-        position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-        background: rgba(15, 23, 42, 0.9); border: 2px solid var(--spring-green);
-        padding: 12px 20px; border-radius: 8px; font-family: 'Space Grotesk'; font-weight: bold;
-        box-shadow: 0 0 25px rgba(109, 179, 63, 0.3); z-index: 20; color: #fff; text-align: center;
-    }
-    .engine-core span { font-size: 9px; color: var(--spring-green); font-family: 'JetBrains Mono'; display: block; margin-top: 2px; text-transform: uppercase;}
-
-    /* Nodes & Pipelines */
-    .node {
-        position: absolute; background: rgba(0,0,0,0.8); border: 1px solid var(--neon-purple);
-        padding: 10px 15px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
-        font-size: 11px; color: var(--neon-purple); font-weight: bold; text-align: center;
-        box-shadow: 0 0 15px rgba(168, 85, 247, 0.2); z-index: 15; transition: all 0.4s ease;
-    }
-    
-    .node-controller { top: 90px; left: 50%; transform: translateX(-50%); border-color: var(--neon-cyan); color: var(--neon-cyan); }
-    .node-view { top: 180px; left: 30px; border-color: var(--neon-orange); color: var(--neon-orange); opacity: 0;}
-    .node-converter { top: 180px; right: 30px; border-color: var(--neon-pink); color: var(--neon-pink); opacity: 0;}
-    
-    .client-end { position: absolute; bottom: 20px; padding: 10px; border-radius: 6px; font-family: 'Space Grotesk'; font-size: 12px; font-weight: bold; text-align: center; opacity: 0; z-index: 15;}
-    .ce-browser { left: 30px; background: rgba(251,146,60,0.2); color: var(--neon-orange); border: 1px solid var(--neon-orange);}
-    .ce-mobile { right: 30px; background: rgba(244,114,182,0.2); color: var(--neon-pink); border: 1px solid var(--neon-pink);}
-
-    /* Paths & Pipes */
-    .pipe { position: absolute; background: rgba(255,255,255,0.1); z-index: 10; opacity: 0; transition: all 0.4s ease;}
-    .pipe-vert { width: 2px; }
-    .pipe-horz { height: 2px; }
-    
-    .data-packet {
-        position: absolute; font-family: monospace; font-size: 10px; font-weight: bold;
-        background: #fff; color: #000; padding: 4px 8px; border-radius: 4px;
-        opacity: 0; z-index: 25; pointer-events: none; white-space: nowrap;
-        box-shadow: 0 0 15px rgba(255,255,255,0.6);
-    }
-    .dp-html { background: var(--neon-orange); }
-    .dp-json { background: var(--neon-pink); }
-    .dp-error { background: var(--neon-red); color: white; }
-
-    /* Detour Barrier */
-    .detour-sign {
-        position: absolute; top: 140px; left: 50%; transform: translateX(-50%);
-        background: var(--neon-red); color: #fff; font-family: monospace; font-size: 10px; font-weight: bold;
-        padding: 2px 8px; border-radius: 4px; box-shadow: 0 0 15px var(--neon-red); opacity: 0; z-index: 30;
-    }
-
-    /* Scene 4: Meta-Annotation Code Reveal */
-    .meta-box {
-        width: 85%; background: rgba(0,0,0,0.7); border: 2px solid var(--spring-green); border-radius: 12px;
-        padding: 15px; box-shadow: 0 0 30px rgba(109,179,63,0.2); backdrop-filter: blur(10px);
-    }
-    .mb-title { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: bold; color: var(--spring-green); margin-bottom: 10px; border-bottom: 1px solid rgba(109,179,63,0.3); padding-bottom: 5px;}
-
-    /* Scene 6: Final Matrix */
-    .matrix-grid { display: flex; flex-direction: column; gap: 10px; width: 90%; }
-    .m-row { display: flex; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; align-items: center; gap: 15px;}
-    .m-anno { flex: 1; font-family: monospace; font-size: 12px; font-weight: bold; color: var(--neon-cyan);}
-    .m-route { flex: 1; font-family: monospace; font-size: 10px; color: var(--muted);}
-    .m-out { flex: 1; font-family: 'Space Grotesk'; font-size: 11px; font-weight: bold; text-align: right;}
-
-    /* Bottom Half: Explainer Panel (Frosted Glass) */
-    .explainer-panel {
-        background: rgba(15, 23, 42, 0.6);
-        padding: 20px; position: relative; width: 100%; z-index: 30;
-        flex: 1; display: flex; flex-direction: column; min-height: 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(24px);
-    }
-    
-    .explainer-content {
-        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
-    }
-    .explainer-content::-webkit-scrollbar { width: 4px; }
-    .explainer-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-
-    .step-badge {
-        display: inline-block; background: rgba(109, 179, 63, 0.15); color: var(--spring-green);
-        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
-        padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;
-        border: 1px solid rgba(109, 179, 63, 0.4); align-self: flex-start;
-    }
-
-    .explainer-title {
-        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
-        margin-bottom: 8px; letter-spacing: -0.5px;
-    }
-
-    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
-
-    /* Embedded Code Block */
-    .code-block {
-        background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
-        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
-        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
-    }
-    
-    .c-kw { color: #f472b6; font-weight: bold; } 
-    .c-ty { color: var(--neon-cyan); } 
-    .c-fn { color: #818cf8; } 
-    .c-st { color: var(--neon-green); } 
-    .c-cm { color: #64748b; font-style: italic; } 
-    .c-an { color: var(--spring-green); font-weight: bold;} 
-    .c-hi { background: rgba(45, 212, 191, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
-    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
-
-    .btn-next {
-        background: linear-gradient(135deg, var(--neon-cyan), #0284c7);
-        color: white; border: none; padding: 14px 24px; border-radius: 12px;
-        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(45, 212, 191, 0.3);
-        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
-        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
-    }
-    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(45, 212, 191, 0.3); }
-
-    /* Animations */
-    @keyframes moveDownLeft {
-        0% { top: 120px; left: 50%; opacity: 1;}
-        20% { top: 150px; left: 50%; }
-        50% { top: 150px; left: 70px; }
-        100% { top: 180px; left: 70px; opacity: 1;}
-    }
-    @keyframes moveDownRight {
-        0% { top: 120px; left: 50%; opacity: 1;}
-        20% { top: 150px; left: 50%; }
-        50% { top: 150px; left: calc(100% - 70px); }
-        100% { top: 180px; left: calc(100% - 70px); opacity: 1;}
-    }
-    @keyframes moveEndLeft {
-        0% { top: 220px; left: 70px; opacity: 1;}
-        100% { top: 280px; left: 70px; opacity: 0;}
-    }
-    @keyframes moveEndRight {
-        0% { top: 220px; left: calc(100% - 70px); opacity: 1;}
-        100% { top: 280px; left: calc(100% - 70px); opacity: 0;}
-    }
-    @keyframes shakeError {
-        0% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        50% { transform: translateX(5px); }
-        75% { transform: translateX(-5px); }
-        100% { transform: translateX(0); }
-    }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring MVC Routing Engine - Deep Tech Reel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
 </head>
 <body>
-
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
 <div id="reel-container">
     <div class="aurora-bg">
         <div class="orb orb-1"></div>
@@ -332,6 +119,9 @@
     </div>
 </div>
 
+
+    </div>
+  </main>
 <script>
     const badge = document.getElementById('step-badge');
     const title = document.getElementById('explainer-title');
@@ -607,5 +397,6 @@
         btnNext.disabled = false;
     }
 </script>
+  <script type="module" src="../../js/topic.js"></script>
 </body>
 </html>

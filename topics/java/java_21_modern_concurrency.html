@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Learn Modern Java 21+ concurrency features including Virtual Threads, Structured Concurrency, Scoped Values, and Record Patterns." />
+  <title>Modern Java 21+ & Concurrency — Java Learn</title>
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+
+    <h1>Modern Java (Java 21+) & Concurrency Paradigm Shift</h1>
+    <p>
+      Java 21 introduced some of the most significant changes to the language and platform in a decade,
+      particularly around concurrency (Project Loom) and data-oriented programming (Project Amber). 
+      These features fundamentally change how we build scalable applications in Java.
+    </p>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h2>1. Virtual Threads (Project Loom)</h2>
+    <p>
+      For years, Java threads mapped 1:1 to OS threads. OS threads are expensive to create and context-switch,
+      limiting the number of concurrent connections a server can handle (the "thread-per-request" model bottleneck).
+      To scale, developers were forced to use complex <strong>reactive programming</strong> models (like WebFlux).
+    </p>
+    <p>
+      <strong>Virtual Threads</strong> are lightweight threads managed by the JVM, not the OS. They are cheap to create,
+      allowing you to have millions of them. They preserve the simple, synchronous "thread-per-request" style
+      without the performance penalty.
+    </p>
+
+    <pre><code class="language-java">public class VirtualThreadsDemo {
+    public static void main(String[] args) throws InterruptedException {
+        // Creating and starting a virtual thread
+        Thread vThread = Thread.ofVirtual().start(() -> {
+            System.out.println("Running in virtual thread: " + Thread.currentThread());
+        });
+        vThread.join();
+
+        // Using ExecutorService with virtual threads
+        try (var executor = java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 0; i < 10_000; i++) {
+                final int taskId = i;
+                executor.submit(() -> {
+                    // This blocks the virtual thread, but NOT the underlying OS carrier thread!
+                    Thread.sleep(1000); 
+                    System.out.println("Task " + taskId + " completed.");
+                    return taskId;
+                });
+            }
+        } // Executor blocks until all tasks complete
+    }
+}</code></pre>
+
+    <div class="callout callout-info">
+      <strong>Key Benefit:</strong> When a virtual thread makes a blocking I/O call (like fetching from a DB or API), 
+      the JVM automatically unmounts it from the OS carrier thread. The carrier thread is then free to execute 
+      other virtual threads.
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h2>2. Structured Concurrency (Preview)</h2>
+    <p>
+      When splitting a task into concurrent subtasks using traditional <code>ExecutorService</code>, the subtasks 
+      run independently. If the parent task fails or is cancelled, the child tasks often leak and continue running 
+      unnecessarily. <strong>Structured Concurrency</strong> groups related tasks into a single unit of work.
+    </p>
+
+    <pre><code class="language-java">import java.util.concurrent.StructuredTaskScope;
+
+public class StructuredConcurrencyDemo {
+    
+    record UserData(String profile, String orders) {}
+
+    public UserData fetchUserData(String userId) throws Exception {
+        // ShutdownOnFailure cancels all other subtasks if one fails!
+        try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+            
+            // Fork subtasks
+            StructuredTaskScope.Subtask&lt;String&gt; profileTask = scope.fork(() -> fetchProfile(userId));
+            StructuredTaskScope.Subtask&lt;String&gt; ordersTask = scope.fork(() -> fetchOrders(userId));
+            
+            // Wait for both to complete (or one to fail)
+            scope.join();
+            scope.throwIfFailed(); // Throws if any subtask failed
+            
+            // Both succeeded
+            return new UserData(profileTask.get(), ordersTask.get());
+        }
+    }
+    
+    private String fetchProfile(String id) throws InterruptedException {
+        Thread.sleep(500); return "Profile-" + id;
+    }
+    
+    private String fetchOrders(String id) throws InterruptedException {
+        Thread.sleep(500); return "Orders-" + id;
+    }
+}</code></pre>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h2>3. Scoped Values (Preview)</h2>
+    <p>
+      Traditionally, <code>ThreadLocal</code> was used to share data (like security context or trace IDs) implicitly 
+      across method calls. But <code>ThreadLocal</code> variables are mutable, have unbounded lifetimes, and are 
+      expensive to inherit. <strong>Scoped Values</strong> offer a modern, immutable, and highly efficient alternative 
+      designed specifically for virtual threads.
+    </p>
+
+    <pre><code class="language-java">public class ScopedValuesDemo {
+    // Define a scoped value
+    public final static ScopedValue&lt;String&gt; TRACE_ID = ScopedValue.newInstance();
+
+    public static void main(String[] args) {
+        // Bind a value and run a method
+        ScopedValue.where(TRACE_ID, "req-12345").run(() -> {
+            processRequest();
+        });
+    }
+
+    private static void processRequest() {
+        // Read the value deep in the call stack
+        System.out.println("Processing with Trace ID: " + TRACE_ID.get());
+    }
+}</code></pre>
+
+    <!-- ═══════════════════════════════════════════════════════════ -->
+    <h2>4. Pattern Matching and Record Patterns</h2>
+    <p>
+      Beyond concurrency, Java 21 makes working with data structures much more expressive. You can now use 
+      <strong>Pattern Matching for switch</strong> and <strong>Record Patterns</strong> to destructure objects safely.
+    </p>
+
+    <pre><code class="language-java">public class PatternMatchingDemo {
+
+    // A sealed interface with records
+    sealed interface Response permits Success, Error, Loading {}
+    record Success(String data) implements Response {}
+    record Error(int code, String message) implements Response {}
+    record Loading() implements Response {}
+
+    public static void handleResponse(Response response) {
+        // Modern switch expression with exhaustive pattern matching
+        String result = switch (response) {
+            case Success(String data) -> "Got data: " + data;
+            case Error(int code, String msg) when code >= 500 -> "Server Error: " + msg;
+            case Error(int code, String msg) -> "Client Error: " + msg;
+            case Loading() -> "Please wait...";
+        };
+        
+        System.out.println(result);
+    }
+}</code></pre>
+
+    <div class="callout callout-info">
+      <strong>Exhaustiveness:</strong> The compiler knows <code>Response</code> is a sealed interface. If you forget 
+      to handle one of the permitted types (like <code>Loading</code>), the code will refuse to compile!
+    </div>
+
+  </main>
+  <!-- Interactive logic will be bound automatically by app.js based on ID -->
+</body>
+</html>

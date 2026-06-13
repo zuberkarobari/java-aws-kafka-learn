@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kafka Consumer API Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-download-simple"></i> Reading Data
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Kafka <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Consumer API</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering the Polling Loop, Consumer Groups, Offset Management, Rebalancing, and avoiding the dreaded "Rebalance Storm".
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">A Consumer is an application that reads data from Kafka. It is a "pull-based" system. Kafka doesn't mail letters to your house; instead, the Consumer drives to the post office (Kafka) and asks, "Do you have any new letters for me?"</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">The Kafka Consumer API allows an application to subscribe to topics and process streams of records. It runs a continuous polling loop, fetching batches of records, executing business logic, and explicitly committing the "Offset" (the read pointer) back to the broker.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To securely and durably process high-throughput event streams. By utilizing Consumer Groups, multiple consumers can share the workload of reading a topic without processing the same message twice.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The Polling Loop</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">Kafka is a "dumb broker". It does not track which messages you have read. The Consumer must explicitly ask for data and then tell Kafka, "I have successfully processed up to Offset X."</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-brand-400"></i> The Consumer Architecture
+                            </h3>
+
+                            <div class="flex flex-col items-center w-full relative z-10 pt-2 pb-6 gap-6 max-w-3xl">
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+                                    
+                                    <!-- Left: Consumer Application -->
+                                    <div class="bg-slate-800 border-2 border-slate-600 p-6 rounded-xl shadow-md w-full relative">
+                                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-700 text-slate-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-slate-500">Consumer App (Node 1)</div>
+                                        
+                                        <div class="flex flex-col gap-4 mt-2">
+                                            <!-- Polling Thread -->
+                                            <div class="bg-blue-900/30 border border-blue-500/50 p-3 rounded text-center">
+                                                <div class="text-blue-400 font-bold text-sm mb-1"><i class="ph-fill ph-arrows-clockwise"></i> Main Polling Loop</div>
+                                                <div class="text-[10px] font-mono text-slate-300 bg-slate-950 p-2 rounded text-left">
+                                                    records = consumer.poll(100ms);<br>
+                                                    process(records);<br>
+                                                    consumer.commitSync();
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Heartbeat Thread -->
+                                            <div class="bg-emerald-900/30 border border-emerald-500/50 p-3 rounded text-center">
+                                                <div class="text-emerald-400 font-bold text-sm mb-1"><i class="ph-fill ph-heartbeat"></i> Background Heartbeat</div>
+                                                <div class="text-[10px] text-slate-400">Pings Kafka every ~3s to prove it's alive.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Right: Kafka Broker -->
+                                    <div class="bg-brand-900/20 border-2 border-brand-500/50 p-6 rounded-xl w-full text-center shadow-[0_0_20px_rgba(249,115,22,0.15)] relative">
+                                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Kafka Broker</div>
+                                        
+                                        <div class="flex flex-col gap-4 mt-2">
+                                            <!-- Topic Data -->
+                                            <div class="bg-slate-800 border border-slate-600 p-3 rounded text-left">
+                                                <div class="text-xs font-bold text-slate-300 mb-2"><i class="ph-fill ph-folder-open text-brand-400"></i> Topic: "orders"</div>
+                                                <div class="flex gap-1 overflow-hidden">
+                                                    <div class="bg-slate-700 px-2 py-0.5 text-[9px] rounded text-slate-400">0</div>
+                                                    <div class="bg-slate-700 px-2 py-0.5 text-[9px] rounded text-slate-400">1</div>
+                                                    <div class="bg-brand-600 px-2 py-0.5 text-[9px] rounded text-white font-bold relative">2</div>
+                                                    <div class="bg-slate-600 px-2 py-0.5 text-[9px] rounded text-slate-400 border border-dashed border-slate-400">3</div>
+                                                    <div class="bg-slate-600 px-2 py-0.5 text-[9px] rounded text-slate-400 border border-dashed border-slate-400">4</div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Group Coordinator & Offsets -->
+                                            <div class="bg-purple-900/30 border border-purple-500/50 p-3 rounded text-left">
+                                                <div class="text-xs font-bold text-purple-300 mb-1"><i class="ph-fill ph-users-three"></i> Group Coordinator</div>
+                                                <div class="text-[10px] text-slate-400 mb-2">Manages rebalances & heartbeats.</div>
+                                                
+                                                <div class="text-[10px] font-mono text-slate-300 bg-slate-950 p-2 rounded border border-slate-700 flex justify-between items-center">
+                                                    <span>__consumer_offsets</span>
+                                                    <span class="text-brand-400">GroupA -> P0: Offset 2</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                                
+                                <!-- Interaction Lines (Abstract representation) -->
+                                <div class="w-full bg-slate-800/80 p-4 rounded-xl border border-slate-700 text-xs text-slate-400 text-center flex flex-col md:flex-row justify-center items-center gap-6">
+                                    <div class="flex items-center gap-2"><i class="ph-bold ph-arrow-right text-blue-400"></i> <span class="font-mono text-blue-300">poll()</span> fetches batch of records</div>
+                                    <div class="flex items-center gap-2"><i class="ph-bold ph-arrow-right text-emerald-400"></i> <span class="font-mono text-emerald-300">commit()</span> writes to __consumer_offsets</div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-users-three text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-yellow-300">Fraud Detection System</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Why configuring the Consumer correctly prevents "Rebalance Storms".</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30"><i class="ph-fill ph-magnifying-glass text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Heavy Processing Problem</h4>
+                                    <p class="text-sm text-slate-400 mt-1">Our Fraud Service reads a batch of 500 transactions. It makes slow API calls to an external ML model to score them. Processing the batch takes 6 minutes. Suddenly, Kafka kicks our consumer out of the group, and a "Rebalance" triggers.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-warning-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Why did it fail? (max.poll.interval.ms)</h4>
+                                    <p class="text-sm text-slate-300 mt-1">Even though our background Heartbeat thread was pinging Kafka ("I'm alive!"), the <strong>Main Polling Loop</strong> was blocked for 6 minutes. Kafka's <code>max.poll.interval.ms</code> defaults to 5 minutes. Since we didn't call <code>poll()</code> again within 5 minutes, Kafka assumed our processing logic was deadlocked and revoked our partitions.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-wrench text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Fix</h4>
+                                    <p class="text-sm text-slate-400 mt-1">To fix this, we have two options: 1) Increase <code>max.poll.interval.ms</code> to 10 minutes. Or 2) Decrease <code>max.poll.records</code> (the batch size) from 500 to 100, ensuring the batch finishes processing well under the 5-minute limit.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Configurations <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border-2 border-brand-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-brand-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-500 font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">`group.id`</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Crucial. Consumers with the same <code>group.id</code> share the partitions of a topic. Kafka guarantees a partition is only read by ONE consumer within a group.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">`enable.auto.commit`</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Defaults to <code>true</code>. Kafka automatically commits the largest offset returned by <code>poll()</code> every 5 seconds. <strong>Warning:</strong> If your app crashes mid-processing, you will lose data. Set to <code>false</code> in enterprise apps for manual commit.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">`auto.offset.reset`</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">What happens when a consumer joins a group for the very first time? <code>earliest</code> reads from the absolute beginning of the topic. <code>latest</code> (default) reads only new messages arriving from this moment forward.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">`max.poll.interval.ms`</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The max time allowed between <code>poll()</code> calls. If your processing loop takes longer than this (default 5 mins), Kafka assumes your thread is deadlocked and kicks you out of the group, causing a rebalance.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">`session.timeout.ms`</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The heartbeat failure threshold. A background thread pings the broker. If the broker doesn't hear a ping for this duration (default 10s or 45s depending on version), it assumes the node crashed.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">`max.poll.records`</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Limits the number of records returned in a single <code>poll()</code> call (default 500). Lowering this is the easiest way to ensure you don't breach <code>max.poll.interval.ms</code> during heavy processing.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">`isolation.level` (Transactions)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">By default (<code>read_uncommitted</code>), consumers read all messages immediately. If Producers are using Transactions, you MUST set this to <code>read_committed</code> so the consumer only reads fully committed transactional messages (ignoring aborted ones).</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: How do you handle "Poison Pill" messages?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> A poison pill is a message that causes an exception (e.g., malformed JSON) and crashes the consumer. If unhandled, the consumer restarts, polls the same message, and crashes again infinitely. You must use a <code>try-catch</code> inside the loop, log the error, send the bad message to a <strong>Dead Letter Topic (DLT)</strong>, and manually commit the offset to move past it. Spring Kafka provides <code>SeekToCurrentErrorHandler</code> and <code>DeadLetterPublishingRecoverer</code> out of the box for this.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: Why does Kafka use "Pull" instead of "Push"?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> If a broker "pushes" data to consumers (like RabbitMQ), a fast producer could overwhelm and crash a slow consumer. By using a "pull" model, the consumer dictates the pace. It asks for data only when it has the capacity to process it. Furthermore, pulling allows aggressive batching (fetching 500 messages in one network request).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How do you achieve Exactly-Once Processing in a Consumer?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> Kafka guarantees At-Least-Once delivery. To achieve Exactly-Once semantics in your application, your downstream processing MUST be <strong>Idempotent</strong>. For example, if you process a payment event twice, your database upsert logic should check the unique <code>transactionId</code> and ignore the duplicate. Kafka's Transaction API can only guarantee Exactly-Once if you are doing a "Consume-Transform-Produce" loop back into Kafka.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: Spring Boot Manual Ack</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">ManualCommitConsumer.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-brand-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#c586c0]">import</span> org.springframework.kafka.annotation.KafkaListener;
+<span class="text-[#c586c0]">import</span> org.springframework.kafka.support.Acknowledgment;
+<span class="text-[#c586c0]">import</span> org.springframework.stereotype.Service;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.clients.consumer.ConsumerRecord;
+
+<span class="text-[#6a9955]">/* Requirements in application.yml:
+   spring.kafka.consumer.enable-auto-commit: false
+   spring.kafka.listener.ack-mode: MANUAL
+   spring.kafka.consumer.auto-offset-reset: earliest
+*/</span>
+
+<span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">InventoryConsumer</span> {
+
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">InventoryService</span> inventoryService;
+
+    <span class="text-[#569cd6]">public</span> InventoryConsumer(<span class="text-[#4ec9b0]">InventoryService</span> inventoryService) {
+        <span class="text-[#569cd6]">this</span>.inventoryService = inventoryService;
+    }
+
+    <span class="text-[#4ec9b0]">@KafkaListener</span>(<span class="text-[#9cdcfe]">topics</span> = <span class="text-[#ce9178]">"order-events"</span>, <span class="text-[#9cdcfe]">groupId</span> = <span class="text-[#ce9178]">"inventory-group"</span>)
+    <span class="text-[#569cd6]">public void</span> consumeOrder(<span class="text-[#4ec9b0]">ConsumerRecord</span>&lt;<span class="text-[#4ec9b0]">String</span>, <span class="text-[#4ec9b0]">String</span>&gt; record, <span class="text-[#4ec9b0]">Acknowledgment</span> ack) {
+        
+        <span class="text-[#569cd6]">try</span> {
+            <span class="text-[#6a9955]">// 1. Extract data</span>
+            <span class="text-[#4ec9b0]">String</span> orderId = record.key();
+            <span class="text-[#4ec9b0]">String</span> orderPayload = record.value();
+            
+            System.out.printf(<span class="text-[#ce9178]">"Processing Partition: %d, Offset: %d%n"</span>, 
+                    record.partition(), record.offset());
+
+            <span class="text-[#6a9955]">// 2. Execute Idempotent Business Logic</span>
+            inventoryService.deductInventory(orderId, orderPayload);
+
+            <span class="text-[#6a9955]">// 3. Manually Commit Offset ONLY if successful</span>
+            <span class="text-[#6a9955]">// This writes the offset to the __consumer_offsets internal topic.</span>
+            ack.acknowledge();
+            
+        } <span class="text-[#569cd6]">catch</span> (<span class="text-[#4ec9b0]">Exception</span> e) {
+            <span class="text-[#6a9955]">// Log error. Do NOT acknowledge.</span>
+            <span class="text-[#6a9955]">// Spring Kafka will either retry based on your DefaultErrorHandler config</span>
+            <span class="text-[#6a9955]">// or route the message to a DLT (Dead Letter Topic).</span>
+            System.err.println(<span class="text-[#ce9178]">"Error processing order: "</span> + e.getMessage());
+            <span class="text-[#569cd6]">throw</span> e; 
+        }
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-brand-50 to-white border-l-4 border-brand-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-brand-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "The Kafka Consumer relies on a strictly pull-based architecture. Instead of the broker keeping track of delivery, the consumer polls for a batch of messages, processes them, and explicitly commits its offset to an internal topic named <code>__consumer_offsets</code>.
+                            <br><br>
+                            In production, the most critical issue I see is the 'Rebalance Storm'. A consumer runs a background heartbeat thread to prove it's alive (governed by <code>session.timeout.ms</code>), but its main polling loop is governed by <code>max.poll.interval.ms</code>. If your business logic makes a slow database call and exceeds this 5-minute interval, Kafka assumes your application thread is deadlocked. It forcefully revokes your partitions and triggers a cluster-wide rebalance, pausing all consumption. To prevent this, we must tune <code>max.poll.records</code> downward to ensure batch processing times remain predictable.
+                            <br><br>
+                            Furthermore, I never rely on <code>enable.auto.commit=true</code>. To guarantee 'At-Least-Once' delivery and prevent data loss during a crash, we set it to false and use Spring Kafka's <code>Acknowledgment.acknowledge()</code> to manually commit the offset only after the database transaction has successfully closed. We pair this with idempotent database operations to safely handle the inevitable duplicate message deliveries that occur during network hiccups."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-arrows-clockwise text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Poll Loop:</strong> Consumer controls speed. Pulls batches of records via <code>poll()</code>.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-users-three text-brand-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Consumer Groups:</strong> Kafka assigns exactly ONE consumer per partition in a group.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-database text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>__consumer_offsets:</strong> Internal Kafka topic where committed offsets are stored securely.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-heartbeat text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>session.timeout.ms:</strong> Checks if the consumer JVM crashed via background pings.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-hourglass-high text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>max.poll.interval.ms:</strong> Checks if the consumer logic is deadlocked (default 5m).</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-hand-palm text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Manual Commit:</strong> Disable auto-commit to prevent data loss if crash happens mid-process.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-skull text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Poison Pill:</strong> Bad message causes infinite crash loop. Solve with Dead Letter Topic (DLT).</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-shield-check text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Idempotence:</strong> Consumer downstream logic MUST handle duplicate deliveries safely.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "The Kafka Consumer API utilizes a pull-based model where the application explicitly polls the broker for batches of records. To scale consumption, we organize instances into Consumer Groups. The Group Coordinator ensures that each partition is exclusively read by one consumer in the group.
+                            <br><br>
+                            A critical aspect of consumer design is Offset Management. Instead of relying on auto-commits, which risk data loss if the application crashes during processing, we configure manual commits and acknowledge the offset only after the database transaction succeeds. We also ensure our database logic is idempotent to safely absorb at-least-once delivery duplicates.
+                            <br><br>
+                            Operationally, the most common pitfall is breaching the `max.poll.interval.ms` timeout. If processing a batch takes too long, Kafka triggers a rebalance. We prevent this by tuning down `max.poll.records` or offloading extremely heavy processing to separate asynchronous threads."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-brand-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

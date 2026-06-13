@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kafka Load Balancing Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-scales"></i> Decentralized Scaling
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Kafka <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Load Balancing</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Why Kafka doesn't use HAProxy: Client-side routing, Partition distribution, and Cooperative Sticky rebalancing.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">In a normal web app, a bouncer (Load Balancer) stands at the door and tells requests which server to go to. In Kafka, there is no bouncer. The clients (Producers and Consumers) have a map of the building and route themselves directly to the correct server room.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Kafka utilizes <strong>Client-Side Load Balancing</strong>. Load balancing is achieved by horizontally distributing a Topic into Partitions across multiple Brokers, and relying on smart Producer Partitioners and Consumer Group Coordinators to distribute I/O perfectly across the cluster.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To eliminate network bottlenecks. If all traffic went through a central proxy, that proxy would melt under millions of messages per second. Decentralized routing allows Kafka to scale linearly with hardware.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: End-to-End Balancing</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">Load balancing in Kafka happens simultaneously at three distinct layers: The Producer, The Broker Cluster, and The Consumer Group.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-brand-400"></i> Decentralized Load Distribution
+                            </h3>
+
+                            <div class="flex flex-col items-center w-full relative z-10 pt-2 pb-6 max-w-3xl">
+                                
+                                <!-- PRODUCER BALANCING -->
+                                <div class="w-full flex items-center justify-between mb-8">
+                                    <div class="bg-blue-900/30 border border-blue-500/50 p-4 rounded-xl text-center shadow-lg w-1/3 z-10">
+                                        <h4 class="font-bold text-blue-400 text-sm mb-2"><i class="ph-fill ph-upload-simple"></i> Producer</h4>
+                                        <div class="text-[10px] text-slate-300 bg-slate-950 p-2 rounded">
+                                            <strong>Partitioner Engine</strong><br>
+                                            <span class="text-slate-400">Routes based on Hash(Key) or Sticky Round-Robin</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex-1 flex flex-col items-center px-4 relative">
+                                        <!-- Splitting Arrows -->
+                                        <svg class="w-full h-16 text-slate-600" preserveAspectRatio="none" viewBox="0 0 100 50">
+                                            <path d="M 0,25 C 50,25 50,5 100,5" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+                                            <path d="M 0,25 L 100,25" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+                                            <path d="M 0,25 C 50,25 50,45 100,45" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+                                            <defs>
+                                                <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                                                    <polygon points="0 0, 6 2, 0 4" fill="currentColor" />
+                                                </marker>
+                                            </defs>
+                                        </svg>
+                                    </div>
+
+                                    <!-- BROKER BALANCING -->
+                                    <div class="w-1/3 flex flex-col gap-3 z-10">
+                                        <div class="bg-slate-800 border-2 border-brand-500/50 p-2 rounded text-center">
+                                            <div class="text-xs font-bold text-white">Broker 1</div>
+                                            <div class="text-[10px] text-brand-300">Partition 0 (Leader)</div>
+                                        </div>
+                                        <div class="bg-slate-800 border-2 border-brand-500/50 p-2 rounded text-center">
+                                            <div class="text-xs font-bold text-white">Broker 2</div>
+                                            <div class="text-[10px] text-brand-300">Partition 1 (Leader)</div>
+                                        </div>
+                                        <div class="bg-slate-800 border-2 border-brand-500/50 p-2 rounded text-center">
+                                            <div class="text-xs font-bold text-white">Broker 3</div>
+                                            <div class="text-[10px] text-brand-300">Partition 2 (Leader)</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex-1 flex flex-col items-center px-4 relative">
+                                        <!-- Joining Arrows -->
+                                        <svg class="w-full h-16 text-slate-600" preserveAspectRatio="none" viewBox="0 0 100 50">
+                                            <path d="M 0,5 C 50,5 50,25 100,25" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+                                            <path d="M 0,25 L 100,25" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+                                            <path d="M 0,45 C 50,45 50,25 100,25" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+                                        </svg>
+                                    </div>
+
+                                    <!-- CONSUMER BALANCING -->
+                                    <div class="bg-emerald-900/30 border border-emerald-500/50 p-4 rounded-xl text-center shadow-lg w-1/3 z-10">
+                                        <h4 class="font-bold text-emerald-400 text-sm mb-2"><i class="ph-fill ph-users-three"></i> Consumer Grp</h4>
+                                        <div class="text-[10px] text-slate-300 bg-slate-950 p-2 rounded flex flex-col gap-1 text-left">
+                                            <div><i class="ph-fill ph-user text-emerald-400"></i> C1 reads P0</div>
+                                            <div><i class="ph-fill ph-user text-emerald-400"></i> C2 reads P1</div>
+                                            <div><i class="ph-fill ph-user text-emerald-400"></i> C3 reads P2</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="w-full bg-slate-800/80 p-4 rounded-xl border border-slate-700 text-xs text-slate-400 text-center grid grid-cols-3 gap-4">
+                                    <div><strong>Layer 1:</strong> Producer intelligently sends data directly to specific broker IPs.</div>
+                                    <div><strong>Layer 2:</strong> Cluster scatters Partition Leaders evenly across physical hardware.</div>
+                                    <div><strong>Layer 3:</strong> Coordinator ensures exactly 1 Consumer per Partition.</div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-chart-line-up text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-yellow-300">Black Friday Auto-Scaling</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">How to handle a sudden 10x spike in traffic without downtime.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30"><i class="ph-fill ph-cube text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Bottleneck</h4>
+                                    <p class="text-sm text-slate-400 mt-1">Your <code>orders</code> topic has 6 partitions hosted on 3 brokers. You have 6 Consumer instances running. Suddenly, Black Friday hits. Millions of orders flood the system. The 6 consumers max out their CPU to 100% and <strong>Consumer Lag</strong> starts skyrocketing (messages queue up unread).</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-warning-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Wrong Fix</h4>
+                                    <p class="text-sm text-slate-300 mt-1">You spin up 6 MORE consumer instances via Kubernetes. Now you have 12 consumers. <strong>Result:</strong> 6 of them sit completely idle. Kafka's load balancing rule is strict: <em>A partition can only be read by ONE consumer in a group.</em> Since there are only 6 partitions, you can only utilize 6 consumers.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-check-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Right Fix</h4>
+                                    <p class="text-sm text-slate-400 mt-1">You run a Kafka CLI command to increase the <code>orders</code> topic to <strong>24 partitions</strong>. Next, you scale your Kubernetes deployment to 24 Consumer instances. Kafka automatically detects the new resources and <strong>Rebalances</strong> the load, assigning 1 partition to each of the 24 consumers. Throughput instantly quadruples.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Concepts <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border-2 border-brand-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-brand-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-500 font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">No Proxy Allowed</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Putting an HAProxy or Nginx load balancer in front of Kafka brokers is an anti-pattern. Clients require direct TCP connections to the specific broker hosting the Leader partition for the data they want to read/write.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Producer Default Partitioner</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If a message has a Key, it uses <code>hash(key) % num_partitions</code>. This guarantees messages with the same key always hit the same partition. If no key exists, it uses <strong>Sticky Partitioning</strong> (sticks to one partition until the batch is full, then switches) to optimize I/O.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Preferred Replica Election</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">When creating a topic, Kafka attempts to evenly distribute the "Leaders" across all brokers. Over time, due to crashes, one broker might accidentally become the Leader for too many partitions. Kafka runs background tasks to automatically transfer leadership back to the "Preferred" replicas to rebalance I/O.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Consumer Rebalancing</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Triggered when a consumer joins/leaves a group, or when partitions are added. The Group Coordinator halts consumption, calculates a new mapping, and assigns partitions to the active consumers to evenly distribute the load.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Cooperative Sticky Assignor</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The modern default consumer assignment strategy. Unlike the old "Stop-the-World" approach where all consumers paused during a rebalance, Cooperative Sticky only revokes the specific partitions that need to be moved, keeping 90% of the consumers working uninterrupted.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Adding New Brokers</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If you add a new Broker to a running Kafka cluster, it stays completely empty. Kafka does <strong>not</strong> automatically move existing partitions to it. You must run the <code>kafka-reassign-partitions</code> script to manually shift load to the new hardware.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Cruise Control (LinkedIn)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Because Kafka's manual partition reassignment is tedious, enterprise teams use tools like LinkedIn's open-source <strong>Cruise Control</strong>. It constantly monitors CPU, Network, and Disk usage across the brokers and automatically shifts partition replicas in the background to perfectly balance the cluster load.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: Can I decrease the number of partitions to save memory later?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> No. You can easily increase partitions, but Kafka does not allow decreasing partitions. Doing so would destroy the routing hash logic and orphan existing data. If you must decrease, you have to create a new topic and stream the data over.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: One of my consumers is doing 90% of the work. Why?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> This is classic "Data Skew". You are likely producing messages using a Key that is not evenly distributed (e.g., using "Country" as a key, where "USA" generates 90% of the traffic). Since all "USA" messages map to the same partition, the single consumer reading that partition gets overwhelmed. You need to pick a higher cardinality key, like `UserId`.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How do clients know which Broker to talk to?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> When a client connects to any broker using the `bootstrap.servers` list, it immediately issues a Metadata Request. The broker returns a map of the entire cluster: which brokers exist, and which broker is the Leader for every partition. The client caches this map and routes itself.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Configuration & Architecture</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">LoadBalancingConfig.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-brand-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#c586c0]">import</span> org.apache.kafka.clients.producer.ProducerConfig;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.clients.consumer.ConsumerConfig;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
+<span class="text-[#c586c0]">import</span> org.apache.kafka.clients.producer.RoundRobinPartitioner;
+<span class="text-[#c586c0]">import</span> java.util.Properties;
+
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">KafkaTuning</span> {
+    
+    <span class="text-[#569cd6]">public static void</span> configureProducer() {
+        <span class="text-[#4ec9b0]">Properties</span> props = <span class="text-[#569cd6]">new</span> Properties();
+        
+        <span class="text-[#6a9955]">// 1. PRODUCER BALANCING</span>
+        <span class="text-[#6a9955]">// By default (since Kafka 2.4), if no key is provided, Kafka uses Sticky Partitioning</span>
+        <span class="text-[#6a9955]">// to fill a batch perfectly before switching to another partition.</span>
+        <span class="text-[#6a9955]">// If you explicitly want the old, purely even (but less efficient) Round Robin:</span>
+        props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, RoundRobinPartitioner.class.getName());
+    }
+
+    <span class="text-[#569cd6]">public static void</span> configureConsumer() {
+        <span class="text-[#4ec9b0]">Properties</span> props = <span class="text-[#569cd6]">new</span> Properties();
+        
+        <span class="text-[#6a9955]">// 2. CONSUMER BALANCING</span>
+        <span class="text-[#6a9955]">// When a new consumer joins the group, how do we distribute the partitions?</span>
+        <span class="text-[#6a9955]">// Default is RangeAssignor (often causes imbalance if topics have different partition counts).</span>
+        <span class="text-[#6a9955]">// Best practice for modern architectures is Cooperative Sticky:</span>
+        props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, 
+                  CooperativeStickyAssignor.class.getName());
+    }
+}
+
+<span class="text-[#6a9955]">/* --- CLI COMMANDS FOR BROKER BALANCING ---
+ 
+ 1. Check if partitions are evenly distributed across brokers:
+ > kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic orders
+ 
+ 2. Force Kafka to re-elect the preferred leaders to fix I/O imbalance:
+ > kafka-leader-election.sh --bootstrap-server localhost:9092 --election-type preferred --all-topic-partitions
+ 
+ 3. Generate a JSON file to move partitions to a newly added Broker (e.g., Broker ID 4):
+ > kafka-reassign-partitions.sh --bootstrap-server localhost:9092 --topics-to-move-json-file topics.json --broker-list "1,2,3,4" --generate
+*/</span></code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-brand-50 to-white border-l-4 border-brand-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-brand-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "Unlike typical web architectures, Kafka does not use a centralized load balancer because it would immediately become a massive network bottleneck. Instead, Kafka utilizes a 'Smart Client' decentralized load-balancing model.
+                            <br><br>
+                            Load is distributed via Partitions. When a Producer sends data, its internal Partitioner hashes the message key to route the TCP packet directly to the specific Broker hosting that partition's Leader. On the read side, the Group Coordinator balances the load by dynamically assigning partitions to available consumers within a Consumer Group. In modern deployments, we configure consumers to use the <code>CooperativeStickyAssignor</code> to prevent 'stop-the-world' pauses during rebalances.
+                            <br><br>
+                            However, the most common operational oversight is assuming Kafka automatically balances data when new hardware is added. If we add a new broker to the cluster, it will sit completely idle. We must run a manual partition reassignment plan, or utilize an automated tool like LinkedIn's Cruise Control, to physically migrate partition replicas to the new broker and balance the disk and CPU utilization across the cluster."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-columns text-brand-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>The Core Unit:</strong> Partitions are the fundamental unit of scaling and load distribution.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-prohibit text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>No Central Proxies:</strong> Never put HAProxy/Nginx between clients and brokers.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-hash text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Producer Routing:</strong> Routes via Key Hash, or Sticky Round-Robin if no key exists.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-users-three text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Consumer Groups:</strong> Evenly divides partitions among available consumers.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-arrows-merge text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Cooperative Sticky:</strong> Best consumer assignor. Prevents full-pause rebalance storms.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-chart-bar text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Data Skew:</strong> Happens when a low-cardinality Key sends 90% of traffic to 1 partition.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-hard-drives text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Adding Brokers:</strong> Requires manual <code>kafka-reassign-partitions</code> to move load.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-robot text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Cruise Control:</strong> Enterprise tool for automated, background cluster rebalancing.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "Load balancing in Kafka is entirely decentralized; there is no HAProxy or NGINX sitting in front of the cluster. Instead, load is distributed via Partitions, and the clients do the routing themselves.
+                            <br><br>
+                            When a Producer sends a message, it fetches cluster metadata, hashes the message key, and sends the TCP packet directly to the specific broker hosting that partition's Leader. On the read side, the Group Coordinator dynamically balances the load by assigning subsets of partitions to available consumers in a group, ensuring no two consumers read the same data. 
+                            <br><br>
+                            To optimize this, we configure consumers to use the <code>CooperativeStickyAssignor</code> to minimize downtime during rebalances. Finally, at the infrastructure level, adding new brokers does not automatically balance the load. We must rely on partition reassignment scripts or automated tools like Cruise Control to shift partition replicas and balance I/O across the hardware."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-brand-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

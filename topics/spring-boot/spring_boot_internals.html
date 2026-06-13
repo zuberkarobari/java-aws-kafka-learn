@@ -1,155 +1,24 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spring Boot Internals Interview Guide</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Phosphor Icons (Duotone for premium look) -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <!-- Modern Typography -->
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        spring: {
-                            50: '#f0f9eb',
-                            100: '#dbf0cd',
-                            400: '#86c953',
-                            500: '#6db33f', // Official Spring Green
-                            600: '#589b2f',
-                            900: '#234011',
-                            950: '#142609',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                        display: ['Plus Jakarta Sans', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    animation: {
-                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'float': 'float 6s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        fadeInUp: {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        },
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        /* Glassmorphism Utilities */
-        .glass {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        .glass-dark {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Accordion Animations */
-        .accordion-content {
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-        }
-        .accordion-content.open {
-            max-height: 800px;
-            opacity: 1;
-            padding-top: 1rem;
-            padding-bottom: 1.5rem;
-        }
-        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        .open .accordion-icon { transform: rotate(180deg); color: #6db33f; }
-
-        /* Staggered Animations */
-        .animate-on-scroll { opacity: 0; }
-        
-        /* Code Block Mac OS Window */
-        .mac-window {
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-    </style>
-    </head>
-<body class="text-slate-800 antialiased selection:bg-spring-500 selection:text-white flex h-screen overflow-hidden">
-
-    <!-- Sidebar Navigation -->
-    <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 flex flex-col h-full shadow-xl md:shadow-none">
-        <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
-            <div class="bg-gradient-to-br from-blue-400 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
-                <i class="ph-fill ph-arrows-left-right text-2xl"></i>
-            </div>
-            <div>
-                <h2 class="font-display font-bold text-lg leading-tight">Spring Boot</h2>
-                <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5 truncate w-48" title="Spring Boot Internals">Spring Boot Internals</p>
-            </div>
-        </div>
-        
-        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
-            
-            <a href="#definition" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
-            </a>
-            <a href="#internal-working" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 2. Internal Working: Startup Flow
-            </a>
-            <a href="#real-world" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 3. Real-World Project Example
-            </a>
-            <a href="#key-points" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 4. 7 Key Points For senior-level depth
-            </a>
-            <a href="#faqs" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 5. Follow-Up Questions
-            </a>
-            <a href="#code-example" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 6. Code Example: Auto-Config Magic
-            </a>
-            <a href="#senior-answer" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 7. Senior Developer Answer
-            </a>
-            <a href="#revision-notes" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 8. Quick Revision Notes
-            </a>
-            <a href="#answer-template" class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-all">
-                <i class="ph-duotone ph-book-open-text text-xl"></i> 9. Interview Answer Template
-            </a>
-        </nav>
-    </aside>
-
-    <!-- Main Content -->
-    <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-slate-50">
-
-
-            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring Boot Internals Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
                 
                 <!-- Page Title -->
                 <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
@@ -561,133 +430,9 @@
                 Generated with HTML, Tailwind CSS & JavaScript. <br>
                 <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
             </footer>
-        
-  
-    </main>
-    <script>
-        // Advanced Accordion Logic
-        const accordionBtns = document.querySelectorAll('.accordion-btn');
-        accordionBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                // Remove active state from all buttons
-                document.querySelectorAll('.accordion-btn').forEach(b => {
-                    if (b !== this) b.classList.remove('bg-spring-50/50');
-                });
-                
-                this.classList.toggle('bg-spring-50/50');
-                const content = this.nextElementSibling;
-                const parent = this.parentElement;
-                
-                if (parent.classList.contains('open')) {
-                    parent.classList.remove('open');
-                    content.classList.remove('open');
-                    parent.classList.remove('border-spring-300');
-                } else {
-                    // Close others
-                    document.querySelectorAll('.accordion-content').forEach(c => {
-                        c.classList.remove('open');
-                        c.parentElement.classList.remove('open');
-                        c.parentElement.classList.remove('border-spring-300');
-                    });
-                    
-                    parent.classList.add('open');
-                    content.classList.add('open');
-                    parent.classList.add('border-spring-300');
-                }
-            });
-        });
+    </div>
+  </main>
 
-        // Copy to Clipboard Logic with enhanced feedback
-        const copyBtn = document.getElementById('copy-btn');
-        const codeContent = document.getElementById('code-content');
-        const copyToast = document.getElementById('copy-toast');
-
-        copyBtn.addEventListener('click', () => {
-            const textToCopy = codeContent.innerText;
-            const tempTextArea = document.createElement('textarea');
-            tempTextArea.value = textToCopy;
-            document.body.appendChild(tempTextArea);
-            tempTextArea.select();
-            
-            try {
-                document.execCommand('copy');
-                copyToast.style.opacity = '1';
-                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-spring-400"></i>';
-                
-                setTimeout(() => {
-                    copyToast.style.opacity = '0';
-                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
-                }, 2000);
-            } catch (err) {
-                console.error('Failed to copy text', err);
-            }
-            
-            document.body.removeChild(tempTextArea);
-        });
-
-        // Mobile Menu Toggle Logic
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
-        const sidebar = document.getElementById('sidebar');
-        const navLinks = document.querySelectorAll('.nav-link');
-
-        function toggleMenu() {
-            sidebar.classList.toggle('-translate-x-full');
-            // Add overlay backdrop when menu is open on mobile (optional enhancement)
-        }
-
-        mobileMenuBtn.addEventListener('click', toggleMenu);
-        closeMobileMenuBtn.addEventListener('click', toggleMenu);
-
-        navLinks.forEach(link => {
-            link.addEventListener('click', () => {
-                if (window.innerWidth < 768) { 
-                    toggleMenu();
-                }
-            });
-        });
-
-        // Intersection Observer for scroll animations
-        const observerOptions = {
-            root: document.getElementById('main-scroll'),
-            rootMargin: '0px',
-            threshold: 0.1
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('animate-fade-in-up');
-                    observer.unobserve(entry.target); // Only animate once
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
-            observer.observe(el);
-        });
-
-        // Highlight active section in sidebar based on scroll
-        const sections = document.querySelectorAll('section');
-        const mainScroll = document.getElementById('main-scroll');
-        
-        mainScroll.addEventListener('scroll', () => {
-            let current = '';
-            
-            sections.forEach(section => {
-                const sectionTop = section.offsetTop;
-                if (mainScroll.scrollTop >= sectionTop - 150) {
-                    current = section.getAttribute('id');
-                }
-            });
-
-            navLinks.forEach(link => {
-                link.classList.remove('text-spring-700', 'bg-spring-50', 'shadow-sm');
-                if (link.getAttribute('href').includes(current)) {
-                    link.classList.add('text-spring-700', 'bg-spring-50', 'shadow-sm');
-                }
-            });
-        });
-    </script>
+  <script type="module" src="../../js/topic.js"></script>
 </body>
 </html>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leader & Follower Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-hard-drives"></i> Distributed Systems
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-blue-600">Leader & Follower</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering data replication, fault tolerance, In-Sync Replicas (ISR), and failover mechanics in distributed databases and message brokers like Kafka.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Imagine a CEO (Leader) and their assistants (Followers). All important decisions (Write requests) must go through the CEO. The assistants immediately write down everything the CEO decides. If the CEO suddenly quits, the most up-to-date assistant is promoted to be the new CEO.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Also known as Primary-Replica or Master-Slave. It is a replication architecture where one node (the Leader) is designated to handle all write requests for a specific data partition. Other nodes (Followers) passively replicate the data from the leader to maintain exact copies.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To provide High Availability (HA) and Fault Tolerance. If the machine hosting the data catches fire, the system automatically fails over to a follower with zero data loss. It also prevents concurrency conflicts since only one node accepts writes.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: Replication Flow</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">The complexity of this pattern lies in <em>how</em> data is replicated. Systems must balance Durability (ensuring data isn't lost) with Latency (how fast the client gets a response).</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-brand-400"></i> Write & Replication Architecture
+                            </h3>
+
+                            <div class="flex flex-col items-center w-full relative z-10 pt-2 pb-6 max-w-2xl">
+                                
+                                <!-- Client -->
+                                <div class="bg-slate-800 border-2 border-slate-600 px-6 py-3 rounded-lg text-sm text-center shadow-md z-10 w-48 mb-6">
+                                    <i class="ph-fill ph-user text-blue-400 mb-1"></i><br>Client
+                                </div>
+                                
+                                <!-- Write Request -->
+                                <div class="flex items-center gap-2 mb-2">
+                                    <div class="text-[10px] font-mono text-emerald-400">1. WRITE "Data X"</div>
+                                    <i class="ph-bold ph-arrow-down text-emerald-500 text-2xl"></i>
+                                </div>
+
+                                <!-- LEADER -->
+                                <div class="bg-brand-900/40 border-2 border-brand-500/50 p-6 rounded-xl w-full text-center shadow-[0_0_20px_rgba(99,102,241,0.15)] relative mb-8">
+                                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                                        <i class="ph-fill ph-crown text-yellow-300"></i> THE LEADER
+                                    </div>
+                                    
+                                    <div class="bg-slate-900/80 p-3 rounded border border-slate-700 mt-2 text-left text-xs font-mono text-slate-300">
+                                        <span class="text-brand-300">2.</span> Write to local disk.<br>
+                                        <span class="text-brand-300">3.</span> Wait for Followers to acknowledge...
+                                    </div>
+                                </div>
+
+                                <!-- Split Arrows to Followers -->
+                                <div class="flex w-full max-w-md justify-between px-10 relative h-10">
+                                    <div class="absolute left-[20%] top-0 h-full w-0.5 bg-blue-500/50"></div>
+                                    <div class="absolute right-[20%] top-0 h-full w-0.5 bg-blue-500/50"></div>
+                                    <i class="ph-fill ph-caret-down text-blue-500 absolute left-[20%] bottom-0 -translate-x-1/2"></i>
+                                    <i class="ph-fill ph-caret-down text-blue-500 absolute right-[20%] bottom-0 translate-x-1/2"></i>
+                                    
+                                    <!-- Replication labels -->
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 text-[9px] text-blue-300 font-mono">4a. Replicate</div>
+                                    <div class="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] text-blue-300 font-mono">4b. Replicate</div>
+                                </div>
+
+                                <!-- FOLLOWERS -->
+                                <div class="grid grid-cols-2 gap-12 w-full mt-2">
+                                    <!-- Follower 1 -->
+                                    <div class="bg-slate-800 border-2 border-slate-600 p-4 rounded-xl text-center shadow-md relative">
+                                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-700 text-slate-200 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">Follower 1 (ISR)</div>
+                                        <div class="bg-slate-900 p-2 rounded border border-slate-700 mt-2 text-left text-[10px] font-mono text-slate-400">
+                                            - Save to disk<br>
+                                            - Send ACK <i class="ph-bold ph-arrow-up text-emerald-400 inline"></i>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Follower 2 -->
+                                    <div class="bg-slate-800 border-2 border-slate-600 p-4 rounded-xl text-center shadow-md relative">
+                                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-700 text-slate-200 text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">Follower 2 (ISR)</div>
+                                        <div class="bg-slate-900 p-2 rounded border border-slate-700 mt-2 text-left text-[10px] font-mono text-slate-400">
+                                            - Save to disk<br>
+                                            - Send ACK <i class="ph-bold ph-arrow-up text-emerald-400 inline"></i>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Acknowledgment back to client -->
+                                <div class="absolute left-[10%] top-[40%] text-[10px] font-mono text-emerald-400 flex flex-col items-center">
+                                    <i class="ph-bold ph-arrow-up text-emerald-500 text-2xl"></i>
+                                    5. Return "Success"<br>(Only after ACKs)
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-fire text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-blue-300">AWS Data Center Outage (Kafka)</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">How the Leader/Follower pattern prevents catastrophic data loss during hardware failures.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30"><i class="ph-fill ph-hard-drives text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Setup (Replication Factor = 3)</h4>
+                                    <p class="text-sm text-slate-400 mt-1">You have a Kafka Topic named <code>financial-transactions</code>. It is configured with a replication factor of 3. <strong>Broker A</strong> is the elected Leader. <strong>Broker B</strong> and <strong>Broker C</strong> are the Followers. All new transactions are written strictly to Broker A, which immediately syncs them to B and C.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-warning-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Crash</h4>
+                                    <p class="text-sm text-slate-300 mt-1">The AWS Availability Zone hosting <strong>Broker A</strong> loses power. Broker A dies instantly. Clients attempting to write transactions experience a sudden connection timeout. The system is momentarily headless.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-arrows-clockwise text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Failover</h4>
+                                    <p class="text-sm text-slate-400 mt-1">The cluster's Controller node notices Broker A stopped sending heartbeats. It looks at the <strong>In-Sync Replicas (ISR)</strong> list and sees Broker B has an exact, up-to-date copy of the data. The Controller instantly promotes Broker B to be the new <strong>Leader</strong>. Producer clients automatically fetch the new metadata, discover Broker B is the new boss, and resume writing. <em>Data loss: Zero. Downtime: Milliseconds.</em></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Concepts -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Concepts <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">Synchronous vs Asynchronous</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><strong>Sync:</strong> Leader waits for followers to confirm the write before replying to the client (High durability, high latency). <strong>Async:</strong> Leader writes locally, replies to client, and followers copy later (Low latency, high risk of data loss on crash).</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">ISR (In-Sync Replicas)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">In Kafka, a follower is only considered "In-Sync" if it has fetched the latest data from the Leader within a specific time window. Only nodes in the ISR list are eligible to become the new Leader during a failover.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-blue-100 hover:border-blue-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-blue-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">High Watermark</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The offset (position) of the last message that has been successfully copied to <strong>all</strong> members of the ISR. Clients (Consumers) are only allowed to read messages up to the High Watermark to ensure they never read uncommitted data.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Split-Brain Problem</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">A catastrophic scenario where a network partition causes the cluster to split in half, and both halves elect their own Leader for the same data. Resolving this usually requires a <strong>Quorum</strong> (majority vote) or Fencing tokens.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Read Replicas (Databases)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">In relational databases (like PostgreSQL), you often route all <code>INSERT/UPDATE</code> queries to the Master/Leader, but route heavy <code>SELECT</code> queries to the Slaves/Followers to distribute CPU load (CQRS pattern).</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Unclean Leader Election</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If the Leader dies and NO followers are in the ISR (they were lagging), the system halts. If you enable "Unclean Election," the system picks a lagging follower as the new leader, restoring Availability but guaranteeing <strong>Data Loss</strong>.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">CAP Theorem Trade-offs</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The Leader/Follower pattern is fundamentally a manifestation of the CAP theorem. Configuring it requires choosing between <strong>Consistency</strong> (waiting for all followers to sync before acking) vs <strong>Availability</strong> (acking immediately after the leader writes, risking data loss on failure).</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: In Kafka, can consumers read from Followers?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> Historically, no. All reads and writes went strictly to the Leader to guarantee strong consistency. However, since Kafka 2.4 (KIP-392), Kafka supports "Fetch from Closest Replica". This allows consumers to read from a follower if it is in the same Availability Zone (rack), saving massive cross-zone network costs.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: What happens if the network is partitioned and the Leader can't see the Followers?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> The Leader will realize the followers are not fetching data and will remove them from the ISR (In-Sync Replicas) list. If the producer is configured with `acks=all` and `min.insync.replicas=2`, the Leader will start rejecting writes because there aren't enough active replicas to safely store the data, protecting system consistency over availability.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How is a new Leader chosen?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> It depends on the system. In Kafka, the active Controller node monitors broker health. When it detects a crash, it looks at the ISR list for the affected partitions and automatically nominates the first available broker in that list to become the new Leader, broadcasting this update to the cluster.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Configuration: Kafka Durability</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">Broker & Producer Configs</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-brand-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]"># ========================================================
+# 1. BROKER CONFIGURATION (server.properties)
+# ========================================================</span>
+
+<span class="text-[#6a9955]"># How many total copies of the data exist (1 Leader + 2 Followers)</span>
+<span class="text-[#9cdcfe]">default.replication.factor</span>=<span class="text-[#b5cea8]">3</span>
+
+<span class="text-[#6a9955]"># The minimum number of replicas that must acknowledge a write 
+# before it is considered successful (if acks=all is used by producer).
+# Setting this to 2 ensures data is written to at least the Leader and 1 Follower.</span>
+<span class="text-[#9cdcfe]">min.insync.replicas</span>=<span class="text-[#b5cea8]">2</span>
+
+<span class="text-[#6a9955]"># If the Leader dies and NO followers are in the ISR (they are out of sync),
+# should we pick an out-of-sync follower as the new leader?
+# false = Cluster halts (Favors Consistency, prevents data loss)
+# true = Failover happens (Favors Availability, causes data loss)</span>
+<span class="text-[#9cdcfe]">unclean.leader.election.enable</span>=<span class="text-[#569cd6]">false</span>
+
+
+<span class="text-[#6a9955]"># ========================================================
+# 2. PRODUCER CONFIGURATION (application.yml)
+# ========================================================</span>
+<span class="text-[#569cd6]">spring</span>:
+  <span class="text-[#569cd6]">kafka</span>:
+    <span class="text-[#569cd6]">producer</span>:
+      <span class="text-[#6a9955]"># Defines how the Producer interacts with the Leader & Followers</span>
+      <span class="text-[#6a9955]"># acks=0   -> Fire and forget (Fastest, High Data Loss Risk)</span>
+      <span class="text-[#6a9955]"># acks=1   -> Leader writes to disk and acks (Medium Risk)</span>
+      <span class="text-[#6a9955]"># acks=all -> Leader waits for ALL ISR followers to write to disk (Zero Data Loss)</span>
+      <span class="text-[#569cd6]">acks</span>: <span class="text-[#ce9178]">all</span></code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-brand-50 to-white border-l-4 border-brand-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-brand-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "The Leader/Follower pattern is the architectural bedrock of high availability in distributed stateful systems. In Kafka, topics are divided into partitions, and every partition has a designated Leader broker. All read and write requests are routed to this Leader to guarantee strict ordering and consistency.
+                            <br><br>
+                            To ensure fault tolerance, the Leader passively replicates its data to Follower brokers. A critical mechanism here is the ISR (In-Sync Replicas) list. The Leader monitors which followers are fully caught up with the data log. When a producer writes data with <code>acks=all</code>, the Leader will not acknowledge the write until every node in the ISR has safely written the data to disk. 
+                            <br><br>
+                            If the Leader node experiences a hardware failure, the cluster Controller immediately steps in, selects a healthy follower from the ISR, and promotes it to be the new Leader. Because we enforce <code>min.insync.replicas=2</code> and disable unclean leader election in our enterprise environments, we guarantee zero data loss during these failovers, favoring Consistency over absolute Availability in our CAP theorem trade-offs."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-crown text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Leader:</strong> The primary node. Handles 100% of standard Write and Read requests.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-users text-brand-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Follower:</strong> Passive node. Silently copies data from the Leader to stay up-to-date.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-arrows-merge text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>ISR (In-Sync):</strong> Followers that are fully caught up with the Leader.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-waves text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>High Watermark:</strong> Consumers can only read messages that have been replicated to ALL ISRs.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-shield-check text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>acks=all:</strong> Producer waits for Leader AND all ISRs to save data before continuing.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Unclean Election:</strong> Picking an out-of-sync follower as leader. Causes data loss.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-arrows-split text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Split-Brain:</strong> Network issue causing two leaders. Solved by Quorum consensus.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-database text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Read Replicas:</strong> In DBs, followers handle heavy SELECT queries to offload the Leader.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "The Leader/Follower pattern is the primary mechanism for ensuring high availability and fault tolerance in distributed systems like Kafka. 
+                            <br><br>
+                            For any given partition, one broker acts as the Leader and handles all incoming read and write requests. To prevent data loss, the Leader replicates its data to Follower brokers. The Leader maintains a list of In-Sync Replicas (ISR)—followers that have successfully caught up to the Leader's log. 
+                            <br><br>
+                            If the hardware hosting the Leader fails, the system detects the heartbeat timeout and instantly promotes one of the nodes in the ISR list to be the new Leader. By configuring the producer with <code>acks=all</code> and setting a <code>min.insync.replicas</code> threshold, we guarantee that data is securely stored on multiple physical disks before acknowledging the write, ensuring zero data loss during a failover scenario."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-brand-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

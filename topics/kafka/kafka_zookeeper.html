@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kafka & ZooKeeper Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-brain"></i> Cluster Metadata Management
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Kafka <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">& ZooKeeper</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering the legacy "Brain" of Kafka, Controller Election, Ephemeral Znodes, and the architectural shift to KRaft.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">If a Kafka cluster is an orchestra of musicians (Brokers), ZooKeeper was the conductor. It didn't play the music (store messages), but it kept track of who was playing what, who called in sick, and who should step up to take a solo.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Apache ZooKeeper is a centralized service for maintaining configuration information, naming, and providing distributed synchronization. In legacy Kafka (pre-v3.3), it was strictly required to manage cluster state, elect the active Controller, and track partition leaders.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To act as the single source of truth for the cluster's metadata. It ensured that if a broker died, the cluster would agree on a new leader without causing a "Split-Brain" scenario where two brokers claim the same authority.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. The Architectural Shift</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">For over a decade, Kafka relied on ZooKeeper. However, managing two completely different distributed systems simultaneously was an operational nightmare. Enter <strong>KRaft (Kafka Raft)</strong>.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-brand-400"></i> Legacy ZooKeeper vs Modern KRaft
+                            </h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 w-full relative z-10">
+                                
+                                <!-- Legacy ZooKeeper Architecture -->
+                                <div class="flex flex-col bg-slate-800/50 border border-slate-700 rounded-xl p-5 relative">
+                                    <div class="absolute -top-3 left-6 bg-red-500 text-red-950 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Legacy (Pre-v3.3)</div>
+                                    <h4 class="text-red-400 font-bold mb-4 flex items-center gap-2"><i class="ph-bold ph-tree-structure"></i> ZooKeeper Ensemble</h4>
+                                    
+                                    <!-- Zookeeper Nodes -->
+                                    <div class="flex justify-center gap-2 mb-6">
+                                        <div class="bg-red-900/30 border border-red-500/50 w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-red-400">ZK1</div>
+                                        <div class="bg-red-900/80 border-2 border-red-400 w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-[0_0_10px_rgba(239,68,68,0.5)]">LDR</div>
+                                        <div class="bg-red-900/30 border border-red-500/50 w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-red-400">ZK3</div>
+                                    </div>
+                                    
+                                    <div class="flex justify-center w-full relative h-8 mb-2">
+                                        <div class="absolute w-px h-full bg-slate-600"></div>
+                                        <div class="absolute w-px h-full bg-slate-600 translate-x-12"></div>
+                                        <div class="absolute w-px h-full bg-slate-600 -translate-x-12"></div>
+                                        <div class="absolute top-1/2 w-24 h-px bg-slate-600"></div>
+                                    </div>
+
+                                    <!-- Kafka Brokers -->
+                                    <div class="bg-slate-800 border border-slate-600 p-4 rounded-lg text-center">
+                                        <div class="text-xs text-slate-400 mb-2 font-bold uppercase tracking-widest">Kafka Cluster</div>
+                                        <div class="flex justify-center gap-2">
+                                            <div class="bg-slate-700 px-3 py-2 rounded text-xs text-slate-300">Broker</div>
+                                            <div class="bg-brand-900/50 border border-brand-500 px-3 py-2 rounded text-xs text-brand-300 font-bold">Controller</div>
+                                            <div class="bg-slate-700 px-3 py-2 rounded text-xs text-slate-300">Broker</div>
+                                        </div>
+                                    </div>
+                                    <p class="text-[9px] text-slate-400 mt-4 leading-relaxed">The Controller watches ZK. If a broker dies, ZK notifies the Controller. Controller pulls massive state from ZK synchronously.</p>
+                                </div>
+
+                                <!-- Modern KRaft Architecture -->
+                                <div class="flex flex-col bg-slate-800/50 border border-brand-500/30 rounded-xl p-5 relative shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+                                    <div class="absolute -top-3 left-6 bg-brand-500 text-brand-950 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Modern (v3.3+)</div>
+                                    <h4 class="text-brand-400 font-bold mb-4 flex items-center gap-2"><i class="ph-bold ph-lightning"></i> KRaft Mode</h4>
+                                    
+                                    <!-- Internal Quorum -->
+                                    <div class="bg-slate-800 border border-brand-500/50 p-4 rounded-lg text-center h-full flex flex-col justify-center">
+                                        <div class="text-xs text-slate-400 mb-4 font-bold uppercase tracking-widest">Unified Kafka Cluster</div>
+                                        
+                                        <div class="flex justify-center gap-2 mb-4">
+                                            <div class="flex flex-col items-center">
+                                                <div class="bg-slate-700 px-3 py-2 rounded text-xs text-slate-300 border border-slate-600 mb-1">Broker</div>
+                                            </div>
+                                            <div class="flex flex-col items-center">
+                                                <div class="bg-brand-900/80 px-3 py-2 rounded text-xs text-white font-bold border-2 border-brand-400 mb-1 shadow-md">Broker + Controller</div>
+                                                <div class="text-[9px] text-brand-300">Active Quorum Node</div>
+                                            </div>
+                                            <div class="flex flex-col items-center">
+                                                <div class="bg-slate-700 px-3 py-2 rounded text-xs text-slate-300 border border-slate-600 mb-1">Broker</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="bg-slate-900 p-2 rounded text-left border border-slate-700 mt-auto">
+                                            <div class="text-[10px] font-mono text-emerald-400 mb-1">> @metadata topic</div>
+                                            <div class="flex gap-1 overflow-hidden opacity-70">
+                                                <div class="w-2 h-4 bg-slate-600 rounded-sm"></div>
+                                                <div class="w-2 h-4 bg-slate-600 rounded-sm"></div>
+                                                <div class="w-2 h-4 bg-brand-500 rounded-sm"></div>
+                                                <div class="text-[8px] ml-2 text-slate-400 align-middle">Raft Event Log</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-[9px] text-slate-400 mt-4 leading-relaxed">No ZK. Controllers use Raft consensus. Metadata is treated as just another Kafka Event Log, syncing asynchronously.</p>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Bottleneck Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-hourglass-high text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-yellow-300">The 200,000 Partition Problem</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Why Netflix and LinkedIn pushed to kill ZooKeeper.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-warning-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The ZK Bottleneck</h4>
+                                    <p class="text-sm text-slate-400 mt-1">Imagine an enterprise cluster with 200,000 partitions. The Kafka Controller node suddenly crashes due to a hardware fault. ZooKeeper notices the heartbeat is gone and tells Broker 5 to become the new Controller.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-slate-700 text-slate-300 flex items-center justify-center shrink-0 border border-slate-600"><i class="ph-fill ph-clock text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Downtime (Legacy)</h4>
+                                    <p class="text-sm text-slate-300 mt-1">Before Broker 5 can start managing the cluster, it MUST download the metadata for all 200,000 partitions from ZooKeeper <strong>synchronously</strong>. This massive network payload and processing could take minutes. During this time, no new leaders can be elected, causing prolonged cluster downtime.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-lightning text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The KRaft Solution</h4>
+                                    <p class="text-sm text-slate-400 mt-1">In KRaft mode, metadata is just an internal Kafka log. Brokers constantly replicate this log in the background (asynchronously). When the active Controller crashes, the standby Controller <strong>already has the metadata in memory</strong>. Failover happens in milliseconds, and the cluster can now support millions of partitions.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Concepts <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">The Controller</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The most important broker in the cluster. It is responsible for maintaining the state of partitions and replicas, executing administrative tasks (creating topics), and managing leader elections when other brokers fail.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-brand-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-brand-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-500 font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Ephemeral Znodes (Legacy)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">In ZK, brokers created "ephemeral" nodes. These files only exist as long as the TCP session between the broker and ZK is active. If a broker crashes, the session dies, the znode is deleted, and the Controller is instantly notified via a "Watch" trigger.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Controller Epoch</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">An integer representing the "generation" of the Controller. It prevents "Split-Brain". If a temporarily frozen Controller wakes up and tries to send commands, brokers will ignore it if its Epoch is lower than the new active Controller's Epoch.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">KRaft (Kafka Raft)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The consensus protocol introduced in KIP-500 to replace ZK. A subset of brokers are designated as "Voters" (Controller Quorum). They use Raft to elect a single active controller and replicate the metadata log.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">The `@metadata` Topic</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">In KRaft, instead of storing metadata in ZK trees, cluster state (like topic configs and ACLs) is stored in a hidden internal Kafka topic named `@metadata`. All brokers consume this topic to stay perfectly in sync.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Security Unification</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">A major pain point of Zookeeper was that it required its own separate security configuration (SASL/SSL). KRaft eliminates this, allowing you to secure the entire streaming infrastructure using only Kafka's native security protocols.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Migration Process</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Kafka provides tools to migrate an existing Zookeeper cluster to KRaft without downtime. It involves starting KRaft controllers alongside ZK, letting KRaft observe ZK until fully synced, and then doing a "Double Write" phase before officially severing the ZK connection.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: Can I still use Zookeeper with the latest version of Kafka?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> Zookeeper was officially marked as deprecated in Kafka 3.0. As of Kafka 3.5+, KRaft is production-ready, and Zookeeper support is slated to be completely removed in Kafka 4.0. You must migrate.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: What is "Split-Brain" and how does the Epoch fix it?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> Split-brain happens when the Controller experiences a long Garbage Collection pause. The cluster assumes it died and elects a new Controller. When the old Controller wakes up, it still thinks it's the leader and tries to send commands. To fix this, every time a new controller is elected, the "Epoch" (generation number) increments (e.g., from 4 to 5). Brokers see the old controller sending commands with Epoch 4, realize it's a "zombie", and ignore it.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: Do I need dedicated KRaft Controller nodes?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> It depends on the cluster size. In a small cluster, a Kafka node can run in "combined" mode (handling both broker and controller duties). In large enterprise clusters, it is highly recommended to provision dedicated Controller nodes (e.g., 3 nodes dedicated solely to metadata quorum) to isolate metadata workloads from heavy data I/O.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Configuration Differences</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">server.properties comparison</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-brand-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]"># ========================================================
+# THE OLD WAY (Legacy ZooKeeper Mode)
+# ========================================================</span>
+<span class="text-[#9cdcfe]">broker.id</span>=<span class="text-[#b5cea8]">1</span>
+
+<span class="text-[#6a9955]"># The broker had to point outward to a completely separate ZK ensemble</span>
+<span class="text-[#9cdcfe]">zookeeper.connect</span>=<span class="text-[#ce9178]">zk1.company.com:2181,zk2.company.com:2181,zk3.company.com:2181</span>
+<span class="text-[#9cdcfe]">zookeeper.connection.timeout.ms</span>=<span class="text-[#b5cea8]">18000</span>
+
+
+<span class="text-[#6a9955]"># ========================================================
+# THE NEW WAY (Modern KRaft Mode)
+# ========================================================</span>
+<span class="text-[#6a9955]"># node.id replaces broker.id</span>
+<span class="text-[#9cdcfe]">node.id</span>=<span class="text-[#b5cea8]">1</span>
+
+<span class="text-[#6a9955]"># Defines what this node does. </span>
+<span class="text-[#6a9955]"># It can be 'broker', 'controller', or 'broker,controller' (combined mode)</span>
+<span class="text-[#9cdcfe]">process.roles</span>=<span class="text-[#ce9178]">broker,controller</span>
+
+<span class="text-[#6a9955]"># Maps node IDs to their network endpoints for the Raft quorum</span>
+<span class="text-[#6a9955]"># Format: {node.id}@{host}:{port}</span>
+<span class="text-[#9cdcfe]">controller.quorum.voters</span>=<span class="text-[#ce9178]">1@kafka1:9093,2@kafka2:9093,3@kafka3:9093</span>
+
+<span class="text-[#6a9955]"># Standard listeners for clients</span>
+<span class="text-[#9cdcfe]">listeners</span>=<span class="text-[#ce9178]">PLAINTEXT://:9092,CONTROLLER://:9093</span>
+
+<span class="text-[#6a9955]"># Map the internal protocol to the listener</span>
+<span class="text-[#9cdcfe]">controller.listener.names</span>=<span class="text-[#ce9178]">CONTROLLER</span></code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-brand-50 to-white border-l-4 border-brand-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-brand-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "In older Kafka architectures, ZooKeeper was a mandatory dependency used to manage cluster state, elect the Controller broker, and maintain topic configurations. While reliable, relying on an external distributed system caused immense operational friction. The biggest issue was the 'metadata bottleneck'. If the active Controller crashed, the newly elected Controller had to synchronously download the entire metadata state from ZooKeeper before it could start serving the cluster, resulting in prolonged downtime for clusters with hundreds of thousands of partitions.
+                            <br><br>
+                            To solve this, Kafka introduced KRaft (Kafka Raft) in KIP-500. KRaft eliminates ZooKeeper entirely by treating cluster metadata as just another internal Kafka event stream (the <code>@metadata</code> topic). 
+                            <br><br>
+                            Now, a subset of brokers form a Raft quorum to manage metadata. Because the standby controllers continually consume this metadata log asynchronously, their memory is always hot. If the active controller dies, failover is almost instantaneous. This architectural shift unified the security model, simplified operational deployments, and allowed Kafka to scale to millions of partitions."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-tree-structure text-brand-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>ZooKeeper:</strong> Legacy metadata manager for Kafka clusters.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-crown text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>The Controller:</strong> The single broker responsible for cluster management and leader election.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-ghost text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Ephemeral Znodes:</strong> Files in ZK tied to a TCP session. Disappear instantly if a broker crashes.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-arrows-split text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Split-Brain:</strong> Two controllers claiming leadership. Prevented by the "Controller Epoch".</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-lightning text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>KRaft:</strong> Kafka Raft. Replaces Zookeeper in Kafka 3.3+.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-database text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>@metadata Topic:</strong> In KRaft, metadata is stored internally as a standard Kafka event log.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-clock-counter-clockwise text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>The Bottleneck:</strong> ZK caused downtime during failover due to synchronous metadata loading.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-shield-check text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Unified Security:</strong> KRaft eliminates the need to configure separate security (SASL) for Zookeeper.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "Historically, Kafka relied on Apache ZooKeeper to manage cluster metadata and elect the Controller broker. ZooKeeper used ephemeral znodes to detect broker crashes and notify the Controller to trigger leader elections. 
+                            <br><br>
+                            However, this created a significant bottleneck. Maintaining two separate distributed systems was an operational burden, and if the Controller node crashed in a massive cluster, the new Controller suffered from prolonged downtime because it had to synchronously download all partition metadata from ZooKeeper.
+                            <br><br>
+                            To resolve this, Kafka introduced KRaft (Kafka Raft). KRaft removes ZooKeeper entirely. It treats cluster metadata as just an internal Kafka topic. Because standby controllers constantly consume this metadata topic asynchronously, their in-memory state is always hot. If the active controller fails, failover happens in milliseconds, allowing modern Kafka clusters to scale to millions of partitions effortlessly."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-brand-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

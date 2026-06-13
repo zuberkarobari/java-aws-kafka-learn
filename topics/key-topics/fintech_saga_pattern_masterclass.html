@@ -1,186 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Saga Pattern - Claude Aesthetic</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
-
-    :root {
-        /* Anthropic Claude Palette */
-        --bg-canvas: #F8F7F4;
-        --bg-panel: #FFFFFF;
-        --text-main: #23221F;
-        --text-muted: #737373;
-        --accent-rust: #D97757;
-        --accent-sand: #D3C4B1;
-        --accent-sage: #6B7D6A;
-        --accent-blue: #5C7B99;
-        --border-light: #E8E5DF;
-    }
-
-    body {
-        margin: 0; padding: 0; background-color: #E5E0D8; color: var(--text-main);
-        font-family: 'Inter', sans-serif;
-        display: flex; justify-content: center; align-items: center;
-        min-height: 100vh; overflow: hidden;
-    }
-
-    /* 9:16 Aspect Ratio Container - Strict Flex Layout */
-    #reel-container {
-        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
-        background: var(--bg-canvas); position: relative;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08); border: 1px solid var(--border-light);
-        display: flex; flex-direction: column; overflow: hidden;
-        border-radius: 20px;
-    }
-
-    /* Minimalist Background Grid */
-    .grid-bg {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background-image: 
-            linear-gradient(var(--border-light) 1px, transparent 1px),
-            linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
-        background-size: 30px 30px;
-        opacity: 0.6; z-index: 0;
-    }
-
-    /* Header */
-    .header { padding: 30px 24px 5px; text-align: center; z-index: 10; flex-shrink: 0;}
-    .header h1 {
-        font-family: 'Lora', serif; font-size: 22px; font-weight: 600;
-        color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;
-    }
-    .header p {
-        color: var(--accent-rust); font-size: 11px; font-family: 'JetBrains Mono', monospace;
-        font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin: 0;
-    }
-
-    /* Top Half: Visual Canvas Area */
-    .canvas {
-        flex: 1.3; position: relative; z-index: 5; display: flex;
-        flex-direction: column; align-items: center; justify-content: center; min-height: 0;
-        padding: 10px 0; perspective: 1000px;
-    }
-
-    .scene-container {
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
-    }
-    .scene-container.active { opacity: 1; pointer-events: auto; }
-
-    /* Nodes */
-    .node {
-        position: absolute; background: var(--bg-panel); border: 2px solid var(--accent-sand);
-        padding: 12px 16px; border-radius: 12px; font-family: 'Inter', sans-serif;
-        font-weight: 600; font-size: 12px; color: var(--text-main); text-align: center;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.04); transition: all 0.5s ease;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        z-index: 15;
-    }
-    .node span { font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 4px; text-transform: uppercase;}
-    
-    .db-icon { margin-top: 6px; font-size: 16px; opacity: 0.8; }
-    
-    .status-badge {
-        position: absolute; top: -10px; right: -10px; background: var(--accent-sage); color: white;
-        font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 10px; opacity: 0; transition: opacity 0.3s;
-    }
-
-    /* Specific Node Positions */
-    .n-wallet { top: 40px; left: 30px; border-color: var(--accent-blue); width: 120px;}
-    .n-bank { top: 40px; right: 30px; border-color: var(--accent-rust); width: 120px;}
-    .n-broker { top: 160px; left: 50%; transform: translateX(-50%); border-style: dashed; border-color: var(--text-muted); background: var(--bg-canvas); width: 160px;}
-    .n-rewards { top: 260px; left: 30px; border-color: var(--accent-sage); width: 120px;}
-    .n-fraud { top: 260px; right: 30px; border-color: var(--text-main); width: 120px;}
-    
-    .n-coord { top: 160px; left: 50%; transform: translateX(-50%); border-color: var(--text-main); background: #E8E5DF; width: 180px; box-shadow: 0 0 20px rgba(0,0,0,0.1); border-width: 3px;}
-    .state-machine { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--text-main); background: var(--bg-panel); padding: 4px; border-radius: 4px; margin-top: 8px; border: 1px solid var(--accent-sand); width: 100%;}
-
-    /* Cross Mark for 2PC */
-    .cross-2pc { position: absolute; font-size: 80px; color: var(--accent-rust); opacity: 0; z-index: 20; pointer-events: none; transition: opacity 0.3s;}
-
-    /* Connection Lines */
-    .svg-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none;}
-    .line { fill: none; stroke: var(--border-light); stroke-width: 2; opacity: 0; transition: all 0.5s; }
-    .line.dashed { stroke-dasharray: 4 4; }
-    .line.active { stroke: var(--accent-blue); }
-    .line.err { stroke: var(--accent-rust); }
-
-    /* Data Packets */
-    .packet {
-        position: absolute; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 600;
-        padding: 4px 8px; border-radius: 4px; opacity: 0; z-index: 20; color: #fff;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        pointer-events: none; text-align: center;
-    }
-    .pkt-event { background: var(--accent-sage); }
-    .pkt-cmd { background: var(--accent-blue); }
-    .pkt-err { background: var(--accent-rust); }
-    .pkt-comp { background: var(--text-main); } /* Compensation */
-
-    /* Matrix */
-    .matrix-grid { display: flex; flex-direction: column; gap: 10px; width: 90%; }
-    .m-row { display: flex; background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 8px; padding: 12px; align-items: center; gap: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);}
-    .m-anno { flex: 1; font-family: 'Lora', serif; font-size: 14px; font-weight: 600; color: var(--text-main);}
-    .m-route { flex: 1.5; font-family: 'Inter', sans-serif; font-size: 11px; color: var(--text-muted); line-height: 1.4;}
-    .m-out { flex: 0.8; font-family: 'JetBrains Mono'; font-size: 10px; font-weight: bold; text-align: right; color: var(--accent-rust);}
-
-    /* Bottom Half: Explainer Panel */
-    .explainer-panel {
-        background: var(--bg-panel); padding: 20px 24px; position: relative; width: 100%; z-index: 30;
-        flex: 1; display: flex; flex-direction: column; min-height: 0;
-        border-top: 1px solid var(--border-light); box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
-    }
-    
-    .explainer-content { flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 10px; }
-    .explainer-content::-webkit-scrollbar { width: 4px; }
-    .explainer-content::-webkit-scrollbar-thumb { background: var(--accent-sand); border-radius: 4px; }
-
-    .step-badge {
-        display: inline-block; background: var(--bg-canvas); color: var(--accent-rust);
-        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
-        padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--accent-sand);
-    }
-
-    .explainer-title {
-        font-family: 'Lora', serif; font-size: 19px; font-weight: 600; color: var(--text-main);
-        margin-bottom: 8px; letter-spacing: -0.5px; line-height: 1.2;
-    }
-
-    .explainer-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px; }
-
-    /* Code Block */
-    .code-block {
-        background: #F9F8F6; border: 1px solid var(--border-light); border-radius: 8px;
-        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
-        line-height: 1.5; color: #3A3A3A; overflow-x: auto;
-    }
-    
-    .c-kw { color: #8F5E4D; font-weight: 500; } 
-    .c-ty { color: #5C7B99; } 
-    .c-st { color: #6B7D6A; } 
-    .c-cm { color: #A3A3A3; font-style: italic; } 
-    .c-an { color: #D97757; } 
-
-    .btn-next {
-        background: var(--text-main); color: var(--bg-canvas); border: none; padding: 14px 24px;
-        border-radius: 8px; font-weight: 500; font-size: 13px; cursor: pointer; transition: all 0.2s;
-        width: 100%; font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
-    }
-    .btn-next:active { transform: translateY(2px); }
-    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* Animations */
-    .node-fail { border-color: var(--accent-rust) !important; background: rgba(217,119,87,0.05) !important; color: var(--accent-rust) !important;}
-    @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saga Pattern - Claude Aesthetic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <!-- Tailwind CSS preserved for page content -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- inline styles removed by strip_inline_styles.js -->
 </head>
 <body>
-
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
 <div id="reel-container">
     <div class="grid-bg"></div>
 
@@ -269,6 +106,9 @@
     </div>
 </div>
 
+
+    </div>
+  </main>
 <script>
     const badge = document.getElementById('step-badge');
     const title = document.getElementById('explainer-title');
@@ -530,5 +370,6 @@
     // Init state
     resetVisuals();
 </script>
+  <script type="module" src="../../js/topic.js"></script>
 </body>
 </html>

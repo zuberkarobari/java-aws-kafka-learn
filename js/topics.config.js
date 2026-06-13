@@ -40,7 +40,7 @@ export const PATHWAYS = {
     title: 'Kafka',
     icon: '🐿️',
     description: 'Master event-driven message streaming, partitions, replication, and Spring Kafka integration.',
-    categories: ['Kafka Messaging'],
+    categories: ['Kafka Messaging', 'Kafka Interview Q&A'],
   },
   microservices: {
     id: 'microservices',
@@ -54,7 +54,7 @@ export const PATHWAYS = {
     title: 'Interview Prep',
     icon: '💼',
     description: 'Crack senior backend interviews with 150+ high-frequency Q&As in Java, Spring Boot, Microservices, and DSA.',
-    categories: ['Java Interview Q&A', 'Spring Boot Core Concepts', 'Web & REST API', 'Data & JPA', 'Transactions', 'Security', 'Cloud & Messaging', 'Spring Boot Interview Q&A', 'Microservices Interview Q&A', 'DSA Interview Q&A'],
+    categories: ['Java Interview Q&A', 'Spring Boot Core Concepts', 'Web & REST API', 'Data & JPA', 'Transactions', 'Security', 'Cloud & Messaging', 'Spring Boot Interview Q&A', 'Microservices Interview Q&A', 'Kafka Interview Q&A', 'DSA Interview Q&A'],
   },
   studyplan: {
     id: 'studyplan',
@@ -106,6 +106,7 @@ export const TOPIC_ORDER = [
 
   // ── Advanced ──────────────────────────────────────────────────
   'multithreading',
+  'java/java_21_modern_concurrency',
 
   // ── Java Interview Q&A ──────────────────────────────────────────
   'questions and answers/java/multithreading_30qa',
@@ -170,6 +171,10 @@ export const TOPIC_ORDER = [
   'kafka/kafka-basics',
   'kafka/kafka-architecture',
   'kafka/spring-kafka',
+  'kafka/what_is_consumer_group',
+
+  // ── Kafka Interview Q&A ───────────────────────────────────────
+  'questions and answers/kafka/kafka_top20',
 
   // ── Microservices ─────────────────────────────────────────────
   'microservices/service-discovery',
@@ -312,6 +317,12 @@ export const TOPIC_META = {
     icon: '🧵',
     description: 'Thread lifecycle, synchronization, and the Executor framework.',
   },
+  'java/java_21_modern_concurrency': {
+    category: 'Advanced',
+    icon: '🚀',
+    title: 'Java 21+ Modern Concurrency',
+    description: 'Virtual Threads (Loom), Structured Concurrency, Scoped Values, and modern switch expressions.',
+  },
 
   // ── Spring Boot ───────────────────────────────────────────────
   'springboot': {
@@ -414,6 +425,12 @@ export const TOPIC_META = {
   },
 
   // ─── Kafka Messaging ───────────────────────────────────────────
+  'kafka/what_is_consumer_group': {
+    category: 'Kafka Messaging',
+    icon: '👥',
+    title: 'What is a Consumer Group?',
+    description: 'Understand consumer groups, rebalancing, and parallel message processing in Kafka.',
+  },
   'kafka/kafka-basics': {
     category: 'Kafka Messaging',
     icon: '🐿️',
@@ -434,6 +451,14 @@ export const TOPIC_META = {
     title: 'Spring Kafka Integration',
     description: 'Configure producers, consumers, serialisers, and error handlers in Spring Boot.',
     isLocked: true,
+  },
+
+  // ─── Kafka Interview Q&A ───────────────────────────────────────
+  'questions and answers/kafka/kafka_top20': {
+    category: 'Kafka Interview Q&A',
+    icon: '🐿️',
+    title: 'Kafka Top 20 Q&A',
+    description: '20 critical questions on Kafka partitions, offsets, consumers, brokers, and architecture.',
   },
 
   // ─── Microservices ─────────────────────────────────────────────
