@@ -1,23 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Enterprise REST API Design - Deep Space Reel</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../../css/styles.css" />
-  <link rel="stylesheet" href="../../css/topic.css" />
-  
-  <!-- Tailwind CSS preserved for page content -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <!-- inline styles removed by strip_inline_styles.js -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise REST API Design - Deep Space Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --space-dark: #030014;
+        --neon-cyan: #22d3ee;
+        --neon-pink: #f472b6;
+        --neon-purple: #a855f7;
+        --neon-red: #f43f5e;
+        --neon-green: #34d399;
+        --neon-orange: #fb923c;
+        --panel-bg: rgba(9, 9, 14, 0.9);
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Flex Layout */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--space-dark); position: relative;
+        box-shadow: 0 0 50px rgba(168, 85, 247, 0.2); border: 1px solid #2e1065;
+        display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* Deep Space Background */
+    .space-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #030014 70%); z-index: 0;
+    }
+    
+    .stars {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 200px 50px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 250px 90px, #ffffff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 300px 150px, #ffffff, rgba(0,0,0,0));
+        background-repeat: repeat; background-size: 400px 200px;
+        opacity: 0.3; animation: drift 60s linear infinite; z-index: 0;
+    }
+
+    @keyframes drift { from { background-position: 0 0; } to { background-position: 0 400px; } }
+
+    /* Header - Fixed Top */
+    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
+        background: linear-gradient(to right, var(--neon-cyan), var(--neon-purple));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 4px; letter-spacing: -0.5px; text-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+    }
+    .header p {
+        color: var(--neon-cyan); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Visual Canvas Area - Top Half */
+    .canvas {
+        flex: 1.2; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 15px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scrollable Data Containers in Canvas */
+    .scroll-container {
+        width: 92%; max-height: 95%; overflow-y: auto; overflow-x: hidden;
+        background: var(--panel-bg); border: 1px solid rgba(168, 85, 247, 0.3);
+        border-radius: 8px; padding: 12px; backdrop-filter: blur(8px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .scroll-container::-webkit-scrollbar { width: 4px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: var(--neon-purple); border-radius: 4px; }
+
+    /* Tables */
+    .rest-table { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #e2e8f0; }
+    .rest-table th { text-align: left; padding: 6px 4px; color: var(--neon-cyan); border-bottom: 1px solid rgba(34, 211, 238, 0.3); text-transform: uppercase;}
+    .rest-table td { padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: top;}
+    .rest-table tr:hover td { background: rgba(255,255,255,0.05); }
+    
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold;}
+    .b-safe { background: rgba(52, 211, 153, 0.2); color: var(--neon-green); border: 1px solid var(--neon-green);}
+    .b-unsafe { background: rgba(244, 63, 94, 0.2); color: var(--neon-red); border: 1px solid var(--neon-red);}
+    .b-idemp { background: rgba(34, 211, 238, 0.2); color: var(--neon-cyan); border: 1px solid var(--neon-cyan);}
+    .b-nidemp { background: rgba(251, 146, 60, 0.2); color: var(--neon-orange); border: 1px solid var(--neon-orange);}
+
+    /* HTTP Conversation / Diagram */
+    .http-flow { display: flex; flex-direction: column; width: 100%; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+    .msg-client { align-self: flex-start; background: rgba(34, 211, 238, 0.1); border-left: 2px solid var(--neon-cyan); padding: 6px 8px; border-radius: 4px; width: 85%;}
+    .msg-server { align-self: flex-end; background: rgba(168, 85, 247, 0.1); border-right: 2px solid var(--neon-purple); padding: 6px 8px; border-radius: 4px; width: 85%; text-align: right;}
+    .code-hl { color: var(--neon-pink); font-weight: bold;}
+
+    /* Explainer Panel at Bottom - Bottom Half */
+    .explainer-panel {
+        background: rgba(3, 0, 20, 0.95);
+        padding: 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.5); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(168, 85, 247, 0.1); color: var(--neon-purple);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+        padding: 4px 10px; border-radius: 4px; margin-bottom: 10px; text-transform: uppercase;
+        border: 1px solid rgba(168, 85, 247, 0.3); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+        margin-bottom: 8px; letter-spacing: -0.5px;
+    }
+
+    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: #000; border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
+        box-shadow: inset 0 0 20px rgba(0,0,0,1);
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: #22d3ee; } 
+    .c-fn { color: #a855f7; } 
+    .c-st { color: #34d399; } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-an { color: #fb923c; } 
+    .c-hi { background: rgba(168, 85, 247, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-purple); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan));
+        color: white; border: 1px solid var(--neon-cyan); padding: 14px 24px; border-radius: 8px;
+        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
+        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(168, 85, 247, 0.3); }
+</style>
 </head>
 <body>
-  <main id="topic-content">
-    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+
 <div id="reel-container">
     <div class="space-bg"></div>
     <div class="stars"></div>
@@ -219,9 +368,6 @@
     </div>
 </div>
 
-
-    </div>
-  </main>
 <script>
     const badge = document.getElementById('step-badge');
     const title = document.getElementById('explainer-title');
@@ -426,6 +572,5 @@
         btnNext.disabled = false;
     }
 </script>
-  <script type="module" src="../../js/topic.js"></script>
 </body>
 </html>

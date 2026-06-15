@@ -1,24 +1,346 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Service Discovery - Enterprise Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="../../css/styles.css" />
-  <link rel="stylesheet" href="../../css/topic.css" />
-  
-  <!-- Tailwind CSS preserved for page content -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/@phosphor-icons/web"></script>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <!-- inline styles removed by strip_inline_styles.js -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Discovery - Enterprise Architecture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;500&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #020617; /* Very dark blue */
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 9:16 Aspect Ratio Container for Mobile Reels */
+        #reel-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            max-height: 880px;
+            background: #0b1120;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            border: 1px solid #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Tech Grid Background */
+            background-image: 
+                linear-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: center center;
+        }
+
+        /* Header */
+        .header {
+            padding: 25px 20px 5px;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(to right, #2dd4bf, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 11px;
+            font-family: 'Fira Code', monospace;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Visualization Area */
+        .canvas {
+            flex: 1;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Nodes */
+        .node {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            z-index: 20;
+        }
+
+        .node-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #334155;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+            transition: all 0.3s ease;
+            position: relative;
+            backdrop-filter: blur(4px);
+        }
+
+        .node-label {
+            margin-top: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            color: #cbd5e1;
+            text-align: center;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: rgba(2, 6, 23, 0.85);
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid #1e293b;
+        }
+        
+        .node-ip {
+            font-family: 'Fira Code', monospace;
+            font-size: 8px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* Node Positioning */
+        #node-gateway { top: 12%; left: 50%; }
+        
+        /* Central Registry */
+        #node-registry { top: 38%; left: 50%; }
+        
+        /* Microservice Instances (Payment Service) */
+        #node-inst1 { top: 68%; left: 20%; }
+        #node-inst2 { top: 68%; left: 50%; }
+        #node-inst3 { top: 68%; left: 80%; }
+
+        /* Customizing Registry */
+        #node-registry .node-icon {
+            width: 64px; height: 64px;
+            border-radius: 16px;
+            background: rgba(2, 6, 23, 1);
+            border: 2px solid #2dd4bf;
+            box-shadow: 0 0 20px rgba(45, 212, 191, 0.2);
+        }
+
+        /* Database Simulation */
+        .registry-db {
+            position: absolute;
+            top: -15px; right: -15px;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            padding: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 8px;
+            color: #2dd4bf;
+            display: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            width: 100px;
+            text-align: left;
+        }
+
+        /* Active states & Colors */
+        .node.active .node-icon { transform: scale(1.15); }
+        .node.processing .node-icon { animation: pulse 1s infinite; }
+        .node.dead .node-icon { 
+            border-color: #ef4444; 
+            background: rgba(239, 68, 68, 0.1);
+            opacity: 0.5;
+        }
+        .node.dead .node-label { color: #ef4444; text-decoration: line-through; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(var(--rgb), 0); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--rgb), 0); }
+        }
+
+        .theme-gateway { --rgb: 56, 189, 248; }
+        .theme-registry { --rgb: 45, 212, 191; }
+        .theme-instance { --rgb: 52, 211, 153; }
+        .theme-dead { --rgb: 239, 68, 68; }
+
+        .active-gateway .node-icon { border-color: #38bdf8; box-shadow: 0 0 25px rgba(56, 189, 248, 0.6); }
+        .active-registry .node-icon { border-color: #2dd4bf; box-shadow: 0 0 30px rgba(45, 212, 191, 0.7); }
+        .active-instance .node-icon { border-color: #34d399; box-shadow: 0 0 20px rgba(52, 211, 153, 0.6); }
+
+        /* Data Packets */
+        .packet {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: #fff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        .packet-register { background-color: #34d399; box-shadow: 0 0 15px 5px rgba(52, 211, 153, 0.6); }
+        .packet-heartbeat { background-color: #facc15; box-shadow: 0 0 12px 4px rgba(250, 204, 21, 0.6); width: 8px; height: 8px; }
+        .packet-query { background-color: #38bdf8; box-shadow: 0 0 15px 5px rgba(56, 189, 248, 0.6); }
+        .packet-response { background-color: #2dd4bf; box-shadow: 0 0 15px 5px rgba(45, 212, 191, 0.6); }
+        .packet-traffic { background-color: #c084fc; box-shadow: 0 0 15px 5px rgba(192, 132, 252, 0.6); width: 14px; height: 14px; }
+
+        /* Connections */
+        svg.connections {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        path.line {
+            fill: none;
+            stroke: #1e293b;
+            stroke-width: 2;
+            stroke-dasharray: 4 4;
+            transition: stroke 0.3s ease;
+        }
+
+        path.line.active {
+            stroke: #475569;
+            stroke-dasharray: none;
+            animation: dash 0.8s linear infinite;
+        }
+        
+        path.line.danger { stroke: #7f1d1d; }
+
+        @keyframes dash {
+            to { stroke-dashoffset: -20; }
+        }
+
+        /* Explainer Panel at Bottom */
+        .explainer-panel {
+            background: linear-gradient(to top, rgba(2, 6, 23, 1) 75%, rgba(2, 6, 23, 0.95) 90%, transparent);
+            padding: 30px 24px 30px;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            z-index: 30;
+            min-height: 290px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            backdrop-filter: blur(4px);
+            border-top: 1px solid rgba(30, 41, 59, 0.5);
+        }
+
+        .step-badge {
+            display: inline-block;
+            background: rgba(15, 23, 42, 0.8);
+            color: #2dd4bf;
+            font-family: 'Fira Code', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #334155;
+            align-self: flex-start;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .explainer-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .explainer-text {
+            font-size: 13px;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            min-height: 80px;
+        }
+        
+        .explainer-text code {
+            background: #1e293b;
+            color: #2dd4bf;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            border: 1px solid #334155;
+        }
+        
+        .explainer-text span.highlight {
+            color: #facc15;
+            font-weight: 600;
+        }
+        
+        .explainer-text span.danger {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #14b8a6, #0ea5e9);
+            color: white;
+            border: 1px solid #5eead4;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(20, 184, 166, 0.4);
+            transition: all 0.2s;
+            width: 100%;
+            font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-next:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 10px rgba(20, 184, 166, 0.4);
+        }
+        
+        .btn-next:disabled {
+            background: #1e293b;
+            border-color: #334155;
+            color: #64748b;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    </style>
 </head>
 <body>
-  <main id="topic-content">
-    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
-<div id="reel-container">
+
+    <div id="reel-container">
         <!-- Header -->
         <div class="header" style="position: relative;">
     <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
@@ -98,10 +420,7 @@
         </div>
     </div>
 
-    
-    </div>
-  </main>
-<script>
+    <script>
         // DOM Elements
         const badge = document.getElementById('step-badge');
         const title = document.getElementById('explainer-title');
@@ -369,6 +688,5 @@
             btnNext.disabled = false;
         }
     </script>
-  <script type="module" src="../../js/topic.js"></script>
 </body>
 </html>
