@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Async Workers - Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+      
+      <!-- Page Title -->
+      <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+              <i class="ph-fill ph-robot"></i> System Request Flow
+          </div>
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+              15. Async <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Workers</span>
+          </h1>
+          <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+              Once a task is in Kafka, who actually does the work? Enter the background worker nodes that scale independently to crunch through queues.
+          </p>
+      </div>
+
+      <!-- 1. Definition -->
+      <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-book-open-text text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+          </div>
+          
+          <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">If the API server is the "Cashier" taking orders, the Async Worker is the "Chef" in the back room actually cooking the meals. They operate completely out of sight from the customer.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">Stateless background processes or microservices that continuously poll a message broker (Kafka/RabbitMQ) for jobs, execute heavy computational or I/O bound logic, and optionally update a database or emit a success event upon completion.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">To protect the main web servers from CPU exhaustion. Workers allow you to independently scale the parts of your app that do heavy lifting (like video rendering) without scaling the parts that just serve web pages.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- 2. Internal Working -->
+      <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-gears text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Consumer Groups & Scaling</h2>
+          </div>
+
+          <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+              <p class="text-slate-600 font-medium">If one worker is too slow to process all emails in the queue, Kafka allows you to spin up multiple instances of the worker in a <strong>Consumer Group</strong> to share the load evenly.</p>
+              
+              <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                  
+                  <div class="flex flex-col w-full relative z-10 pt-2 pb-6 max-w-lg mx-auto">
+                      
+                      <!-- Topic partitions -->
+                      <div class="text-center mb-6">
+                          <div class="inline-block bg-orange-900/50 border border-orange-500/50 rounded-lg px-6 py-3 min-w-[300px]">
+                              <span class="text-white font-bold block text-sm mb-2">Kafka Topic: email_queue</span>
+                              <div class="flex gap-2 justify-center">
+                                  <div class="bg-slate-800 border border-slate-600 px-2 py-1 rounded text-[9px] text-slate-400">Partition 0</div>
+                                  <div class="bg-slate-800 border border-slate-600 px-2 py-1 rounded text-[9px] text-slate-400">Partition 1</div>
+                                  <div class="bg-slate-800 border border-slate-600 px-2 py-1 rounded text-[9px] text-slate-400">Partition 2</div>
+                              </div>
+                          </div>
+                      </div>
+
+                      <div class="flex justify-between px-16 mb-4 relative h-10">
+                          <div class="absolute left-[20%] top-0 w-px h-full border-l border-emerald-500"></div>
+                          <div class="absolute left-1/2 top-0 w-px h-full border-l border-emerald-500"></div>
+                          <div class="absolute right-[20%] top-0 w-px h-full border-r border-emerald-500"></div>
+                      </div>
+
+                      <!-- Consumer Group Box -->
+                      <div class="bg-emerald-900/20 border-2 border-emerald-500 border-dashed rounded-xl p-6 relative text-center">
+                          <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 text-emerald-400 text-[10px] font-bold px-3 py-1 rounded-full border border-emerald-500 uppercase tracking-wider">Consumer Group: email-senders</div>
+                          
+                          <div class="flex justify-between gap-4 mt-2">
+                              <!-- Worker 1 -->
+                              <div class="flex-1 bg-slate-800 border border-emerald-500/50 p-3 rounded-lg relative">
+                                  <div class="absolute -top-2 -right-2 w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                                  <i class="ph-fill ph-robot text-2xl text-emerald-400 mb-1"></i>
+                                  <div class="text-[10px] font-bold text-white">Worker Node 1</div>
+                                  <div class="text-[8px] text-slate-400 mt-1 font-mono">Reads Partition 0</div>
+                              </div>
+                              
+                              <!-- Worker 2 -->
+                              <div class="flex-1 bg-slate-800 border border-emerald-500/50 p-3 rounded-lg relative">
+                                  <div class="absolute -top-2 -right-2 w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                                  <i class="ph-fill ph-robot text-2xl text-emerald-400 mb-1"></i>
+                                  <div class="text-[10px] font-bold text-white">Worker Node 2</div>
+                                  <div class="text-[8px] text-slate-400 mt-1 font-mono">Reads Partition 1</div>
+                              </div>
+
+                              <!-- Worker 3 -->
+                              <div class="flex-1 bg-slate-800 border border-emerald-500/50 p-3 rounded-lg relative">
+                                  <div class="absolute -top-2 -right-2 w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                                  <i class="ph-fill ph-robot text-2xl text-emerald-400 mb-1"></i>
+                                  <div class="text-[10px] font-bold text-white">Worker Node 3</div>
+                                  <div class="text-[8px] text-slate-400 mt-1 font-mono">Reads Partition 2</div>
+                              </div>
+                          </div>
+                          <div class="text-[9px] text-slate-400 mt-4 italic text-center">Kafka guarantees that a partition is read by ONE AND ONLY ONE worker within the same group. This prevents duplicate emails.</div>
+                      </div>
+
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 3. Interview Questions -->
+      <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chats-circle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Interview Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+              <!-- Intermediate -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Intermediate: What happens if there are 3 partitions, but you spin up 4 Worker Nodes in a Consumer Group?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> The 4th Worker Node will sit completely idle. In Kafka, a single partition cannot be split between multiple consumers in the same group (to ensure message ordering). The maximum number of active workers in a group is strictly equal to the number of partitions. If you want to process faster, you must first add more partitions to the topic.
+                      </p>
+                  </div>
+              </div>
+
+              <!-- Senior -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Senior: What happens if a Worker Node crashes? How does the system recover?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> This triggers a <strong>Rebalance</strong>. Every worker node constantly sends a heartbeat to the Kafka broker. If Worker 2 crashes, the broker notices the missing heartbeat. It takes Partition 1 (which Worker 2 was reading) and assigns it to either Worker 1 or Worker 3. Processing continues seamlessly. When Worker 2 reboots and rejoins, another Rebalance occurs, and Partition 1 is handed back to it.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

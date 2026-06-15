@@ -23,14 +23,33 @@ import { initCommandPalette, openCommandPalette } from './command-palette.js';
 const prefix = getPathPrefix();
 const currentId = getCurrentTopicId();
 const topics = getTopics();
-const activePathway = getActivePathway();
+const currentTopic = topics.find((t) => t.id === currentId) || null;
+
+let activePathway = getActivePathway();
+
+// Self-healing: if the current topic is not in the active pathway, find a pathway that contains it
+if (currentTopic) {
+  const isCurrentInActive = activePathway && 
+                            PATHWAYS[activePathway] && 
+                            PATHWAYS[activePathway].categories.includes(currentTopic.category);
+  if (!isCurrentInActive) {
+    // Find the first pathway that contains this topic's category
+    const matchingPathway = Object.keys(PATHWAYS).find(pwId => 
+      PATHWAYS[pwId]?.categories?.includes(currentTopic.category)
+    );
+    if (matchingPathway) {
+      activePathway = matchingPathway;
+      localStorage.setItem('java-learn-active-pathway', activePathway);
+    }
+  }
+}
 
 // Filter topics list by the active pathway to keep navigation consistent
+const pathwayCategories = PATHWAYS[activePathway]?.categories || [];
 const pathwayTopics = topics.filter(t => 
-  PATHWAYS[activePathway]?.categories.includes(t.category)
+  pathwayCategories.includes(t.category)
 );
 const currentIndexInPathway = pathwayTopics.findIndex((t) => t.id === currentId);
-const currentTopic = topics.find((t) => t.id === currentId) || null;
 const prevTopic = currentIndexInPathway > 0 ? pathwayTopics[currentIndexInPathway - 1] : null;
 const nextTopic = currentIndexInPathway < pathwayTopics.length - 1 ? pathwayTopics[currentIndexInPathway + 1] : null;
 

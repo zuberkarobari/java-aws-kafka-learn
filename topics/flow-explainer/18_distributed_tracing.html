@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Distributed Tracing - Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+      
+      <!-- Page Title -->
+      <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+              <i class="ph-fill ph-magnifying-glass-plus"></i> System Request Flow
+          </div>
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+              18. Distributed <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Tracing</span>
+          </h1>
+          <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+              When a request fails after traversing 5 different microservices, how do you know which one crashed? Enter Sleuth and Zipkin.
+          </p>
+      </div>
+
+      <!-- 1. Definition -->
+      <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-book-open-text text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+          </div>
+          
+          <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">Imagine handing a package to FedEx. They put a barcode on it. Every time it changes trucks or cities, it gets scanned. If it gets lost, you look up the barcode to see exactly where it stopped. Tracing puts a barcode on HTTP requests.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">A method used to profile and monitor applications, especially those built using a microservices architecture. It tracks a single request through all its complex interactions across multiple independent systems.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">To pinpoint performance bottlenecks and debug errors. Without tracing, looking at logs from 10 different servers to find one failed request is like finding a needle in a haystack.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- 2. Internal Working -->
+      <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-gears text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Trace IDs and Span IDs</h2>
+          </div>
+
+          <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+              <p class="text-slate-600 font-medium">Tools like Spring Cloud Sleuth (Micrometer Tracing) automatically inject headers into every HTTP request. Zipkin collects these to draw visual timelines.</p>
+              
+              <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                  
+                  <div class="flex flex-col w-full relative z-10 pt-2 pb-6 max-w-lg mx-auto">
+                      
+                      <!-- Gateway -->
+                      <div class="bg-slate-800 border-2 border-brand-500/50 p-4 rounded-lg relative mb-6">
+                          <div class="absolute -top-3 left-6 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">1. API Gateway</div>
+                          <div class="text-sm mt-2 text-slate-300">
+                              Receives GET /order. Generates a new <span class="text-yellow-400 font-mono">Trace ID (T-123)</span> and a <span class="text-blue-400 font-mono">Span ID (S-A)</span>. Logs it, then forwards to Order Service.
+                          </div>
+                      </div>
+
+                      <div class="flex justify-center mb-6">
+                          <div class="text-[9px] text-slate-400 font-mono text-center">
+                              <i class="ph-bold ph-arrow-down mb-1 text-slate-500"></i><br>
+                              Headers injected:<br>
+                              `X-B3-TraceId: T-123`<br>
+                              `X-B3-SpanId: S-B`<br>
+                              `X-B3-ParentSpanId: S-A`
+                          </div>
+                      </div>
+
+                      <!-- Order Service -->
+                      <div class="bg-slate-800 border-2 border-emerald-500/50 p-4 rounded-lg relative mb-6">
+                          <div class="absolute -top-3 left-6 bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">2. Order Service</div>
+                          <div class="text-sm mt-2 text-slate-300">
+                              Receives request. Keeps <span class="text-yellow-400 font-mono">Trace ID (T-123)</span> but uses its new <span class="text-blue-400 font-mono">Span ID (S-B)</span>. Performs DB logic (Span S-C), then calls Inventory Service.
+                          </div>
+                      </div>
+
+                      <div class="flex justify-center mb-6">
+                          <div class="text-[9px] text-slate-400 font-mono text-center">
+                              <i class="ph-bold ph-arrow-down mb-1 text-slate-500"></i><br>
+                              Headers injected:<br>
+                              `X-B3-TraceId: T-123`<br>
+                              `X-B3-SpanId: S-D`<br>
+                              `X-B3-ParentSpanId: S-B`
+                          </div>
+                      </div>
+
+                      <!-- Inventory Service -->
+                      <div class="bg-slate-800 border-2 border-orange-500/50 p-4 rounded-lg relative">
+                          <div class="absolute -top-3 left-6 bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">3. Inventory Service</div>
+                          <div class="text-sm mt-2 text-slate-300">
+                              Keeps <span class="text-yellow-400 font-mono">Trace ID (T-123)</span>. Uses <span class="text-blue-400 font-mono">Span ID (S-D)</span>. <span class="text-red-400 font-bold">ERROR OCCURS HERE.</span>
+                          </div>
+                      </div>
+
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 3. Interview Questions -->
+      <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chats-circle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Interview Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+              <!-- Intermediate -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Intermediate: What is the exact difference between a Trace ID and a Span ID?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> A <strong>Trace ID</strong> represents the entire journey of a single user request. It is generated at the Gateway and remains exactly the same as the request bounces across 5 different microservices. <br><br>
+                          A <strong>Span ID</strong> represents a single logical operation or "hop" within that journey. Every time the request hits a new microservice, or even executes a new database query within a service, a new Span ID is generated. Spans are linked together via Parent/Child relationships to build a timeline tree.
+                      </p>
+                  </div>
+              </div>
+
+              <!-- Senior -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Senior: How does ELK stack (Elasticsearch, Logstash, Kibana) integrate with this?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> While Zipkin provides the visual timeline of how long each span took, you still need to see the actual error logs (stack traces). <br><br>
+                          Spring Cloud Sleuth injects the <code>[TraceID, SpanID]</code> into the standard SLF4J/Logback logs (e.g., <code>INFO [OrderSvc, T-123, S-B]</code>). Logstash forwards all these logs from all servers into Elasticsearch. When the user reports an error, you find their Trace ID, paste it into the Kibana dashboard search bar, and instantly see every single log line printed by every microservice for that exact request, filtered out from the millions of other logs.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

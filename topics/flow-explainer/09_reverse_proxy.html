@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reverse Proxy (NGINX) - Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+      
+      <!-- Page Title -->
+      <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+              <i class="ph-fill ph-arrows-left-right"></i> System Request Flow
+          </div>
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+              9. Reverse Proxy <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">(NGINX)</span>
+          </h1>
+          <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+              Why don't we expose Spring Boot's Tomcat directly to the internet? Enter the Reverse Proxy: handling SSL, compression, and static files with C-level speed.
+          </p>
+      </div>
+
+      <!-- 1. Definition -->
+      <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-book-open-text text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+          </div>
+          
+          <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">If you call a celebrity's phone, their publicist answers. The publicist filters out the junk, handles the paparazzi, and only forwards the important calls to the celebrity's private number. The Reverse Proxy is the publicist.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">A server that sits in front of one or more web servers, intercepting requests from clients. It provides caching, load balancing, SSL termination, and protection against attacks, forwarding the purified request to the backend server.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">To protect the application server (like Tomcat in Spring Boot) from direct internet exposure. It handles slow client connections and heavy CPU tasks like TLS encryption so the Java app can focus on business logic.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- 2. Internal Working -->
+      <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-gears text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: SSL Termination & Forwarding</h2>
+          </div>
+
+          <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+              <p class="text-slate-600 font-medium">NGINX is often installed on the exact same EC2 instance as the Spring Boot app, or just in front of a cluster of them. It intercepts Port 443, does the heavy lifting, and forwards to Port 8080.</p>
+              
+              <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                  
+                  <div class="flex flex-col w-full relative z-10 pt-2 pb-6 max-w-lg mx-auto">
+                      
+                      <!-- Internet Traffic -->
+                      <div class="flex justify-between items-center w-full mb-6">
+                          <div class="flex flex-col text-center">
+                              <i class="ph-fill ph-globe text-3xl text-blue-400"></i>
+                              <span class="text-xs mt-1 text-slate-400 font-mono">Internet</span>
+                          </div>
+                          
+                          <div class="flex-1 flex flex-col items-center">
+                              <div class="text-[10px] text-brand-400 font-mono mb-1 font-bold">HTTPS (Port 443)</div>
+                              <div class="w-full h-1 bg-brand-500/50 relative">
+                                  <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 border-t-2 border-r-2 border-brand-500 transform rotate-45"></div>
+                              </div>
+                              <div class="text-[9px] text-slate-500 italic mt-1">Encrypted Payload</div>
+                          </div>
+                      </div>
+
+                      <!-- NGINX Server Box -->
+                      <div class="bg-slate-800 border-2 border-emerald-500 p-6 rounded-xl relative mb-6">
+                          <div class="absolute -top-3 left-6 bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">NGINX (Reverse Proxy)</div>
+                          
+                          <div class="space-y-4 text-sm font-mono text-slate-300">
+                              <div class="flex items-center gap-2">
+                                  <i class="ph-fill ph-lock-key-open text-emerald-400 text-lg"></i>
+                                  <span>1. SSL Termination (Decrypts traffic)</span>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                  <i class="ph-fill ph-file-zip text-emerald-400 text-lg"></i>
+                                  <span>2. GZIP Compression (Compresses response)</span>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                  <i class="ph-fill ph-image text-emerald-400 text-lg"></i>
+                                  <span>3. Serve Static Files (Serves index.html, JS, CSS)</span>
+                              </div>
+                          </div>
+                      </div>
+
+                      <!-- Forwarding Traffic -->
+                      <div class="flex justify-between items-center w-full mb-6 px-10">
+                          <div class="flex-1 flex flex-col items-center">
+                              <div class="w-px h-10 bg-slate-600 relative">
+                                  <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 border-b-2 border-r-2 border-slate-600 transform rotate-45"></div>
+                              </div>
+                              <div class="text-[10px] text-slate-400 font-mono mt-1 text-center bg-slate-900 px-2 relative -top-6">
+                                  <span class="text-orange-400 font-bold">HTTP (Port 8080)</span><br>
+                                  <span class="text-[9px] italic">Unencrypted, Internal Network Only</span>
+                              </div>
+                          </div>
+                      </div>
+
+                      <!-- Spring Boot App -->
+                      <div class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl text-center">
+                          <i class="ph-fill ph-leaf text-3xl text-brand-400 mb-2"></i>
+                          <div class="font-bold text-slate-200">Spring Boot (Tomcat)</div>
+                          <div class="text-[10px] text-slate-400 mt-1 font-mono">Listens on localhost:8080. Never exposed to internet.</div>
+                      </div>
+
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 3. Interview Questions -->
+      <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chats-circle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Interview Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+              <!-- Intermediate -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Intermediate: What is SSL Termination?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> SSL Termination is the process of decrypting encrypted HTTPS traffic before passing it along to the web server. <br><br>
+                          The Reverse Proxy holds the SSL Certificate and performs the CPU-intensive TLS Handshake with the client. It decrypts the payload, and then forwards a plain HTTP request over the internal, secure network to the Spring Boot application. This significantly reduces the CPU load on the Java application.
+                      </p>
+                  </div>
+              </div>
+
+              <!-- Senior -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Senior: What is the difference between a Forward Proxy and a Reverse Proxy?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> 
+                          <br><br>
+                          A <strong>Forward Proxy</strong> sits in front of the <strong>Client</strong>. It protects the client by masking their IP address before forwarding their request to the internet (like a corporate proxy or a VPN). The server doesn't know who the client is.
+                          <br><br>
+                          A <strong>Reverse Proxy</strong> sits in front of the <strong>Server</strong>. It protects the server by intercepting requests from the internet before they reach the backend. The client doesn't know what backend server actually processed the request.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

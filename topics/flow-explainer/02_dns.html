@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DNS Resolution Flow - Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+      
+      <!-- Page Title -->
+      <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+              <i class="ph-fill ph-book-bookmark"></i> System Request Flow
+          </div>
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+              2. DNS <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Resolution</span>
+          </h1>
+          <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+              How the internet translates human-readable domain names into machine-readable IP addresses using a globally distributed hierarchy.
+          </p>
+      </div>
+
+      <!-- 1. Definition -->
+      <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-book-open-text text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+          </div>
+          
+          <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">DNS is the phonebook of the internet. You memorize a name (google.com), but computers need a number (IP Address like 142.250.190.46) to dial the connection. DNS makes the translation.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">A hierarchical, decentralized naming system that resolves human-readable hostnames to IP addresses. It uses UDP port 53 for queries, falling back to TCP if the response is too large.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">To decouple logical names from physical infrastructure. Servers change IP addresses frequently due to load balancing or failure; DNS ensures the user's bookmark never breaks.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- 2. Internal Working -->
+      <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-gears text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The DNS Lookup Flow</h2>
+          </div>
+
+          <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+              <p class="text-slate-600 font-medium">If the IP is not in the browser, OS, or router cache, your computer contacts your ISP's Recursive Resolver to do the heavy lifting.</p>
+              
+              <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                  
+                  <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                      <i class="ph-fill ph-magnifying-glass text-brand-400"></i> The Recursive DNS Journey
+                  </h3>
+
+                  <div class="flex flex-col items-center w-full relative z-10 pt-2 pb-6 gap-6">
+                      
+                      <!-- Step 1 -->
+                      <div class="flex justify-between items-center w-full max-w-lg border-b border-slate-700 pb-4">
+                          <div class="flex flex-col">
+                              <span class="text-xs text-slate-400 font-bold uppercase">1. The Client</span>
+                              <span class="text-white font-mono">My PC</span>
+                          </div>
+                          <div class="text-xs text-brand-400">"Where is google.com?" &rarr;</div>
+                          <div class="flex flex-col text-right">
+                              <span class="text-xs text-slate-400 font-bold uppercase">Recursive Resolver</span>
+                              <span class="text-white font-mono">ISP / 8.8.8.8</span>
+                          </div>
+                      </div>
+
+                      <!-- Step 2 -->
+                      <div class="flex justify-between items-center w-full max-w-lg border-b border-slate-700 pb-4">
+                          <div class="flex flex-col">
+                              <span class="text-xs text-slate-400 font-bold uppercase">2. Resolver</span>
+                              <span class="text-white font-mono">ISP / 8.8.8.8</span>
+                          </div>
+                          <div class="text-xs text-brand-400">"Who handles .com?" &rarr;</div>
+                          <div class="flex flex-col text-right">
+                              <span class="text-xs text-slate-400 font-bold uppercase">Root Server</span>
+                              <span class="text-white font-mono">(1 of 13 globally)</span>
+                          </div>
+                      </div>
+
+                      <!-- Step 3 -->
+                      <div class="flex justify-between items-center w-full max-w-lg border-b border-slate-700 pb-4">
+                          <div class="flex flex-col">
+                              <span class="text-xs text-slate-400 font-bold uppercase">3. Resolver</span>
+                              <span class="text-white font-mono">ISP / 8.8.8.8</span>
+                          </div>
+                          <div class="text-xs text-brand-400">"Who handles google.com?" &rarr;</div>
+                          <div class="flex flex-col text-right">
+                              <span class="text-xs text-slate-400 font-bold uppercase">TLD Server</span>
+                              <span class="text-white font-mono">(.com server)</span>
+                          </div>
+                      </div>
+
+                      <!-- Step 4 -->
+                      <div class="flex justify-between items-center w-full max-w-lg border-b border-slate-700 pb-4">
+                          <div class="flex flex-col">
+                              <span class="text-xs text-slate-400 font-bold uppercase">4. Resolver</span>
+                              <span class="text-white font-mono">ISP / 8.8.8.8</span>
+                          </div>
+                          <div class="text-xs text-brand-400">"What is the IP of google.com?" &rarr;</div>
+                          <div class="flex flex-col text-right">
+                              <span class="text-xs text-slate-400 font-bold uppercase">Authoritative Server</span>
+                              <span class="text-white font-mono">(Route 53 / Cloudflare)</span>
+                          </div>
+                      </div>
+
+                      <!-- Step 5 -->
+                      <div class="flex justify-between items-center w-full max-w-lg">
+                          <div class="flex flex-col">
+                              <span class="text-xs text-slate-400 font-bold uppercase">5. Resolver</span>
+                              <span class="text-white font-mono">ISP / 8.8.8.8</span>
+                          </div>
+                          <div class="text-xs text-emerald-400 font-bold">&larr; "IP is 142.250.190.46!"</div>
+                          <div class="flex flex-col text-right">
+                              <span class="text-xs text-slate-400 font-bold uppercase">The Client</span>
+                              <span class="text-white font-mono">My PC</span>
+                          </div>
+                      </div>
+
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 3. Real-World Example -->
+      <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-buildings text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Cloud Usage</h2>
+          </div>
+
+          <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+              <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                  <i class="ph-fill ph-cloud text-[12rem] transform -rotate-12"></i>
+              </div>
+              <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-yellow-300">AWS Route 53 (Netflix/Uber)</h3>
+              <p class="text-slate-300 mb-8 relative z-10 font-medium">DNS isn't just for IP translation—it's a global traffic controller.</p>
+              
+              <div class="space-y-6 relative z-10">
+                  <div class="flex gap-5 items-start">
+                      <div class="mt-1 w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30"><i class="ph-fill ph-globe text-xl"></i></div>
+                      <div>
+                          <h4 class="font-bold text-white text-lg font-display">Latency-Based Routing</h4>
+                          <p class="text-sm text-slate-400 mt-1">If a user in Tokyo requests <code>netflix.com</code>, Route 53 (the Authoritative Server) looks at their location. Instead of returning the IP of a US server, it returns the IP of an AWS region in Tokyo, ensuring minimal latency.</p>
+                      </div>
+                  </div>
+                  <div class="flex gap-5 items-start">
+                      <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-heartbeat text-xl"></i></div>
+                      <div>
+                          <h4 class="font-bold text-white text-lg font-display">Failover Routing (Active-Passive)</h4>
+                          <p class="text-sm text-slate-300 mt-1">If Uber's primary data center goes down, Route 53 detects failed health checks. It immediately stops returning the primary IP and starts returning the disaster-recovery IP. Users experience a minor blip instead of a full outage.</p>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 4. Interview Questions -->
+      <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chats-circle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. Interview Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+              <!-- Intermediate -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Intermediate: What is a DNS A Record vs a CNAME Record?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> An <strong>A Record</strong> maps a domain name directly to an IPv4 address (e.g., `google.com -> 142.250.190.46`). A <strong>CNAME (Canonical Name)</strong> record maps an alias name to the true domain name (e.g., `www.google.com -> google.com`). You cannot point a CNAME to an IP address, only to another domain name.
+                      </p>
+                  </div>
+              </div>
+
+              <!-- Senior -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Senior: What is DNS TTL and what is the danger of setting it too high?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> Time To Live (TTL) dictates how long DNS resolvers (like your ISP) should cache a record before querying the authoritative server again. 
+                          <br><br>
+                          If you set a high TTL (e.g., 24 hours), it reduces load on your DNS servers and speeds up user requests. However, the danger is during an emergency: if your server crashes and you switch your IP to a backup server, users worldwide won't see the change for up to 24 hours because their ISPs are holding the cached (old) IP address. Production applications often keep TTLs low (e.g., 60 seconds) for dynamic records.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

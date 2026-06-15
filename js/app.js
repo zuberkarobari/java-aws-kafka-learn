@@ -182,10 +182,11 @@ const renderSidebar = () => {
   }
 
   const categories = getCategoriesByPathway(activePathway);
+  const pathwayInfo = PATHWAYS[activePathway] || { icon: '☕', title: activePathway };
   const html = `
     <div class="sidebar-header">
-      <span class="sidebar-logo">${PATHWAYS[activePathway].icon}</span>
-      <span class="sidebar-title">${PATHWAYS[activePathway].title} Pathway</span>
+      <span class="sidebar-logo">${pathwayInfo.icon || '☕'}</span>
+      <span class="sidebar-title">${pathwayInfo.title || 'Java'} Pathway</span>
     </div>
     <nav class="sidebar-nav" aria-label="Category navigation">
       <ul class="sidebar-category-list">

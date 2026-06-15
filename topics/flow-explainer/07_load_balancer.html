@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Load Balancer - Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+      
+      <!-- Page Title -->
+      <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+              <i class="ph-fill ph-scales"></i> System Request Flow
+          </div>
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+              7. Load <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Balancer</span>
+          </h1>
+          <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+              When one server isn't enough, we add more. But how do we distribute millions of requests evenly without crushing a single machine?
+          </p>
+      </div>
+
+      <!-- 1. Definition -->
+      <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-book-open-text text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+          </div>
+          
+          <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">Think of a traffic cop standing at a busy intersection during rush hour. Instead of letting all cars jam down one lane, the cop directs traffic evenly across three open lanes so everyone keeps moving quickly.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">A device or software (like AWS ALB or HAProxy) that acts as a reverse proxy, distributing network or application traffic across a cluster of servers to improve responsiveness and availability.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">To achieve Horizontal Scaling (scaling out). It prevents any single server from becoming a bottleneck (Single Point of Failure) and constantly checks server health to route around dead instances.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- 2. Internal Working -->
+      <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-gears text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: Routing & Health</h2>
+          </div>
+
+          <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+              <p class="text-slate-600 font-medium">The load balancer intercepts the traffic and decides which backend server should handle the request based on an algorithm and health checks.</p>
+              
+              <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                  
+                  <div class="flex flex-col w-full relative z-10 pt-2 pb-6 max-w-lg mx-auto">
+                      
+                      <!-- Traffic In -->
+                      <div class="flex justify-center mb-6">
+                          <div class="text-center">
+                              <i class="ph-fill ph-users text-3xl text-brand-400"></i>
+                              <div class="text-[10px] text-slate-400 font-mono mt-2">Incoming Traffic (10,000 req/sec)</div>
+                          </div>
+                      </div>
+
+                      <div class="flex justify-center mb-6"><i class="ph-bold ph-arrow-down text-slate-500"></i></div>
+
+                      <!-- Load Balancer -->
+                      <div class="bg-slate-800 border-2 border-brand-500 p-4 rounded-xl text-center shadow-lg mb-8 relative">
+                          <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Load Balancer (ALB)</div>
+                          <div class="text-xs text-slate-300 font-bold mt-2">Algorithm: Round Robin</div>
+                          <div class="text-[10px] text-slate-400 mt-1">Pinging backend servers every 10 seconds for health...</div>
+                      </div>
+
+                      <!-- Arrows -->
+                      <div class="flex justify-between px-10 mb-2 relative h-10">
+                          <div class="absolute left-[20%] top-0 w-px h-full bg-slate-600"></div>
+                          <div class="absolute left-1/2 top-0 w-px h-full bg-slate-600"></div>
+                          <div class="absolute right-[20%] top-0 w-px h-red-500 border-r-2 border-red-500 border-dashed"></div>
+                      </div>
+
+                      <!-- Backend Servers -->
+                      <div class="flex justify-between gap-4">
+                          <div class="flex-1 bg-emerald-900/30 border border-emerald-500/50 p-3 rounded-lg text-center relative">
+                              <div class="absolute -top-2 -right-2 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>
+                              <i class="ph-fill ph-server text-2xl text-emerald-400 mb-2"></i>
+                              <div class="text-xs font-bold text-slate-200">Server A</div>
+                              <div class="text-[9px] text-slate-400">Healthy (200 OK)</div>
+                          </div>
+                          
+                          <div class="flex-1 bg-emerald-900/30 border border-emerald-500/50 p-3 rounded-lg text-center relative">
+                              <div class="absolute -top-2 -right-2 w-4 h-4 bg-emerald-500 rounded-full border-2 border-slate-900"></div>
+                              <i class="ph-fill ph-server text-2xl text-emerald-400 mb-2"></i>
+                              <div class="text-xs font-bold text-slate-200">Server B</div>
+                              <div class="text-[9px] text-slate-400">Healthy (200 OK)</div>
+                          </div>
+
+                          <div class="flex-1 bg-red-900/30 border border-red-500/50 p-3 rounded-lg text-center relative opacity-50">
+                              <div class="absolute -top-2 -right-2 w-4 h-4 bg-red-500 rounded-full border-2 border-slate-900 flex items-center justify-center text-[8px] text-white font-bold">X</div>
+                              <i class="ph-fill ph-server text-2xl text-red-400 mb-2"></i>
+                              <div class="text-xs font-bold text-slate-200">Server C</div>
+                              <div class="text-[9px] text-red-400">Dead (502 Error)</div>
+                          </div>
+                      </div>
+                      
+                      <div class="text-[10px] text-slate-400 mt-6 text-center italic">
+                          Because Server C failed the Health Check ping, the LB removes it from the pool. Traffic only routes to A and B.
+                      </div>
+
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 3. Interview Questions -->
+      <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chats-circle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Interview Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+              <!-- Intermediate -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Intermediate: What is the difference between a Layer 4 (L4) and Layer 7 (L7) Load Balancer?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> A <strong>Layer 4 LB (Network Load Balancer)</strong> routes traffic based strictly on IP addresses and TCP/UDP ports. It is extremely fast because it doesn't look at the data payload.<br><br>
+                          A <strong>Layer 7 LB (Application Load Balancer)</strong> decrypts the HTTPS traffic, reads the HTTP headers, URLs, and cookies. It allows for "smart" routing, e.g., routing requests for `/api/videos` to a specific video microservice, and `/api/users` to the user microservice.
+                      </p>
+                  </div>
+              </div>
+
+              <!-- Senior -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Senior: Explain "Sticky Sessions" and why modern architectures avoid them.</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> Sticky Sessions (Session Affinity) is a feature where the LB routes a specific user's requests to the exact same backend server every time. This was used when servers held user session state (like a shopping cart) in their local RAM.
+                          <br><br>
+                          <strong>Why avoid them?</strong> They defeat load balancing. If one server gets "stuck" with heavy users, it crashes, and those users lose their session data. Modern REST APIs are <strong>Stateless</strong>. They store session data in a distributed cache like Redis. This means the LB can safely route any request to any server at any time, achieving perfect horizontal scaling.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

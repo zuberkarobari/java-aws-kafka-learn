@@ -83,6 +83,13 @@ export const PATHWAYS = {
     icon: '👤',
     description: 'View your account details, global progress, and synced data.',
     categories: []
+  },
+  requestflow: {
+    id: 'requestflow',
+    title: 'Request Flow',
+    icon: '🔄',
+    description: 'Complete request lifecycle from Browser to Database to Kafka.',
+    categories: ['Complete Request Flow']
   }
 };
 
@@ -172,9 +179,38 @@ export const TOPIC_ORDER = [
   'kafka/kafka-architecture',
   'kafka/spring-kafka',
   'kafka/what_is_consumer_group',
+  'kafka/what_is_kafka',
+  'kafka/what_is_topic',
+  'kafka/what_is_partition',
+  'kafka/what_is_offset',
+  'kafka/what_is_replication',
+  'kafka/what_is_isr',
+  'kafka/what_is_rebalancing',
+  'kafka/what_is_consumer_lag',
+  'kafka/what_is_log_compaction',
+  'kafka/what_is_dlt',
+  'kafka/what_is_idempotent_producer',
+  'kafka/kafka_architecture',
+  'kafka/kafka_components',
+  'kafka/kafka_producer_api',
+  'kafka/kafka_consumer_api',
+  'kafka/kafka_streams',
+  'kafka/kafka_zookeeper',
+  'kafka/kafka_load_balancing',
+  'kafka/leader_and_follower',
+  'kafka/consumer_group',
 
   // ── Kafka Interview Q&A ───────────────────────────────────────
+  'kafka/kafka-70-qa',
   'questions and answers/kafka/kafka_top20',
+  'kafka/at_most_once_vs_at_least_once_vs_exactly_once',
+  'kafka/auto_commit_vs_manual_commit',
+  'kafka/kafka_vs_rabbitmq',
+  'kafka/how_kafka_achieves_scalability',
+  'kafka/what_happens_when_broker_crashes',
+  'kafka/explain_producer_acknowledgment',
+  'kafka/how_do_you_integrate_kafka_with_spring_boot',
+  'kafka/describe_a_kafka_implementation_from_your_project',
 
   // ── Microservices ─────────────────────────────────────────────
   'microservices/service-discovery',
@@ -266,6 +302,28 @@ export const TOPIC_ORDER = [
   'key-topics/spring_boot_request_flow',
   'key-topics/spring_boot_routing_engine',
   'key-topics/spring_mvc_routing_engine_reel',
+
+  // ── Complete Request Flow ─────────────────────────────────────
+  'flow-explainer/01_browser',
+  'flow-explainer/02_dns',
+  'flow-explainer/03_networking',
+  'flow-explainer/04_http_https',
+  'flow-explainer/05_firewall',
+  'flow-explainer/06_cdn',
+  'flow-explainer/07_load_balancer',
+  'flow-explainer/08_api_gateway',
+  'flow-explainer/09_reverse_proxy',
+  'flow-explainer/10_spring_boot_flow',
+  'flow-explainer/11_redis_caching',
+  'flow-explainer/12_database',
+  'flow-explainer/13_database_pooling',
+  'flow-explainer/14_message_queue_kafka',
+  'flow-explainer/15_async_workers',
+  'flow-explainer/16_third_party_apis',
+  'flow-explainer/17_service_discovery',
+  'flow-explainer/18_distributed_tracing',
+  'flow-explainer/19_docker_kubernetes',
+  'flow-explainer/20_complete_flow',
 ];
 
 /**
@@ -452,13 +510,187 @@ export const TOPIC_META = {
     description: 'Configure producers, consumers, serialisers, and error handlers in Spring Boot.',
     isLocked: true,
   },
+  'kafka/what_is_kafka': {
+    category: 'Kafka Messaging',
+    icon: '📡',
+    title: 'What is Kafka?',
+    description: 'Apache Kafka as a distributed event streaming platform — the append-only commit log explained.',
+  },
+  'kafka/what_is_topic': {
+    category: 'Kafka Messaging',
+    icon: '📂',
+    title: 'What is a Topic?',
+    description: 'Understand Kafka topics as logical channels that producers write to and consumers read from.',
+  },
+  'kafka/what_is_partition': {
+    category: 'Kafka Messaging',
+    icon: '🔀',
+    title: 'What is a Partition?',
+    description: 'The unit of parallelism in Kafka — how topics are split across brokers for throughput.',
+  },
+  'kafka/what_is_offset': {
+    category: 'Kafka Messaging',
+    icon: '🔢',
+    title: 'What is an Offset?',
+    description: 'The sequential integer position of a message in a partition — how consumers track progress.',
+  },
+  'kafka/what_is_replication': {
+    category: 'Kafka Messaging',
+    icon: '♻️',
+    title: 'What is Replication?',
+    description: 'How Kafka copies partition data across broker replicas for fault tolerance.',
+  },
+  'kafka/what_is_isr': {
+    category: 'Kafka Messaging',
+    icon: '✅',
+    title: 'What is ISR?',
+    description: 'In-Sync Replicas — the set of followers that are fully caught up with the partition leader.',
+  },
+  'kafka/what_is_rebalancing': {
+    category: 'Kafka Messaging',
+    icon: '⚖️',
+    title: 'What is Rebalancing?',
+    description: 'How Kafka redistributes partition ownership when consumers join or leave a consumer group.',
+  },
+  'kafka/what_is_consumer_lag': {
+    category: 'Kafka Messaging',
+    icon: '🐢',
+    title: 'What is Consumer Lag?',
+    description: 'The gap between the latest produced offset and the last committed consumer offset — a key health metric.',
+  },
+  'kafka/what_is_log_compaction': {
+    category: 'Kafka Messaging',
+    icon: '🗜️',
+    title: 'What is Log Compaction?',
+    description: 'Kafka\'s mechanism to retain only the latest value per key, acting like a changelog table.',
+  },
+  'kafka/what_is_dlt': {
+    category: 'Kafka Messaging',
+    icon: '☠️',
+    title: 'What is a DLT?',
+    description: 'Dead Letter Topics — where Kafka routes messages that repeatedly fail consumer processing.',
+  },
+  'kafka/what_is_idempotent_producer': {
+    category: 'Kafka Messaging',
+    icon: '🔒',
+    title: 'What is an Idempotent Producer?',
+    description: 'How Kafka prevents duplicate messages during retries using producer sequence IDs.',
+  },
+  'kafka/kafka_architecture': {
+    category: 'Kafka Messaging',
+    icon: '🏗️',
+    title: 'Kafka Architecture Deep Dive',
+    description: 'Mastering Topics, Partitions, Consumer Groups, Offsets, and the Dumb Broker / Smart Consumer philosophy.',
+  },
+  'kafka/kafka_components': {
+    category: 'Kafka Messaging',
+    icon: '🧩',
+    title: 'Kafka Components',
+    description: 'A complete breakdown of Kafka\'s core building blocks: Brokers, Topics, Producers, Consumers, and ZooKeeper/KRaft.',
+  },
+  'kafka/kafka_producer_api': {
+    category: 'Kafka Messaging',
+    icon: '📤',
+    title: 'Kafka Producer API',
+    description: 'Deep dive into the Producer API — acks, retries, idempotency, batching, and serialization strategies.',
+  },
+  'kafka/kafka_consumer_api': {
+    category: 'Kafka Messaging',
+    icon: '📥',
+    title: 'Kafka Consumer API',
+    description: 'Master consumer configuration, poll loops, offset management, and consumer group coordination.',
+  },
+  'kafka/kafka_streams': {
+    category: 'Kafka Messaging',
+    icon: '🌊',
+    title: 'Kafka Streams',
+    description: 'Stream processing with the Kafka Streams DSL — stateless transforms, aggregations, and joins.',
+  },
+  'kafka/kafka_zookeeper': {
+    category: 'Kafka Messaging',
+    icon: '🦝',
+    title: 'Kafka & ZooKeeper / KRaft',
+    description: 'How ZooKeeper managed Kafka cluster metadata and why KRaft replaces it in modern Kafka.',
+  },
+  'kafka/kafka_load_balancing': {
+    category: 'Kafka Messaging',
+    icon: '🔄',
+    title: 'Kafka Load Balancing',
+    description: 'Partition assignment strategies, consumer group rebalancing, and even workload distribution.',
+  },
+  'kafka/leader_and_follower': {
+    category: 'Kafka Messaging',
+    icon: '👑',
+    title: 'Leader & Follower Replicas',
+    description: 'How partition leaders handle all I/O while follower replicas keep in sync for high availability.',
+  },
+  'kafka/consumer_group': {
+    category: 'Kafka Messaging',
+    icon: '👥',
+    title: 'Consumer Group Internals',
+    description: 'Deep dive into consumer group coordination, the Group Coordinator, and rebalance protocols.',
+  },
 
   // ─── Kafka Interview Q&A ───────────────────────────────────────
+  'kafka/kafka-70-qa': {
+    category: 'Kafka Interview Q&A',
+    icon: '🚀',
+    title: 'Kafka 70 Q&A Mastery',
+    description: '70 essential Kafka interview questions covering architecture, producers, consumers, and streams.',
+  },
   'questions and answers/kafka/kafka_top20': {
     category: 'Kafka Interview Q&A',
     icon: '🐿️',
     title: 'Kafka Top 20 Q&A',
     description: '20 critical questions on Kafka partitions, offsets, consumers, brokers, and architecture.',
+  },
+  'kafka/at_most_once_vs_at_least_once_vs_exactly_once': {
+    category: 'Kafka Interview Q&A',
+    icon: '🎯',
+    title: 'At-Most-Once vs At-Least-Once vs Exactly-Once',
+    description: 'The three message delivery guarantees in Kafka and how to configure each in production.',
+  },
+  'kafka/auto_commit_vs_manual_commit': {
+    category: 'Kafka Interview Q&A',
+    icon: '✍️',
+    title: 'Auto Commit vs Manual Commit',
+    description: 'When to use auto offset commit vs manual commitSync/commitAsync and the trade-offs of each.',
+  },
+  'kafka/kafka_vs_rabbitmq': {
+    category: 'Kafka Interview Q&A',
+    icon: '🐇',
+    title: 'Kafka vs RabbitMQ',
+    description: 'Key differences in architecture, delivery guarantees, throughput, and use-case fit.',
+  },
+  'kafka/how_kafka_achieves_scalability': {
+    category: 'Kafka Interview Q&A',
+    icon: '📈',
+    title: 'How Kafka Achieves Scalability',
+    description: 'Partitioning, sequential I/O, zero-copy, and horizontal scaling strategies explained.',
+  },
+  'kafka/what_happens_when_broker_crashes': {
+    category: 'Kafka Interview Q&A',
+    icon: '💥',
+    title: 'What Happens When a Broker Crashes?',
+    description: 'Leader election, ISR failover, and how Kafka recovers without losing committed messages.',
+  },
+  'kafka/explain_producer_acknowledgment': {
+    category: 'Kafka Interview Q&A',
+    icon: '📨',
+    title: 'Producer Acknowledgment (acks)',
+    description: 'The acks=0, acks=1, and acks=all settings — balancing durability vs throughput.',
+  },
+  'kafka/how_do_you_integrate_kafka_with_spring_boot': {
+    category: 'Kafka Interview Q&A',
+    icon: '🌱',
+    title: 'Integrating Kafka with Spring Boot',
+    description: 'Step-by-step configuration of KafkaTemplate, @KafkaListener, and error handling in Spring.',
+  },
+  'kafka/describe_a_kafka_implementation_from_your_project': {
+    category: 'Kafka Interview Q&A',
+    icon: '💼',
+    title: 'Describe a Kafka Implementation',
+    description: 'How to structure your project-based Kafka answer for senior engineering interviews.',
   },
 
   // ─── Microservices ─────────────────────────────────────────────
@@ -1145,5 +1377,127 @@ export const TOPIC_META = {
     title: 'Spring Boot Routing Engine',
     description: 'Master endpoint mapping, HTTP message converters, handler adapters, and filter interceptors.',
   },
+
+  // ── Complete Request Flow ─────────────────────────────────────
+  'flow-explainer/01_browser': {
+    category: 'Complete Request Flow',
+    icon: '🌐',
+    title: '1. Browser Request',
+    description: 'DOM, CSSOM, Render Tree, and what happens when you type google.com.',
+  },
+  'flow-explainer/02_dns': {
+    category: 'Complete Request Flow',
+    icon: '📖',
+    title: '2. DNS Resolution',
+    description: 'Root servers, TLD, Authoritative Name Servers, and DNS caching.',
+  },
+  'flow-explainer/03_networking': {
+    category: 'Complete Request Flow',
+    icon: '📡',
+    title: '3. Internet & Networking',
+    description: 'TCP/IP, UDP, Packets, Routers, and the 3-way Handshake.',
+  },
+  'flow-explainer/04_http_https': {
+    category: 'Complete Request Flow',
+    icon: '🔒',
+    title: '4. HTTP & HTTPS',
+    description: 'SSL/TLS, Certificates, and public/private key encryption.',
+  },
+  'flow-explainer/05_firewall': {
+    category: 'Complete Request Flow',
+    icon: '🧱',
+    title: '5. Network Firewall',
+    description: 'WAF, Security Groups, and blocking malicious traffic.',
+  },
+  'flow-explainer/06_cdn': {
+    category: 'Complete Request Flow',
+    icon: '🌍',
+    title: '6. Content Delivery Network',
+    description: 'Edge locations, Cache Hits/Misses, and static content delivery.',
+  },
+  'flow-explainer/07_load_balancer': {
+    category: 'Complete Request Flow',
+    icon: '⚖️',
+    title: '7. Load Balancer',
+    description: 'L4 vs L7 routing, Round Robin, Health Checks, and HAProxy/AWS ALB.',
+  },
+  'flow-explainer/08_api_gateway': {
+    category: 'Complete Request Flow',
+    icon: '🚪',
+    title: '8. API Gateway',
+    description: 'Routing, Authentication, Rate Limiting, and Spring Cloud Gateway.',
+  },
+  'flow-explainer/09_reverse_proxy': {
+    category: 'Complete Request Flow',
+    icon: '🛡️',
+    title: '9. Reverse Proxy (NGINX)',
+    description: 'SSL Termination, Compression, Caching, and Connection Pooling.',
+  },
+  'flow-explainer/10_spring_boot_flow': {
+    category: 'Complete Request Flow',
+    icon: '🌱',
+    title: '10. Spring Boot Application Flow',
+    description: 'Controller, DTO, Service, Repository, Database, and Response mapping.',
+  },
+  'flow-explainer/11_redis_caching': {
+    category: 'Complete Request Flow',
+    icon: '⚡',
+    title: '11. Caching (Redis)',
+    description: 'Cache-Aside, Read-Through, Eviction policies, and Redis architecture.',
+  },
+  'flow-explainer/12_database': {
+    category: 'Complete Request Flow',
+    icon: '🗄️',
+    title: '12. Database (SQL/NoSQL)',
+    description: 'ACID, Indexing, Query Optimization, and Connection Pooling.',
+  },
+  'flow-explainer/13_database_pooling': {
+    category: 'Complete Request Flow',
+    icon: '🔌',
+    title: '13. Connection Pooling (HikariCP)',
+    description: 'How HikariCP manages database connections, pool sizing, and timeout handling.',
+  },
+  'flow-explainer/14_message_queue_kafka': {
+    category: 'Complete Request Flow',
+    icon: '🐿️',
+    title: '14. Message Queue (Kafka)',
+    description: 'Producers, Consumers, Topics, Partitions, and decoupling microservices.',
+  },
+  'flow-explainer/15_async_workers': {
+    category: 'Complete Request Flow',
+    icon: '🤖',
+    title: '15. Async Workers',
+    description: 'Consumer Groups, Rebalancing, and independently scaling background workers.',
+  },
+  'flow-explainer/16_third_party_apis': {
+    category: 'Complete Request Flow',
+    icon: '🔌',
+    title: '16. Third-Party APIs',
+    description: 'Circuit Breaker (Resilience4j), Idempotency Keys, and WebClient vs RestTemplate.',
+  },
+  'flow-explainer/17_service_discovery': {
+    category: 'Complete Request Flow',
+    icon: '📍',
+    title: '17. Service Discovery (Eureka)',
+    description: 'Dynamic IP resolution, client-side vs server-side discovery, and failover.',
+  },
+  'flow-explainer/18_distributed_tracing': {
+    category: 'Complete Request Flow',
+    icon: '🔍',
+    title: '18. Distributed Tracing',
+    description: 'Trace IDs, Span IDs, Zipkin, and correlating logs across microservices.',
+  },
+  'flow-explainer/19_docker_kubernetes': {
+    category: 'Complete Request Flow',
+    icon: '☸️',
+    title: '19. Docker & Kubernetes',
+    description: 'Containers, Pods, Deployments, rolling updates, and self-healing clusters.',
+  },
+  'flow-explainer/20_complete_flow': {
+    category: 'Complete Request Flow',
+    icon: '🚀',
+    title: '20. Complete Production Flow',
+    description: 'The full 10-hop journey from browser click to database commit and back.',
+  }
 };
 

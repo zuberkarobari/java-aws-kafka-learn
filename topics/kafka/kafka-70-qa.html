@@ -1,0 +1,1979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kafka — 70 Interview Q&amp;A Mastery Guide</title>
+<meta name="description" content="70 essential Kafka interview questions with detailed answers. Master core concepts, architecture, producers, consumers, streams, and operations."/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="../../css/styles.css"/>
+<link rel="stylesheet" href="../../css/topic.css"/>
+<style>
+:root {
+  --bg: #06080f;
+  --surface: #0b0e18;
+  --card: #0e1322;
+  --card-hover: #111827;
+  --border: #1a2236;
+  --border-lit: #243048;
+  --acc:  #a78bfa;   /* violet — core */
+  --acc2: #22d3ee;   /* cyan — architecture */
+  --acc3: #fb923c;   /* orange — producers */
+  --acc4: #4ade80;   /* green — consumers */
+  --acc5: #f472b6;   /* pink — streams */
+  --acc6: #f87171;   /* red — operations */
+  --text: #dde8f5;
+  --muted: #4a5a72;
+  --muted2: #6a7a90;
+  --known-bg: #0d1f15;
+  --known-border: #1a4a28;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:15px;line-height:1.78;min-height:100vh}
+
+/* ── HERO ─────────────────────────────────────────────────────── */
+.hero {
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#07090f 0%,#090d1a 60%,#06080f 100%);
+  border-bottom:1px solid var(--border);
+  padding:56px 44px 44px;
+}
+.hero::before {
+  content:'';position:absolute;top:-120px;right:-80px;
+  width:560px;height:560px;
+  background:radial-gradient(circle,rgba(167,139,250,0.09) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero::after {
+  content:'';position:absolute;bottom:-80px;left:60px;
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(34,211,238,0.05) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero-eyebrow {
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:4px;
+  color:var(--acc);text-transform:uppercase;margin-bottom:14px;
+}
+.hero h1 {
+  font-size:52px;font-weight:700;letter-spacing:-2.5px;line-height:1.05;margin-bottom:12px;
+}
+.hero h1 .k{color:var(--acc)}
+.hero h1 .n{color:var(--acc2)}
+.hero-sub {
+  color:var(--muted2);font-size:14.5px;max-width:620px;line-height:1.75;margin-bottom:26px;
+}
+.hero-chips{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:28px}
+.chip {
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;
+  padding:5px 14px;border-radius:4px;text-transform:uppercase;cursor:pointer;
+  transition:all .2s;user-select:none;
+}
+.chip.all   {background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:var(--acc)}
+.chip.arch  {background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);color:var(--acc2)}
+.chip.prod  {background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);color:var(--acc3)}
+.chip.cons  {background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);color:var(--acc4)}
+.chip.strm  {background:rgba(244,114,182,.08);border:1px solid rgba(244,114,182,.2);color:var(--acc5)}
+.chip.ops   {background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);color:var(--acc6)}
+.chip.active,.chip:hover{filter:brightness(1.3);transform:translateY(-1px)}
+.chip.all.active{background:rgba(167,139,250,.2);border-color:rgba(167,139,250,.5)}
+
+/* ── MAIN LAYOUT ─────────────────────────────────────────────── */
+.main{max-width:1060px;margin:0 auto;padding:36px 28px 80px}
+
+/* ── PROGRESS ────────────────────────────────────────────────── */
+.prog-wrap{
+  display:flex;align-items:center;gap:16px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:16px 22px;margin-bottom:32px;
+}
+.prog-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;white-space:nowrap}
+.prog-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:3px;width:0%;transition:width .5s ease}
+.prog-count{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--acc);font-weight:600;white-space:nowrap}
+.prog-pct  {font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ── SECTION LABEL ───────────────────────────────────────────── */
+.sec-label{
+  display:flex;align-items:center;gap:12px;
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:3px;
+  text-transform:uppercase;color:var(--muted);margin:36px 0 18px;
+}
+.sec-label::before,.sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.sec-label::before{max-width:32px}
+
+/* ── Q CARD ──────────────────────────────────────────────────── */
+.qc{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;margin-bottom:14px;overflow:hidden;
+  transition:border-color .22s,box-shadow .22s,background .22s;
+  position:relative;
+}
+.qc::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  border-radius:12px 0 0 12px;opacity:0;transition:opacity .22s;
+}
+.qc.cat-core::before{background:var(--acc)}
+.qc.cat-arch::before{background:var(--acc2)}
+.qc.cat-prod::before{background:var(--acc3)}
+.qc.cat-cons::before{background:var(--acc4)}
+.qc.cat-strm::before{background:var(--acc5)}
+.qc.cat-ops ::before{background:var(--acc6)}
+
+.qc:hover{border-color:var(--border-lit);background:var(--card-hover)}
+.qc:hover::before,.qc.open::before{opacity:1}
+.qc.open{border-color:var(--border-lit);box-shadow:0 6px 40px rgba(0,0,0,.35)}
+
+/* known state */
+.qc.known{background:var(--known-bg);border-color:var(--known-border)}
+.qc.known .qnum-inner{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.3);color:var(--acc4)}
+
+/* question header */
+.qq{display:flex;align-items:flex-start;gap:16px;padding:20px 22px;cursor:pointer;user-select:none}
+.qc.open .qq{border-bottom:1px solid var(--border)}
+.qnum{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;min-width:48px;margin-top:2px}
+.qnum-inner{
+  padding:4px 10px;border-radius:5px;display:inline-block;
+  transition:background .2s,color .2s;
+}
+.cat-core .qnum-inner{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.28);color:var(--acc)}
+.cat-arch .qnum-inner{background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.25);color:var(--acc2)}
+.cat-prod .qnum-inner{background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25);color:var(--acc3)}
+.cat-cons .qnum-inner{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);color:var(--acc4)}
+.cat-strm .qnum-inner{background:rgba(244,114,182,.1);border:1px solid rgba(244,114,182,.25);color:var(--acc5)}
+.cat-ops  .qnum-inner{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:var(--acc6)}
+
+.qbody{flex:1;min-width:0}
+.qtxt{font-weight:600;font-size:15.5px;line-height:1.5;color:var(--text);margin-bottom:7px}
+.qmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;
+  padding:2px 10px;border-radius:3px;text-transform:uppercase;font-weight:600;
+}
+.tag-core{background:rgba(167,139,250,.09);border:1px solid rgba(167,139,250,.2);color:var(--acc)}
+.tag-arch{background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.18);color:var(--acc2)}
+.tag-prod{background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.18);color:var(--acc3)}
+.tag-cons{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.18);color:var(--acc4)}
+.tag-strm{background:rgba(244,114,182,.08);border:1px solid rgba(244,114,182,.18);color:var(--acc5)}
+.tag-ops {background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.18);color:var(--acc6)}
+
+.qc-right{display:flex;align-items:center;gap:10px;min-width:fit-content;margin-top:2px}
+.qarr{color:var(--muted);font-size:16px;transition:transform .28s}
+.qc.open .qarr{transform:rotate(180deg)}
+.cat-core.open .qarr{color:var(--acc)}
+.cat-arch.open .qarr{color:var(--acc2)}
+.cat-prod.open .qarr{color:var(--acc3)}
+.cat-cons.open .qarr{color:var(--acc4)}
+.cat-strm.open .qarr{color:var(--acc5)}
+.cat-ops.open  .qarr{color:var(--acc6)}
+
+.know-btn{
+  font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;
+  padding:4px 10px;border-radius:4px;border:1px solid var(--border-lit);
+  background:transparent;color:var(--muted);cursor:pointer;text-transform:uppercase;
+  transition:all .2s;white-space:nowrap;
+}
+.know-btn:hover{border-color:rgba(74,222,128,.4);color:var(--acc4);background:rgba(74,222,128,.06)}
+.qc.known .know-btn{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.35);color:var(--acc4)}
+
+/* ── ANSWER ──────────────────────────────────────────────────── */
+.ans{display:none;padding:22px 22px 26px 86px;animation:fadeIn .2s ease}
+.qc.open .ans{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+.ans-intro{
+  font-size:13.5px;color:var(--muted2);font-style:italic;line-height:1.75;
+  padding:10px 16px;border-radius:0 6px 6px 0;margin-bottom:18px;
+}
+.cat-core .ans-intro{border-left:2px solid var(--acc);background:rgba(167,139,250,.04)}
+.cat-arch .ans-intro{border-left:2px solid var(--acc2);background:rgba(34,211,238,.03)}
+.cat-prod .ans-intro{border-left:2px solid var(--acc3);background:rgba(251,146,60,.04)}
+.cat-cons .ans-intro{border-left:2px solid var(--acc4);background:rgba(74,222,128,.04)}
+.cat-strm .ans-intro{border-left:2px solid var(--acc5);background:rgba(244,114,182,.04)}
+.cat-ops  .ans-intro{border-left:2px solid var(--acc6);background:rgba(248,113,113,.04)}
+
+.ans-body{font-size:14.5px;line-height:1.85;color:var(--text)}
+.ans-body p{margin-bottom:12px}
+.ans-body p:last-child{margin-bottom:0}
+
+.bl{list-style:none;display:flex;flex-direction:column;gap:11px;margin-top:4px}
+.bl li{display:flex;gap:12px;align-items:flex-start}
+.bdot{
+  width:22px;height:22px;min-width:22px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+  margin-top:3px;
+}
+.cat-core .bdot{background:rgba(167,139,250,.15);color:var(--acc)}
+.cat-arch .bdot{background:rgba(34,211,238,.12);color:var(--acc2)}
+.cat-prod .bdot{background:rgba(251,146,60,.12);color:var(--acc3)}
+.cat-cons .bdot{background:rgba(74,222,128,.12);color:var(--acc4)}
+.cat-strm .bdot{background:rgba(244,114,182,.12);color:var(--acc5)}
+.cat-ops  .bdot{background:rgba(248,113,113,.12);color:var(--acc6)}
+
+.btxt{flex:1;font-size:14px;line-height:1.8;color:var(--text)}
+.btxt strong{color:var(--text);font-weight:700}
+.btxt code{
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  background:rgba(255,255,255,.07);padding:2px 7px;border-radius:4px;color:#e2c08d;
+}
+
+.kv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:8px}
+.kv{
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:8px;padding:12px 14px;
+}
+.kv-key{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;font-weight:600}
+.kv-val{font-size:13px;color:var(--muted2);line-height:1.6}
+.cat-core .kv-key{color:var(--acc)}
+.cat-arch .kv-key{color:var(--acc2)}
+.cat-prod .kv-key{color:var(--acc3)}
+.cat-cons .kv-key{color:var(--acc4)}
+.cat-strm .kv-key{color:var(--acc5)}
+.cat-ops  .kv-key{color:var(--acc6)}
+
+.tip-box{
+  display:flex;gap:12px;align-items:flex-start;
+  background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.15);
+  border-radius:8px;padding:12px 14px;margin-top:14px;
+}
+.tip-box .tip-icon{font-size:16px;margin-top:1px}
+.tip-box .tip-txt{font-size:13px;color:var(--muted2);line-height:1.7}
+.tip-box .tip-txt strong{color:var(--text)}
+
+/* ── HIDDEN ──────────────────────────────────────────────────── */
+.qc.hidden{display:none}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────── */
+.empty{text-align:center;padding:60px 20px;color:var(--muted);display:none}
+.empty.show{display:block}
+
+/* ── STATS BAR ───────────────────────────────────────────────── */
+.stats-bar{
+  display:flex;gap:20px;flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:14px 22px;margin-bottom:22px;
+}
+.stat{display:flex;align-items:center;gap:8px}
+.stat-dot{width:8px;height:8px;border-radius:50%}
+.stat-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+
+/* ── RESPONSIVE ──────────────────────────────────────────────── */
+@media(max-width:640px){
+  .hero{padding:30px 18px 26px}
+  .hero h1{font-size:32px}
+  .main{padding:24px 14px 60px}
+  .ans{padding:18px 14px 22px}
+  .qq{gap:10px;padding:16px 14px}
+  .qnum{min-width:38px}
+  .qc-right{gap:6px}
+  .know-btn{display:none}
+  .kv-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<main id="topic-content">
+
+<!-- ── HERO ──────────────────────────────────────────────────── -->
+<div class="hero">
+  <div class="hero-eyebrow">Interview Mastery · Apache Kafka · Senior Level</div>
+  <h1><span class="k">Kafka</span> <span class="n">70</span><br/>Interview Q&amp;A</h1>
+  <div class="hero-sub">The most comprehensive Kafka interview prep — from core architecture to advanced stream processing. Click any card to reveal the answer, mark what you know.</div>
+  <div class="hero-chips">
+    <span class="chip all active" onclick="filter('all',this)">✦ All 70</span>
+    <span class="chip all"  onclick="filter('core',this)">🟣 Core Concepts</span>
+    <span class="chip arch" onclick="filter('arch',this)">🔵 Architecture</span>
+    <span class="chip prod" onclick="filter('prod',this)">🟠 Producers</span>
+    <span class="chip cons" onclick="filter('cons',this)">🟢 Consumers</span>
+    <span class="chip strm" onclick="filter('strm',this)">🩷 Streams &amp; Ecosystem</span>
+    <span class="chip ops"  onclick="filter('ops',this)">🔴 Operations</span>
+  </div>
+</div>
+
+<!-- ── MAIN ───────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Progress -->
+  <div class="prog-wrap">
+    <span class="prog-label">Known</span>
+    <div class="prog-track"><div class="prog-fill" id="pF"></div></div>
+    <span class="prog-count" id="pC">0 / 70</span>
+    <span class="prog-pct" id="pPct">0%</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-dot" style="background:var(--acc)"></div><span class="stat-lbl">Core</span><span class="stat-val" style="color:var(--acc)">13</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--acc2)"></div><span class="stat-lbl">Arch</span><span class="stat-val" style="color:var(--acc2)">18</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--acc3)"></div><span class="stat-lbl">Producers</span><span class="stat-val" style="color:var(--acc3)">14</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--acc4)"></div><span class="stat-lbl">Consumers</span><span class="stat-val" style="color:var(--acc4)">12</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--acc5)"></div><span class="stat-lbl">Streams</span><span class="stat-val" style="color:var(--acc5)">7</span></div>
+    <div class="stat"><div class="stat-dot" style="background:var(--acc6)"></div><span class="stat-lbl">Ops</span><span class="stat-val" style="color:var(--acc6)">6</span></div>
+  </div>
+
+  <div id="card-list">
+
+  <!-- ═══════════════ CORE CONCEPTS ═══════════════ -->
+  <div class="sec-label" data-sec="core">🟣 Core Concepts</div>
+
+  <!-- Q1 -->
+  <div class="qc cat-core" data-cat="core" id="q1">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">01</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is Apache Kafka?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-core">Must Know</span></div>
+      </div>
+      <div class="qc-right">
+        <button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button>
+        <span class="qarr">▾</span>
+      </div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A distributed streaming platform — understand what makes it different from a traditional message queue.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Definition:</strong> Apache Kafka is a distributed streaming platform that allows for publishing, subscribing to, storing, and processing streams of records in real-time.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Key distinction:</strong> Unlike traditional message queues (RabbitMQ), Kafka acts as an <code>append-only distributed commit log</code> — messages persist after consumption.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Designed for:</strong> High-throughput, fault-tolerant, and scalable data pipelines and real-time streaming applications.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Use cases:</strong> Real-time analytics, event sourcing, microservice decoupling, log aggregation, CDC (Change Data Capture).</div></li>
+        </ul>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt"><strong>Interview tip:</strong> Mention the "dumb broker, smart consumer" philosophy — Kafka doesn't track who read what, the consumer manages its own offset.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="qc cat-core" data-cat="core" id="q2">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">02</span></span>
+      <div class="qbody">
+        <div class="qtxt">What are the key components of Kafka?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-core">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Six core building blocks — know all of them cold before any Kafka interview.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">Producer</div><div class="kv-val">Publishes messages to Kafka topics</div></div>
+          <div class="kv"><div class="kv-key">Consumer</div><div class="kv-val">Subscribes to topics and processes published messages</div></div>
+          <div class="kv"><div class="kv-key">Broker</div><div class="kv-val">A Kafka server that stores and manages topics</div></div>
+          <div class="kv"><div class="kv-key">ZooKeeper / KRaft</div><div class="kv-val">Manages and coordinates Kafka brokers (KRaft replaces ZK in Kafka 3.3+)</div></div>
+          <div class="kv"><div class="kv-key">Topic</div><div class="kv-val">A named category/feed to which records are published</div></div>
+          <div class="kv"><div class="kv-key">Partition</div><div class="kv-val">Topics divided for scalability and parallel processing</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="qc cat-core" data-cat="core" id="q3">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">03</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is a Topic in Kafka?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Think of a Topic like a database table — a named channel where records flow.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Definition:</strong> A Topic is a category or feed name to which records are published. It's a logical name for a stream of records.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Multi-subscriber:</strong> A topic can have zero, one, or many consumers — all can read independently without affecting each other.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Partitioned:</strong> Topics are split into partitions for improved scalability and parallel processing.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Retention-based:</strong> Unlike a queue, messages stay in the topic until the retention policy (time or size) expires.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="qc cat-core" data-cat="core" id="q4">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">04</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is a Partition in Kafka?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-core">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The fundamental unit of parallelism in Kafka — understanding partitions unlocks understanding of everything else.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Definition:</strong> An ordered, immutable sequence of records that is continually appended to — a structured <code>commit log</code>.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Offset:</strong> Each record gets a sequential integer ID called an offset, used by consumers to track position.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Parallelism:</strong> Multiple partitions → multiple consumers can read simultaneously → horizontal scaling.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Ordering guarantee:</strong> Order is guaranteed <em>within</em> a partition only. Use a message key to route related messages to the same partition.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q5 -->
+  <div class="qc cat-core" data-cat="core" id="q5">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">05</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of ZooKeeper in Kafka?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">ZooKeeper was Kafka's external coordinator — now being replaced by KRaft (Kafka Raft) in modern versions.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Responsibilities:</strong> Manages broker coordination, maintains configuration, naming, distributed synchronization.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Cluster state:</strong> Tracks which brokers are alive, which topic-partitions exist, and who the leaders are.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Leader election:</strong> Orchestrates partition leader elections when a broker fails.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>KRaft mode (Kafka 3.3+):</strong> Kafka now manages its own metadata internally using the Raft consensus protocol — ZooKeeper is deprecated.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q6 -->
+  <div class="qc cat-core" data-cat="core" id="q6">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">06</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is a Broker in Kafka?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The "dumb" server at Kafka's heart — it just stores and serves, consumers do the smart work.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Definition:</strong> A Kafka server running in a Kafka cluster. Multiple brokers form the cluster.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Receives:</strong> Takes messages from producers, assigns offsets, commits to disk.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Serves:</strong> Responds to consumer fetch requests with messages from its stored partitions.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Leader/Follower:</strong> Each partition has one broker as Leader (serves reads/writes) and others as Followers (replicate data).</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q7 -->
+  <div class="qc cat-core" data-cat="core" id="q7">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">07</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka ensure fault tolerance?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka's fault tolerance is built on replication — every partition has multiple copies across brokers.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Replication Factor:</strong> Each partition is replicated across N brokers (configurable). Typically 3 in production.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Leader/Followers:</strong> One broker is the Leader handling all R/W. Others are Followers passively replicating.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Auto leader election:</strong> If the Leader fails, a new Leader is elected from the ISR (In-Sync Replicas) automatically.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>ISR:</strong> Only replicas fully caught-up with the leader can participate in elections — no stale data promoted.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q8 -->
+  <div class="qc cat-core" data-cat="core" id="q8">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">08</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the difference between a Kafka Consumer and a Consumer Group?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-cons">Consumers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Individual vs. team — one reads, many share the work.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">Consumer</div><div class="kv-val">A single application instance reading from one or more topic partitions.</div></div>
+          <div class="kv"><div class="kv-key">Consumer Group</div><div class="kv-val">A set of consumers sharing the same <code>group.id</code>, cooperating to consume a topic. Each partition → exactly one consumer in the group.</div></div>
+        </div>
+        <ul class="bl" style="margin-top:14px">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Load balancing:</strong> Partitions are divided among consumers in the group — enables parallel processing.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Rule:</strong> Max active consumers in a group = number of partitions. Extra consumers sit idle.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Pub-sub:</strong> Multiple groups each get ALL messages — each group is independent.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q9 -->
+  <div class="qc cat-core" data-cat="core" id="q9">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">09</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Offset in Kafka?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-cons">Consumers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The bookmark — consumers use offsets to remember where they stopped reading.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Definition:</strong> A unique sequential integer assigned to each record within a partition. Think of it as a line number in the log file.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Consumer responsibility:</strong> Unlike RabbitMQ, <em>consumers</em> track their own offset — Kafka doesn't track who read what.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Storage:</strong> Consumer offsets are stored in the internal topic <code>__consumer_offsets</code>.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Replay:</strong> Consumers can reset their offset to re-read messages — a powerful feature for debugging or reprocessing.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q10 -->
+  <div class="qc cat-core" data-cat="core" id="q10">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">10</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message delivery semantics?</div>
+        <div class="qmeta"><span class="tag tag-core">Core Concept</span><span class="tag tag-core">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Three guarantees — know the trade-offs for each. This is asked in almost every senior interview.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">At Most Once</div><div class="kv-val">Messages may be lost, never redelivered. Commit offset before processing. Fastest.</div></div>
+          <div class="kv"><div class="kv-key">At Least Once</div><div class="kv-val">Messages never lost, may be duplicated. Commit offset after processing. Default.</div></div>
+          <div class="kv"><div class="kv-key">Exactly Once</div><div class="kv-val">Each message processed exactly once. Requires idempotent producers + Transactions API.</div></div>
+        </div>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt"><strong>Production choice:</strong> Most systems use "At Least Once" with idempotent consumers (deduplication logic) as a practical middle ground.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PRODUCERS ═══════════════ -->
+  <div class="sec-label" data-sec="prod">🟠 Producers</div>
+
+  <!-- Q11 -->
+  <div class="qc cat-prod" data-cat="prod" id="q11">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">11</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of the Kafka Producer API?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The Producer API is the write path — it handles partitioning, compression, batching, and retries.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Publishes:</strong> Sends streams of records to Kafka topics.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Partitioning:</strong> Decides which partition each record goes to (by key hash or round-robin).</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Compression:</strong> Compresses message batches (gzip, snappy, lz4, zstd).</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Retries:</strong> Automatically retries failed sends based on <code>retries</code> and <code>retry.backoff.ms</code> config.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Delivery guarantees:</strong> Configurable via the <code>acks</code> parameter (0, 1, or all).</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q15 -->
+  <div class="qc cat-prod" data-cat="prod" id="q15">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">15</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the significance of the <code>acks</code> parameter in Kafka producers?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span><span class="tag tag-prod">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The most important producer config — controls the durability vs. latency trade-off.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">acks=0</div><div class="kv-val">Fire and forget. No acknowledgment. Lowest latency, highest risk of data loss.</div></div>
+          <div class="kv"><div class="kv-key">acks=1</div><div class="kv-val">Leader writes locally and acks. Risk: leader crashes before followers replicate.</div></div>
+          <div class="kv"><div class="kv-key">acks=all</div><div class="kv-val">All ISRs acknowledge. Strongest durability guarantee. Highest latency.</div></div>
+        </div>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt"><strong>Production standard:</strong> Use <code>acks=all</code> with <code>min.insync.replicas=2</code> for banks/fintech. For analytics pipelines <code>acks=1</code> is acceptable.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q20 -->
+  <div class="qc cat-prod" data-cat="prod" id="q20">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">20</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message compression?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Compression is configured at the producer level and applies to whole message batches — not individual records.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">gzip</div><div class="kv-val">Best compression ratio, higher CPU</div></div>
+          <div class="kv"><div class="kv-key">snappy</div><div class="kv-val">Good balance of speed and compression</div></div>
+          <div class="kv"><div class="kv-key">lz4</div><div class="kv-val">Fastest compression/decompression</div></div>
+          <div class="kv"><div class="kv-key">zstd</div><div class="kv-val">Best ratio with reasonable speed (Kafka 2.1+)</div></div>
+        </div>
+        <ul class="bl" style="margin-top:14px">
+          <li><span class="bdot">✦</span><div class="btxt">Compression reduces network transfer size and disk storage. The broker can store messages in their compressed form.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt">Consumer decompresses transparently — no application code changes needed.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q25 -->
+  <div class="qc cat-prod" data-cat="prod" id="q25">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">25</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Idempotent Producer in Kafka?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span><span class="tag tag-prod">Senior Level</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Idempotent producers are the key to exactly-once delivery — they eliminate duplicates from network retries.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Problem it solves:</strong> Without idempotency, a network timeout causes the producer to retry → broker writes the same message twice.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Mechanism:</strong> Each producer gets a unique <code>Producer ID (PID)</code>. Each message gets a <code>Sequence Number</code> per partition.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Broker deduplication:</strong> If the broker sees a sequence number it already committed, it discards the duplicate silently.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Enable it:</strong> Set <code>enable.idempotence=true</code> on the producer config. This also forces <code>acks=all</code>.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q27 -->
+  <div class="qc cat-prod" data-cat="prod" id="q27">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">27</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the difference between a round-robin partitioner and a key-based partitioner?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">How a producer decides which partition to send a message to — crucial for ordering guarantees.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">Round-Robin</div><div class="kv-val">No key provided → messages distributed evenly across all partitions cyclically. No ordering guarantee.</div></div>
+          <div class="kv"><div class="kv-key">Key-Based (murmur2 hash)</div><div class="kv-val">Key provided → <code>hash(key) % numPartitions</code> → same key always routes to same partition. Guarantees ordering per key.</div></div>
+        </div>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt"><strong>Senior answer:</strong> For user event ordering (e.g., banking transactions), always use <code>userId</code> as the key to ensure all events for a user land on the same partition and are consumed sequentially.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q34 -->
+  <div class="qc cat-prod" data-cat="prod" id="q34">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">34</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message batching?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Batching is how Kafka achieves massive throughput — group many messages into one network request.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>How it works:</strong> The producer buffers messages destined for the same partition and sends them as a single batch.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><code>batch.size</code>: Maximum bytes in a batch (default 16KB). Larger batches → better throughput, more memory.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><code>linger.ms</code>: Time to wait for more messages before sending. Default 0ms (send immediately). Increasing this fills larger batches.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Benefit:</strong> Reduces network overhead and improves I/O efficiency dramatically — key to Kafka's speed.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q38 -->
+  <div class="qc cat-prod" data-cat="prod" id="q38">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">38</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message key hashing?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The murmur2 hash determines partition routing — consistent and deterministic.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Algorithm:</strong> Kafka uses the <code>murmur2</code> hash algorithm by default: <code>partition = Math.abs(murmur2(key)) % numPartitions</code></div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Consistency:</strong> Same key → always same partition (as long as partition count doesn't change).</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Why it matters:</strong> Critical for ordered processing of related events and local state in stream processing.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Warning:</strong> Adding partitions to a topic breaks key-to-partition mapping — plan your partition count upfront.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q41 -->
+  <div class="qc cat-prod" data-cat="prod" id="q41">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">41</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka Quota API?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Rate limiting for producers and consumers — prevents a single client from starving the cluster.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Purpose:</strong> Enforce quotas on produce and fetch request rates, preventing any single client from consuming too many broker resources.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Granularity:</strong> Defined per-client-id or per-user. Can limit bytes/sec for produce or consume.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Enforcement:</strong> When a client exceeds its quota, the broker throttles it by delaying responses (not dropping messages).</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q42/43 -->
+  <div class="qc cat-prod" data-cat="prod" id="q42">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">42</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle producer message acknowledgments (deep dive)?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span><span class="tag tag-prod">Senior Level</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Deep dive into acks — understanding the failure modes of each setting is a senior-level question.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">A0</span><div class="btxt"><code>acks=0</code> — Producer doesn't wait at all. Lowest latency. Message may be silently lost if broker goes down. Good for: metrics, logs where loss is acceptable.</div></li>
+          <li><span class="bdot">A1</span><div class="btxt"><code>acks=1</code> — Leader writes and acks. Risk: leader crashes before followers replicate → data loss despite ack. Good for: throughput-sensitive use cases.</div></li>
+          <li><span class="bdot">AA</span><div class="btxt"><code>acks=all</code> — All in-sync replicas acknowledge. No data loss if any ISR survives. Highest latency. Good for: financial transactions, critical events.</div></li>
+        </ul>
+        <div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-txt"><code>acks=all</code> alone is not enough — also set <code>min.insync.replicas=2</code> to prevent a single-replica partition from satisfying "all" with just the leader.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q53 -->
+  <div class="qc cat-prod" data-cat="prod" id="q53">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">53</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka producer's Partitioner interface?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A pluggable interface for custom partition routing logic.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Default behavior:</strong> Hash(key) % numPartitions for keyed records; sticky batching for unkeyed records.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Custom partitioner:</strong> Implement <code>org.apache.kafka.clients.producer.Partitioner</code> to control distribution based on business logic.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Example:</strong> Route "premium" customers to low-latency partitions on dedicated brokers.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q54 -->
+  <div class="qc cat-prod" data-cat="prod" id="q54">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">54</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message delivery timeouts?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Producers have a total delivery timeout — after which the send is considered failed.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><code>delivery.timeout.ms</code> — Total time the producer will retry sending before throwing an exception. Encompasses retries and backoffs.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><code>request.timeout.ms</code> — How long the producer waits for a response per request attempt.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><code>max.block.ms</code> — How long <code>send()</code> blocks when the buffer is full or metadata is unavailable.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q63 -->
+  <div class="qc cat-prod" data-cat="prod" id="q63">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">63</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka producer's <code>max.block.ms</code> parameter?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Prevents indefinite blocking — sets an upper bound on how long your app will wait.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Controls:</strong> How long <code>send()</code> will block when the producer's send buffer is full, or when requesting metadata.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>On expiry:</strong> Throws a <code>TimeoutException</code> — allows the application to fail fast rather than hang.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Default:</strong> 60,000ms (60 seconds). Set lower in latency-sensitive applications.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q67 -->
+  <div class="qc cat-prod" data-cat="prod" id="q67">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">67</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka producer's <code>linger.ms</code> parameter?</div>
+        <div class="qmeta"><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The throughput knob — wait a little longer to fill bigger batches.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><code>linger.ms=0</code> (default): Send messages immediately. Lowest latency, but smaller batches.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><code>linger.ms=5</code>: Wait up to 5ms for more messages before sending a batch. More throughput, slight latency increase.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Trade-off:</strong> Higher linger.ms → larger batches → better compression ratio → higher throughput → but higher latency.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Production tip:</strong> Set <code>linger.ms=5-20</code> for throughput-critical producers like log aggregation pipelines.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ ARCHITECTURE ═══════════════ -->
+  <div class="sec-label" data-sec="arch">🔵 Architecture &amp; Internals</div>
+
+  <!-- Q12 -->
+  <div class="qc cat-arch" data-cat="arch" id="q12">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">12</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka support scalability?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-arch">Senior Level</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Four mechanisms that make Kafka horizontally scalable to millions of events per second.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">1</span><div class="btxt"><strong>Partitioning:</strong> Topics split across multiple brokers. More partitions = more parallelism.</div></li>
+          <li><span class="bdot">2</span><div class="btxt"><strong>Sequential I/O:</strong> Kafka appends to disk sequentially (like a log file), which is faster than random disk I/O even vs. RAM in some cases.</div></li>
+          <li><span class="bdot">3</span><div class="btxt"><strong>Zero-Copy:</strong> OS-level optimization — data goes directly from disk page cache to network socket, bypassing the JVM heap entirely.</div></li>
+          <li><span class="bdot">4</span><div class="btxt"><strong>Message Batching:</strong> Multiple records bundled per request, reducing network round trips.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q13 -->
+  <div class="qc cat-arch" data-cat="arch" id="q13">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">13</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is Log Compaction in Kafka?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A retention strategy where Kafka keeps only the latest value per key — turning Kafka into a key-value store.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>What it does:</strong> Selectively removes records where a more recent update exists with the same key. Guarantees at least the last state for each key.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>vs Time-based retention:</strong> Normal topics delete all messages after N days. Compacted topics delete only obsolete key versions.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Use case:</strong> Database changelogs (CDC), user profile updates, config stores — where you only care about the latest state.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Tombstone:</strong> To delete a key entirely, produce a record with a <code>null</code> value (tombstone) — the log cleaner will eventually remove it.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q14 -->
+  <div class="qc cat-arch" data-cat="arch" id="q14">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">14</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message ordering?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-arch">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Ordering is per-partition — not global across a topic. This is a common interview gotcha.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Guaranteed within a partition:</strong> Messages sent to a partition are appended in order and consumed in order.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>NOT guaranteed across partitions:</strong> If a topic has 3 partitions, global ordering is not maintained.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Design pattern:</strong> Use a consistent message key (e.g., <code>orderId</code>) to route related events to the same partition → per-key ordering guaranteed.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Caveat:</strong> Retries can reorder messages. Use <code>enable.idempotence=true</code> + <code>max.in.flight.requests.per.connection=5</code> to preserve order with retries.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q16 -->
+  <div class="qc cat-arch" data-cat="arch" id="q16">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">16</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle data retention?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Two retention strategies — time-based or size-based, configured per topic.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">Time-based</div><div class="kv-val"><code>retention.ms</code> — Delete segments older than N ms. Default: 7 days.</div></div>
+          <div class="kv"><div class="kv-key">Size-based</div><div class="kv-val"><code>retention.bytes</code> — Delete oldest segments when partition exceeds N bytes.</div></div>
+          <div class="kv"><div class="kv-key">Log Compaction</div><div class="kv-val">Keep only the latest value per key — for changelog use cases.</div></div>
+        </div>
+        <ul class="bl" style="margin-top:14px">
+          <li><span class="bdot">✦</span><div class="btxt">Deletion is segment-level (whole files), not individual messages — this is why minimum retention granularity = 1 log segment.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q18 -->
+  <div class="qc cat-arch" data-cat="arch" id="q18">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">18</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka ensure high availability?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-arch">Senior Level</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Five pillars of Kafka's high availability — know all of them.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">1</span><div class="btxt"><strong>Partition Replication:</strong> Each partition copied across N brokers (typically 3).</div></li>
+          <li><span class="bdot">2</span><div class="btxt"><strong>Auto Leader Election:</strong> If a leader broker fails, a new leader is elected from ISR automatically.</div></li>
+          <li><span class="bdot">3</span><div class="btxt"><strong>Zero-downtime scaling:</strong> Add brokers to a cluster and rebalance partitions without stopping Kafka.</div></li>
+          <li><span class="bdot">4</span><div class="btxt"><strong>min.insync.replicas:</strong> Configures minimum ISR count required for a write to succeed — prevents data loss.</div></li>
+          <li><span class="bdot">5</span><div class="btxt"><strong>KRaft / ZooKeeper:</strong> Distributed coordination service manages cluster membership and metadata.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q22 -->
+  <div class="qc cat-arch" data-cat="arch" id="q22">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">22</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message size limits?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka defaults to 1MB max per message — but this is configurable across multiple layers.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">message.max.bytes (broker)</div><div class="kv-val">Maximum size the broker will accept. Default 1MB.</div></div>
+          <div class="kv"><div class="kv-key">max.request.size (producer)</div><div class="kv-val">Max size of a produce request. Must align with broker config.</div></div>
+          <div class="kv"><div class="kv-key">max.partition.fetch.bytes (consumer)</div><div class="kv-val">Max bytes fetched per partition per poll.</div></div>
+        </div>
+        <div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-txt">Large messages hurt performance. Best practice: store large payloads in S3/blob storage and put only the reference URL in Kafka.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q24 -->
+  <div class="qc cat-arch" data-cat="arch" id="q24">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">24</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle data replication?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-arch">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Replication is Kafka's core durability mechanism — understand Leader/Follower/ISR deeply.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Leader:</strong> One broker is designated leader for each partition. All reads and writes go through the leader.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Followers:</strong> Other brokers replicate the leader's log passively. They continuously fetch from the leader.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>ISR (In-Sync Replicas):</strong> Set of replicas caught up with the leader within <code>replica.lag.time.max.ms</code>. Only ISR members can become the new leader.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Replication Factor:</strong> Configurable per topic. RF=3 means 1 leader + 2 followers. Can survive 1 broker failure with no data loss.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q28 -->
+  <div class="qc cat-arch" data-cat="arch" id="q28">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">28</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message deletion?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka never deletes individual messages — it removes whole log segments based on policy.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Segment-based deletion:</strong> The log is divided into segments. Kafka deletes entire segments, never individual records.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Triggered by:</strong> Time (<code>retention.ms</code>) or size (<code>retention.bytes</code>) policies.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Log compaction alternative:</strong> Keeps only the latest value per key, deleting only stale versions.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Active segment:</strong> The current open segment is never deleted — only closed (rolled) segments are eligible.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q31 -->
+  <div class="qc cat-arch" data-cat="arch" id="q31">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">31</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of the Controller in a Kafka cluster?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-arch">Senior Level</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">One elected broker takes on controller responsibilities — it's the cluster manager.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Definition:</strong> One broker is elected as the Controller — it has extra responsibilities beyond normal broker operations.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Responsibilities:</strong> Elects partition leaders, manages partition distribution, handles topic creation/deletion admin ops.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Single controller:</strong> Only one controller at a time. If it fails, ZooKeeper (or KRaft) elects a new one.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>KRaft:</strong> In KRaft mode, the controller runs as a separate process/quorum — more scalable than the ZooKeeper-based approach.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q32 -->
+  <div class="qc cat-arch" data-cat="arch" id="q32">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">32</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka ensure data consistency?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-arch">Senior Level</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Five interlocking mechanisms that together guarantee consistency.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">1</span><div class="btxt"><strong>Replication:</strong> Each partition copied across multiple brokers.</div></li>
+          <li><span class="bdot">2</span><div class="btxt"><strong>ISR:</strong> Only up-to-date replicas can become leaders — no stale data promoted.</div></li>
+          <li><span class="bdot">3</span><div class="btxt"><strong>Acknowledgments:</strong> <code>acks=all</code> ensures all ISR have the data before confirming to producer.</div></li>
+          <li><span class="bdot">4</span><div class="btxt"><strong>Atomic partition writes:</strong> Writes to a partition are ordered and atomic.</div></li>
+          <li><span class="bdot">5</span><div class="btxt"><strong>Idempotent producers:</strong> Prevent duplicates from network retries.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q36 -->
+  <div class="qc cat-arch" data-cat="arch" id="q36">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">36</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message ordering within a partition?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Within a partition, order is absolute and immutable — this is the append-only log guarantee.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt">Messages are <strong>appended</strong> to the partition log in the exact order they are received by the leader.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt">The log is <strong>immutable</strong> — once written, records cannot be modified or reordered.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt">Consumers always read in the written order — no random access, only sequential reads from an offset.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q40 -->
+  <div class="qc cat-arch" data-cat="arch" id="q40">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">40</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message timestamps?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Two types of timestamps — producer time vs broker arrival time. Configurable per topic.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">CreateTime</div><div class="kv-val">The time the producer created the message. Set by the producer client.</div></div>
+          <div class="kv"><div class="kv-key">LogAppendTime</div><div class="kv-val">The time the broker received and appended the message. Set by the broker.</div></div>
+        </div>
+        <ul class="bl" style="margin-top:12px">
+          <li><span class="bdot">✦</span><div class="btxt">Used for: time-based log retention, log compaction, and consumer time-based seeking (<code>offsetsForTimes()</code>).</div></li>
+          <li><span class="bdot">✦</span><div class="btxt">Configure via <code>log.message.timestamp.type</code> at the topic or broker level.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q46 -->
+  <div class="qc cat-arch" data-cat="arch" id="q46">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">46</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle topic deletion?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Topic deletion is asynchronous — Kafka marks it for deletion, then cleans up.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">1</span><div class="btxt">Topic is marked for deletion in ZooKeeper / KRaft metadata.</div></li>
+          <li><span class="bdot">2</span><div class="btxt">Kafka stops accepting produce/consume requests for that topic immediately.</div></li>
+          <li><span class="bdot">3</span><div class="btxt">Log segments on disk are asynchronously deleted in the background.</div></li>
+        </ul>
+        <div class="tip-box"><span class="tip-icon">⚠️</span><div class="tip-txt">Requires <code>delete.topic.enable=true</code> on the broker (default is true in modern Kafka). If false, topics are only marked but never deleted.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q50 -->
+  <div class="qc cat-arch" data-cat="arch" id="q50">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">50</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message ordering across multiple partitions?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Short answer: it doesn't. Cross-partition ordering is the developer's responsibility.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>No global ordering:</strong> Kafka only guarantees ordering <em>within</em> a single partition.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Pattern 1 — Single partition:</strong> Use 1 partition for global ordering. Limits throughput to one consumer.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Pattern 2 — Key-based routing:</strong> Use a partition key so related events go to the same partition. Ordering within a key is guaranteed.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Pattern 3 — Application sequencing:</strong> Include a monotonic sequence number in the message and handle ordering in the consumer.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q65 -->
+  <div class="qc cat-arch" data-cat="arch" id="q65">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">65</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of the broker's <code>log.segment.bytes</code> configuration?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Controls log file segment size — affects retention granularity and partition reassignment speed.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Definition:</strong> Maximum size (bytes) of a single log segment file. Default: 1GB. When reached, a new segment is created.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Retention granularity:</strong> Kafka can only delete entire segments — smaller segments = more precise retention.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Reassignment speed:</strong> Smaller segments are faster to move during partition reassignment.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Trade-off:</strong> Too small → too many open file handles and metadata overhead. Too large → retention is coarser.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q66 -->
+  <div class="qc cat-arch" data-cat="arch" id="q66">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">66</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message consumption patterns?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-cons">Consumers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka supports both Queue and Pub-Sub patterns through its consumer group model.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">Queue Pattern</div><div class="kv-val">Multiple consumers in ONE group. Each message processed by exactly one consumer. Load balanced.</div></div>
+          <div class="kv"><div class="kv-key">Pub-Sub Pattern</div><div class="kv-val">Each consumer in its OWN group. Every consumer gets every message. Broadcast.</div></div>
+        </div>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt">This is Kafka's superpower — the same topic can serve both patterns simultaneously by having different consumer groups for different purposes.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q68 -->
+  <div class="qc cat-arch" data-cat="arch" id="q68">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">68</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message delivery guarantees (end-to-end)?</div>
+        <div class="qmeta"><span class="tag tag-arch">Architecture</span><span class="tag tag-arch">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">End-to-end delivery guarantees require coordination between producer config, broker config, and consumer offset management.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>At Most Once:</strong> Producer: <code>acks=0</code>. Consumer: commit before processing. Fast but lossy.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>At Least Once:</strong> Producer: <code>acks=1/all</code>. Consumer: commit after processing. Default for most systems. May duplicate.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Exactly Once (EOS):</strong> Producer: <code>enable.idempotence=true</code>. Use Kafka Transactions API. Consumer: transactional commits. No loss, no duplicates.</div></li>
+        </ul>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt">In Spring Kafka, EOS is configured via <code>spring.kafka.producer.transaction-id-prefix</code> and <code>spring.kafka.consumer.isolation-level=read_committed</code>.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CONSUMERS ═══════════════ -->
+  <div class="sec-label" data-sec="cons">🟢 Consumers</div>
+
+  <!-- Q23 -->
+  <div class="qc cat-cons" data-cat="cons" id="q23">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">23</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of the Group Coordinator in Kafka?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A designated broker that manages all consumer group membership and offset commits.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>What it is:</strong> A broker elected to manage a specific consumer group — handles membership and offset tracking.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Membership:</strong> Tracks which consumers are alive (via heartbeats). Detects failures and triggers rebalances.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Partition assignment:</strong> After a rebalance, coordinates which consumer reads which partition.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Offset storage:</strong> Receives and stores consumer offset commits in <code>__consumer_offsets</code>.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q26 -->
+  <div class="qc cat-cons" data-cat="cons" id="q26">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">26</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle consumer offsets?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span><span class="tag tag-cons">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Offset management is at the heart of Kafka's consumer reliability — consumers own their position.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Per group per partition:</strong> Each consumer group maintains its own offset per partition independently.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Storage:</strong> Committed offsets stored in the internal <code>__consumer_offsets</code> topic (replicated, durable).</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Auto commit:</strong> <code>enable.auto.commit=true</code> commits the highest fetched offset periodically (every 5s by default). Risk: may commit before processing.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Manual commit:</strong> Use <code>commitSync()</code> or <code>commitAsync()</code> after processing for at-least-once guarantees.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Replay:</strong> Reset offset to re-consume messages — use <code>auto.offset.reset=earliest</code> or the kafka-consumer-groups CLI tool.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q39 -->
+  <div class="qc cat-cons" data-cat="cons" id="q39">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">39</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of the Kafka Consumer Coordinator?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The consumer-side coordinator handles group join, sync, and heartbeat protocols.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Group join:</strong> When a consumer starts, it sends a JoinGroup request to the Group Coordinator broker.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Leader consumer:</strong> One consumer in the group is elected as the "Group Leader" — it runs the partition assignment algorithm and reports results back to the coordinator.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Sync:</strong> Coordinator distributes the assignment from the leader consumer to all group members.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Heartbeat:</strong> Each consumer sends heartbeats to the coordinator to stay in the group.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q47 -->
+  <div class="qc cat-cons" data-cat="cons" id="q47">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">47</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the difference between a consumer's <code>poll()</code> and <code>subscribe()</code> methods?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Subscribe declares intent, poll does the actual work — you need both in every Kafka consumer.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">subscribe(topics)</div><div class="kv-val">Registers the consumer to receive messages from a topic. No data fetched yet. Must be called before polling.</div></div>
+          <div class="kv"><div class="kv-key">poll(duration)</div><div class="kv-val">Fetches records from subscribed topics. Drives all consumer mechanics — heartbeats, rebalances, offset commits. Called in a loop.</div></div>
+        </div>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt"><code>poll()</code> must be called regularly to maintain group membership. If you don't call it within <code>max.poll.interval.ms</code>, the consumer is considered dead and a rebalance triggers.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q49 -->
+  <div class="qc cat-cons" data-cat="cons" id="q49">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">49</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka consumer heartbeat thread?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A background thread that keeps the consumer "alive" in the group — without it, rebalancing triggers.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Purpose:</strong> Sends periodic heartbeat signals to the Group Coordinator broker to indicate the consumer is alive.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Frequency:</strong> Configurable via <code>heartbeat.interval.ms</code> (default: 3000ms). Must be less than <code>session.timeout.ms</code>.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>On failure:</strong> If no heartbeat received within <code>session.timeout.ms</code> (default: 45s), consumer is declared dead → rebalance triggered.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Separate thread:</strong> Runs independently of the main polling thread since Kafka 0.10.1, allowing longer processing times without missed heartbeats.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q52 -->
+  <div class="qc cat-cons" data-cat="cons" id="q52">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">52</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle consumer lag?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Consumer lag is a critical production metric — high lag = consumer can't keep up with producers.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Definition:</strong> Lag = (Latest producer offset) − (Last committed consumer offset). High lag means the consumer is falling behind.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Monitoring:</strong> Use <code>kafka-consumer-groups --describe</code> CLI, or AdminClient API, or tools like Grafana + Prometheus Kafka Exporter.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Remediation:</strong> Scale up consumers (add instances up to the partition count), optimize consumer processing logic, or increase partition count.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Kafka doesn't auto-fix lag</strong> — it exposes the data; your infrastructure (auto-scaling, alerting) must respond.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q57 -->
+  <div class="qc cat-cons" data-cat="cons" id="q57">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">57</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of the consumer's <code>position()</code> method?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Returns the offset of the next record that will be fetched — your current read position.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><code>position(topicPartition)</code> — Returns the offset of the next record to be fetched. Useful for tracking consumption progress.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><code>committed(topicPartition)</code> — Returns the last committed offset. The difference between <code>position()</code> and <code>committed()</code> is the number of uncommitted (pending) records.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt">Gap between position and committed = potential for reprocessing on consumer restart. Keep this gap small.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q61 -->
+  <div class="qc cat-cons" data-cat="cons" id="q61">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">61</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of <code>commitSync()</code> and <code>commitAsync()</code> methods?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span><span class="tag tag-cons">Must Know</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Manual offset commit — the right way to ensure exactly the right messages are committed at the right time.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">commitSync()</div><div class="kv-val">Blocks until offset is committed. Retries on retriable errors. Reliable but slower throughput.</div></div>
+          <div class="kv"><div class="kv-key">commitAsync()</div><div class="kv-val">Non-blocking. Does not retry on failure (to avoid out-of-order commits). Faster. Use a callback for error handling.</div></div>
+        </div>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt"><strong>Production pattern:</strong> Use <code>commitAsync()</code> in the polling loop for performance, and <code>commitSync()</code> in the finally block on shutdown for safety.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q64 -->
+  <div class="qc cat-cons" data-cat="cons" id="q64">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">64</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message consumption across consumer group rebalances?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Rebalances cause a consumption pause — understanding this is critical for high-availability systems.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">1</span><div class="btxt">All consumers <strong>stop consuming</strong> and commit their current offsets.</div></li>
+          <li><span class="bdot">2</span><div class="btxt">The Group Coordinator <strong>reassigns partitions</strong> to the remaining (or new) consumers.</div></li>
+          <li><span class="bdot">3</span><div class="btxt">Consumers resume consuming from their newly assigned partitions, starting from the last committed offset.</div></li>
+        </ul>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt"><strong>Minimize rebalances:</strong> Use <code>session.timeout.ms</code> and <code>max.poll.interval.ms</code> wisely. Consider Cooperative Sticky Assignor (<code>CooperativeStickyAssignor</code>) in Kafka 2.4+ for incremental rebalances that don't stop all consumption.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q69 -->
+  <div class="qc cat-cons" data-cat="cons" id="q69">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">69</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of the consumer's <code>auto.offset.reset</code> configuration?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Defines what happens when a consumer has no committed offset — the cold start configuration.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">earliest</div><div class="kv-val">Start from the very first message in the partition. Good for: new consumers that need to process all history.</div></div>
+          <div class="kv"><div class="kv-key">latest</div><div class="kv-val">Start from new messages only (skip existing). Good for: consumers that only care about real-time events.</div></div>
+          <div class="kv"><div class="kv-key">none</div><div class="kv-val">Throw an exception if no previous offset found. Strict mode — forces explicit offset management.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q70 -->
+  <div class="qc cat-cons" data-cat="cons" id="q70">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">70</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message retrieval for consumers?</div>
+        <div class="qmeta"><span class="tag tag-cons">Consumers</span><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka uses a pull model — consumers request data, brokers don't push. This is a core design decision.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Pull model:</strong> Consumers make <code>fetch</code> requests to brokers specifying topic, partition, and starting offset.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Why pull?</strong> Consumers control their own rate — a slow consumer won't be overwhelmed. No back-pressure complexity needed.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><code>max.poll.records</code> — Limits records returned per poll. <code>fetch.min.bytes</code> — Min data before broker responds. <code>fetch.max.wait.ms</code> — Max time broker waits to fill min bytes.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Lag handling:</strong> If consumers fall behind, they simply catch up at their own pace — the log persists until retention expires.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ STREAMS & ECOSYSTEM ═══════════════ -->
+  <div class="sec-label" data-sec="strm">🩷 Streams &amp; Ecosystem</div>
+
+  <!-- Q17 -->
+  <div class="qc cat-strm" data-cat="strm" id="q17">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">17</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka Connect API?</div>
+        <div class="qmeta"><span class="tag tag-strm">Ecosystem</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka Connect is a zero-code integration layer — pipe data between Kafka and external systems without writing producers/consumers.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Source Connector:</strong> Reads from an external system (DB, S3, Salesforce) and publishes to Kafka.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Sink Connector:</strong> Reads from Kafka and writes to an external system (Elasticsearch, JDBC, S3).</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Scalable:</strong> Connectors run as distributed workers. Scales horizontally by adding more workers.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Ecosystem:</strong> 200+ pre-built connectors in Confluent Hub — JDBC, Debezium (CDC), MongoDB, Elasticsearch, etc.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q19 -->
+  <div class="qc cat-strm" data-cat="strm" id="q19">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">19</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the difference between Kafka Streams and Apache Flink?</div>
+        <div class="qmeta"><span class="tag tag-strm">Streams</span><span class="tag tag-strm">Senior Level</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Both are stream processors but designed for different scales and deployment models.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">Kafka Streams</div><div class="kv-val">Client library — runs inside your Java app. No separate cluster. Tightly integrated with Kafka. Simpler to operate.</div></div>
+          <div class="kv"><div class="kv-key">Apache Flink</div><div class="kv-val">Distributed processing engine — separate cluster required. Works with any source/sink. Lower latency for complex ops at massive scale.</div></div>
+        </div>
+        <ul class="bl" style="margin-top:14px">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Choose Kafka Streams when:</strong> Input/output is Kafka, ops team is small, deployment simplicity matters.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Choose Flink when:</strong> Complex event processing, multiple data sources, ML pipelines, or billion-event/sec scale.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q21 -->
+  <div class="qc cat-strm" data-cat="strm" id="q21">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">21</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka Streams API?</div>
+        <div class="qmeta"><span class="tag tag-strm">Streams</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A client library for building streaming applications that live entirely within Kafka.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>What it does:</strong> Consume from Kafka, process/transform/aggregate, produce results back to Kafka — all in one library.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>No cluster needed:</strong> Runs as a standard Java application. Scales by running multiple instances.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Supports:</strong> Stateless transforms (map, filter), stateful aggregations (count, reduce), windowing, stream-table joins.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>State stores:</strong> Local RocksDB state stores backed by Kafka changelog topics for fault tolerance.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q37 -->
+  <div class="qc cat-strm" data-cat="strm" id="q37">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">37</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka Transactions API?</div>
+        <div class="qmeta"><span class="tag tag-strm">Streams</span><span class="tag tag-strm">Senior Level</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The foundation of exactly-once semantics in Kafka — atomic writes across multiple partitions/topics.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Purpose:</strong> Allows atomic updates to multiple topics and partitions. Either ALL writes succeed or NONE do.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Use case:</strong> Exactly-once stream processing — consume, process, produce results, commit offset — all atomically.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Enable it:</strong> Set <code>transactional.id</code> on the producer. Consumer must set <code>isolation.level=read_committed</code>.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Transaction coordinator:</strong> A special broker role that manages active transactions and their state.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q45 -->
+  <div class="qc cat-strm" data-cat="strm" id="q45">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">45</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka Schema Registry?</div>
+        <div class="qmeta"><span class="tag tag-strm">Ecosystem</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A centralized schema store that ensures producers and consumers always agree on message format.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>What it does:</strong> Stores and serves Avro/JSON/Protobuf schemas. Validates compatibility before registering new versions.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Compatibility modes:</strong> BACKWARD (old consumers read new data), FORWARD (new consumers read old data), FULL (both).</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Wire format:</strong> Messages contain only a schema ID (4 bytes) + serialized payload — not the full schema. Efficient.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Why it matters:</strong> Without Schema Registry, a schema change by a producer can silently break consumers.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q55 -->
+  <div class="qc cat-strm" data-cat="strm" id="q55">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">55</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka Streams DSL?</div>
+        <div class="qmeta"><span class="tag tag-strm">Streams</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A high-level API that lets you express complex stream processing as a readable pipeline — like Java Streams for Kafka.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Operations:</strong> <code>filter()</code>, <code>map()</code>, <code>flatMap()</code>, <code>groupBy()</code>, <code>aggregate()</code>, <code>join()</code>, <code>windowed()</code>.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>KStream:</strong> Represents an unbounded stream of records — each record is an independent event.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>KTable:</strong> Represents a changelog stream — each record is an update to a key's current value (like a DB table).</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Processor API:</strong> Low-level alternative to the DSL for fine-grained control.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q56 -->
+  <div class="qc cat-strm" data-cat="strm" id="q56">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">56</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message de-duplication?</div>
+        <div class="qmeta"><span class="tag tag-strm">Streams</span><span class="tag tag-prod">Producers</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka doesn't de-duplicate by default — but provides the tools to implement it at each layer.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">1</span><div class="btxt"><strong>Idempotent Producer:</strong> Prevents duplicates from producer retries (within a single producer session).</div></li>
+          <li><span class="bdot">2</span><div class="btxt"><strong>Exactly-Once Semantics (EOS):</strong> Kafka Streams with transactions ensures each input produces exactly one output.</div></li>
+          <li><span class="bdot">3</span><div class="btxt"><strong>Application-level dedup:</strong> Consumer tracks seen message IDs in Redis/DB and skips already-processed records.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ OPERATIONS ═══════════════ -->
+  <div class="sec-label" data-sec="ops">🔴 Operations &amp; Admin</div>
+
+  <!-- Q29 -->
+  <div class="qc cat-ops" data-cat="ops" id="q29">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">29</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of Kafka MirrorMaker?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A cross-cluster replication tool — essential for disaster recovery and multi-region architectures.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>What it does:</strong> Consumes from one Kafka cluster and produces to another — replicates topics across clusters.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Use cases:</strong> Disaster recovery (standby cluster), geo-distribution (data near users), multi-DC aggregation.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>MirrorMaker 2:</strong> Modern version built on Kafka Connect. Supports offset translation, topic replication policies, and heartbeat topics.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Active-Active:</strong> MirrorMaker 2 supports bidirectional replication for active-active multi-region setups.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q30 -->
+  <div class="qc cat-ops" data-cat="ops" id="q30">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">30</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message versioning?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span><span class="tag tag-strm">Ecosystem</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka is schema-agnostic — versioning is handled by the application layer using Schema Registry.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt">Kafka treats messages as opaque byte arrays — it has no knowledge of or opinion on your schema.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Version field approach:</strong> Include a <code>version</code> field in your JSON/Avro payload. Consumer reads version and handles accordingly.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Schema Registry approach:</strong> Use Confluent Schema Registry with Avro. Schema evolution (adding/removing fields) is managed with compatibility rules.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Best practice:</strong> Use Schema Registry + BACKWARD compatibility. New consumers can read old messages.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q33 -->
+  <div class="qc cat-ops" data-cat="ops" id="q33">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">33</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka AdminClient API?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The programmatic way to manage Kafka — create topics, manage ACLs, inspect cluster state.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Topic management:</strong> Create, delete, describe topics programmatically.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Broker info:</strong> List brokers, get cluster info, check configurations.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>ACL management:</strong> Create/delete/list access control entries for authorization.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Consumer group ops:</strong> List groups, describe groups, reset offsets.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Spring Boot:</strong> Automatically creates topics if configured with <code>NewTopic</code> beans.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q44 -->
+  <div class="qc cat-ops" data-cat="ops" id="q44">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">44</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message serialization and deserialization?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span><span class="tag tag-strm">Ecosystem</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka is byte-array agnostic — serialization is pluggable and your responsibility.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt">Kafka stores/transfers raw byte arrays. It has zero knowledge of your message format.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Built-in serializers:</strong> <code>StringSerializer</code>, <code>IntegerSerializer</code>, <code>ByteArraySerializer</code>, etc.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Avro:</strong> Most popular for production — compact binary format + schema evolution support via Schema Registry.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Custom serializer:</strong> Implement <code>Serializer&lt;T&gt;</code> and <code>Deserializer&lt;T&gt;</code> for custom objects.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q48 -->
+  <div class="qc cat-ops" data-cat="ops" id="q48">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">48</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message compression at the broker level?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">The broker can accept, decompress, recompress, or pass through messages based on its configuration.</div>
+      <div class="ans-body">
+        <div class="kv-grid">
+          <div class="kv"><div class="kv-key">Pass-through</div><div class="kv-val">Broker stores messages in original compressed form. Most efficient — no CPU overhead.</div></div>
+          <div class="kv"><div class="kv-key">Decompress on receipt</div><div class="kv-val">Broker decompresses and stores uncompressed. Needed when broker needs to inspect individual records.</div></div>
+          <div class="kv"><div class="kv-key">Recompress</div><div class="kv-val">Broker decompresses and recompresses with a different algorithm. Used when broker.compression.type differs from producer.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q51 -->
+  <div class="qc cat-ops" data-cat="ops" id="q51">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">51</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the role of the broker's log cleaner thread?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span><span class="tag tag-arch">Architecture</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">A background thread that performs log compaction on eligible topics.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>What it does:</strong> Scans log segments of compaction-enabled topics and removes records where a newer value for the same key exists.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>When it runs:</strong> Periodically in the background. Frequency controlled by <code>log.cleaner.backoff.ms</code>.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Dirty ratio:</strong> Compaction is triggered when the "dirty" (uncompacted) ratio of a partition exceeds <code>min.cleanable.dirty.ratio</code>.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Active segment:</strong> The currently-being-written segment is never compacted — only closed segments are eligible.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q58 -->
+  <div class="qc cat-ops" data-cat="ops" id="q58">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">58</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message schema evolution?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span><span class="tag tag-strm">Ecosystem</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Schema evolution is handled externally via Schema Registry — Kafka itself is format-agnostic.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Schema Registry:</strong> Validates new schemas against registered versions before allowing producers to use them.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Backward compatibility:</strong> New schema can read old messages. Safe to update consumers first.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Forward compatibility:</strong> Old consumers can read new messages. Safe to update producers first.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Breaking changes:</strong> Changing field type or removing a required field requires a full strategy — new topic or consumer migration.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q59 -->
+  <div class="qc cat-ops" data-cat="ops" id="q59">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">59</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is the purpose of the Kafka broker's controlled shutdown?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Graceful broker shutdown — minimizes downtime and prevents unnecessary leader elections.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">1</span><div class="btxt">Broker stops accepting new produce requests.</div></li>
+          <li><span class="bdot">2</span><div class="btxt">Completes all in-progress produce and fetch requests.</div></li>
+          <li><span class="bdot">3</span><div class="btxt">Transfers partition leadership to other healthy brokers in a controlled manner.</div></li>
+        </ul>
+        <div class="tip-box"><span class="tip-icon">💡</span><div class="tip-txt">Controlled shutdown prevents the cluster from going into an unhealthy state. Enable with <code>controlled.shutdown.enable=true</code>. Always prefer this over hard kills for maintenance.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q60 -->
+  <div class="qc cat-ops" data-cat="ops" id="q60">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">60</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message validation?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Kafka only validates message size — all other validation is the application's job.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Kafka's built-in check:</strong> Only validates that the message doesn't exceed <code>message.max.bytes</code>. Rejects oversized messages.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Producer-side validation:</strong> Validate business rules before sending. Reject invalid messages before they enter Kafka.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Schema Registry:</strong> Validates that messages conform to a registered schema — structural validation at serialization time.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Consumer-side validation:</strong> Validate on receipt and route invalid messages to a DLT for manual inspection.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Q62 -->
+  <div class="qc cat-ops" data-cat="ops" id="q62">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">62</span></span>
+      <div class="qbody">
+        <div class="qtxt">How does Kafka handle message retention across multiple data centers?</div>
+        <div class="qmeta"><span class="tag tag-ops">Operations</span></div>
+      </div>
+      <div class="qc-right"><button class="know-btn" onclick="markKnown(event,this)">✓ Know it</button><span class="qarr">▾</span></div>
+    </div>
+    <div class="ans">
+      <div class="ans-intro">Cross-DC replication via MirrorMaker — each data center has its own independent Kafka cluster.</div>
+      <div class="ans-body">
+        <ul class="bl">
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Architecture:</strong> Each DC runs an independent Kafka cluster. MirrorMaker 2 replicates specific topics between clusters.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Retention is local:</strong> Each cluster maintains its own retention policy. Cross-DC replication doesn't inherit retention.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Use cases:</strong> Disaster recovery, geographic read proximity, data sovereignty compliance.</div></li>
+          <li><span class="bdot">✦</span><div class="btxt"><strong>Offset mapping:</strong> MirrorMaker 2 maintains offset translations between clusters so consumers can switch to the standby cluster seamlessly.</div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /card-list -->
+</div><!-- /main -->
+
+</main>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────
+  let knownCount = 0;
+  const TOTAL = 70;
+
+  // ── Toggle accordion ──────────────────────────────────────────
+  function tog(el) {
+    const qc = el.parentElement;
+    qc.classList.toggle('open');
+  }
+
+  // ── Mark as known ─────────────────────────────────────────────
+  function markKnown(e, btn) {
+    e.stopPropagation();
+    const qc = btn.closest('.qc');
+    if (qc.classList.contains('known')) {
+      qc.classList.remove('known');
+      btn.textContent = '✓ Know it';
+      knownCount--;
+    } else {
+      qc.classList.add('known');
+      btn.textContent = '✓ Known!';
+      knownCount++;
+    }
+    updateProgress();
+  }
+
+  // ── Progress bar ──────────────────────────────────────────────
+  function updateProgress() {
+    const pct = Math.round((knownCount / TOTAL) * 100);
+    document.getElementById('pF').style.width = pct + '%';
+    document.getElementById('pC').textContent = knownCount + ' / ' + TOTAL;
+    document.getElementById('pPct').textContent = pct + '%';
+  }
+
+  // ── Filter by category ────────────────────────────────────────
+  function filter(cat, chipEl) {
+    // update chip active states
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chipEl.classList.add('active');
+
+    // show/hide cards
+    document.querySelectorAll('.qc').forEach(qc => {
+      if (cat === 'all' || qc.dataset.cat === cat) {
+        qc.classList.remove('hidden');
+      } else {
+        qc.classList.add('hidden');
+      }
+    });
+
+    // show/hide section labels
+    document.querySelectorAll('.sec-label').forEach(sec => {
+      if (cat === 'all') {
+        sec.style.display = '';
+      } else {
+        sec.style.display = 'none';
+      }
+    });
+  }
+</script>
+
+<script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

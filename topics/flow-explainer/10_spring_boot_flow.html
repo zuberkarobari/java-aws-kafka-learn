@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring Boot Flow - Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+      
+      <!-- Page Title -->
+      <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+              <i class="ph-fill ph-leaf"></i> System Request Flow
+          </div>
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+              10. Spring Boot <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Flow</span>
+          </h1>
+          <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+              The request has finally reached our code. How does it traverse the Servlet Container, DispatcherServlet, Controller, Service, and Repository layers?
+          </p>
+      </div>
+
+      <!-- 1. Definition -->
+      <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-book-open-text text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Architectural Flow</h2>
+          </div>
+          
+          <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-funnel text-lg"></i> Web Layer</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">The embedded Tomcat server accepts the TCP connection. Filters (like Spring Security) inspect the request. The <strong>DispatcherServlet</strong> maps the URL to the correct <strong>@RestController</strong>.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-briefcase text-lg"></i> Business Layer</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">The Controller maps JSON to a DTO and passes it to the <strong>@Service</strong>. Here, transactional boundaries are started (`@Transactional`), and the core business logic executes.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-database text-lg"></i> Data Layer</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">The Service calls a <strong>@Repository</strong> (Spring Data JPA). Hibernate translates the method call into a native SQL query, fetches the Data Entity, and maps it back to a Java Object.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- 2. Internal Working -->
+      <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-gears text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. The 3-Tier Architecture Flow</h2>
+          </div>
+
+          <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+              
+              <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                  
+                  <div class="flex flex-col w-full relative z-10 pt-2 pb-6 max-w-lg mx-auto">
+                      
+                      <!-- Controller -->
+                      <div class="bg-slate-800 border-2 border-blue-500/50 p-4 rounded-xl relative mb-6">
+                          <div class="absolute -top-3 left-6 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">@RestController</div>
+                          <div class="text-sm font-mono text-slate-300 mt-2">
+                              <span class="text-blue-400">public</span> ResponseEntity&lt;OrderDTO&gt; createOrder(<br>
+                              &nbsp;&nbsp;<span class="text-yellow-400">@RequestBody</span> <span class="text-emerald-400">@Valid</span> OrderRequest req) {<br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// 1. Deserializes JSON to DTO</span><br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// 2. Runs @Valid annotations</span><br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// 3. Forwards to Service</span><br>
+                              }
+                          </div>
+                      </div>
+
+                      <div class="text-center mb-6"><i class="ph-bold ph-arrow-down text-slate-500 text-xl"></i></div>
+
+                      <!-- Service -->
+                      <div class="bg-slate-800 border-2 border-orange-500/50 p-4 rounded-xl relative mb-6">
+                          <div class="absolute -top-3 left-6 bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">@Service</div>
+                          <div class="text-sm font-mono text-slate-300 mt-2">
+                              <span class="text-yellow-400">@Transactional</span><br>
+                              <span class="text-blue-400">public</span> Order processOrder(OrderRequest req) {<br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// 1. DB Transaction Starts</span><br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// 2. Execute Business Rules</span><br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// 3. Map DTO to Entity</span><br>
+                              &nbsp;&nbsp;return repository.save(order);<br>
+                              } <span class="text-slate-500">// Transaction Commits here</span>
+                          </div>
+                      </div>
+
+                      <div class="text-center mb-6"><i class="ph-bold ph-arrow-down text-slate-500 text-xl"></i></div>
+
+                      <!-- Repository -->
+                      <div class="bg-slate-800 border-2 border-emerald-500/50 p-4 rounded-xl relative">
+                          <div class="absolute -top-3 left-6 bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">@Repository</div>
+                          <div class="text-sm font-mono text-slate-300 mt-2">
+                              <span class="text-blue-400">public interface</span> OrderRepository <br>
+                              &nbsp;&nbsp;<span class="text-blue-400">extends</span> JpaRepository&lt;Order, Long&gt; {<br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// Hibernate intercepts .save()</span><br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// Generates: INSERT INTO orders...</span><br>
+                              &nbsp;&nbsp;<span class="text-slate-500">// Connects to DB via HikariCP Pool</span><br>
+                              }
+                          </div>
+                      </div>
+
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 3. Interview Questions -->
+      <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chats-circle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Interview Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+              <!-- Intermediate -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Intermediate: What is the DispatcherServlet?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> The DispatcherServlet is the "Front Controller" in Spring MVC. It intercepts every incoming HTTP request and acts as the central router. It consults the <code>HandlerMapping</code> to find which <code>@RestController</code> should handle the specific URL, and then uses <code>HttpMessageConverters</code> (like Jackson) to deserialize the JSON body into Java objects before invoking your method.
+                      </p>
+                  </div>
+              </div>
+
+              <!-- Senior -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Senior: Why do we separate Entities and DTOs? Why not just return the Entity from the Controller?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> Returning JPA Entities directly from the Controller is a major anti-pattern for three reasons:<br>
+                          1. <strong>Security:</strong> An entity might contain sensitive fields (like a password hash). If you return it directly, you leak data.<br>
+                          2. <strong>Coupling:</strong> It tightly couples your database schema to your external API contract. If you rename a DB column, your API response changes, breaking clients.<br>
+                          3. <strong>Infinite Recursion:</strong> If you have Bidirectional Relationships (e.g., User &rarr; Orders, Order &rarr; User), Jackson will infinitely loop while trying to serialize it to JSON unless you add complex annotations. DTOs provide a clean, flattened contract.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

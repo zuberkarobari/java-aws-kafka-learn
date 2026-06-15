@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Complete Request Flow - Interview Guide</title>
+  <meta name="description" content="The complete end-to-end request lifecycle: Browser → DNS → TCP → HTTPS → Firewall → CDN → Load Balancer → API Gateway → Spring Boot → Redis → DB → Kafka → Response." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    .flow-step {
+      position: relative;
+    }
+    .flow-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -32px;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 24px;
+      background: linear-gradient(to bottom, #6366f1, #8b5cf6);
+      opacity: 0.5;
+    }
+    .timeline-line {
+      position: absolute;
+      left: 20px;
+      top: 28px;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, #6366f1 0%, #f97316 100%);
+      opacity: 0.3;
+    }
+  </style>
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+      
+      <!-- Page Title -->
+      <div class="mb-12 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+              <i class="ph-fill ph-infinity"></i> System Request Flow
+          </div>
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+              20. The Complete <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Flow</span>
+          </h1>
+          <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+              Everything comes together. Trace a single POST /api/orders request from the browser click all the way to a Kafka event, and back to a JSON response.
+          </p>
+      </div>
+
+      <!-- Full Timeline -->
+      <section id="full-timeline" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-path text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">The Full Request Journey</h2>
+          </div>
+
+          <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+              <p class="text-slate-600 font-medium mb-8">Scenario: A user clicks "Place Order" on an e-commerce site. Follow every single hop.</p>
+              
+              <div class="w-full bg-slate-900 rounded-2xl p-6 md:p-8 border border-slate-800">
+
+                  <div class="relative">
+                      <div class="timeline-line"></div>
+
+                      <div class="space-y-8 pl-14">
+
+                          <!-- Step 1 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-blue-500 flex items-center justify-center text-blue-400 text-sm font-bold shrink-0">1</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-globe-hemisphere-west text-blue-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">Browser (Client)</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~0ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">User clicks "Place Order". JavaScript calls <code class="text-brand-400">fetch('POST /api/orders', body)</code>. Browser checks HSTS, local cache, and DNS cache — all misses for this dynamic endpoint.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 2 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-purple-500 flex items-center justify-center text-purple-400 text-sm font-bold shrink-0">2</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-book-bookmark text-purple-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">DNS Resolution</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~10ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">Browser asks the OS DNS resolver for <code class="text-brand-400">api.shop.com</code>. ISP Resolver queries the Root → TLD → Authoritative (Route 53). Returns an IP pointing to the Cloudflare CDN edge node closest to the user.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 3 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-emerald-500 flex items-center justify-center text-emerald-400 text-sm font-bold shrink-0">3</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-handshake text-emerald-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">TCP + TLS Handshake</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~30ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">Browser establishes a TCP connection with the CDN edge (SYN → SYN-ACK → ACK). Immediately performs a TLS 1.3 handshake. Certificate is validated. Symmetric session key is negotiated. Channel is secure.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 4 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-orange-500 flex items-center justify-center text-orange-400 text-sm font-bold shrink-0">4</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-shield-check text-orange-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">WAF + CDN Edge</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~2ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">Cloudflare WAF inspects the decrypted HTTP request. Checks IP reputation, rate limiting, OWASP rules. It's a POST to a dynamic endpoint — <em>not</em> cached. WAF passes it. CDN forwards to the origin Load Balancer via an optimized private network.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 5 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-brand-500 flex items-center justify-center text-brand-400 text-sm font-bold shrink-0">5</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-scales text-brand-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">Load Balancer → API Gateway</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~1ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">AWS ALB receives the request, performs a health check round-robin, and forwards to one of the three API Gateway pods in the K8s cluster. Spring Cloud Gateway validates the JWT token, applies rate limiting (Redis token bucket), and routes the request to the Order Service based on path predicate <code class="text-brand-400">/api/orders/**</code>.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 6 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-green-500 flex items-center justify-center text-green-400 text-sm font-bold shrink-0">6</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-leaf text-green-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">Spring Boot Application Layer</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~5ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">Tomcat accepts the request. DispatcherServlet routes to <code class="text-brand-400">OrderController.createOrder()</code>. Jackson deserializes the JSON body into <code class="text-brand-400">OrderRequest</code> DTO. Bean Validation runs (<code class="text-brand-400">@Valid</code>). Execution delegates to <code class="text-brand-400">@Service</code>.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 7 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-red-400 flex items-center justify-center text-red-400 text-sm font-bold shrink-0">7</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-lightning text-red-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">Redis Cache Check</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~1ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">Service checks Redis for cached product catalog and user details. <strong class="text-emerald-400">Cache Hit</strong> on both — data returned from RAM in ~1ms. No DB query needed for these reads. The <code class="text-brand-400">@Transactional</code> boundary starts for the write operation.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 8 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-teal-500 flex items-center justify-center text-teal-400 text-sm font-bold shrink-0">8</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-database text-teal-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">Database Write (PostgreSQL)</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~8ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">HikariCP pool provides a connection in microseconds. Hibernate generates <code class="text-brand-400">INSERT INTO orders VALUES (...)</code>. PostgreSQL writes to the WAL (Write-Ahead Log) and confirms the transaction. Hibernate maps the returned row to an Order entity. Transaction commits. Connection returned to pool.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 9 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-yellow-500 flex items-center justify-center text-yellow-400 text-sm font-bold shrink-0">9</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-queue text-yellow-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">Kafka Event Published</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~2ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">After the DB commit, <code class="text-brand-400">kafkaTemplate.send("order-events", orderEvent)</code> appends an event to the Kafka log. This is fire-and-forget (async). The Email Worker and Inventory Worker will consume this event independently — completely decoupled from this HTTP request.</p>
+                              </div>
+                          </div>
+
+                          <!-- Step 10 -->
+                          <div class="relative">
+                              <div class="absolute -left-14 top-1 w-10 h-10 rounded-full bg-slate-800 border-2 border-brand-500 flex items-center justify-center text-brand-400 text-sm font-bold shrink-0">10</div>
+                              <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+                                  <div class="flex items-center gap-3 mb-2">
+                                      <i class="ph-fill ph-arrow-u-up-left text-brand-400 text-xl"></i>
+                                      <span class="font-bold text-white font-display">HTTP Response to Browser</span>
+                                      <span class="text-[10px] text-slate-400 bg-slate-700 px-2 py-0.5 rounded font-mono">~total 60ms</span>
+                                  </div>
+                                  <p class="text-sm text-slate-300">Controller maps Order entity to OrderDTO, Jackson serializes to JSON. HTTP 201 Created with body <code class="text-brand-400">{orderId: "ORD-9981", status: "PROCESSING"}</code>. Response travels back through API Gateway → ALB → CDN Edge → TLS-encrypted over TCP → Browser. JavaScript renders "Order Placed ✓".</p>
+                              </div>
+                          </div>
+
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- Performance Numbers -->
+      <section id="perf" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chart-line-up text-2xl"></i>
+          </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">Latency Budget Breakdown</h2>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-5">
+              <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                  <div class="flex items-center gap-4 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-brand-500 group-hover:bg-brand-50 transition-colors"><i class="ph-fill ph-network text-xl"></i></div>
+                      <h4 class="font-bold text-slate-800 font-display">Network (Browser ↔ CDN)</h4>
+                  </div>
+                  <div class="text-3xl font-bold text-brand-600 font-display">~20ms</div>
+                  <p class="text-xs text-slate-500 mt-1">Physical distance & speed of light. CDN reduces this dramatically vs. hitting origin directly.</p>
+              </div>
+              <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                  <div class="flex items-center gap-4 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-50 transition-colors"><i class="ph-fill ph-lock-key text-xl"></i></div>
+                      <h4 class="font-bold text-slate-800 font-display">TLS Handshake</h4>
+                  </div>
+                  <div class="text-3xl font-bold text-orange-600 font-display">~10ms</div>
+                  <p class="text-xs text-slate-500 mt-1">TLS 1.3 reduced from 4 round trips (TLS 1.2) to just 1 round trip. 0-RTT session resumption is even faster.</p>
+              </div>
+              <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                  <div class="flex items-center gap-4 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-teal-500 group-hover:bg-teal-50 transition-colors"><i class="ph-fill ph-database text-xl"></i></div>
+                      <h4 class="font-bold text-slate-800 font-display">Database Query</h4>
+                  </div>
+                  <div class="text-3xl font-bold text-teal-600 font-display">~8ms</div>
+                  <p class="text-xs text-slate-500 mt-1">Dominant latency factor. Indexes are everything. Avoid N+1 queries — they multiply this by the record count.</p>
+              </div>
+              <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                  <div class="flex items-center gap-4 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-green-500 group-hover:bg-green-50 transition-colors"><i class="ph-fill ph-leaf text-xl"></i></div>
+                      <h4 class="font-bold text-slate-800 font-display">Spring Boot Logic</h4>
+                  </div>
+                  <div class="text-3xl font-bold text-green-600 font-display">~5ms</div>
+                  <p class="text-xs text-slate-500 mt-1">Deserialization, validation, business rules, serialization. Rarely the bottleneck if you avoid blocking I/O on the request thread.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- Architect Interview Questions -->
+      <section id="architect-faqs" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chats-circle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">Principal Engineer Interview Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Architect: Where are the single points of failure in this architecture, and how would you eliminate them?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong>
+                          <br><strong>1. Single Database Master:</strong> If it crashes, writes are lost. Fix: Use Multi-AZ RDS with automatic failover (standby replica promoted to master in ~30 seconds).
+                          <br><br><strong>2. Single Redis Instance:</strong> If it crashes, the cache is gone and the DB gets flooded. Fix: Redis Cluster with sharding + Redis Sentinel for automatic leader election.
+                          <br><br><strong>3. Single Kafka Broker:</strong> If it crashes, events are lost. Fix: Kafka Cluster with Replication Factor 3. Each partition has 1 leader and 2 followers. If the leader dies, one follower is elected the new leader automatically.
+                          <br><br><strong>4. Single API Gateway Instance:</strong> Fix: Kubernetes Deployment ensures 3 replicas of the Gateway are always running.
+                      </p>
+                  </div>
+              </div>
+
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Architect: The system is getting 10x the normal traffic. Which component breaks first and why?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> The <strong>database</strong> almost always breaks first. It is the hardest component to scale horizontally because of the ACID guarantees on writes.
+                          <br><br>
+                          <strong>Mitigation plan:</strong>
+                          <br>1. First line: Redis absorbs the read spike (cache hit rate should jump to 95%+).
+                          <br>2. Next: Read Replicas share the SELECT load.
+                          <br>3. If writes are still spiking: Kafka acts as a write buffer. Instead of writing directly to DB on every API call, drop the event to Kafka and have a consumer persist at a controlled rate.
+                          <br>4. Finally: Database sharding (partition data by user_id or geography across multiple DB instances).
+                      </p>
+                  </div>
+              </div>
+
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Architect: A user reports their order was placed twice. Walk through how you'd debug this using the tools in this architecture.</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong>
+                          <br>1. <strong>Get the Trace ID</strong>: Ask the user for the timestamp and userID. Search Kibana logs for their userID around that time. Find both requests' Trace IDs (T-111 and T-112).
+                          <br><br>2. <strong>Check Zipkin</strong>: Pull up both Traces side-by-side. Do they have different Source IPs? Or the same IP? If the same, it may be a client-side double-click. Look at timestamp gap — if < 50ms, it's definitely a browser re-submission.
+                          <br><br>3. <strong>Check API Gateway logs</strong>: Did the Gateway see 2 requests, or did it forward one request and it got duplicated downstream? If the Gateway only saw 1 request, the duplication happened in the Order Service.
+                          <br><br>4. <strong>Check DB</strong>: Are there 2 separate rows in the `orders` table? Do they have the same `idempotency_key` column value? If yes, the Idempotency Key check failed (bug). If different keys, a genuine double-call happened.
+                          <br><br>5. <strong>Fix</strong>: Ensure the OrderController checks a unique client-generated `idempotency_key` per request. Store this key in Redis with a short TTL. If the key exists in Redis on a second call, return the cached `201 Created` response without creating a new DB row.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- Congratulations Banner -->
+      <section class="animate-on-scroll">
+          <div class="relative overflow-hidden rounded-[2rem] p-10 text-center" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); border: 1px solid rgba(99, 102, 241, 0.2);">
+              <div class="absolute inset-0 overflow-hidden">
+                  <div class="absolute -top-20 -left-20 w-64 h-64 bg-brand-500/5 rounded-full blur-3xl"></div>
+                  <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl"></div>
+              </div>
+              <div class="relative z-10">
+                  <div class="text-6xl mb-6">🎓</div>
+                  <h2 class="text-3xl font-display font-extrabold text-white mb-4 tracking-tight">You Know It End-to-End</h2>
+                  <p class="text-slate-300 max-w-xl mx-auto leading-relaxed font-medium">
+                      From the user's click all the way to a committed database row, an asynchronous Kafka event, and back to the browser. You now understand the full request lifecycle at a <span class="text-brand-400 font-bold">Principal Engineer</span> level.
+                  </p>
+                  <div class="mt-8 flex flex-wrap justify-center gap-3">
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">Browser ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">DNS ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">TCP/IP ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">HTTPS/TLS ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">WAF ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">CDN ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">Load Balancer ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">API Gateway ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">Spring Boot ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">Redis ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">PostgreSQL ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">HikariCP ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">Kafka ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">Workers ✓</span>
+                      <span class="text-xs bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-full font-mono">Docker/K8s ✓</span>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

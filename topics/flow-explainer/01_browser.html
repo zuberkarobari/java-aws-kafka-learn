@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Browser Request Flow - Interview Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+      
+      <!-- Page Title -->
+      <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+              <i class="ph-fill ph-globe-hemisphere-west"></i> System Request Flow
+          </div>
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+              1. The <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-orange-600">Browser</span>
+          </h1>
+          <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+              What exactly happens inside the browser engine when a user types a URL and hits enter? Let's break down the DOM, CSSOM, Render Tree, and network initialization.
+          </p>
+      </div>
+
+      <!-- 1. Definition -->
+      <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-book-open-text text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+          </div>
+          
+          <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">The browser is the translator between human intentions and computer networks. It takes a typed address, fetches the corresponding code from across the world, and paints it on your screen as a beautiful, interactive page.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">A software application consisting of a UI, a browser engine, a rendering engine (like Blink or WebKit), a networking layer, and a JavaScript engine (like V8) that retrieves, presents, and traverses information resources on the WWW.</p>
+              </div>
+              <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                  <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                  <p class="text-slate-600 leading-relaxed text-sm font-medium">To provide a secure sandbox for executing untrusted code (JS) while rendering standardized markup (HTML/CSS) into an interactive graphical interface, handling all underlying network protocols transparently.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- 2. Internal Working -->
+      <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-gears text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The Rendering Flow</h2>
+          </div>
+
+          <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+              <p class="text-slate-600 font-medium">When the browser finally receives the HTML response from the server, the rendering engine kicks into high gear. This is the "Critical Rendering Path".</p>
+              
+              <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                  
+                  <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                      <i class="ph-fill ph-paint-brush text-brand-400"></i> The Critical Rendering Path
+                  </h3>
+
+                  <div class="flex flex-col items-center w-full relative z-10 pt-2 pb-6">
+                      
+                      <!-- Step 1 -->
+                      <div class="flex justify-center gap-6 w-full max-w-lg mb-6">
+                          <div class="flex-1 bg-slate-800 border-2 border-slate-600 px-4 py-4 rounded-lg text-sm text-center shadow-md">
+                              <div class="font-bold text-slate-200 mb-1">1. Parse HTML</div>
+                              <div class="text-[10px] text-slate-400 font-mono">Creates Document Object Model (DOM)</div>
+                          </div>
+                          <div class="flex-1 bg-slate-800 border-2 border-slate-600 px-4 py-4 rounded-lg text-sm text-center shadow-md">
+                              <div class="font-bold text-slate-200 mb-1">2. Parse CSS</div>
+                              <div class="text-[10px] text-slate-400 font-mono">Creates CSS Object Model (CSSOM)</div>
+                          </div>
+                      </div>
+                      
+                      <div class="flex gap-16 text-xl text-slate-500 mb-4">
+                          <i class="ph-bold ph-arrow-down-right"></i>
+                          <i class="ph-bold ph-arrow-down-left"></i>
+                      </div>
+
+                      <!-- Step 3 -->
+                      <div class="bg-brand-900/40 border-2 border-brand-500/50 p-4 rounded-xl w-full max-w-sm text-center shadow-lg mb-6 relative">
+                          <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">DOM + CSSOM</div>
+                          <div class="font-bold text-brand-100 text-lg mt-2">3. Render Tree</div>
+                          <div class="text-xs text-brand-300/70 mt-1">Contains only visible nodes with computed styles. (e.g., skips `display: none`)</div>
+                      </div>
+
+                      <i class="ph-bold ph-arrow-down text-slate-500 mb-6 text-xl"></i>
+
+                      <!-- Step 4 -->
+                      <div class="bg-slate-800 border-2 border-slate-600 px-6 py-4 rounded-lg text-sm text-center shadow-md w-full max-w-sm mb-6">
+                          <div class="font-bold text-slate-200 mb-1">4. Layout (Reflow)</div>
+                          <div class="text-[10px] text-slate-400 font-mono">Calculates exact position and size (x, y, width, height) of every node based on viewport size.</div>
+                      </div>
+
+                      <i class="ph-bold ph-arrow-down text-slate-500 mb-6 text-xl"></i>
+
+                      <!-- Step 5 -->
+                      <div class="bg-slate-800 border-2 border-slate-600 px-6 py-4 rounded-lg text-sm text-center shadow-md w-full max-w-sm">
+                          <div class="font-bold text-slate-200 mb-1">5. Paint & Composite</div>
+                          <div class="text-[10px] text-slate-400 font-mono">Fills in pixels (colors, text, images) across different layers, then flattens them to the screen.</div>
+                      </div>
+
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 3. Real-World Example -->
+      <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-buildings text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Example</h2>
+          </div>
+
+          <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+              <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                  <i class="ph-fill ph-shopping-cart text-[12rem] transform -rotate-12"></i>
+              </div>
+              <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-yellow-300">Amazon Homepage Load</h3>
+              <p class="text-slate-300 mb-8 relative z-10 font-medium">Why frontend optimization dictates revenue.</p>
+              
+              <div class="space-y-6 relative z-10">
+                  <div class="flex gap-5 items-start">
+                      <div class="mt-1 w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0 border border-orange-500/30"><i class="ph-fill ph-clock text-xl"></i></div>
+                      <div>
+                          <h4 class="font-bold text-white text-lg font-display">The Parsing Blockers</h4>
+                          <p class="text-sm text-slate-400 mt-1">When Amazon's HTML arrives, the browser starts parsing. If it encounters a synchronous `&lt;script src="..."&gt;`, DOM parsing halts completely. The browser must download and execute the JS before continuing. This is why Amazon puts non-critical scripts at the bottom or uses `defer`/`async` attributes—to ensure the user sees products immediately.</p>
+                      </div>
+                  </div>
+                  <div class="flex gap-5 items-start">
+                      <div class="mt-1 w-10 h-10 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 border border-brand-500/30"><i class="ph-fill ph-device-mobile text-xl"></i></div>
+                      <div>
+                          <h4 class="font-bold text-white text-lg font-display">Reflow Costs</h4>
+                          <p class="text-sm text-slate-300 mt-1">If a user resizes their browser window, or if a carousel image loads dynamically pushing content down, the browser must recalculate positions (Reflow) and redraw pixels (Repaint). Amazon minimizes layout shifts to keep the CPU cool and the UI buttery smooth.</p>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- 4. Key Concepts -->
+      <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-target text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. Caching & Storage</h2>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-5">
+              <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                  <div class="flex items-center gap-4 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors"><i class="ph-fill ph-cookie text-xl"></i></div>
+                      <h4 class="font-bold text-slate-800 font-display">Cookies</h4>
+                  </div>
+                  <p class="text-sm text-slate-600 font-medium">Max 4KB. Sent to the server automatically with every HTTP request. Used for session management (Session IDs) and tracking. Secured via `HttpOnly` and `Secure` flags.</p>
+              </div>
+              <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                  <div class="flex items-center gap-4 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors"><i class="ph-fill ph-hard-drives text-xl"></i></div>
+                      <h4 class="font-bold text-slate-800 font-display">Local Storage</h4>
+                  </div>
+                  <p class="text-sm text-slate-600 font-medium">~5MB capacity. Persists even after the browser is closed. Never sent to the server automatically. Accessed via JavaScript. Ideal for user preferences (e.g., dark mode).</p>
+              </div>
+              <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                  <div class="flex items-center gap-4 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors"><i class="ph-fill ph-timer text-xl"></i></div>
+                      <h4 class="font-bold text-slate-800 font-display">Session Storage</h4>
+                  </div>
+                  <p class="text-sm text-slate-600 font-medium">~5MB capacity. Cleared as soon as the specific browser tab is closed. Ideal for temporary state like multi-step form data.</p>
+              </div>
+              <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                  <div class="flex items-center gap-4 mb-3">
+                      <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors"><i class="ph-fill ph-archive-box text-xl"></i></div>
+                      <h4 class="font-bold text-slate-800 font-display">Browser Cache</h4>
+                  </div>
+                  <p class="text-sm text-slate-600 font-medium">Stores HTTP responses (images, CSS, JS) based on HTTP headers (`Cache-Control`, `ETag`). Prevents re-downloading static assets, drastically improving load times.</p>
+              </div>
+          </div>
+      </section>
+
+      <!-- 5. Interview Questions -->
+      <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+          <div class="flex items-center gap-4 mb-8">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                  <i class="ph-duotone ph-chats-circle text-2xl"></i>
+              </div>
+              <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Interview Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+              <!-- Beginner -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Beginner: What is the DOM?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> The Document Object Model (DOM) is an in-memory tree representation of the HTML document. It provides a programming interface (API) that allows JavaScript to interact with, add, remove, or modify HTML elements and attributes dynamically.
+                      </p>
+                  </div>
+              </div>
+              
+              <!-- Intermediate -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Intermediate: What is the difference between Reflow and Repaint?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> A <strong>Reflow</strong> (or Layout) occurs when changes affect the geometry of the page—like changing width, height, or window resizing. The browser must recalculate the positions of all affected elements. A <strong>Repaint</strong> occurs when visibility changes, but geometry does not—like changing a background color or visibility. Reflow is much more expensive computationally than Repaint.
+                      </p>
+                  </div>
+              </div>
+
+              <!-- Senior -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Senior: Why shouldn't you store JWT tokens in Local Storage?</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> Local Storage is accessible via JavaScript. If your site suffers a Cross-Site Scripting (XSS) attack, a malicious script can easily read the JWT from Local Storage and send it to an attacker, resulting in a compromised account. Instead, JWTs (specifically the Access and Refresh tokens) should be stored in an `HttpOnly`, `Secure` cookie, which the browser automatically attaches to requests but cannot be read by JS.
+                      </p>
+                  </div>
+              </div>
+
+              <!-- Architect -->
+              <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                  <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                      <span class="font-display font-semibold text-slate-800">Architect: Explain the exact step-by-step process of what happens in the browser before the DNS lookup even starts.</span>
+                      <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                  </button>
+                  <div class="accordion-content bg-slate-50/50 px-6">
+                      <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4 mb-4">
+                          <strong>Answer:</strong> When you type a URL:
+                          <br>1. <strong>Input parsing:</strong> The browser parses the input to determine if it's a search query or a URL.
+                          <br>2. <strong>HSTS Check:</strong> It checks the HTTP Strict Transport Security (HSTS) list. If the domain is listed, it forces HTTPS instead of HTTP.
+                          <br>3. <strong>Cache Check:</strong> It checks the local browser cache to see if the resource is cached and fresh.
+                          <br>4. <strong>DNS Cache:</strong> It checks the browser's internal DNS cache, then the OS DNS cache, then the router cache, before finally triggering a network DNS resolution.
+                      </p>
+                  </div>
+              </div>
+          </div>
+      </section>
+
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

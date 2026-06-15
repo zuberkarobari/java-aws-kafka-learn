@@ -224,6 +224,14 @@ ${inlineScripts.join('\n')}
 </html>`;
 }
 
+// ── Directories to NEVER touch (they have bespoke flow layouts) ──────────────
+const EXCLUDED_DIRS = [
+  join(TOPICS_DIR, 'key-topics'),
+];
+
+const isExcluded = (filePath) =>
+  EXCLUDED_DIRS.some(excl => filePath.startsWith(excl));
+
 // ── Main execution ─────────────────────────────────────────────────────────────
 
 const allFiles = getAllHtmlFiles(TOPICS_DIR);
@@ -233,7 +241,13 @@ for (const filePath of allFiles) {
   try {
     const html = readFileSync(filePath, 'utf8');
     const relPath = relative(TOPICS_DIR, filePath);
-    
+
+    // Skip protected directories (e.g. key-topics — bespoke flow layout)
+    if (isExcluded(filePath)) {
+      skipped++;
+      continue;
+    }
+
     // Skip if already properly wrapped with topic.js
     if (html.includes('topic.js') && html.includes('id="topic-content"')) {
       skipped++;
