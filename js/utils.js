@@ -4,7 +4,6 @@
  */
 
 import { TOPIC_ORDER, TOPIC_META, PATHWAYS } from './topics.config.js';
-import { saveUserData, getCurrentUser } from './firebase-service.js';
 
 // ─── Firebase In-Memory State & Sync ─────────────────────────────────────────
 
@@ -34,19 +33,8 @@ export const clearInMemoryState = () => {
   };
 };
 
-export const triggerSync = () => {
-  if (getCurrentUser()) {
-    saveUserData({
-      visited: inMemoryState.visited || Array.from(getVisited()),
-      streakDates: inMemoryState.streakDates || getStreakHistory(),
-      plannerTasks: inMemoryState.plannerTasks || getPlannerTasks(),
-      checklistConfidence: inMemoryState.checklistConfidence || getConfidenceRatings(),
-      checklistItems: inMemoryState.checklistItems || Array.from(getCheckedItems()),
-      timers: inMemoryState.timers || {},
-      notes: inMemoryState.notes || {}
-    });
-  }
-};
+// triggerSync is a no-op — Firebase removed, localStorage only
+export const triggerSync = () => {};
 
 export const clearAllLearningData = () => {
   if (!confirm("Are you sure you want to clear all your learning progress? This action cannot be undone.")) {

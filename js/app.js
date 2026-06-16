@@ -1,6 +1,7 @@
 /**
  * app.js — Homepage logic
  * Renders: dashboard overview, category sidebar, topic cards, search, progress bar, theme toggle, pathways nav
+ * localStorage only — no Firebase dependency
  */
 
 import {
@@ -12,7 +13,6 @@ import {
   setSearchParam,
   getActivePathway,
   setActivePathway,
-  getTopicsByPathway,
   getCategoriesByPathway,
   getTopicsByCategoryAndPathway,
   calcProgress,
@@ -25,11 +25,7 @@ import {
   togglePlannerTask,
   deletePlannerTask,
   getConfidenceRatings,
-  setInMemoryState,
-  clearInMemoryState
 } from './utils.js';
-import { listenToAuthChanges, loginWithGoogle, logout, getUserData } from './firebase-service.js';
-import { profileComponent } from './components/ProfileComponent.js';
 import { PATHWAYS } from './topics.config.js';
 import { initCommandPalette, openCommandPalette } from './command-palette.js';
 
@@ -209,6 +205,7 @@ const renderDashboard = () => {
   const container = document.getElementById('topics-grid');
   if (!container) return;
 
+  try {
   const { visited, total, percent } = calcProgress('dashboard');
   const streak = calcStreakDays();
   const recommended = getRecommendation();
@@ -372,6 +369,10 @@ const renderDashboard = () => {
 
   // Wire up the add task input triggers
   setupTodoInputListeners();
+  } catch (err) {
+    console.error('[renderDashboard] CRASH:', err);
+    container.innerHTML = `<div style="color:red;padding:2rem;font-family:monospace;"><b>Dashboard Error:</b><br>${err.message}<br><pre>${err.stack}</pre></div>`;
+  }
 };
 
 const generateCalendarMarkup = () => {
@@ -609,7 +610,7 @@ const renderCards = (filterText = '') => {
   }
 
   if (activePathway === 'profile') {
-    profileComponent.render(container);
+    renderLocalProfile(container);
     return;
   }
 
@@ -724,78 +725,78 @@ window.clearSearch = () => {
   renderCards();
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Local Profile View (localStorage only) ──────────────────────────────────
+
+const renderLocalProfile = (container) => {
+  const { visited, total, percent } = getGlobalProgress();
+  const streak = calcStreakDays();
+  const tasks = getPlannerTasks();
+  const completedTasks = tasks.filter(t => t.done).length;
+
+  // Count notes
+  let notesCount = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('java-learn-notes-') && localStorage.getItem(key)?.trim()) notesCount++;
+  }
+
+  container.innerHTML = `
+    <div class="dashboard-container" style="max-width: 800px;">
+      <div class="dashboard-stat-card" style="text-align:center; padding: 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+        <h2 style="margin: 0 0 0.5rem;">Your Local Progress</h2>
+        <p style="color: var(--text-muted); margin: 0 0 2rem;">All data stored locally in your browser.</p>
+      </div>
+      <div class="dashboard-stats-grid">
+        <div class="dashboard-stat-card">
+          <h4 class="stat-card-title">Overall Completion</h4>
+          <div style="font-size: 2.5rem; font-weight: 800; color: var(--accent); margin: 0.5rem 0;">${percent}%</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">${visited} of ${total} topics done</div>
+        </div>
+        <div class="dashboard-stat-card">
+          <h4 class="stat-card-title">Study Streak</h4>
+          <div style="font-size: 2.5rem; font-weight: 800; color: #f59e0b; margin: 0.5rem 0;">${streak} 🔥</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">consecutive days</div>
+        </div>
+        <div class="dashboard-stat-card">
+          <h4 class="stat-card-title">Notes Written</h4>
+          <div style="font-size: 2.5rem; font-weight: 800; color: #10b981; margin: 0.5rem 0;">${notesCount} 📝</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">saved across topics</div>
+        </div>
+        <div class="dashboard-stat-card">
+          <h4 class="stat-card-title">Planner Tasks</h4>
+          <div style="font-size: 2.5rem; font-weight: 800; color: #8b5cf6; margin: 0.5rem 0;">${completedTasks}/${tasks.length}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">tasks completed</div>
+        </div>
+      </div>
+      <div class="dashboard-stat-card" style="text-align:center;">
+        <h4 class="stat-card-title" style="margin-bottom:1rem;">Reset Progress</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">This will clear all visited topics, notes, and planner tasks from your browser.</p>
+        <button onclick="if(confirm('Clear ALL local data?')){localStorage.clear();window.location.reload();}" style="padding: 0.6rem 1.5rem; border-radius: var(--radius-md); background: #ef4444; color: white; border: none; cursor: pointer; font-weight: 600;">🗑️ Clear All Data</button>
+      </div>
+    </div>
+  `;
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const slugify = (str) =>
   str.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-// ─── Authentication ─────────────────────────────────────────────────────────────
-
-const initAuthUI = () => {
-  const authBtn = document.getElementById('auth-btn');
-  if (authBtn) {
-    authBtn.addEventListener('click', async () => {
-      const authText = document.getElementById('auth-text');
-      if (authText.textContent === 'Login') {
-        authText.textContent = '...';
-        try {
-          await loginWithGoogle();
-        } catch (e) {
-          authText.textContent = 'Login';
-        }
-      } else {
-        authText.textContent = '...';
-        try {
-          await logout();
-        } catch (e) {
-          authText.textContent = 'Logout';
-        }
-      }
-    });
-  }
-};
-
-const updateAuthUI = (user) => {
-  const authText = document.getElementById('auth-text');
-  if (authText) {
-    authText.textContent = user ? 'Logout' : 'Login';
-  }
-};
-
 // ─── Init ─────────────────────────────────────────────────────────────────────
-
-let appInitialized = false;
 
 const init = () => {
   initTheme();
-  initAuthUI();
+  initPathwayTabs();
+  initSearch();
+  initCommandPalette();
+  document.getElementById('header-search-btn')?.addEventListener('click', openCommandPalette);
 
-  listenToAuthChanges(async (user) => {
-    if (user) {
-      const data = await getUserData();
-      setInMemoryState(data);
-      updateAuthUI(user);
-    } else {
-      clearInMemoryState();
-      updateAuthUI(null);
-    }
-    
-    // Only init DOM listeners once
-    if (!appInitialized) {
-      appInitialized = true;
-      initPathwayTabs();
-      initSearch();
-      initCommandPalette();
-      document.getElementById('header-search-btn')?.addEventListener('click', openCommandPalette);
-      
-      window.addEventListener('storage', () => {
-        renderProgress();
-        renderCards(getSearchParam('search'));
-      });
-    }
+  renderSidebar();
+  renderProgress();
+  renderCards(getSearchParam('search'));
 
-    // Always re-render on auth change
-    renderSidebar();
+  window.addEventListener('storage', () => {
     renderProgress();
     renderCards(getSearchParam('search'));
   });
