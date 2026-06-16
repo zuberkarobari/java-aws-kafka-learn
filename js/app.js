@@ -794,6 +794,13 @@ const init = () => {
     renderProgress();
     renderCards(getSearchParam('search'));
   });
+
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      renderProgress();
+      renderCards(getSearchParam('search'));
+    }
+  });
 };
 
 document.addEventListener('DOMContentLoaded', init);

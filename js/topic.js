@@ -14,6 +14,7 @@ import {
   getPathPrefix,
   getTopicsByCategoryAndPathway,
   getActivePathway,
+  calcProgress,
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
 import { initCommandPalette, openCommandPalette } from './command-palette.js';
@@ -197,6 +198,36 @@ const injectSidebar = () => {
 
 // ─── Prev/Next Nav Injection ──────────────────────────────────────────────────
 
+const injectProgressBar = () => {
+  const { visited, total, percent } = calcProgress(activePathway);
+  
+  const container = document.createElement('div');
+  container.className = 'topic-sticky-progress';
+  
+  // Styling to match the screenshot exactly
+  container.style.position = 'fixed';
+  container.style.bottom = '0';
+  container.style.left = '0';
+  container.style.width = '100%';
+  container.style.height = '40px';
+  container.style.backgroundColor = 'var(--bg-surface, #f8f9fa)';
+  container.style.borderTop = '1px solid var(--border-color, #e5e7eb)';
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'center';
+  container.style.gap = '12px';
+  container.style.zIndex = '1000';
+  container.style.boxShadow = '0 -2px 10px rgba(0,0,0,0.05)';
+  
+  container.innerHTML = `
+    <span style="font-size: 13px; color: var(--text-color, #4b5563); font-weight: 500;">Topic progress: ${percent}%</span>
+    <div style="width: 200px; height: 12px; background: #ffffff; border: 1px solid #d1d5db; border-radius: 999px; overflow: hidden; position: relative;">
+      <div style="width: ${percent}%; height: 100%; background: #3b82f6; border-radius: 999px; transition: width 0.5s ease;"></div>
+    </div>
+  `;
+  return container;
+};
+
 const injectPrevNext = () => {
   const nav = document.createElement('nav');
   nav.className = 'prev-next-nav';
@@ -343,6 +374,12 @@ const assembleLayout = () => {
 
   document.body.appendChild(wrapper);
   document.body.appendChild(footer);
+  
+  const progressBar = injectProgressBar();
+  if (progressBar) document.body.appendChild(progressBar);
+  
+  // Add padding to body so the footer/content isn't hidden by the fixed bar
+  document.body.style.paddingBottom = '40px';
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -353,6 +390,9 @@ const slugify = (str) =>
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 const init = () => {
+  // Mark topic as visited FIRST so UI reflects it immediately
+  if (currentId) markVisited(currentId);
+
   const theme = getSavedTheme();
   applyTheme(theme);
 
@@ -378,9 +418,6 @@ const init = () => {
   initSidebarToggle();
   initSidebarFilter();
   loadPrism();
-
-  // Mark topic as visited
-  if (currentId) markVisited(currentId);
 
   // Scroll active sidebar item into view
   requestAnimationFrame(() => {
