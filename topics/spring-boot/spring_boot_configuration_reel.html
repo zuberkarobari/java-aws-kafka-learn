@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Boot Internals - Java Theme</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --java-dark: #020617; /* Deep Slate Base */
+        --java-blue: #38bdf8; /* Classic Spring/Java Blue */
+        --java-orange: #fb923c; /* Java Orange */
+        --java-red: #ef4444; 
+        --java-green: #34d399;
+        --java-purple: #c084fc;
+        --panel-bg: rgba(15, 23, 42, 0.6); /* Frosted Glass Base */
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Flex Layout ensures no overlapping */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--java-dark); position: relative;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.8); border: 1px solid rgba(56, 189, 248, 0.2);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 16px;
+    }
+
+    /* Java Theme Background Engine */
+    .theme-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        overflow: hidden; z-index: 0; background: var(--java-dark);
+        background-image: 
+            linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    
+    .glow-orb {
+        position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.3;
+        animation: float 15s infinite ease-in-out alternate;
+    }
+    .glow-blue { width: 300px; height: 300px; background: #0284c7; top: -50px; left: -100px; }
+    .glow-orange { width: 250px; height: 250px; background: #ea580c; bottom: 100px; right: -100px; animation-delay: -5s; }
+
+    @keyframes float {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(20px, -20px) scale(1.1); }
+    }
+
+    /* Header - Fixed Top */
+    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
+        background: linear-gradient(135deg, #ffffff, var(--java-blue));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 4px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--java-orange); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Visual Canvas Area - Top Half */
+    .canvas {
+        flex: 1.2; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 15px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* Scrollable Data Containers in Canvas (Frosted Glass) */
+    .scroll-container {
+        width: 90%; max-height: 95%; overflow-y: auto; overflow-x: hidden;
+        background: var(--panel-bg); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px; padding: 15px; backdrop-filter: blur(20px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .scroll-container::-webkit-scrollbar { width: 4px; }
+    .scroll-container::-webkit-scrollbar-thumb { background: var(--java-blue); border-radius: 4px; }
+
+    /* Scene 1: Starters */
+    .starter-box { background: rgba(56, 189, 248, 0.1); border: 2px solid var(--java-blue); border-radius: 8px; padding: 15px; text-align: center; margin-bottom: 20px; box-shadow: 0 0 20px rgba(56,189,248,0.2);}
+    .starter-title { font-family: 'JetBrains Mono', monospace; font-weight: bold; color: var(--java-blue); font-size: 12px;}
+    .dep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; opacity: 0; transform: translateY(-10px); transition: all 0.5s ease;}
+    .dep-item { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 10px; text-align: center; color: #cbd5e1;}
+
+    /* Scene 2: Auto-Config Radar */
+    .radar-container { position: relative; width: 150px; height: 150px; border-radius: 50%; border: 2px dashed var(--java-orange); display: flex; align-items: center; justify-content: center; margin: 10px auto; overflow: hidden;}
+    .radar-sweep { position: absolute; top: 50%; left: 50%; width: 75px; height: 75px; background: conic-gradient(from 0deg, transparent 70%, rgba(251,146,60,0.6) 100%); transform-origin: top left; animation: radar 2s linear infinite; opacity: 0;}
+    @keyframes radar { 100% { transform: rotate(360deg); } }
+    .radar-cp { font-size: 10px; font-family: monospace; color: var(--java-orange); position: absolute; z-index: 10; font-weight: bold;}
+    .bean-factory { opacity: 0; transition: all 0.5s; text-align: center; margin-top: 15px; border: 1px solid var(--java-green); background: rgba(52,211,153,0.1); padding: 10px; border-radius: 8px; color: var(--java-green); font-family: monospace; font-size: 12px;}
+
+    /* Scene 3: Profiles */
+    .profile-switch { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px;}
+    .p-btn { padding: 8px 16px; border-radius: 20px; font-family: 'Space Grotesk'; font-weight: bold; font-size: 12px; border: 2px solid #475569; color: #94a3b8; transition: all 0.3s;}
+    .p-btn.active-dev { border-color: var(--java-blue); color: var(--java-blue); background: rgba(56,189,248,0.1); box-shadow: 0 0 15px rgba(56,189,248,0.3);}
+    .p-btn.active-prod { border-color: var(--java-orange); color: var(--java-orange); background: rgba(251,146,60,0.1); box-shadow: 0 0 15px rgba(251,146,60,0.3);}
+    .p-card { background: rgba(0,0,0,0.4); border: 1px solid var(--border-neon); border-radius: 8px; padding: 15px; display: none; transition: opacity 0.3s;}
+    .p-card.show { display: block; animation: fadeIn 0.3s;}
+    @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+
+    /* Scene 4: External Config Hierarchy */
+    .hierarchy-tower { display: flex; flex-direction: column; gap: 5px; width: 100%; margin-top: 10px; align-items: center;}
+    .h-layer { width: 80%; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 10px; text-align: center; border: 1px solid transparent; transition: all 0.3s;}
+    .h-low { background: rgba(255,255,255,0.05); border-color: #475569; color: #94a3b8; width: 90%;}
+    .h-mid { background: rgba(56,189,248,0.1); border-color: var(--java-blue); color: var(--java-blue); width: 85%;}
+    .h-top { background: rgba(251,146,60,0.2); border-color: var(--java-orange); color: var(--java-orange); width: 80%; font-weight: bold; box-shadow: 0 0 15px rgba(251,146,60,0.3); transform: scale(1.05);}
+    .winner-arrow { color: var(--java-orange); font-size: 20px; font-weight: bold; margin: 5px 0;}
+
+    /* Explainer Panel at Bottom - Bottom Half (Frosted Glass) */
+    .explainer-panel {
+        background: rgba(2, 6, 23, 0.7);
+        padding: 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid rgba(56, 189, 248, 0.3);
+        backdrop-filter: blur(24px);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.5); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(251, 146, 60, 0.15); color: var(--java-orange);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;
+        border: 1px solid rgba(251, 146, 60, 0.4); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+        margin-bottom: 8px; letter-spacing: -0.5px;
+    }
+
+    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: var(--java-blue); } 
+    .c-fn { color: #818cf8; } 
+    .c-st { color: var(--java-green); } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-an { color: var(--java-orange); font-weight: bold;} 
+    .c-hi { background: rgba(56, 189, 248, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--java-blue); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(239, 68, 68, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--java-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, var(--java-blue), #0284c7);
+        color: white; border: none; padding: 14px 24px; border-radius: 12px;
+        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4);
+        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(56, 189, 248, 0.4); }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="theme-bg">
+        <div class="glow-orb glow-blue"></div>
+        <div class="glow-orb glow-orange"></div>
+    </div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Spring Boot Core</h1>
+        <p>Eliminating Boilerplate</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        
+        <!-- Scene 1: Starters -->
+        <div class="scene-container active" id="scene-1">
+            <div class="scroll-container">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--java-blue); margin-bottom: 10px; text-align:center;">The Bill of Materials</div>
+                
+                <div class="starter-box">
+                    <div class="starter-title">spring-boot-starter-web</div>
+                    <div style="font-size: 9px; color:#94a3b8; margin-top: 5px;">Curated dependencies resolved instantly</div>
+                </div>
+                
+                <div class="dep-grid" id="dep-grid">
+                    <div class="dep-item">spring-webmvc</div>
+                    <div class="dep-item">tomcat-embed</div>
+                    <div class="dep-item">jackson-databind</div>
+                    <div class="dep-item">spring-core</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 2: Auto-Configuration -->
+        <div class="scene-container" id="scene-2">
+            <div class="scroll-container" style="border-color: rgba(251,146,60,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--java-orange); margin-bottom: 15px; text-align:center;">The Radar Engine</div>
+                
+                <div class="radar-container">
+                    <div class="radar-sweep" id="r-sweep"></div>
+                    <div class="radar-cp">Classpath Scan</div>
+                </div>
+                
+                <div style="text-align:center; font-family:monospace; font-size:10px; color:#cbd5e1; margin-top:10px; opacity:0;" id="radar-log">
+                    > Found: org.postgresql.Driver<br>
+                    > Found: HikariCP
+                </div>
+                
+                <div class="bean-factory" id="b-factory">
+                    ✨ Auto-Configuring DataSource Bean!
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 3: Profiles -->
+        <div class="scene-container" id="scene-3">
+            <div class="scroll-container" style="border-color: rgba(56,189,248,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--text); margin-bottom: 15px; text-align:center;">Environment Slicing</div>
+                
+                <div class="profile-switch">
+                    <div class="p-btn active-dev" id="btn-dev">DEV</div>
+                    <div class="p-btn" id="btn-prod">PROD</div>
+                </div>
+                
+                <div class="p-card show" id="card-dev">
+                    <div style="color:var(--java-blue); font-weight:bold; font-size:12px; margin-bottom:5px;">application-dev.yml</div>
+                    <div style="font-family:monospace; font-size:10px; color:#94a3b8;">
+                        db.url: jdbc:h2:mem:testdb<br>
+                        <span style="color:var(--java-green);">// Injects MockEmailSender.class</span>
+                    </div>
+                </div>
+                
+                <div class="p-card" id="card-prod">
+                    <div style="color:var(--java-orange); font-weight:bold; font-size:12px; margin-bottom:5px;">application-prod.yml</div>
+                    <div style="font-family:monospace; font-size:10px; color:#94a3b8;">
+                        db.url: jdbc:postgresql://aws...<br>
+                        <span style="color:var(--java-green);">// Injects AwsSesEmailSender.class</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 4: External Config Hierarchy -->
+        <div class="scene-container" id="scene-4">
+            <div class="scroll-container" style="border-color: rgba(251,146,60,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--java-orange); margin-bottom: 10px; text-align:center;">Property Resolution Priority</div>
+                
+                <div class="hierarchy-tower">
+                    <div class="h-layer h-top">1. Command-Line Args<br><span style="font-weight:normal; font-size:8px;">--server.port=9090</span></div>
+                    <div class="winner-arrow">↑ Overrides</div>
+                    <div class="h-layer h-mid">2. Environment Variables<br><span style="font-weight:normal; font-size:8px;">SERVER_PORT=8081</span></div>
+                    <div class="winner-arrow">↑ Overrides</div>
+                    <div class="h-layer h-low">3. application.yml<br><span style="font-weight:normal; font-size:8px;">server.port: 8080</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 5: ConfigurationProperties -->
+        <div class="scene-container" id="scene-5">
+            <div class="scroll-container" style="border-color: rgba(192,132,252,0.3);">
+                <div style="font-family: 'Space Grotesk'; font-size: 14px; font-weight: bold; color: var(--java-purple); margin-bottom: 10px; text-align:center;">Type-Safe Bindings</div>
+                <div style="font-style: italic; font-size: 10px; color: #94a3b8; margin-bottom: 10px; text-align:center;">
+                    Stop using <code>@Value</code>. Bind entire YAML trees to Java Records for autocomplete and validation.
+                </div>
+                
+                <div style="display:flex; justify-content: center; gap: 10px; align-items: center;">
+                    <div style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 9px; border: 1px solid var(--java-blue);">
+                        app.payment:<br>
+                        &nbsp;&nbsp;key: sk_test...<br>
+                        &nbsp;&nbsp;timeout: 5000
+                    </div>
+                    <div style="color:var(--java-orange); font-weight:bold;">→</div>
+                    <div style="background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 9px; border: 1px solid var(--java-green);">
+                        @ConfigurationProperties<br>
+                        record PaymentProps(<br>
+                        &nbsp;&nbsp;String key,<br>
+                        &nbsp;&nbsp;int timeout) {}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[SPRING_BOOT_CORE]</div>
+            <h2 id="explainer-title" class="explainer-title">Opinionated Defaults</h2>
+            <p id="explainer-text" class="explainer-text">Before Spring Boot, setting up a Java app meant days of writing XML and fighting dependency hell. Spring Boot isn't magic; it's a brilliant delegation system. Let's look under the hood.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initialize Sequence</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function setScene(index) {
+        document.querySelectorAll('.scene-container').forEach((el, i) => {
+            if(i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        });
+    }
+
+    const steps = [
+        {
+            badge: "Pillar 1/4",
+            title: "Starter Dependencies",
+            text: "A 'Starter' is not a single library. It is a curated <strong>Bill of Materials (BOM)</strong>. You declare <code>spring-boot-starter-web</code>, and Spring reaches into its tested repository to pull down Tomcat, Jackson, and Spring Web—all perfectly version-matched to prevent crashes.",
+            code: `
+<span class="c-cm">&lt;!-- Just one dependency in pom.xml --&gt;</span>
+&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+<span class="c-hi">    &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;</span>
+&lt;/dependency&gt;
+<span class="c-cm">&lt;!-- Resolves 30+ perfectly compatible JARs --&gt;</span>
+            `,
+            action: async () => {
+                setScene(0);
+                codeContainer.style.display = 'block';
+                
+                await sleep(500);
+                document.getElementById('dep-grid').style.opacity = '1';
+                document.getElementById('dep-grid').style.transform = 'translateY(0)';
+            }
+        },
+        {
+            badge: "Pillar 2/4",
+            title: "Auto-Configuration",
+            text: "This is the true engine. When your app boots, <code>@EnableAutoConfiguration</code> scans the classpath. If it sees PostgreSQL drivers but no <code>DataSource</code> bean, it automatically spins one up for you. It writes the boilerplate infrastructure code at runtime based on what libraries you downloaded.",
+            code: `
+<span class="c-cm">// Inside Spring Boot's source code:</span>
+<span class="c-an">@AutoConfiguration</span>
+<span class="c-hi"><span class="c-an">@ConditionalOnClass</span>(DataSource.class)</span>
+<span class="c-hi"><span class="c-an">@ConditionalOnMissingBean</span>(DataSource.class)</span>
+<span class="c-kw">public class</span> <span class="c-ty">DataSourceAutoConfiguration</span> {
+    <span class="c-cm">// Automatically creates connection pool!</span>
+}
+            `,
+            action: async () => {
+                setScene(1);
+                codeContainer.style.display = 'block';
+                
+                const sweep = document.getElementById('r-sweep');
+                const log = document.getElementById('radar-log');
+                const factory = document.getElementById('b-factory');
+                
+                sweep.style.opacity = '1';
+                await sleep(1500);
+                
+                log.style.opacity = '1';
+                await sleep(1000);
+                
+                sweep.style.opacity = '0';
+                factory.style.opacity = '1';
+            }
+        },
+        {
+            badge: "Pillar 3/4",
+            title: "Environment Profiles",
+            text: "Enterprise apps behave differently locally versus in the cloud. Profiles segregate configuration. By setting <code>SPRING_PROFILES_ACTIVE=prod</code>, Spring dynamically hot-swaps settings. You can even use <code>@Profile(\"dev\")</code> to load Mock beans instead of real AWS services locally.",
+            code: `
+<span class="c-cm">// Bean only loads in Production!</span>
+<span class="c-an">@Service</span>
+<span class="c-hi"><span class="c-an">@Profile</span>(<span class="c-st">"prod"</span>)</span>
+<span class="c-kw">public class</span> <span class="c-ty">AwsEmailSender</span> <span class="c-kw">implements</span> <span class="c-ty">EmailSender</span> { ... }
+
+<span class="c-cm">// Bean only loads locally!</span>
+<span class="c-an">@Service</span>
+<span class="c-hi"><span class="c-an">@Profile</span>(<span class="c-st">"dev"</span>)</span>
+<span class="c-kw">public class</span> <span class="c-ty">MockEmailSender</span> <span class="c-kw">implements</span> <span class="c-ty">EmailSender</span> { ... }
+            `,
+            action: async () => {
+                setScene(2);
+                codeContainer.style.display = 'block';
+                
+                await sleep(1500);
+                // Toggle visually to PROD
+                document.getElementById('btn-dev').className = 'p-btn';
+                document.getElementById('btn-prod').className = 'p-btn active-prod';
+                
+                document.getElementById('card-dev').classList.remove('show');
+                await sleep(100);
+                document.getElementById('card-prod').classList.add('show');
+            }
+        },
+        {
+            badge: "Pillar 4/4",
+            title: "Externalized Config",
+            text: "Hardcoding API keys is a fatal security risk. Spring uses a strict 14-step resolution hierarchy. <strong>Environment Variables injected by Docker override internal <code>application.yml</code> files. Command-Line arguments override everything.</strong> DevOps can alter the app without recompiling Java code.",
+            code: `
+<span class="c-cm"># application.yml (Internal Default)</span>
+<span class="c-kw">server:</span>
+  <span class="c-kw">port:</span> 8080
+
+<span class="c-cm"># Docker override (Wins!)</span>
+<span class="c-hi">docker run -e SERVER_PORT=9090 my-app</span>
+
+<span class="c-cm"># Command Line override (Absolute Winner!)</span>
+<span class="c-hi">java -jar app.jar --server.port=8081</span>
+            `,
+            action: async () => {
+                setScene(3);
+                codeContainer.style.display = 'block';
+            }
+        },
+        {
+            badge: "Best Practice",
+            title: "Type-Safe Properties",
+            text: "Beginners inject <code>@Value</code> everywhere. This is brittle. Senior engineers use <code>@ConfigurationProperties</code>. It binds an entire YAML tree into a strongly-typed Java Record. You get autocomplete, immutability, and startup validation.",
+            code: `
+<span class="c-cm">// Safe, Immutable, and Validated on Startup</span>
+<span class="c-hi"><span class="c-an">@ConfigurationProperties</span>(prefix = <span class="c-st">"app.payment"</span>)</span>
+<span class="c-kw">public record</span> <span class="c-ty">PaymentProperties</span>(
+    <span class="c-an">@NotBlank</span> <span class="c-ty">String</span> apiKey, 
+    <span class="c-an">@Min</span>(<span class="c-st">1000</span>) <span class="c-ty">int</span> timeoutMs
+) {}
+            `,
+            action: async () => {
+                setScene(4);
+                codeContainer.style.display = 'block';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            setScene(-1); // Hide all
+            codeContainer.style.display = 'none';
+
+            // Reset specific visuals
+            document.getElementById('dep-grid').style.opacity = '0';
+            document.getElementById('dep-grid').style.transform = 'translateY(-10px)';
+            
+            document.getElementById('r-sweep').style.opacity = '0';
+            document.getElementById('radar-log').style.opacity = '0';
+            document.getElementById('b-factory').style.opacity = '0';
+            
+            document.getElementById('btn-dev').className = 'p-btn active-dev';
+            document.getElementById('btn-prod').className = 'p-btn';
+            document.getElementById('card-dev').className = 'p-card show';
+            document.getElementById('card-prod').className = 'p-card';
+
+            badge.innerText = "[SPRING_BOOT_CORE]";
+            title.innerText = "Opinionated Defaults";
+            text.innerHTML = "Before Spring Boot, setting up a Java app meant days of writing XML and fighting dependency hell. Spring Boot isn't magic; it's a brilliant delegation system. Let's look under the hood.";
+            btnNext.innerText = "Initialize Sequence";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Sequence" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

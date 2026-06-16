@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saga Pattern Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1', // Indigo 500
+                            600: '#4f46e5',
+                            900: '#312e81',
+                            950: '#1e1b4b',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6366f1; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Mobile Header (Glass) -->
+    <header class="md:hidden glass sticky top-0 z-50 px-5 py-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-2">
+            <i class="ph-fill ph-arrows-left-right text-brand-500 text-2xl animate-float"></i>
+            <h1 class="font-display font-bold text-lg text-slate-900 tracking-tight">Saga Pattern</h1>
+        </div>
+        <button id="mobile-menu-btn" class="p-2 text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+            <i class="ph-duotone ph-list text-2xl"></i>
+        </button>
+    </header>
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 glass border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) flex flex-col h-full shadow-xl md:shadow-none">
+            <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+                <div class="bg-gradient-to-br from-brand-400 to-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-brand-500/30">
+                    <i class="ph-fill ph-arrows-left-right text-2xl animate-float"></i>
+                </div>
+                <div>
+                    <h2 class="font-display font-bold text-lg leading-tight tracking-tight">Architecture</h2>
+                    <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">Data Consistency</p>
+                </div>
+            </div>
+            
+            <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+                <a href="#definition" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+                </a>
+                <a href="#internal-working" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-gears text-xl"></i> 2. Internal Working
+                </a>
+                <a href="#real-world" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-buildings text-xl"></i> 3. Real-World Example
+                </a>
+                <a href="#key-points" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-target text-xl"></i> 4. 7 Key Concepts
+                </a>
+                <a href="#faqs" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-chats-circle text-xl"></i> 5. FAQs
+                </a>
+                <a href="#code-example" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-code text-xl"></i> 6. Code Example
+                </a>
+                <a href="#senior-answer" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-user-focus text-xl"></i> 7. Senior Dev Answer
+                </a>
+                <a href="#revision-notes" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-lightning text-xl"></i> 8. Revision Notes
+                </a>
+                <a href="#answer-template" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-microphone-stage text-xl"></i> 9. Answer Template
+                </a>
+            </nav>
+            <div class="p-5 border-t border-slate-200/50">
+                <button id="close-mobile-menu" class="md:hidden w-full py-2.5 bg-slate-800 text-white font-medium rounded-xl hover:bg-slate-900 transition-colors shadow-md">Close Menu</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-50/50 via-white to-slate-50/80">
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-scales"></i> Distributed Transactions
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-indigo-600">Saga</span> Pattern
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering Data Consistency across microservices: Choreography vs. Orchestration, Compensating Transactions, and Eventual Consistency.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Imagine booking a vacation. You book a flight, then a hotel, then a rental car. If the rental car fails, you can't magically "rollback" the flight you already bought. You have to actively call the airline and say "cancel my ticket." That's a Saga.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">The Saga pattern is an architectural pattern for managing distributed transactions. Instead of a single ACID transaction locking multiple databases, a Saga is a sequence of local transactions. Each local transaction updates the database and publishes an event to trigger the next local transaction.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To maintain data consistency across multiple microservices without using synchronous, blocking protocols like Two-Phase Commit (2PC). If one step fails, the Saga executes <strong>Compensating Transactions</strong> to undo the preceding steps.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: The Two Approaches</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">There are two ways to coordinate a Saga: <strong>Choreography</strong> (decentralized, event-driven) and <strong>Orchestration</strong> (centralized, command-driven). Both handle failures using <em>Compensating Transactions</em>.</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 w-full relative z-10">
+                                
+                                <!-- Choreography -->
+                                <div class="flex flex-col items-center w-full">
+                                    <h3 class="font-display font-bold text-xs text-brand-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                        <i class="ph-fill ph-users-three text-lg"></i> Choreography (Decentralized)
+                                    </h3>
+                                    
+                                    <div class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl w-full flex flex-col items-center gap-4 shadow-md h-full">
+                                        <div class="text-[10px] text-slate-400 mb-2">Services react to events independently.</div>
+                                        
+                                        <!-- Step 1 -->
+                                        <div class="bg-slate-900 border border-slate-600 px-4 py-2 rounded-lg text-sm text-center w-full shadow-sm">
+                                            <div class="font-bold text-blue-400">Order Service</div>
+                                            <div class="text-[10px] text-slate-400 mt-1"><i class="ph-bold ph-megaphone"></i> "OrderCreatedEvent"</div>
+                                        </div>
+                                        
+                                        <i class="ph-bold ph-arrow-down text-slate-500"></i>
+                                        
+                                        <!-- Step 2 -->
+                                        <div class="bg-slate-900 border border-slate-600 px-4 py-2 rounded-lg text-sm text-center w-full shadow-sm">
+                                            <div class="font-bold text-emerald-400">Payment Service</div>
+                                            <div class="text-[10px] text-slate-400 mt-1"><i class="ph-bold ph-megaphone"></i> "PaymentFailedEvent"</div>
+                                        </div>
+                                        
+                                        <i class="ph-bold ph-arrow-up text-red-500"></i>
+                                        
+                                        <!-- Step 3 (Compensation) -->
+                                        <div class="bg-red-900/20 border border-red-500/50 px-4 py-2 rounded-lg text-sm text-center w-full shadow-sm">
+                                            <div class="font-bold text-red-400">Order Service</div>
+                                            <div class="text-[10px] text-red-300 mt-1"><i class="ph-bold ph-clock-counter-clockwise"></i> Compensation: Cancel Order</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Orchestration -->
+                                <div class="flex flex-col items-center w-full">
+                                    <h3 class="font-display font-bold text-xs text-amber-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                        <i class="ph-fill ph-brain text-lg"></i> Orchestration (Centralized)
+                                    </h3>
+                                    
+                                    <div class="bg-slate-800/80 border border-slate-700 p-4 rounded-xl w-full flex flex-col items-center gap-4 shadow-md h-full relative">
+                                        <div class="text-[10px] text-slate-400 mb-2">A central brain manages the flow.</div>
+                                        
+                                        <!-- The Brain -->
+                                        <div class="bg-amber-900/30 border-2 border-amber-500/50 px-4 py-3 rounded-xl text-sm text-center w-full shadow-[0_0_15px_rgba(245,158,11,0.15)] z-10">
+                                            <div class="font-bold text-amber-400"><i class="ph-fill ph-robot"></i> Order Saga Orchestrator</div>
+                                            <div class="text-[10px] text-amber-200 mt-1">Maintains State Machine (Pending -> Paying)</div>
+                                        </div>
+                                        
+                                        <div class="flex justify-between w-full px-4 relative">
+                                            <!-- To Order -->
+                                            <div class="flex flex-col items-center w-1/2">
+                                                <i class="ph-bold ph-arrows-down-up text-slate-500 mb-2"></i>
+                                                <div class="bg-slate-900 border border-slate-600 px-2 py-2 rounded-lg text-xs text-center w-full">
+                                                    <div class="font-bold text-blue-400 mb-1">Order Svc</div>
+                                                    <div class="text-[9px] text-slate-500">Cmd: Create<br>Cmd: Cancel</div>
+                                                </div>
+                                            </div>
+                                            <!-- To Payment -->
+                                            <div class="flex flex-col items-center w-1/2 ml-4">
+                                                <i class="ph-bold ph-arrows-down-up text-slate-500 mb-2"></i>
+                                                <div class="bg-slate-900 border border-slate-600 px-2 py-2 rounded-lg text-xs text-center w-full">
+                                                    <div class="font-bold text-emerald-400 mb-1">Payment Svc</div>
+                                                    <div class="text-[9px] text-red-400">Cmd: Pay<br>Reply: FAIL</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="mt-6 w-full text-center bg-slate-950/50 p-3 rounded-lg border border-slate-700 text-xs text-slate-400">
+                                <strong>Compensating Transaction:</strong> The semantic "undo" of an operation. It doesn't rollback the database row; it creates a new transaction that negates the business effect (e.g., refunding money).
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-package text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-indigo-300">E-Commerce Order Fulfillment</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Handling distributed failures gracefully.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30"><i class="ph-fill ph-shopping-cart text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">1. Order Service (Success)</h4>
+                                    <p class="text-sm text-slate-400 mt-1">User clicks "Buy". The Order Service creates an order in <code>PENDING</code> state, commits the transaction to its PostgreSQL DB, and emits an <code>OrderCreated</code> event.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-credit-card text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">2. Payment Service (Success)</h4>
+                                    <p class="text-sm text-slate-300 mt-1">Listens to the event. Charges the credit card $100. Commits the payment record to its MongoDB. Emits a <code>PaymentProcessed</code> event.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-warning-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">3. Inventory Service (FAILURE & COMPENSATION)</h4>
+                                    <p class="text-sm text-slate-400 mt-1">Listens to the payment event. Tries to reserve the item, but it's out of stock. It emits an <code>InventoryFailed</code> event. <br><br><strong>The Rollback:</strong> The Payment Service hears this and triggers a Refund (Compensating Transaction 1). The Order Service hears this and marks the Order as <code>FAILED</code> (Compensating Transaction 2).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Concepts <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border-2 border-brand-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-brand-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-500 font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">Local vs Global Transactions</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">A Saga abandons Global (Distributed) Transactions. Instead, each step is a perfectly isolated Local Transaction with strict ACID guarantees within its own database.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Compensating Transactions</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">You cannot execute a SQL `ROLLBACK` across microservices. If Step 3 fails, you must execute explicit business logic to "undo" Step 2 (e.g., If Step 2 was 'Charge $50', the compensation is 'Refund $50').</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">The Pivot Transaction</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The point of no return in a Saga. If the Pivot transaction succeeds, the entire Saga is guaranteed to eventually succeed. (e.g., Verifying Inventory). Everything before it is compensatable.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Retryable Transactions</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Transactions that occur <em>after</em> the Pivot transaction. They are guaranteed to succeed eventually, so if they fail (e.g., network error sending a receipt), they must be infinitely retried until they succeed.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Idempotency is Mandatory</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Because network failures cause message brokers to retry deliveries (At-Least-Once delivery), every step in a Saga MUST be idempotent. Refunding $50 twice should only actually deduct $50 once.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Choreography (Pros & Cons)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><strong>Pros:</strong> Simple, no single point of failure, highly decoupled. <strong>Cons:</strong> Hard to monitor. If a Saga spans 10 services, tracking the current state of an order requires checking 10 databases or complex distributed tracing.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Orchestration (Pros & Cons)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><strong>Pros:</strong> Centralized logic. You have one state machine (the Orchestrator) that knows exactly where the transaction is. Easy to monitor and rollback. <strong>Cons:</strong> Single point of failure. Creates tighter coupling because the orchestrator must know about the APIs of all participating services.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: Why not just use Two-Phase Commit (2PC)?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> 2PC relies on a global lock manager. It locks resources across all participating databases until every DB confirms it's ready to commit. This causes massive latency, creates single points of failure, doesn't scale in cloud environments, and isn't supported by many modern NoSQL databases.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: How do you solve the "Dual-Write" problem when emitting Saga events?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> If you save to your DB, and then publish a Kafka event, the app might crash in between—leaving the DB updated but the Saga broken. You MUST use the <strong>Transactional Outbox Pattern</strong>. You save the business entity AND the event to an "Outbox" table in the exact same ACID transaction. A background process (like Debezium CDC) reads the Outbox table and reliably pushes the events to Kafka.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: What happens if a Compensating Transaction fails?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> Compensating transactions MUST be designed to be "Retryable" (guaranteed to eventually succeed). If the failure is a network glitch, Kafka will continually retry delivering the message. If the failure is a hard business error (e.g., the account was frozen so we can't refund it), the message must be sent to a <strong>Dead Letter Queue (DLQ)</strong> for manual human intervention.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example: Choreography via Kafka</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">SagaChoreographyDemo.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-brand-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#c586c0]">import</span> org.springframework.kafka.core.KafkaTemplate;
+<span class="text-[#c586c0]">import</span> org.springframework.kafka.annotation.KafkaListener;
+<span class="text-[#c586c0]">import</span> org.springframework.stereotype.Service;
+
+<span class="text-[#6a9955]">/* --- MICROSERVICE 1: ORDER SERVICE --- */</span>
+<span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">OrderService</span> {
+
+    <span class="text-[#569cd6]">public void</span> createOrder(<span class="text-[#4ec9b0]">Order</span> order) {
+        <span class="text-[#6a9955]">// 1. Save local state (PENDING)</span>
+        order.setStatus(<span class="text-[#ce9178]">"PENDING"</span>);
+        repository.save(order);
+        
+        <span class="text-[#6a9955]">// 2. Trigger next step in Saga</span>
+        kafkaTemplate.send(<span class="text-[#ce9178]">"order-created"</span>, <span class="text-[#569cd6]">new</span> OrderCreatedEvent(order));
+    }
+
+    <span class="text-[#6a9955]">// Listen for COMPENSATION requests</span>
+    <span class="text-[#4ec9b0]">@KafkaListener</span>(<span class="text-[#9cdcfe]">topics</span> = <span class="text-[#ce9178]">"payment-failed"</span>)
+    <span class="text-[#569cd6]">public void</span> compensateOrder(<span class="text-[#4ec9b0]">PaymentFailedEvent</span> event) {
+        <span class="text-[#4ec9b0]">Order</span> order = repository.findById(event.getOrderId());
+        order.setStatus(<span class="text-[#ce9178]">"CANCELLED"</span>);
+        order.setReason(<span class="text-[#ce9178]">"Payment Failed: "</span> + event.getReason());
+        repository.save(order);
+        System.out.println(<span class="text-[#ce9178]">"Saga Compensated: Order Cancelled."</span>);
+    }
+}
+
+<span class="text-[#6a9955]">/* --- MICROSERVICE 2: PAYMENT SERVICE --- */</span>
+<span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">PaymentService</span> {
+
+    <span class="text-[#4ec9b0]">@KafkaListener</span>(<span class="text-[#9cdcfe]">topics</span> = <span class="text-[#ce9178]">"order-created"</span>)
+    <span class="text-[#569cd6]">public void</span> processPayment(<span class="text-[#4ec9b0]">OrderCreatedEvent</span> event) {
+        <span class="text-[#569cd6]">try</span> {
+            <span class="text-[#6a9955]">// Attempt local transaction</span>
+            paymentGateway.charge(event.getUserId(), event.getAmount());
+            
+            <span class="text-[#6a9955]">// Saga continues forward...</span>
+            kafkaTemplate.send(<span class="text-[#ce9178]">"payment-successful"</span>, <span class="text-[#569cd6]">new</span> PaymentSuccessEvent(event));
+            
+        } <span class="text-[#569cd6]">catch</span> (<span class="text-[#4ec9b0]">Exception</span> e) {
+            <span class="text-[#6a9955]">// Local transaction failed. Trigger COMPENSATION backward.</span>
+            kafkaTemplate.send(<span class="text-[#ce9178]">"payment-failed"</span>, 
+                <span class="text-[#569cd6]">new</span> PaymentFailedEvent(event.getOrderId(), e.getMessage()));
+        }
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-brand-50 to-white border-l-4 border-brand-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-brand-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "In a true Database-per-Service architecture, distributed transactions via Two-Phase Commit (2PC) are an anti-pattern. They create tight coupling, severe latency bottlenecks, and block resources. Instead, we use the Saga Pattern to maintain data consistency through Eventual Consistency.
+                            <br><br>
+                            A Saga breaks a global transaction down into a sequence of isolated local ACID transactions. If any local step fails, the system executes Compensating Transactions to reverse the preceding steps. For simpler flows, I prefer Choreography, where services react to domain events via Kafka. It's highly decoupled, though tracking the state requires robust Distributed Tracing. For complex state machines—like order fulfillment spanning 5+ services—I prefer Orchestration. We use a central orchestrator component to issue commands and handle failures explicitly.
+                            <br><br>
+                            Regardless of the approach, two technical practices are non-negotiable: First, to avoid the dual-write problem, events must be published using the Transactional Outbox pattern. Second, because message brokers guarantee at-least-once delivery, every downstream consumer and compensating transaction must be strictly idempotent to safely absorb network retries."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-arrows-left-right text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>The Core Concept:</strong> A sequence of local ACID transactions updating isolated databases.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Why not 2PC?</strong> Two-Phase Commit is slow, locks resources, and isn't supported by NoSQL.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-clock-counter-clockwise text-brand-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Compensation:</strong> Semantic "undo" operations (e.g., refunding a payment) when a step fails.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-users-three text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Choreography:</strong> Decentralized. Services emit events, others listen. Good for simple flows.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-brain text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Orchestration:</strong> Centralized. A state machine explicitly commands services. Good for complex flows.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-shield-check text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Idempotency:</strong> All steps must be safe to retry, as Kafka ensures At-Least-Once delivery.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-upload-simple text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Outbox Pattern:</strong> Required to guarantee a DB commit and a Kafka event publish occur atomically.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-anchor text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Pivot Transaction:</strong> The point of no return. Once successful, the Saga cannot be compensated.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "In a Database-per-Service architecture, maintaining data consistency requires moving away from synchronous distributed transactions (like Two-Phase Commit) and adopting Eventual Consistency via the Saga Pattern.
+                            <br><br>
+                            A Saga breaks a business flow into a sequence of isolated local transactions. Each service updates its own database and publishes an event (via a broker like Kafka) to trigger the next step. If a downstream service fails—for example, an inventory check fails after a payment has been processed—the system executes a series of Compensating Transactions to reverse the preceding steps.
+                            <br><br>
+                            We can implement this via Orchestration (using a central controller) or Choreography (decentralized event listening). In either implementation, we must heavily utilize the Transactional Outbox pattern to solve the dual-write problem and ensure all consumer endpoints are idempotent to handle message retries gracefully."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-brand-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-brand-50/50');
+                });
+                
+                this.classList.toggle('bg-brand-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-brand-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-brand-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-brand-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-brand-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-brand-700', 'bg-brand-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-brand-700', 'bg-brand-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

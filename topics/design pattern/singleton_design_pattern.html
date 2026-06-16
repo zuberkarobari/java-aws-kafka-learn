@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singleton Design Pattern Interview Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Duotone for premium look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1', // Indigo 500
+                            600: '#4f46e5',
+                            900: '#312e81',
+                            950: '#1e1b4b',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .glass-dark {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Accordion Animations */
+        .accordion-content {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+            padding-top: 1rem;
+            padding-bottom: 1.5rem;
+        }
+        .accordion-icon { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .open .accordion-icon { transform: rotate(180deg); color: #6366f1; }
+
+        /* Staggered Animations */
+        .animate-on-scroll { opacity: 0; }
+        
+        /* Code Block Mac OS Window */
+        .mac-window {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Mobile Header (Glass) -->
+    <header class="md:hidden glass sticky top-0 z-50 px-5 py-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-2">
+            <i class="ph-fill ph-cube text-brand-500 text-2xl animate-float"></i>
+            <h1 class="font-display font-bold text-lg text-slate-900 tracking-tight">Singleton Pattern</h1>
+        </div>
+        <button id="mobile-menu-btn" class="p-2 text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-xl transition-all">
+            <i class="ph-duotone ph-list text-2xl"></i>
+        </button>
+    </header>
+
+    <div class="flex h-screen overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 glass border-r border-slate-200/60 transform -translate-x-full md:translate-x-0 transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1) flex flex-col h-full shadow-xl md:shadow-none">
+            <div class="p-6 border-b border-slate-200/50 hidden md:flex items-center gap-3">
+                <div class="bg-gradient-to-br from-brand-400 to-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-brand-500/30">
+                    <i class="ph-fill ph-cube text-2xl animate-float"></i>
+                </div>
+                <div>
+                    <h2 class="font-display font-bold text-lg leading-tight tracking-tight">Design Patterns</h2>
+                    <p class="text-[11px] text-slate-500 font-medium uppercase tracking-wider mt-0.5">Singleton</p>
+                </div>
+            </div>
+            
+            <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-1.5">
+                <a href="#definition" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-book-open-text text-xl"></i> 1. Definition
+                </a>
+                <a href="#internal-working" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-gears text-xl"></i> 2. Internal Working
+                </a>
+                <a href="#real-world" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-buildings text-xl"></i> 3. Real-World Example
+                </a>
+                <a href="#key-points" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-target text-xl"></i> 4. 7 Key Points
+                </a>
+                <a href="#faqs" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-chats-circle text-xl"></i> 5. FAQs
+                </a>
+                <a href="#code-example" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-code text-xl"></i> 6. Code Example
+                </a>
+                <a href="#senior-answer" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-user-focus text-xl"></i> 7. Senior Dev Answer
+                </a>
+                <a href="#revision-notes" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-lightning text-xl"></i> 8. Revision Notes
+                </a>
+                <a href="#answer-template" class="nav-link flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:text-brand-700 hover:bg-brand-50 hover:shadow-sm transition-all duration-300">
+                    <i class="ph-duotone ph-microphone-stage text-xl"></i> 9. Answer Template
+                </a>
+            </nav>
+            <div class="p-5 border-t border-slate-200/50">
+                <button id="close-mobile-menu" class="md:hidden w-full py-2.5 bg-slate-800 text-white font-medium rounded-xl hover:bg-slate-900 transition-colors shadow-md">Close Menu</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="main-scroll" class="flex-1 overflow-y-auto scroll-smooth relative bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-50/50 via-white to-slate-50/80">
+            <div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+                
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-100/80 border border-brand-200 text-brand-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-number-square-one"></i> Creational Design Pattern
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 to-blue-600">Singleton</span> Pattern
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Mastering the Singleton pattern: Double-Checked Locking, Thread Safety, Enums, and the Spring IoC comparison.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Imagine your application is a country, and the Singleton is the President. There can only ever be exactly one President at any given time. Whenever someone needs to speak to the President, they are directed to that same, single person.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">A creational design pattern that ensures a class has only one instance, while providing a global access point to this instance. It restricts instantiation of a class to a single object within the Java Classloader.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">To control access to a shared resource (like a database connection pool, a logger, or hardware device) and prevent the system from wasting memory by creating redundant identical objects.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Internal Working -->
+                <section id="internal-working" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Internal Working: Instantiation Flow</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 space-y-10">
+                        <p class="text-slate-600 font-medium">The Singleton pattern relies on three core mechanisms: a <strong>private constructor</strong> (so nobody can use `new`), a <strong>private static variable</strong> (to hold the instance), and a <strong>public static getter</strong> (to provide global access).</p>
+                        
+                        <!-- Flow Diagram -->
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-brand-400"></i> Singleton Access Lifecycle
+                            </h3>
+
+                            <div class="flex flex-col items-center w-full max-w-2xl relative z-10 pt-2 pb-6">
+                                
+                                <!-- Clients -->
+                                <div class="flex items-center justify-between w-full max-w-sm mb-6">
+                                    <div class="bg-slate-800 border border-slate-600 px-4 py-2 rounded-lg text-sm text-center">
+                                        <i class="ph-fill ph-user text-blue-400 mb-1"></i><br>Client A
+                                    </div>
+                                    <div class="bg-slate-800 border border-slate-600 px-4 py-2 rounded-lg text-sm text-center">
+                                        <i class="ph-fill ph-user text-amber-400 mb-1"></i><br>Client B
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between w-full max-w-xs mb-4 px-8">
+                                    <i class="ph-bold ph-arrow-down-right text-slate-500 text-xl"></i>
+                                    <i class="ph-bold ph-arrow-down-left text-slate-500 text-xl"></i>
+                                </div>
+
+                                <!-- getInstance() Method -->
+                                <div class="bg-brand-900/30 border-2 border-brand-500/50 p-4 rounded-xl w-full max-w-md text-center shadow-lg relative mb-6">
+                                    <div class="font-mono text-brand-300 font-bold mb-2">Singleton.getInstance()</div>
+                                    
+                                    <!-- Double Checked Locking Logic -->
+                                    <div class="bg-slate-900 p-3 rounded border border-slate-700 text-left text-xs font-mono space-y-1 relative">
+                                        <div class="text-purple-400">if (instance == null) {</div>
+                                        <div class="pl-4 text-emerald-400">synchronized (Singleton.class) {</div>
+                                        <div class="pl-8 text-purple-400">if (instance == null) {</div>
+                                        <div class="pl-12 text-brand-400">instance = new Singleton();</div>
+                                        <div class="pl-8 text-purple-400">}</div>
+                                        <div class="pl-4 text-emerald-400">}</div>
+                                        <div class="text-purple-400">}</div>
+                                        <div class="text-slate-300 mt-2 border-t border-slate-700 pt-2">return instance;</div>
+                                    </div>
+                                </div>
+
+                                <i class="ph-bold ph-arrow-down text-slate-600 mb-4 text-2xl"></i>
+
+                                <!-- The Instance in Memory -->
+                                <div class="bg-emerald-900/20 border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)] px-8 py-5 rounded-xl flex items-center gap-4">
+                                    <i class="ph-fill ph-memory text-emerald-400 text-4xl"></i>
+                                    <div class="text-left">
+                                        <h4 class="font-bold text-white tracking-wider">Memory Heap</h4>
+                                        <p class="text-xs text-emerald-200 mt-1 font-mono">0x7F8B9C (Shared Single Instance)</p>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-brand-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-database text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-blue-300">Database Connection Pool</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Why instantiating multiple connection managers crashes your app.</p>
+                        
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-x-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Problem: Exhaustion</h4>
+                                    <p class="text-sm text-slate-400 mt-1">If every time your application needs to query the database, it creates a <code>new DatabaseConnectionManager()</code>, your application will open thousands of physical network connections to your PostgreSQL server. The database will quickly run out of allowed connections, and your entire system will crash with a "Too Many Connections" error.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-check-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">The Singleton Solution</h4>
+                                    <p class="text-sm text-slate-300 mt-1">By making the <code>DatabaseConnectionManager</code> a Singleton, you ensure that only <strong>one</strong> object exists in memory. This single object initializes a strict pool of 10 connections upon startup. Whenever any part of your app needs a connection, it calls <code>DatabaseConnectionManager.getInstance().getConnection()</code>, ensuring connections are safely borrowed and returned without exceeding the limit.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Configurations -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. Implementation Strategies <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">Eager Initialization</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The instance is created at class loading time (<code>private static final Singleton INSTANCE = new Singleton()</code>). It is thread-safe and simple, but wastes memory if the object is heavy and never actually used.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Lazy Initialization</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">The instance is created only when <code>getInstance()</code> is called for the first time. It saves memory but introduces severe thread-safety issues if multiple threads call the method simultaneously.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-amber-100 hover:border-amber-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-amber-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500 font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Double-Checked Locking</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Fixes the thread-safety of Lazy Init without severe performance penalties. It checks if the instance is null, synchronizes the block, and checks for null <em>again</em>. Requires the <code>volatile</code> keyword to prevent instruction reordering bugs.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Bill Pugh (Nested Class)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">A very elegant approach utilizing Java's classloader mechanism. The Singleton instance is kept inside a `private static class`. It is thread-safe, lazy-loaded, and doesn't require `synchronized` blocks.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border-2 border-emerald-100 hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-emerald-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Enum Singleton</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Advocated by Joshua Bloch (Effective Java). Enums are globally accessible and inherently serializable and thread-safe. It provides absolute protection against Reflection attacks.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Reflection Attack</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">An attacker can use Java Reflection API (<code>Constructor.setAccessible(true)</code>) to bypass the private constructor and create a second instance. Enums are immune to this by JVM design.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-brand-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-brand-500 group-hover:bg-brand-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Serialization Attack</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If your Singleton implements <code>Serializable</code>, deserializing it will create a new instance. To fix this, you must implement the <code>readResolve()</code> method and return the existing <code>INSTANCE</code>.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: Why is the Singleton Pattern often considered an "Anti-Pattern"?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> It introduces global state into an application, which makes unit testing exceedingly difficult (because state persists across tests). It also hides dependencies—instead of seeing what a class requires in its constructor, the class reaches out globally to grab the Singleton, breaking the principles of Dependency Injection.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: What is the difference between a GoF Singleton and a Spring Singleton?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> A traditional "Gang of Four" (GoF) Singleton restricts instantiation to one object per Java Classloader. The Spring Framework's default Bean Scope is also "Singleton", but it restricts instantiation to one object per Spring <code>ApplicationContext</code>. You can have multiple Application Contexts in the same JVM, meaning multiple "Spring Singletons" of the same class.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-brand-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: Why is the `volatile` keyword necessary in Double-Checked Locking?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-brand-400 pl-4">
+                                    <strong>Answer:</strong> Without <code>volatile</code>, the JVM is allowed to reorder execution instructions. It might assign the memory reference to the `instance` variable <em>before</em> the object is fully constructed. Another thread might see that `instance` is not null and try to use it, crashing because the object is only half-built. <code>volatile</code> enforces a strict "happens-before" relationship.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Code Example</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">SingletonExamples.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-brand-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]">/* --- 1. Thread-Safe: Double-Checked Locking --- */</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">DCLSingleton</span> {
+
+    <span class="text-[#6a9955]">// 'volatile' prevents instruction reordering bugs</span>
+    <span class="text-[#569cd6]">private static volatile</span> <span class="text-[#4ec9b0]">DCLSingleton</span> instance;
+
+    <span class="text-[#6a9955]">// 1. Private constructor</span>
+    <span class="text-[#569cd6]">private</span> DCLSingleton() {
+        <span class="text-[#6a9955]">// Protection against Reflection API attacks</span>
+        <span class="text-[#569cd6]">if</span> (instance != <span class="text-[#569cd6]">null</span>) {
+            <span class="text-[#569cd6]">throw new</span> <span class="text-[#4ec9b0]">RuntimeException</span>(<span class="text-[#ce9178]">"Use getInstance() method!"</span>);
+        }
+    }
+
+    <span class="text-[#6a9955]">// 2. Global Access Point</span>
+    <span class="text-[#569cd6]">public static</span> <span class="text-[#4ec9b0]">DCLSingleton</span> getInstance() {
+        <span class="text-[#569cd6]">if</span> (instance == <span class="text-[#569cd6]">null</span>) { <span class="text-[#6a9955]">// First check (without lock for performance)</span>
+            <span class="text-[#569cd6]">synchronized</span> (DCLSingleton.class) {
+                <span class="text-[#569cd6]">if</span> (instance == <span class="text-[#569cd6]">null</span>) { <span class="text-[#6a9955]">// Second check (thread-safe)</span>
+                    instance = <span class="text-[#569cd6]">new</span> DCLSingleton();
+                }
+            }
+        }
+        <span class="text-[#569cd6]">return</span> instance;
+    }
+}
+
+<span class="text-[#6a9955]">/* --- 2. Joshua Bloch's Enum Singleton --- */</span>
+<span class="text-[#6a9955]">/* The most robust implementation. Inherently thread-safe, 
+   serialization-safe, and reflection-safe by JVM design. */</span>
+<span class="text-[#569cd6]">public enum</span> <span class="text-[#4ec9b0]">EnumSingleton</span> {
+    
+    <span class="text-[#4ec9b0]">INSTANCE</span>; <span class="text-[#6a9955]">// The single instance</span>
+
+    <span class="text-[#6a9955]">// You can add fields and methods normally</span>
+    <span class="text-[#569cd6]">private int</span> connectionCount;
+
+    <span class="text-[#569cd6]">public void</span> doSomething() {
+        System.out.println(<span class="text-[#ce9178]">"Doing work securely..."</span>);
+    }
+}
+
+<span class="text-[#6a9955]">// Usage:</span>
+<span class="text-[#6a9955]">// EnumSingleton.INSTANCE.doSomething();</span></code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-brand-50 to-white border-l-4 border-brand-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-brand-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "While understanding how to write a thread-safe Singleton using Double-Checked Locking and the <code>volatile</code> keyword is a classic Java computer science exercise, in modern enterprise development, I consider hardcoding the GoF Singleton pattern to be an anti-pattern.
+                            <br><br>
+                            Hardcoded singletons introduce global state, making concurrent unit testing extremely difficult. More dangerously, they hide dependencies, bypassing the principles of Dependency Injection. 
+                            <br><br>
+                            Instead, we rely entirely on Inversion of Control (IoC) containers like Spring. When I annotate a class with <code>@Service</code>, Spring manages it as a Singleton by default within the ApplicationContext. This gives us all the benefits of a single shared instance (memory efficiency, shared connection pools) while keeping the class perfectly testable, mockable, and loosely coupled via constructor injection. If I absolutely must implement a Singleton outside of a framework, I default to Joshua Bloch's Enum pattern for its native protection against reflection and serialization attacks."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Revision Notes -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 flex items-center justify-center text-brand-600 shadow-sm border border-brand-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-lock-key text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Core Need:</strong> Restrict object creation to one single instance.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-eye-slash text-brand-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Mechanism:</strong> Private constructor + Static variable + Static getter method.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-git-merge text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Double-Checked Locking:</strong> Best lazy-loading approach. Check null -> sync -> check null again.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-shield-warning text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Volatile Keyword:</strong> Mandatory for DCL to prevent instruction reordering crashes.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-crown text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Enum Singleton:</strong> The cleanest, safest way. Immune to reflection/serialization.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-bug text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Anti-Pattern:</strong> Hard to mock, carries global state, hides dependencies.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-leaf text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Spring Singleton:</strong> One instance per ApplicationContext, not per JVM. Testable via DI.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-brand-200 transition-colors">
+                            <i class="ph-fill ph-file-code text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Bill Pugh Pattern:</strong> Uses a static inner helper class for thread-safe lazy loading.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. Answer Template -->
+                <section id="answer-template" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-microphone-stage text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">9. Interview Answer Template</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100">
+                        <p class="text-slate-700 leading-relaxed text-lg font-medium">
+                            "The Singleton is a creational design pattern that restricts the instantiation of a class to exactly one object, providing a global access point to it. It is typically implemented using a private constructor, a private static variable to hold the instance, and a public static <code>getInstance()</code> method.
+                            <br><br>
+                            When lazy initialization is required, thread safety becomes critical. The optimal approach is Double-Checked Locking, where we check if the instance is null, enter a synchronized block, and check again, ensuring we use the <code>volatile</code> keyword to prevent instruction reordering issues. Alternatively, Joshua Bloch's Enum pattern provides inherent protection against reflection and serialization attacks.
+                            <br><br>
+                            However, in modern enterprise applications, hardcoding singletons is considered an anti-pattern as it introduces untestable global state. Instead, we rely on Dependency Injection frameworks like Spring, which manage components (like Services and Repositories) as Singletons by default within the ApplicationContext, offering the same memory efficiency while preserving testability."
+                        </p>
+                    </div>
+                </section>
+                
+            </div>
+            
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-brand-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Advanced Accordion Logic
+        const accordionBtns = document.querySelectorAll('.accordion-btn');
+        accordionBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active state from all buttons
+                document.querySelectorAll('.accordion-btn').forEach(b => {
+                    if (b !== this) b.classList.remove('bg-brand-50/50');
+                });
+                
+                this.classList.toggle('bg-brand-50/50');
+                const content = this.nextElementSibling;
+                const parent = this.parentElement;
+                
+                if (parent.classList.contains('open')) {
+                    parent.classList.remove('open');
+                    content.classList.remove('open');
+                    parent.classList.remove('border-brand-300');
+                } else {
+                    // Close others
+                    document.querySelectorAll('.accordion-content').forEach(c => {
+                        c.classList.remove('open');
+                        c.parentElement.classList.remove('open');
+                        c.parentElement.classList.remove('border-brand-300');
+                    });
+                    
+                    parent.classList.add('open');
+                    content.classList.add('open');
+                    parent.classList.add('border-brand-300');
+                }
+            });
+        });
+
+        // Copy to Clipboard Logic with enhanced feedback
+        const copyBtn = document.getElementById('copy-btn');
+        const codeContent = document.getElementById('code-content');
+        const copyToast = document.getElementById('copy-toast');
+
+        copyBtn.addEventListener('click', () => {
+            const textToCopy = codeContent.innerText;
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            
+            try {
+                document.execCommand('copy');
+                copyToast.style.opacity = '1';
+                copyBtn.innerHTML = '<i class="ph-fill ph-check text-lg text-brand-400"></i>';
+                
+                setTimeout(() => {
+                    copyToast.style.opacity = '0';
+                    copyBtn.innerHTML = '<i class="ph-duotone ph-copy text-lg"></i>';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            
+            document.body.removeChild(tempTextArea);
+        });
+
+        // Mobile Menu Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeMobileMenuBtn = document.getElementById('close-mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        function toggleMenu() {
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        closeMobileMenuBtn.addEventListener('click', toggleMenu);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) { 
+                    toggleMenu();
+                }
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observerOptions = {
+            root: document.getElementById('main-scroll'),
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fade-in-up');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-on-scroll').forEach((el) => {
+            observer.observe(el);
+        });
+
+        // Highlight active section in sidebar based on scroll
+        const sections = document.querySelectorAll('section');
+        const mainScroll = document.getElementById('main-scroll');
+        
+        mainScroll.addEventListener('scroll', () => {
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (mainScroll.scrollTop >= sectionTop - 150) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('text-brand-700', 'bg-brand-50', 'shadow-sm');
+                if (link.getAttribute('href').includes(current)) {
+                    link.classList.add('text-brand-700', 'bg-brand-50', 'shadow-sm');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

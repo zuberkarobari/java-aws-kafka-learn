@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring Boot Request Flow - Claude Aesthetic</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+        /* Anthropic Claude Inspired Palette */
+        --bg-canvas: #F8F7F4; /* Warm off-white */
+        --bg-panel: #FFFFFF; /* Pure white for contrast */
+        --text-main: #23221F; /* Soft black/charcoal */
+        --text-muted: #737373; /* Warm gray */
+        --accent-rust: #D97757; /* Claude rust/terracotta */
+        --accent-sand: #D3C4B1; /* Warm sand border */
+        --accent-sage: #6B7D6A; /* Muted sage green */
+        --accent-blue: #5C7B99; /* Muted slate blue */
+        --border-light: #E8E5DF; /* Subtle border */
+        
+        /* Flow Diagram Specific Colors */
+        --node-bg: #F0EEEA;
+        --node-border: #C2BBAE;
+        --line-color: #A3A3A3;
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #E5E0D8; color: var(--text-main);
+        font-family: 'Inter', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Strict Flex Layout */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-canvas); position: relative;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08); border: 1px solid var(--border-light);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 20px;
+    }
+
+    /* Minimalist Background Grid */
+    .grid-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            linear-gradient(var(--border-light) 1px, transparent 1px),
+            linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+        background-size: 30px 30px;
+        opacity: 0.6; z-index: 0;
+    }
+
+    /* Header */
+    .header { padding: 30px 24px 5px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Lora', serif; font-size: 22px; font-weight: 600;
+        color: var(--text-main); margin-bottom: 6px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--accent-rust); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 500; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Top Half: Visual Canvas Area */
+    .canvas {
+        flex: 1.3; position: relative; z-index: 5; display: flex;
+        flex-direction: column; align-items: center; justify-content: center; min-height: 0;
+        padding: 10px 0;
+    }
+
+    /* Vertical Flow Layout */
+    .flow-pipeline {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 30px; /* Space between nodes */
+        width: 100%;
+        padding-top: 10px;
+    }
+
+    /* Central connecting line */
+    .pipeline-track {
+        position: absolute;
+        top: 20px; bottom: 20px; left: 50%;
+        width: 2px; transform: translateX(-50%);
+        background: var(--border-light);
+        z-index: 1;
+    }
+
+    .node-wrap {
+        position: relative; z-index: 10; display: flex; align-items: center; justify-content: center;
+    }
+
+    .node {
+        background: var(--node-bg); border: 2px solid var(--node-border);
+        padding: 12px 20px; border-radius: 8px; font-family: 'Inter', sans-serif;
+        font-weight: 600; font-size: 13px; color: var(--text-main);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        transition: all 0.4s ease; text-align: center; width: 140px;
+    }
+    
+    .node span { display: block; font-size: 9px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-top: 4px; text-transform: uppercase;}
+
+    /* Special Nodes */
+    .client-node { background: var(--bg-panel); border-style: dashed; border-radius: 20px;}
+    .db-node { background: rgba(92, 123, 153, 0.1); border-color: var(--accent-blue); border-radius: 50% 50% 8px 8px;}
+    .model-node { 
+        position: absolute; right: -100px; top: -10px; 
+        background: rgba(107, 125, 106, 0.1); border-color: var(--accent-sage);
+        width: 80px; padding: 8px;
+    }
+    
+    /* Model connection branch */
+    .model-branch {
+        position: absolute; right: -30px; top: 15px; width: 30px; height: 2px; background: var(--border-light);
+    }
+
+    /* Node Active States */
+    .node.active { transform: scale(1.1); border-color: var(--accent-rust); background: var(--bg-panel); box-shadow: 0 8px 25px rgba(217, 119, 87, 0.15);}
+    .node.active span { color: var(--accent-rust); }
+
+    /* Animated Data Packet */
+    .packet {
+        position: absolute; width: 16px; height: 16px; background: var(--accent-rust);
+        border-radius: 50%; border: 3px solid var(--bg-canvas);
+        top: 0; left: 50%; transform: translateX(-50%);
+        z-index: 20; opacity: 0; transition: top 0.6s ease-in-out, opacity 0.3s;
+        box-shadow: 0 0 10px rgba(217, 119, 87, 0.4);
+    }
+
+    /* Packet States */
+    .pkt-req { background: var(--accent-rust); }
+    .pkt-res { background: var(--accent-sage); box-shadow: 0 0 10px rgba(107, 125, 106, 0.4);}
+    .pkt-model { background: var(--accent-blue); box-shadow: 0 0 10px rgba(92, 123, 153, 0.4);}
+
+    /* Floating Labels beside pipeline */
+    .flow-label {
+        position: absolute; left: 50%; transform: translateX(20px);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted);
+        opacity: 0; transition: opacity 0.3s; font-weight: 500;
+    }
+
+    /* Bottom Half: Explainer Panel */
+    .explainer-panel {
+        background: var(--bg-panel);
+        padding: 24px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid var(--border-light);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.02);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: var(--accent-sand); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: var(--bg-canvas); color: var(--accent-rust);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 12px; text-transform: uppercase;
+        border: 1px solid var(--accent-sand); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Lora', serif; font-size: 19px; font-weight: 600; color: var(--text-main);
+        margin-bottom: 10px; letter-spacing: -0.5px; line-height: 1.2;
+    }
+
+    .explainer-text { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 15px; }
+
+    /* Code Block in Explainer */
+    .code-block {
+        background: #F9F8F6; border: 1px solid var(--border-light); border-radius: 8px;
+        padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.6; color: #3A3A3A; margin-bottom: 10px; overflow-x: auto;
+    }
+    
+    .c-kw { color: #8F5E4D; font-weight: 500; } /* Earthy brown/purple */
+    .c-ty { color: #5C7B99; } /* Muted blue */
+    .c-st { color: #6B7D6A; } /* Sage green */
+    .c-cm { color: #A3A3A3; font-style: italic; } /* Gray comment */
+    .c-an { color: #D97757; } /* Rust annotation */
+
+    .btn-next {
+        background: var(--text-main); color: var(--bg-canvas);
+        border: none; padding: 14px 24px; border-radius: 8px;
+        font-weight: 500; font-size: 13px; cursor: pointer;
+        transition: all 0.2s; width: 100%; font-family: 'Inter', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .btn-next:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="grid-bg"></div>
+
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Spring Boot Pipeline</h1>
+        <p>The 5-Layer Architecture</p>
+    </div>
+
+    <div class="canvas" id="canvas">
+        <div class="flow-pipeline" id="pipeline">
+            <div class="pipeline-track"></div>
+            
+            <!-- Packet that travels -->
+            <div class="packet pkt-req" id="travel-packet"></div>
+
+            <div class="node-wrap" id="wrap-client">
+                <div class="node client-node" id="n-client">Client <span>HTTPS (GET/POST)</span></div>
+            </div>
+            
+            <div class="flow-label" id="lbl-req" style="top: 65px;">Request</div>
+
+            <div class="node-wrap" id="wrap-controller">
+                <div class="node" id="n-controller">Controller Layer <span>Validates & Routes</span></div>
+            </div>
+            
+            <div class="flow-label" id="lbl-dto" style="top: 140px; color: var(--accent-blue);">DTO</div>
+
+            <div class="node-wrap" id="wrap-service">
+                <div class="node" id="n-service">Service Layer <span>Business Logic</span></div>
+                
+                <div class="model-branch"></div>
+                <div class="node model-node" id="n-model">Model <span>JPA Entity</span></div>
+            </div>
+
+            <div class="flow-label" id="lbl-entity" style="top: 220px; color: var(--accent-sage);">Entity</div>
+
+            <div class="node-wrap" id="wrap-repository">
+                <div class="node" id="n-repository">Repository Layer <span>CRUD Operations</span></div>
+            </div>
+            
+            <div class="flow-label" id="lbl-sql" style="top: 295px; color: var(--accent-rust);">Native SQL</div>
+
+            <div class="node-wrap" id="wrap-database">
+                <div class="node db-node" id="n-database">Database <span>RDBMS Storage</span></div>
+            </div>
+            
+            <div class="flow-label" id="lbl-res" style="top: 65px; left: calc(50% - 70px);">Response</div>
+        </div>
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[SYSTEM_ARCHITECTURE]</div>
+            <h2 id="explainer-title" class="explainer-title">The Anatomy of a Request</h2>
+            <p id="explainer-text" class="explainer-text">Every day, billions of HTTPS requests hit Spring Boot servers. How does a raw network packet turn into a database record? It relies on a meticulously decoupled 5-layer pipeline. Let's trace it.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Open The Pipeline</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    const packet = document.getElementById('travel-packet');
+    
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // Helper to get relative top position of a node wrap
+    function getPacketTop(wrapId) {
+        const wrap = document.getElementById(wrapId);
+        // center of the node
+        return wrap.offsetTop + (wrap.offsetHeight / 2) - 8; // -8 for half packet size
+    }
+
+    function deactivateAllNodes() {
+        ['n-client', 'n-controller', 'n-service', 'n-model', 'n-repository', 'n-database'].forEach(id => {
+            document.getElementById(id).classList.remove('active');
+        });
+        ['lbl-req', 'lbl-dto', 'lbl-entity', 'lbl-sql', 'lbl-res'].forEach(id => {
+            document.getElementById(id).style.opacity = '0';
+        });
+    }
+
+    const steps = [
+        {
+            badge: "Ingress 1/7",
+            title: "The Client & Controller",
+            text: "A Client fires an HTTPS request. The <code>DispatcherServlet</code> intercepts it and routes it to the <code>@RestController</code>. The Controller is a bouncer: it validates the JSON payload, maps it to a DTO, and delegates it. <strong>No business logic goes here!</strong>",
+            code: `
+<span class="c-an">@RestController</span>
+<span class="c-an">@RequestMapping</span>(<span class="c-st">"/users"</span>)
+<span class="c-kw">public class</span> <span class="c-ty">UserController</span> {
+    <span class="c-an">@PostMapping</span>
+    <span class="c-kw">public</span> <span class="c-ty">UserDto</span> <span class="c-fn">create</span>(<span class="c-an">@Valid</span> <span class="c-an">@RequestBody</span> <span class="c-ty">UserDto</span> dto) {
+        <span class="c-cm">// Validates JSON, immediately passes to Service</span>
+        <span class="c-kw">return</span> userService.createUser(dto);
+    }
+}
+            `,
+            action: async () => {
+                deactivateAllNodes();
+                codeContainer.style.display = 'block';
+                
+                packet.style.opacity = '1';
+                packet.className = 'packet pkt-req';
+                packet.style.top = getPacketTop('wrap-client') + 'px';
+                document.getElementById('n-client').classList.add('active');
+                
+                await sleep(600);
+                document.getElementById('lbl-req').style.opacity = '1';
+                packet.style.top = getPacketTop('wrap-controller') + 'px';
+                document.getElementById('n-client').classList.remove('active');
+                document.getElementById('n-controller').classList.add('active');
+            }
+        },
+        {
+            badge: "Business Logic 2/7",
+            title: "The Service Layer (The Brain)",
+            text: "The Controller passes the DTO to the Service. This is the heart of the app. We enforce rules (check balances, taxes) and apply <code>@Transactional</code> boundaries so failing operations safely rollback the database state.",
+            code: `
+<span class="c-an">@Service</span>
+<span class="c-kw">public class</span> <span class="c-ty">UserService</span> {
+    <span class="c-an">@Transactional</span>
+    <span class="c-kw">public</span> <span class="c-ty">UserDto</span> <span class="c-fn">createUser</span>(<span class="c-ty">UserDto</span> dto) {
+        <span class="c-cm">// Business Logic Executed here</span>
+        <span class="c-ty">User</span> entity = mapper.toEntity(dto);
+        <span class="c-cm">// ...</span>
+    }
+}
+            `,
+            action: async () => {
+                deactivateAllNodes();
+                document.getElementById('lbl-dto').style.opacity = '1';
+                
+                packet.className = 'packet pkt-model'; // change color
+                packet.style.top = getPacketTop('wrap-service') + 'px';
+                document.getElementById('n-service').classList.add('active');
+            }
+        },
+        {
+            badge: "Data Mapping 3/7",
+            title: "The JPA Model",
+            text: "Once validated, the Service maps the DTO into an <code>@Entity</code> Model. The Entity is a literal blueprint bridging Object-Oriented Java with Relational SQL tables, handling relationships automatically.",
+            code: `
+<span class="c-an">@Entity</span>
+<span class="c-an">@Table</span>(name = <span class="c-st">"users"</span>)
+<span class="c-kw">public class</span> <span class="c-ty">User</span> {
+    <span class="c-an">@Id</span>
+    <span class="c-an">@GeneratedValue</span>
+    <span class="c-kw">private</span> <span class="c-ty">Long</span> id;
+
+    <span class="c-an">@Column</span>(nullable = <span class="c-kw">false</span>)
+    <span class="c-kw">private</span> <span class="c-ty">String</span> email;
+}
+            `,
+            action: async () => {
+                document.getElementById('n-service').classList.remove('active');
+                document.getElementById('n-model').classList.add('active');
+                
+                // Animate packet to model
+                packet.style.transition = 'top 0.3s, left 0.3s, transform 0.3s';
+                packet.style.left = 'calc(50% + 70px)'; 
+                
+                await sleep(800);
+                // Animate back to service
+                packet.style.left = '50%';
+                document.getElementById('n-model').classList.remove('active');
+                document.getElementById('n-service').classList.add('active');
+                
+                // reset transition
+                setTimeout(() => { packet.style.transition = 'top 0.6s ease-in-out, opacity 0.3s'; }, 300);
+            }
+        },
+        {
+            badge: "Data Access 4/7",
+            title: "The Repository Layer",
+            text: "The Service hands the Entity to the Repository. By extending <code>JpaRepository</code>, Spring uses Dynamic Proxies to auto-generate complex CRUD operations at runtime, translating your <code>save()</code> into raw SQL.",
+            code: `
+<span class="c-cm">// No implementation class needed!</span>
+<span class="c-an">@Repository</span>
+<span class="c-kw">public interface</span> <span class="c-ty">UserRepository</span> 
+       <span class="c-kw">extends</span> <span class="c-ty">JpaRepository</span>&lt;<span class="c-ty">User</span>, <span class="c-ty">Long</span>&gt; {
+    
+    <span class="c-cm">// Auto-generates SQL: SELECT * FROM users WHERE...</span>
+    <span class="c-ty">Optional</span>&lt;<span class="c-ty">User</span>&gt; <span class="c-fn">findByEmail</span>(<span class="c-ty">String</span> email);
+}
+            `,
+            action: async () => {
+                deactivateAllNodes();
+                document.getElementById('lbl-entity').style.opacity = '1';
+                
+                packet.className = 'packet pkt-req';
+                packet.style.top = getPacketTop('wrap-repository') + 'px';
+                document.getElementById('n-repository').classList.add('active');
+            }
+        },
+        {
+            badge: "Storage 5/7",
+            title: "The Database Commit",
+            text: "The Repository fires raw SQL over the network. The Database executes the transaction, commits it safely to disk (ACID), generates the new Primary Key, and returns it up the chain.",
+            code: `
+<span class="c-cm">-- Executed by Hibernate</span>
+<span class="c-kw">INSERT INTO</span> users (email, created_at) 
+<span class="c-kw">VALUES</span> (<span class="c-st">'test@app.com'</span>, <span class="c-st">'2026-04-23'</span>)
+<span class="c-kw">RETURNING</span> id;
+            `,
+            action: async () => {
+                deactivateAllNodes();
+                document.getElementById('lbl-sql').style.opacity = '1';
+                
+                packet.style.top = getPacketTop('wrap-database') + 'px';
+                document.getElementById('n-database').classList.add('active');
+                
+                await sleep(600);
+                packet.className = 'packet pkt-res'; // turn green for return
+            }
+        },
+        {
+            badge: "Security 6/7",
+            title: "The Return Journey",
+            text: "The data travels back up. <strong>Architectural Trap:</strong> NEVER return a raw Database Entity to the user! Entities contain sensitive passwords. The Service intercepts the Entity and maps it safely back into a scrubbed Response DTO.",
+            code: `
+<span class="c-cm">// Inside UserService:</span>
+<span class="c-ty">User</span> savedEntity = repository.save(entity);
+
+<span class="c-cm">// Scrub sensitive data before returning up</span>
+<span class="c-kw">return</span> mapper.toDto(savedEntity);
+            `,
+            action: async () => {
+                deactivateAllNodes();
+                
+                packet.style.top = getPacketTop('wrap-service') + 'px';
+                document.getElementById('n-repository').classList.add('active');
+                await sleep(300);
+                document.getElementById('n-repository').classList.remove('active');
+                document.getElementById('n-service').classList.add('active');
+            }
+        },
+        {
+            badge: "Response 7/7",
+            title: "View Resolution & Output",
+            text: "The Controller takes the safe DTO. For REST APIs, <code>HttpMessageConverter</code> (Jackson) serializes it into JSON. For classic MVC apps, a ViewResolver renders a JSP/HTML page. The HTTP <code>200 OK</code> is sent. Total time: < 15ms.",
+            code: `
+<span class="c-cm">// Final JSON Payload sent to Client</span>
+{
+  <span class="c-st">"status"</span>: <span class="c-an">200</span>,
+  <span class="c-st">"data"</span>: {
+    <span class="c-st">"id"</span>: <span class="c-an">1042</span>,
+    <span class="c-st">"email"</span>: <span class="c-st">"test@app.com"</span>
+  }
+}
+            `,
+            action: async () => {
+                deactivateAllNodes();
+                
+                packet.style.top = getPacketTop('wrap-controller') + 'px';
+                document.getElementById('n-controller').classList.add('active');
+                
+                await sleep(500);
+                document.getElementById('lbl-res').style.opacity = '1';
+                packet.style.top = getPacketTop('wrap-client') + 'px';
+                document.getElementById('n-controller').classList.remove('active');
+                document.getElementById('n-client').classList.add('active');
+                
+                await sleep(600);
+                packet.style.opacity = '0';
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            deactivateAllNodes();
+            codeContainer.style.display = 'none';
+            packet.style.opacity = '0';
+            packet.style.top = '0';
+
+            badge.innerText = "[SYSTEM_ARCHITECTURE]";
+            title.innerText = "The Anatomy of a Request";
+            text.innerHTML = "Every day, billions of HTTPS requests hit Spring Boot servers. How does a raw network packet turn into a database record? It relies on a meticulously decoupled 5-layer pipeline. Let's trace it.";
+            btnNext.innerText = "Open The Pipeline";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Architecture" : "Next Phase →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

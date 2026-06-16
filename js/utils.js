@@ -140,7 +140,7 @@ export const getTopics = () =>
       description: meta.description || '',
       ...meta
     };
-  });
+  }).filter(t => !t.isLocked);
 
 /**
  * Get all topics filtered by a specific learning pathway
@@ -575,3 +575,32 @@ export const getAllNotes = () => {
   }
   return notes;
 };
+
+// ─── Anti-Copy Protections ───────────────────────────────────────────────────
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+  document.addEventListener('copy', (e) => e.preventDefault());
+  document.addEventListener('cut', (e) => e.preventDefault());
+  document.addEventListener('selectstart', (e) => e.preventDefault());
+  
+  // Prevent keyboard shortcuts for copying/inspecting
+  document.addEventListener('keydown', (e) => {
+    // ctrl+c or cmd+c
+    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+      e.preventDefault();
+    }
+    // ctrl+x or cmd+x
+    if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+      e.preventDefault();
+    }
+    // ctrl+shift+i, ctrl+shift+j, f12 (inspect element)
+    if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j'))) {
+      e.preventDefault();
+    }
+    // ctrl+u (view source)
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) {
+      e.preventDefault();
+    }
+  });
+}

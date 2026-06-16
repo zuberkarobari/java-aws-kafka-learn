@@ -70,7 +70,7 @@ const injectHeader = () => {
   header.innerHTML = `
     <div class="header-inner">
       <a href="${prefix}index.html" class="header-logo" aria-label="Go to homepage">
-        <span class="logo-icon">☕</span>
+        <span class="logo-icon" style="display: flex; align-items: center;"><img src="https://upload.wikimedia.org/wikipedia/en/3/30/Java_programming_language_logo.svg" alt="Java Logo" width="28" height="28"></span>
         <span class="logo-text">Java Learn</span>
       </a>
 
@@ -231,7 +231,10 @@ const injectFooter = () => {
   footer.className = 'site-footer';
   footer.innerHTML = `
     <div class="footer-inner">
-      <span>☕ Java Learn</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;">
+        <img src="https://upload.wikimedia.org/wikipedia/en/3/30/Java_programming_language_logo.svg" alt="Java Logo" width="16" height="16">
+        Java Learn
+      </span>
       <span class="footer-sep">·</span>
       <span>Built for learners</span>
     </div>

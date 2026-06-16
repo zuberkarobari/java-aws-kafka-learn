@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spring Data JPA Deep Dive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+</head>
+<body>
+  <main id="topic-content">
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="brand">
+    <div class="brand-dot"></div>
+    Spring Data JPA Architecture
+  </div>
+  <div class="step-tabs" id="tabs"></div>
+  <div class="nav-btns">
+    <button class="nav-btn" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
+    <button class="nav-btn primary" id="nextBtn" onclick="navigate(1)">Next →</button>
+  </div>
+</div>
+
+<!-- MAIN 3-PANE LAYOUT -->
+<div id="main">
+
+  <!-- LEFT PANE: Request Pipeline -->
+  <div id="left">
+    <div class="left-section-title">Active Component</div>
+    
+    <div class="request-block" id="req-block">
+      <div class="req-header">
+        <span class="method-badge" id="m-badge">JAVA</span>
+        <span class="req-path" id="r-path">UserRepository.java</span>
+      </div>
+      <div class="req-body" id="req-body">
+        <span class="c-kw">interface</span> UserRepository <span class="c-kw">extends</span> JpaRepository {<br><br>
+        &nbsp;&nbsp;<span style="color:var(--text);">User findByEmail(String e);</span><br>
+        }
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="left-section-title">Execution Pipeline</div>
+    <div class="phase-list" id="phaseList">
+      <!-- Generated via JS -->
+    </div>
+  </div>
+
+  <!-- CENTER PANE: Visualizations -->
+  <div id="center">
+    
+    <!-- Persistent Network Canvas -->
+    <div class="scene active" id="scene-arch">
+        <div class="net-canvas" id="network-canvas">
+            
+            <!-- Lines -->
+            <div class="net-line" id="l-c-r"></div>
+            <div class="net-line" id="l-r-em"></div>
+            <div class="net-line" id="l-em-db"></div>
+
+            <!-- Nodes -->
+            <div class="node" id="n-client">
+                <div class="node-icon">☕</div>
+                <div class="node-title">UserService</div>
+            </div>
+
+            <div class="node" id="n-repo-int">
+                <div class="node-icon" style="font-size: 16px;">🧩</div>
+                <div class="node-title">UserRepository</div>
+                <div class="node-sub">Interface</div>
+            </div>
+
+            <div class="node" id="n-proxy">
+                <div class="proxy-badge" id="p-badge">JDK Proxy</div>
+                <div class="node-icon" style="font-size: 16px;">⚙️</div>
+                <div class="node-title">$Proxy123</div>
+                <div class="node-sub">Runtime Implementation</div>
+            </div>
+
+            <div class="node" id="n-em">
+                <div class="node-title">EntityManager</div>
+                <div class="node-sub">Hibernate</div>
+                <div class="l1-box">
+                    L1 Cache (Persistence Context)
+                    <div class="entity-token" id="e-tok">User@42</div>
+                </div>
+            </div>
+
+            <div class="node" id="n-db">
+                <div class="node-icon" style="font-size: 20px;">🗄️</div>
+                <div class="node-title">PostgreSQL</div>
+            </div>
+
+            <!-- Lexer Overlay (Scene 3) -->
+            <div class="lexer-vis" id="lexer-vis">
+                <div class="lex-str">findByStatusAndAgeGreaterThan</div>
+                <div class="lex-parts">
+                    <div class="lex-p lp-verb" id="lp-1">findBy</div>
+                    <div class="lex-p lp-prop" id="lp-2">Status</div>
+                    <div class="lex-p lp-conj" id="lp-3">And</div>
+                    <div class="lex-p lp-prop" id="lp-4">Age</div>
+                    <div class="lex-p lp-oper" id="lp-5">GreaterThan</div>
+                </div>
+            </div>
+
+            <!-- Packets -->
+            <div class="packet" id="pkt"></div>
+
+        </div>
+    </div>
+
+    <!-- Scene 1: Boilerplate Code Block (Overlay) -->
+    <div class="scene" id="scene-code">
+        <div class="code-block">
+            <div class="code-header"><span class="code-lang">JAVA</span><span style="font-family:monospace; font-size:10px; color:var(--muted); margin-left:auto;">Before Spring Data (JDBC/JPA)</span></div>
+            <div class="code-body">
+<span class="c-cm">// The old way: Massive boilerplate for a simple SELECT</span>
+<span class="c-kw">public</span> User <span class="c-fn">findByEmail</span>(String email) {
+    EntityManager em = emf.createEntityManager();
+    EntityTransaction tx = em.getTransaction();
+    <span class="c-kw">try</span> {
+        tx.begin();
+        String jpql = <span class="c-st">"SELECT u FROM User u WHERE u.email = :email"</span>;
+        User user = em.createQuery(jpql, User.<span class="c-kw">class</span>)
+                      .setParameter(<span class="c-st">"email"</span>, email)
+                      .getSingleResult();
+        tx.commit();
+        <span class="c-kw">return</span> user;
+    } <span class="c-kw">catch</span> (Exception e) {
+        tx.rollback();
+        <span class="c-kw">throw</span> e;
+    } <span class="c-kw">finally</span> {
+        em.close();
+    }
+}
+            </div>
+        </div>
+    </div>
+
+    <!-- Scene 7: Matrix -->
+    <div class="scene" id="scene-matrix">
+        <div class="matrix-grid">
+            <div class="m-row">
+                <div class="m-anno" style="color: var(--s-blue);">JDBC</div>
+                <div class="m-route">Raw SQL strings and manual Connection/ResultSet management. High performance, massive boilerplate.</div>
+            </div>
+            <div class="m-row">
+                <div class="m-anno" style="color: var(--s-amber);">Hibernate (JPA)</div>
+                <div class="m-route">Maps Java objects to tables (ORM). Provides L1 Cache and dirty checking. Still requires EntityManager boilerplate.</div>
+            </div>
+            <div class="m-row">
+                <div class="m-anno" style="color: var(--s-green);">Spring Data JPA</div>
+                <div class="m-route">The apex abstraction. Uses runtime Proxies to completely eliminate DAO classes. You only write interfaces.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Explainer Panel -->
+    <div class="explainer-panel">
+      <div class="explainer-content">
+        <div id="step-badge" class="step-badge">[CORE_ARCHITECTURE]</div>
+        <h2 id="explainer-title" class="explainer-title">The Boilerplate Killer</h2>
+        <p id="explainer-text" class="explainer-text">If you are still manually injecting <code>EntityManager</code> or writing boilerplate SQL wrappers, you are wasting hundreds of development hours. Spring Data JPA is an incredible runtime code-generation engine powered by dark magic called Dynamic Proxies. Let's hack into the JVM.</p>
+      </div>
+      <button id="btn-next" class="btn-next" onclick="nextStep()">Initiate Proxy Engine</button>
+    </div>
+
+  </div><!-- end center -->
+
+  <!-- RIGHT PANE (Telemetry) -->
+  <div id="right">
+    <div class="right-title">⚡ Generated Output</div>
+    <div class="sql-panel" id="sql-panel">
+      <span style="color:var(--muted);">[Awaiting execution...]</span>
+    </div>
+
+    <div class="right-title" style="margin-top: 24px;">📈 Core Telemetry</div>
+    
+    <div class="metric-card">
+      <div class="metric-label">Active Proxy Class</div>
+      <div class="metric-val c-purple" id="m-proxy">None</div>
+      <div class="metric-sub">Generated at runtime</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">L1 Cache State</div>
+      <div class="metric-val c-amber" id="m-cache">Empty</div>
+      <div class="metric-sub" id="ms-cache">Persistence Context</div>
+    </div>
+    
+    <div class="code-sm" id="sys-log">
+      [SPRING-BOOT] Context initialized. Awaiting queries.
+    </div>
+  </div>
+
+</div><!-- end main -->
+
+<!-- FOOTER -->
+<div id="footer">
+  <div class="footer-dot pulse"></div>
+  <span>Spring Data JPA Internal Architecture</span>
+  <span class="separator">|</span>
+  <span>Use <span class="kbd">←</span> <span class="kbd">→</span> to navigate</span>
+</div>
+
+<script>
+  const STAGES = [
+    { id: 'scene-arch', short: 'Overview', phase: 'The Abstraction' },
+    { id: 'scene-code', short: 'Boilerplate', phase: '1 · Manual EntityManager' },
+    { id: 'scene-arch', short: 'Proxies', phase: '2 · JDK Dynamic Proxies' },
+    { id: 'scene-arch', short: 'Lexer', phase: '3 · AST Query Derivation' },
+    { id: 'scene-arch', short: '@Query', phase: '4 · Validation & Safety' },
+    { id: 'scene-arch', short: 'Dirty Check', phase: '5 · L1 Cache Flushing' },
+    { id: 'scene-arch', short: 'Pagination', phase: '6 · Limit/Offset Interceptor' },
+    { id: 'scene-matrix', short: 'Summary ✓', phase: 'Complete' }
+  ];
+
+  const PHASES = [
+    { label: 'ProxyFactory Gen', id: 'p-prx' },
+    { label: 'Method Name Parse', id: 'p-lex' },
+    { label: 'JPQL Compilation', id: 'p-cmp' },
+    { label: 'Hibernate Exec', id: 'p-hib' },
+    { label: 'JDBC Statement', id: 'p-jdb' }
+  ];
+
+  let currentStep = 0;
+  let isAnimating = false;
+
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  function buildUI() {
+    const tabContainer = document.getElementById('tabs');
+    STAGES.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = 'tab' + (i === 0 ? ' active' : '');
+      div.innerHTML = `<span class="tab-num">${i}</span>${s.short}`;
+      div.onclick = () => goTo(i);
+      tabContainer.appendChild(div);
+    });
+
+    const pContainer = document.getElementById('phaseList');
+    PHASES.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'phase-item';
+      div.id = 'l-phase-' + i;
+      div.innerHTML = `<div class="phase-dot"></div><span class="phase-label">${p.label}</span>`;
+      pContainer.appendChild(div);
+    });
+  }
+
+  async function firePacket(startY, endY, type, text, duration = 600) {
+      const pkt = document.getElementById('pkt');
+      pkt.className = `packet ${type}`;
+      pkt.innerText = text;
+      
+      pkt.style.transition = 'none';
+      pkt.style.top = startY + 'px';
+      pkt.style.left = '50%';
+      pkt.style.opacity = '1';
+      
+      void pkt.offsetWidth; // reflow
+      
+      pkt.style.transition = `top ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+      pkt.style.top = endY + 'px';
+      
+      await sleep(duration);
+      pkt.style.opacity = '0';
+  }
+
+  async function updateDynamicContent(idx) {
+    const sysLog = document.getElementById('sys-log');
+    const sqlPanel = document.getElementById('sql-panel');
+    const mProxy = document.getElementById('m-proxy');
+    const mCache = document.getElementById('m-cache');
+    const eTok = document.getElementById('e-tok');
+    const reqBody = document.getElementById('req-body');
+
+    // Reset Visuals
+    for(let i=0; i<5; i++) document.getElementById('l-phase-'+i).className = 'phase-item';
+    document.getElementById('n-proxy').style.opacity = '0';
+    document.getElementById('p-badge').style.opacity = '0';
+    document.getElementById('lexer-vis').style.opacity = '0';
+    for(let i=1; i<=5; i++) document.getElementById(`lp-${i}`).style.opacity = '0';
+    eTok.style.opacity = '0'; eTok.style.background = 'var(--surface3)';
+
+    if (idx === 0 || idx === 1) { // Overview & Boilerplate
+        sysLog.innerText = "[SPRING-BOOT] Context initialized. Awaiting queries.";
+        sqlPanel.innerHTML = `<span style="color:var(--muted);">[Awaiting execution...]</span>`;
+        mProxy.innerText = "None"; mCache.innerText = "Empty";
+        reqBody.innerHTML = `<span class="c-kw">interface</span> UserRepository <span class="c-kw">extends</span> JpaRepository {<br><br>&nbsp;&nbsp;<span style="color:var(--text);">User findByEmail(String e);</span><br>}`;
+    } 
+    else if (idx === 2) { // Proxy Generation
+        document.getElementById('l-phase-0').classList.add('active');
+        sysLog.innerText = "[PROXY-FACTORY] Intercepting Repository interface at startup...";
+        reqBody.innerHTML = `<span class="c-cm">// Spring intercepts this</span><br><span class="c-an">@Autowired</span><br>UserRepository repo;`;
+        
+        await sleep(300);
+        document.getElementById('n-proxy').style.opacity = '1';
+        sysLog.innerText = "[PROXY-FACTORY] Generated implementation class in memory.";
+        await sleep(300);
+        document.getElementById('p-badge').style.opacity = '1';
+        mProxy.innerText = "JdkDynamicProxy";
+        
+        document.getElementById('l-phase-0').classList.replace('active', 'done');
+    }
+    else if (idx === 3) { // Lexer
+        document.getElementById('l-phase-0').classList.add('done');
+        document.getElementById('l-phase-1').classList.add('active');
+        mProxy.innerText = "JdkDynamicProxy";
+        document.getElementById('n-proxy').style.opacity = '1'; document.getElementById('p-badge').style.opacity = '1';
+        
+        reqBody.innerHTML = `<span class="c-ty">List</span>&lt;User&gt; <span class="c-fn">findByStatusAndAgeGreaterThan</span>(...);`;
+        sysLog.innerText = "[AST-PARSER] Analyzing method name string...";
+        
+        document.getElementById('lexer-vis').style.opacity = '1';
+        
+        const ids = ['lp-1', 'lp-2', 'lp-3', 'lp-4', 'lp-5'];
+        for(let i=0; i<ids.length; i++) {
+            await sleep(300);
+            const el = document.getElementById(ids[i]);
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }
+        
+        document.getElementById('l-phase-1').classList.replace('active', 'done');
+        document.getElementById('l-phase-2').classList.add('active');
+        sysLog.innerText = "[JPQL-COMPILER] Method parsed successfully. Compiling query.";
+        
+        sqlPanel.innerHTML = `<span class="sql-kw">select</span> u <span class="sql-kw">from</span> User u <span class="sql-kw">where</span> u.status = <span class="sql-val">?1</span> <span class="sql-kw">and</span> u.age > <span class="sql-val">?2</span>`;
+    }
+    else if (idx === 4) { // Custom @Query
+        document.getElementById('l-phase-0').classList.add('done'); document.getElementById('l-phase-1').classList.add('done'); document.getElementById('l-phase-2').classList.add('active');
+        document.getElementById('n-proxy').style.opacity = '1'; document.getElementById('p-badge').style.opacity = '1'; mProxy.innerText = "JdkDynamicProxy";
+        
+        reqBody.innerHTML = `<span class="c-an">@Query</span>(<span class="c-st">"SELECT u FROM User u WHERE..."</span>)<br><span class="c-ty">List</span>&lt;User&gt; <span class="c-fn">findCustom</span>(...);`;
+        sysLog.innerText = "[VALIDATOR] Validating @Query against Entity graph...";
+        
+        await sleep(500);
+        sqlPanel.innerHTML = `<span class="sql-kw">select</span> u <span class="sql-kw">from</span> User u <span class="sql-kw">where</span>...<br><br><span style="color:var(--s-green);">[VALIDATION PASSED] Properties match Entity.</span>`;
+    }
+    else if (idx === 5) { // Dirty Checking
+        for(let i=0; i<3; i++) document.getElementById('l-phase-'+i).classList.add('done');
+        document.getElementById('l-phase-3').classList.add('active');
+        document.getElementById('n-proxy').style.opacity = '1'; document.getElementById('p-badge').style.opacity = '1'; mProxy.innerText = "JdkDynamicProxy";
+        
+        reqBody.innerHTML = `<span class="c-an">@Transactional</span><br><span class="c-kw">public void</span> <span class="c-fn">update</span>() {<br>&nbsp;&nbsp;User u = repo.findById(1);<br>&nbsp;&nbsp;u.setEmail(<span class="c-st">"new@a.com"</span>);<br>}`;
+        sysLog.innerText = "[HIBERNATE] Fetching entity into L1 Cache (Persistence Context).";
+        
+        // Fetch
+        await firePacket(150, 270, 'pkt-proxy', 'findById(1)');
+        await firePacket(270, 410, 'pkt-sql', 'SELECT', 400);
+        await firePacket(410, 270, 'pkt-sql', 'Row Data', 400);
+        
+        eTok.style.opacity = '1'; mCache.innerText = "Tracking User@42"; mCache.className = "metric-val c-green";
+        await sleep(500);
+        
+        sysLog.innerText = "[APP] Mutating property. NO save() called.";
+        eTok.style.background = 'var(--s-amber)'; eTok.innerText = "User@42 (Dirty)"; mCache.innerText = "Dirty Entity Found"; mCache.className = "metric-val c-amber";
+        await sleep(800);
+        
+        sysLog.innerText = "[TRANSACTION] Committing. Hibernate auto-flushing dirty entities.";
+        document.getElementById('l-phase-3').classList.replace('active', 'done'); document.getElementById('l-phase-4').classList.add('active');
+        
+        sqlPanel.innerHTML = `<span class="sql-kw">update</span> users <span class="sql-kw">set</span> email=<span class="sql-val">?</span> <span class="sql-kw">where</span> id=<span class="sql-val">?</span>`;
+        await firePacket(270, 410, 'pkt-sql', 'UPDATE', 400);
+        eTok.style.background = 'var(--surface3)'; eTok.innerText = "User@42"; mCache.innerText = "Clean"; mCache.className = "metric-val c-green";
+    }
+    else if (idx === 6) { // Pagination
+        for(let i=0; i<3; i++) document.getElementById('l-phase-'+i).classList.add('done');
+        document.getElementById('l-phase-3').classList.add('active');
+        document.getElementById('n-proxy').style.opacity = '1'; document.getElementById('p-badge').style.opacity = '1'; mProxy.innerText = "JdkDynamicProxy"; mCache.innerText = "Empty"; mCache.className = "metric-val c-amber";
+        
+        reqBody.innerHTML = `Page&lt;User&gt; page = repo.findAll(<br>&nbsp;&nbsp;PageRequest.of(<span class="c-an">0</span>, <span class="c-an">20</span>)<br>);`;
+        sysLog.innerText = "[INTERCEPTOR] Pageable detected. Splitting into two queries.";
+        
+        await firePacket(150, 270, 'pkt-proxy', 'findAll(Page 0)');
+        
+        document.getElementById('l-phase-3').classList.replace('active', 'done'); document.getElementById('l-phase-4').classList.add('active');
+        
+        sqlPanel.innerHTML = `<span class="sql-kw">select</span> u <span class="sql-kw">from</span> User u <span class="sql-kw">limit</span> <span class="sql-val">?</span>`;
+        await firePacket(270, 410, 'pkt-sql', 'SELECT ... LIMIT 20', 500);
+        
+        await sleep(300);
+        sqlPanel.innerHTML += `<br><br><span class="sql-kw">select count</span>(u.id) <span class="sql-kw">from</span> User u`;
+        await firePacket(270, 410, 'pkt-sql', 'COUNT(*)', 500);
+        
+        sysLog.innerText = "[PAGINATION] Total elements calculated automatically.";
+    }
+  }
+
+  function goTo(idx) {
+    if (isAnimating) return;
+    const scenes = document.querySelectorAll('.scene');
+    scenes.forEach(s => s.classList.remove('active'));
+    document.getElementById(STAGES[idx].id).classList.add('active');
+
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach((t, i) => {
+      t.classList.remove('active', 'done');
+      if (i < idx) t.classList.add('done');
+      if (i === idx) t.classList.add('active');
+    });
+
+    const expData = [
+        { b: "[CORE_ARCHITECTURE]", t: "The Boilerplate Killer", txt: "If you are still manually injecting <code>EntityManager</code> or writing boilerplate SQL wrappers, you are wasting hundreds of development hours. Spring Data JPA is an incredible runtime code-generation engine powered by dark magic called Dynamic Proxies. Let's hack into the JVM." },
+        { b: "[LEGACY]", t: "The Boilerplate Problem", txt: "Before Spring Data, we had standard Hibernate. To do a simple DB lookup, you injected the EntityManager, began a transaction, wrote a JPQL string, set parameters, executed, and committed. It was 15 lines of highly repetitive, error-prone code for every single call." },
+        { b: "[GENERATION]", t: "JDK Dynamic Proxies", txt: "This is the 'Aha!' moment. You don't write a class. You write an <em>Interface</em>. At application startup, a <code>ProxyFactory</code> dynamically generates a class in the JVM memory at runtime (e.g., <code>$Proxy123</code>). It automatically implements all your CRUD operations." },
+        { b: "[COMPILER]", t: "The Lexical Parser", txt: "How does it know what <code>findByStatusAndAgeGreaterThan</code> means? A built-in Lexical Parser breaks your method name down into an AST (Abstract Syntax Tree) and compiles it directly into highly optimized JPQL. If you misspell a property, the app physically refuses to start." },
+        { b: "[SAFETY]", t: "Custom @Query Validation", txt: "When method names get too long, we use <code>@Query</code>. Spring doesn't just blindly send this string to the database. At startup, it validates your custom JPQL against your actual Entity mappings, providing absolute type safety for your queries." },
+        { b: "[HIBERNATE]", t: "L1 Cache & Dirty Checking", txt: "Spring Data wraps Hibernate, inheriting the L1 Cache (Persistence Context). If you fetch a User and modify their email via a Java setter, <em>you do not need to call .save()</em>. Hibernate's 'Dirty Checking' realizes the object changed in memory and automatically fires an <code>UPDATE</code>." },
+        { b: "[INTERCEPTOR]", t: "Pagination Mechanics", txt: "Adding a <code>Pageable</code> parameter completely alters the execution path. It intercepts the query, adds <code>LIMIT</code> and <code>OFFSET</code>, and automatically fires a <em>secondary</em> <code>COUNT()</code> query behind the scenes so the frontend knows exactly how many total pages exist." },
+        { b: "[SUMMARY]", t: "The Layer Cake", txt: "Spring Data JPA is the top of the layer cake. It abstracts the raw JDBC drivers, orchestrates the Hibernate EntityManager, and uses runtime proxies to eliminate repository boilerplate entirely. It is the absolute pinnacle of Java data access." }
+    ];
+
+    document.getElementById('step-badge').innerText = expData[idx].b;
+    document.getElementById('explainer-title').innerText = expData[idx].t;
+    document.getElementById('explainer-text').innerHTML = expData[idx].txt;
+
+    document.getElementById('prevBtn').disabled = idx === 0;
+    document.getElementById('nextBtn').disabled = idx === STAGES.length - 1;
+    document.getElementById('nextBtn').textContent = idx === STAGES.length - 1 ? 'Done ✓' : 'Next →';
+
+    currentStep = idx;
+    
+    isAnimating = true;
+    updateDynamicContent(idx).then(() => { isAnimating = false; });
+  }
+
+  function navigate(dir) {
+    if (isAnimating) return;
+    const next = Math.max(0, Math.min(STAGES.length - 1, currentStep + dir));
+    goTo(next);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
+  });
+
+  buildUI();
+  updateDynamicContent(0);
+</script>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

@@ -58,9 +58,9 @@ export const PATHWAYS = {
   },
   studyplan: {
     id: 'studyplan',
-    title: '60-Day Plan',
+    title: '45-Day Plan',
     icon: '📅',
-    description: 'A day-by-day structured curriculum with daily targets, checklists, mentor deep dives, and mock interviews.',
+    description: 'A structured curriculum with daily sessions, checklists, and deep dives — covering Java, Spring Boot, AWS, Kafka, and Microservices.',
     categories: ['Weeks 1–2: Core Java', 'Weeks 3–4: Advanced Java', 'Weeks 5–6: Spring Boot', 'Weeks 7–8: Microservices & Cloud', 'Weeks 9–10: System Design'],
   },
   keytopics: {
@@ -153,8 +153,8 @@ export const TOPIC_ORDER = [
   'spring-boot/rollback_mechanism',
   'spring-boot/spring_security',
   'spring-boot/authentication_vs_authorization',
-  'spring-boot/jwt_authentication',
   'spring-boot/aws_day19_sqs_sns_eventbridge',
+  'spring-boot/spring_data_jpa_architecture',
 
 
   // ── AWS Cloud ─────────────────────────────────────────────────
@@ -213,9 +213,17 @@ export const TOPIC_ORDER = [
   'kafka/describe_a_kafka_implementation_from_your_project',
 
   // ── Microservices ─────────────────────────────────────────────
-  'microservices/service-discovery',
-  'microservices/api-gateway',
-  'microservices/resilience4j',
+  'microservice/service-discovery',
+  'microservice/api-gateway',
+  'microservice/resilience4j',
+  'microservice/api_gateway',
+  'microservice/async_and_eda',
+  'microservice/database_per_service',
+  'microservice/distributed_tracing',
+  'microservice/interservice_communication',
+  'microservice/rate_limiting',
+  'microservice/saga_pattern',
+  'microservice/service_discovery (2)',
 
   // ── Microservices Interview Q&A ────────────────────────────────
   'questions and answers/microservices/microservices_top10',
@@ -694,26 +702,75 @@ export const TOPIC_META = {
   },
 
   // ─── Microservices ─────────────────────────────────────────────
-  'microservices/service-discovery': {
+  'microservice/service-discovery': {
     category: 'Microservices',
     icon: '🔍',
     title: 'Service Discovery (Eureka)',
     description: 'Register and locate microservices dynamically using Spring Cloud Eureka.',
     isLocked: true,
   },
-  'microservices/api-gateway': {
+  'microservice/api-gateway': {
     category: 'Microservices',
     icon: '🚪',
     title: 'API Gateway & Routing',
     description: 'Build a centralized routing entry point with Spring Cloud Gateway.',
     isLocked: true,
   },
-  'microservices/resilience4j': {
+  'microservice/resilience4j': {
     category: 'Microservices',
     icon: '🛡️',
     title: 'Fault Tolerance & Resiliency',
     description: 'Implement Circuit Breakers, Rate Limiters, and Retries with Resilience4j.',
     isLocked: true,
+  },
+
+  'microservice/api_gateway': {
+    category: 'Microservices',
+    icon: '🚪',
+    title: 'API Gateway',
+    description: 'Mastering Spring Cloud Gateway: Reactive routing, cross-cutting concerns, rate limiting, and the BFF pattern.',
+  },
+  'microservice/async_and_eda': {
+    category: 'Microservices',
+    icon: '⚡',
+    title: 'Async & EDA',
+    description: 'Learn about Asynchronous communication and Event-Driven Architecture.',
+  },
+  'microservice/database_per_service': {
+    category: 'Microservices',
+    icon: '💾',
+    title: 'Database per Service',
+    description: 'Learn about the Database per Service pattern.',
+  },
+  'microservice/distributed_tracing': {
+    category: 'Microservices',
+    icon: '🔍',
+    title: 'Distributed Tracing',
+    description: 'Learn about Distributed Tracing in Microservices.',
+  },
+  'microservice/interservice_communication': {
+    category: 'Microservices',
+    icon: '🔗',
+    title: 'Interservice Communication',
+    description: 'Learn about Interservice Communication in Microservices.',
+  },
+  'microservice/rate_limiting': {
+    category: 'Microservices',
+    icon: '🚦',
+    title: 'Rate Limiting',
+    description: 'Learn about Rate Limiting in Microservices.',
+  },
+  'microservice/saga_pattern': {
+    category: 'Microservices',
+    icon: '🔄',
+    title: 'Saga Pattern',
+    description: 'Learn about the Saga Pattern in Microservices.',
+  },
+  'microservice/service_discovery (2)': {
+    category: 'Microservices',
+    icon: '🔍',
+    title: 'Service Discovery (2)',
+    description: 'Understanding Netflix Eureka, dynamic routing, client-side load balancing, and the Self-Preservation mode.',
   },
 
   // ─── Java Interview Q&A ──────────────────────────────────────────
@@ -736,6 +793,12 @@ export const TOPIC_META = {
     icon: '🌱',
     title: 'Spring Boot 50 Q&A',
     description: 'Deep-dive Q&As covering auto-configuration, WebFlux, security, and JPA.',
+  },
+  'spring-boot/spring_data_jpa_architecture': {
+    category: 'Spring Boot Interview Q&A',
+    icon: '🌱',
+    title: 'Spring Data JPA Architecture',
+    description: 'Learn about Spring Data JPA Architecture in Spring Boot.',
   },
 'spring-boot/ambiguity_resolution': {
     category: 'Spring Boot Interview Q&A',

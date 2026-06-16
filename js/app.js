@@ -457,49 +457,43 @@ window.deleteTodo = (taskId) => {
   renderDashboard();
 };
 
-// ─── Study Plan Roadmap Grid ──────────────────────────────────────────────────
+// ─── Study Plan Roadmap Grid ──────────────────────────────────────────────────────
 
 const renderStudyPlanRoadmap = () => {
   const visited = getVisited();
-  const topics = getTopics().filter(t => t.category.includes('Weeks'));
-  
-  const totalDays = 60;
-  const dots = [];
   const confidenceRatings = getConfidenceRatings();
 
-  for (let d = 1; d <= totalDays; d++) {
-    const dayId = `checklists/day${d}`;
-    const topic = topics.find(t => t.id === dayId);
-    
-    let dotClass = 'roadmap-dot';
-    let title = `Day ${d}: Unlocked soon`;
-    let ratingStars = '';
-    
-    if (topic) {
-      const isDone = visited.has(dayId);
-      dotClass += isDone ? ' done' : ' active';
-      title = `Day ${d}: ${topic.title}`;
-      
-      const rating = confidenceRatings[dayId];
-      if (rating) {
-        ratingStars = ` (${'★'.repeat(rating)}${'☆'.repeat(5 - rating)})`;
-      }
-    } else {
-      dotClass += ' locked';
-    }
-    
-    const onClickAttr = topic ? `onclick="window.location.href='topics/${topic.file}'"` : '';
-    
-    dots.push(`
-      <div class="${dotClass}" title="${title}${ratingStars}" ${onClickAttr} role="button" aria-label="${title}${ratingStars}">
-        <span class="dot-num">${d}</span>
-      </div>
-    `);
-  }
-  
-  const completedCount = topics.filter(t => visited.has(t.id)).length;
-  const totalRegistered = topics.length;
-  const completionPercent = totalRegistered > 0 ? Math.round((completedCount / totalRegistered) * 100) : 0;
+  // Only include days that have actual content, sorted by day number, renumbered 1…43
+  const dayTopics = getTopics()
+    .filter(t => t.category.includes('Weeks'))
+    .map(t => {
+      const match = t.id.match(/checklists\/day(\d+)$/);
+      return match ? { ...t, dayNum: parseInt(match[1], 10) } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.dayNum - b.dayNum);
+
+  const totalAvailable = dayTopics.length;
+  const completedCount = dayTopics.filter(t => visited.has(t.id)).length;
+  const completionPercent = totalAvailable > 0
+    ? Math.round((completedCount / totalAvailable) * 100)
+    : 0;
+
+  // Sequential index shown on the dot face; original day title shown in tooltip
+  const dots = dayTopics.map((topic, idx) => {
+    const sessionNum = idx + 1;
+    const isDone = visited.has(topic.id);
+    const dotClass = `roadmap-dot${isDone ? ' done' : ' active'}`;
+    const rating = confidenceRatings[topic.id];
+    const stars = rating ? ` (${'\u2605'.repeat(rating)}${'\u2606'.repeat(5 - rating)})` : '';
+    const label = `Session ${sessionNum}: ${topic.title}${stars}`;
+    return `
+      <div class="${dotClass}" title="${label}"
+           onclick="window.location.href='topics/${topic.file}'"
+           role="button" aria-label="${label}">
+        <span class="dot-num">${sessionNum}</span>
+      </div>`;
+  });
 
   return `
     <div class="studyplan-roadmap-container">
@@ -507,13 +501,13 @@ const renderStudyPlanRoadmap = () => {
         <div class="roadmap-title-wrap">
           <span class="roadmap-icon">📅</span>
           <div>
-            <h3 class="roadmap-main-title">60-Day Study Plan Roadmap</h3>
-            <p class="roadmap-subtitle">Track your senior developer journey day-by-day. Active and completed days are highlighted.</p>
+            <h3 class="roadmap-main-title">45-Day Study Plan Roadmap</h3>
+            <p class="roadmap-subtitle">${totalAvailable} sessions · hover a dot to see the topic · green = completed.</p>
           </div>
         </div>
         <div class="roadmap-stats">
           <div class="roadmap-stat-item">
-            <span class="roadmap-stat-val">${completedCount} / 60</span>
+            <span class="roadmap-stat-val">${completedCount} / ${totalAvailable}</span>
             <span class="roadmap-stat-label">Days Complete</span>
           </div>
           <div class="roadmap-stat-item">

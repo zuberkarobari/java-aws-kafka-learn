@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Microservices — Top 10 Interview Q&A</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<!-- inline styles removed by strip_inline_styles.js -->
+
+  <link rel="stylesheet" href="../../../css/styles.css" />
+  <link rel="stylesheet" href="../../../css/topic.css" />
+  </head>
+<body>
+  <main id="topic-content">
+
+
+<div class="hdr">
+  <div class="eye">Interview Preparation · Senior Backend Engineer</div>
+  <h1><span class="ms">Microservices</span><br/><span class="t10">Top 10 Most Asked</span></h1>
+  <div class="hdesc">The 10 questions that appear in virtually every senior microservices interview — answered with production depth from JP Morgan &amp; VISA experience. Every answer is grounded in real architectural decisions, failure modes, and trade-offs.</div>
+  <div class="chips">
+    <span class="chip cp">Service Discovery</span>
+    <span class="chip cb">API Gateway</span>
+    <span class="chip co">Saga Pattern</span>
+    <span class="chip cg">Circuit Breaker</span>
+    <span class="chip cp">Event-Driven</span>
+    <span class="chip cb">CAP Theorem</span>
+    <span class="chip co">CQRS</span>
+    <span class="chip cg">12-Factor App</span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="prog">
+    <span class="prog-label">PROGRESS</span>
+    <div class="prog-track"><div class="prog-fill" id="pF" style="width:0%"></div></div>
+    <span class="prog-count" id="pL">0 / 10 reviewed</span>
+  </div>
+
+  <!-- ══════════════════════ Q1 ══════════════════════ -->
+  <div class="qc" id="q1">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">01</span></span>
+      <div class="qbody">
+        <div class="qtxt">What are Microservices? How do they differ from Monoliths? What are the trade-offs?</div>
+        <div class="qtags"><span class="tag tp">Foundation</span><span class="tag tb">Must Know</span><span class="tag to">Always Asked First</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">This is your opening answer — frame it as a deliberate architectural trade-off, not "microservices are better." Interviewers at senior level want to see you acknowledge the cost.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>Definition:</strong> Microservices is an architectural style where a large application is decomposed into small, <kw class="kw">independently deployable</kw> services — each owning a single bounded business capability, its own data store, and communicating over lightweight protocols (HTTP/gRPC/messaging). At JP Morgan, the Ops Intelligence system is 12 independently deployable services. At VISA, the payment notification pipeline is a separate service from reconciliation.</div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Monolith vs Microservices — Core Differences:</strong>
+<div class="diag">MONOLITH:       [UI → Business Logic → Data Access → Single DB]
+                Deploy together, scale together, fail together
+
+MICROSERVICES:  [Service A] → [Service B] → [Service C]
+                     ↓              ↓              ↓
+                  [DB-A]         [DB-B]         [DB-C]
+                Deploy independently, scale independently</div></div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>Microservices Advantages:</strong> (1) <nt class="nt">Independent deployment</nt> — release Service A without touching Service B. (2) <nt class="nt">Independent scaling</nt> — scale only the reconciliation service during peak settlement, not the entire monolith. (3) <nt class="nt">Technology heterogeneity</nt> — Java for heavy processing, Go for high-throughput APIs. (4) <nt class="nt">Fault isolation</nt> — a bug in the notification service doesn't bring down payment processing. (5) Team autonomy — JP Morgan teams own their service end-to-end.</div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>Microservices Costs (The Honest Answer):</strong> (1) <nt class="nt">Distributed systems complexity</nt> — network failures, partial failures, eventual consistency. (2) <nt class="nt">Operational overhead</nt> — 12 services to deploy, monitor, and debug vs 1. (3) <nt class="nt">Data consistency</nt> — no ACID transactions across services. (4) <nt class="nt">Latency</nt> — network calls vs in-process calls. (5) <nt class="nt">Testing complexity</nt> — integration testing 12 services is harder than testing 1 monolith.</div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>When Microservices Make Sense:</strong> Large teams (Conway's Law — architecture mirrors team structure), different scaling requirements per domain, different release cadences per team, need for technology flexibility, domains with clear boundaries. When they DON'T make sense: small team (&lt;10 engineers), startup MVP (operational overhead too high), tightly coupled domains where service boundaries are unclear.</div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>JP Morgan Context — Why We Use Microservices:</strong> The Ops Intelligence system has 6 teams working on different domains simultaneously. Without microservices, team A's deployment would require coordinating with teams B through F. With independent services, each team deploys 8-10 times per week without affecting others. The operational overhead (Terraform, Jenkins pipelines, CloudWatch dashboards per service) is justified by the deployment independence at this scale.</div></li>
+      </ul>
+      <div class="tip">Always acknowledge trade-offs. Saying "microservices are always better" is a red flag to senior interviewers. The right answer is: "microservices make sense WHEN the team size and domain complexity justify the operational overhead."</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q2 ══════════════════════ -->
+  <div class="qc" id="q2">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">02</span></span>
+      <div class="qbody">
+        <div class="qtxt">How do Microservices communicate? REST vs gRPC vs Messaging — when do you use each?</div>
+        <div class="qtags"><span class="tag tp">Communication</span><span class="tag tb">Sync vs Async</span><span class="tag to">Frequently Asked</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">Show you know all three patterns and — critically — when NOT to use each. The sync vs async decision is what separates senior from mid-level answers.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>Synchronous REST (HTTP/JSON):</strong> Simple, universal, human-readable, stateless. Best for: request-response queries where the caller needs the result immediately, public-facing APIs (external consumers), simple CRUD operations. At JP Morgan: the Event Query API (dashboards querying event history) uses REST — the dashboard needs the data immediately to render. Downside: tight coupling between caller and callee availability.</div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Synchronous gRPC (HTTP/2 + Protocol Buffers):</strong> Binary serialization (3-10x smaller payload than JSON), strongly-typed contracts via .proto files, bidirectional streaming, code generation for all languages. Best for: internal service-to-service calls where performance matters, streaming data, polyglot microservices. Downside: less human-readable, steeper learning curve, no native browser support. At JP Morgan: high-frequency internal enrichment calls use gRPC — 5x less bandwidth than equivalent JSON.</div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>Asynchronous Messaging (Kafka/SQS):</strong> Decoupled producer and consumer — producer doesn't wait for or know about consumers. Best for: event notification, fire-and-forget operations, fan-out to multiple consumers, operations where the caller doesn't need the result immediately, temporal decoupling (consumer processes when ready). At VISA: payment events published to Kafka — notification, reconciliation, and audit services all consume independently. Adding a new consumer requires zero producer changes.
+<div class="diag">SYNC:   Producer ──→ Consumer (waits for response) → tight coupling
+ASYNC:  Producer ──→ [Kafka Topic] ←── Consumer A
+                                   ←── Consumer B  (loose coupling)
+                                   ←── Consumer C</div></div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>Decision Framework:</strong>
+<pre><span class="cm">Need immediate result?         → REST or gRPC</span>
+<span class="cm">High-frequency internal calls? → gRPC (performance matters)</span>
+<span class="cm">External / public API?         → REST (universally supported)</span>
+<span class="cm">Fire-and-forget notification?  → Kafka/SQS</span>
+<span class="cm">Multiple consumers same event? → Kafka (consumer groups)</span>
+<span class="cm">Order guaranteed per entity?   → Kafka (key-based partitioning)</span>
+<span class="cm">Simple work queue?             → SQS</span>
+<span class="cm">Need event replay?             → Kafka (retention policy)</span></pre></div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>Choreography vs Orchestration:</strong> In async systems, choreography means each service reacts to events independently — no central coordinator. Orchestration means a central saga orchestrator directs the flow. Choreography: more decoupled, harder to trace. Orchestration: clear audit trail, easier to debug, single point of failure risk. At VISA I used orchestration for the payment reconciliation saga because financial workflows need a traceable audit trail of each step.</div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>The Hybrid Approach (JP Morgan):</strong> We use all three. REST for external API (event dashboard). gRPC for internal enrichment service calls (performance-critical, same VPC). Kafka for event processing pipeline (async, multiple consumers, replay). SQS for simple inter-service command passing (trigger report generation). The key insight: no single protocol is right for everything — choose based on the coupling, latency, and reliability requirements of each interaction.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q3 ══════════════════════ -->
+  <div class="qc" id="q3">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">03</span></span>
+      <div class="qbody">
+        <div class="qtxt">How do you handle distributed transactions across Microservices? Explain the Saga pattern.</div>
+        <div class="qtags"><span class="tag tp">Saga Pattern</span><span class="tag tb">Distributed Tx</span><span class="tag tg">System Design</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">This is the most technically deep question in microservices interviews. Show you understand WHY 2PC fails and HOW Saga solves it with a real VISA example.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>The Problem — No ACID Across Services:</strong> In a monolith, a single DB transaction spans all operations atomically — if one step fails, everything rolls back. In microservices, each service owns its own database. There is no single transaction manager that spans all DBs. If Service A commits and Service B fails, you have an inconsistent distributed state — this is the core challenge of distributed transactions.</div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Why NOT 2-Phase Commit (2PC):</strong> 2PC uses a coordinator that asks all participants to "prepare" (phase 1), then "commit" (phase 2). The problem: if the coordinator crashes between phase 1 and 2, ALL participants hold locks indefinitely — distributed deadlock. In microservices environments with network partitions and independent failure modes, 2PC is a liability, not a solution. It creates tight coupling and availability risk.</div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>The Saga Pattern — Sequence of Local Transactions:</strong> A Saga decomposes a distributed transaction into a series of local transactions, each publishing an event to trigger the next step. If any step fails, compensating transactions undo the preceding steps.
+<div class="diag">VISA Payment Settlement Saga:
+Step 1: ingest_payment_event     → success → publish PaymentIngested
+Step 2: match_to_settlement      → success → publish SettlementMatched
+Step 3: apply_to_ledger          → FAIL    → publish LedgerUpdateFailed
+   ↓
+COMPENSATE:
+Step 2C: unmark_settlement       → reversal
+Step 1C: flag_event_for_review   → creates audit record</div></div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>Choreography vs Orchestration Sagas:</strong> <ok class="ok">Choreography:</ok> each service publishes events and subscribes to others — no central coordinator. Decoupled but hard to trace the overall workflow. <ok class="ok">Orchestration:</ok> a Saga Orchestrator directs all steps — service A complete? Tell B to go. B complete? Tell C. The orchestrator maintains state in a DB table. I used orchestration at VISA because financial workflows need a full audit trail of every step in the saga — the orchestrator's state table was the single source of truth for any settlement's progress.</div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>Transactional Outbox — Ensuring Reliable Event Publishing:</strong> The biggest risk in a Saga: Service A commits to DB but the event publication to Kafka fails. The Saga is now in an inconsistent state. The Outbox pattern solves this — write the event to an <code>outbox</code> table in the SAME local DB transaction as the business update. A relay service reads the outbox and publishes to Kafka. If the DB commit succeeds, the event WILL be published eventually — guaranteed.
+<pre><span class="an">@Transactional</span>  <span class="cm">// single DB transaction</span>
+<span class="kw">public void</span> saveAndRecord(<span class="ty">Settlement</span> s) {
+    settlementRepo.save(s);            <span class="cm">// business entity</span>
+    outboxRepo.save(<span class="kw">new</span> <span class="ty">OutboxMessage</span>(<span class="cm">/* event data */</span>));
+    <span class="cm">// If commit succeeds → event guaranteed to publish</span>
+}</pre></div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>Compensating Transactions Must Be Idempotent:</strong> Compensations may be retried if they fail. Running a compensation twice must produce the same result as running it once. Design every compensation to check current state before applying: "if settlement is not already cancelled, cancel it; if it is already cancelled, return success." This idempotency requirement applies to both forward steps AND compensating steps in a Saga.</div></li>
+      </ul>
+      <div class="warn">Sagas do NOT provide isolation — other sagas can read intermediate state. This is "BASE" (Basically Available, Soft-state, Eventually consistent) rather than ACID. Design your business flows to tolerate brief periods of inconsistency, or add domain-level locking (e.g., PENDING status that prevents concurrent settlement operations on the same entity).</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q4 ══════════════════════ -->
+  <div class="qc" id="q4">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">04</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is Service Discovery? How does it work and how did you implement it?</div>
+        <div class="qtags"><span class="tag tp">Service Discovery</span><span class="tag tb">Infrastructure</span><span class="tag to">Cloud Native</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">Connect this to your AWS/ECS experience — service discovery in cloud environments is done differently than the classic Eureka approach.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>The Problem Service Discovery Solves:</strong> In microservices, service instances are ephemeral — they start, stop, scale, and move across hosts constantly. Hardcoding IP addresses breaks immediately. Service Discovery allows services to find each other dynamically by name rather than by fixed IP/port. Two patterns: Client-side discovery (client asks a registry for addresses, then load-balances) and Server-side discovery (infrastructure handles it — load balancer, DNS).</div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Client-Side Discovery — Eureka (Classic Spring Cloud):</strong> Services register with Eureka on startup. Clients query Eureka to get a list of available instances, then use a client-side load balancer (Ribbon/Spring Cloud LoadBalancer) to pick one. Works well but: Eureka is another service to operate, clients must implement discovery logic, works best in VM/bare-metal environments.
+<pre><span class="cm"># Spring Cloud Netflix Eureka (older approach)</span>
+<span class="an">@EnableDiscoveryClient</span>  <span class="cm">// register with Eureka</span>
+<span class="cm"># Client-side load-balanced call:</span>
+<span class="an">@LoadBalanced</span>
+<span class="ty">WebClient</span>.builder().baseUrl(<span class="st">"http://enrichment-service"</span>).build();</pre></div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>Server-Side Discovery — AWS ECS + Route 53 (JP Morgan):</strong> In our ECS Fargate deployment, service discovery uses AWS Cloud Map + Route 53 private hosted zones. Each ECS service registers automatically with a DNS name: <code>enrichment-service.ops.local</code>. The Application Load Balancer handles load balancing. Services call each other by DNS name — zero client-side registry logic. AWS manages registration, deregistration, and health checking.
+<div class="diag">Service A → DNS lookup "enrichment.ops.local"
+           → AWS Cloud Map returns healthy instance IPs
+           → ALB load-balances across healthy tasks
+           → Service A never knows about individual task IPs</div></div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>Kubernetes Service Discovery (for context):</strong> Kubernetes uses built-in DNS. Each Service object gets a stable DNS name: <code>enrichment-service.namespace.svc.cluster.local</code>. kube-proxy handles load balancing across matching pods. Services call each other by name — fully managed by Kubernetes. No external registry needed. This is why Kubernetes has largely replaced Eureka in modern microservices deployments.</div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>Health Checking and Deregistration:</strong> Service discovery only works correctly if unhealthy instances are deregistered promptly. At JP Morgan, ECS health checks hit <code>/actuator/health/readiness</code> every 15 seconds. If 3 consecutive checks fail, ECS removes the task from the target group AND deregisters it from Cloud Map. New requests never reach the unhealthy instance. This automatic deregistration is essential — stale registrations cause cascading failures.</div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>Eureka vs Cloud Map vs Kubernetes DNS — Decision:</strong> Use Eureka: legacy Spring Cloud ecosystem, on-premises deployment. Use AWS Cloud Map: ECS-native, fully managed, integrates with ALB/Route 53, minimal ops overhead — our choice at JP Morgan. Use Kubernetes DNS: Kubernetes-native, works out of the box. The trend is toward infrastructure-managed discovery (cloud-native or Kubernetes) over application-managed discovery (Eureka) — less client-side complexity, more reliable.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q5 ══════════════════════ -->
+  <div class="qc" id="q5">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">05</span></span>
+      <div class="qbody">
+        <div class="qtxt">What is an API Gateway? What responsibilities does it own and how did you configure it?</div>
+        <div class="qtags"><span class="tag tp">API Gateway</span><span class="tag tb">Cross-Cutting</span><span class="tag tg">Infrastructure</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">The API Gateway is a critical architectural component. Show you know what belongs there vs what belongs in individual services — that boundary matters.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>What an API Gateway Is:</strong> A single entry point for all client requests to the microservices ecosystem. It sits in front of all services and handles cross-cutting concerns so individual services don't have to. Without an API Gateway, every client would need to know the addresses of all services, and every service would have to implement authentication, rate limiting, and SSL termination redundantly.
+<div class="diag">Client → [API Gateway] → /events     → EventService
+                      → /enrichment → EnrichmentService
+                      → /reports    → ReportService
+No cross-cutting code in individual services</div></div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>API Gateway Responsibilities:</strong> (1) <strong>Authentication &amp; Authorization</strong> — validate JWT tokens, check scopes. (2) <strong>Rate Limiting</strong> — per-client, per-endpoint throttling. (3) <strong>SSL Termination</strong> — decrypt HTTPS once at the edge. (4) <strong>Request Routing</strong> — route <code>/v1/events</code> to EventService v1, <code>/v2/events</code> to EventService v2. (5) <strong>Request/Response Transformation</strong> — header injection, protocol translation. (6) <strong>Logging &amp; Tracing</strong> — assign correlation IDs to all incoming requests. (7) <strong>Circuit Breaking</strong> — at the edge level.</div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>AWS API Gateway at JP Morgan:</strong>
+<pre><span class="cm"># Terraform configuration:</span>
+resource <span class="st">"aws_api_gateway_rest_api"</span> <span class="st">"ops_api"</span> {
+  name = <span class="st">"jpmorgan-ops-intelligence-api"</span>
+}
+<span class="cm"># JWT Authorizer validates every request:</span>
+resource <span class="st">"aws_api_gateway_authorizer"</span> <span class="st">"jwt"</span> {
+  type                   = <span class="st">"JWT"</span>
+  identity_source        = <span class="st">"$request.header.Authorization"</span>
+  jwks_uri               = <span class="st">"https://auth.jpmorgan.com/.well-known/jwks"</span>
+}
+<span class="cm"># Usage plans for rate limiting per API key</span></pre></div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>What Does NOT Belong in the API Gateway:</strong> Business logic, domain validation, data transformation specific to one service's domain. The gateway is infrastructure — it should be stateless and domain-agnostic. If your gateway contains business rules, you've made it a service and now you have a deployment dependency problem. Keep it thin.</div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>Spring Cloud Gateway (Code-Level):</strong>
+<pre><span class="an">@Bean</span>
+<span class="kw">public</span> <span class="ty">RouteLocator</span> routes(<span class="ty">RouteLocatorBuilder</span> b) {
+    <span class="kw">return</span> b.routes()
+        .route(<span class="st">"events-v2"</span>, r -&gt; r
+            .path(<span class="st">"/v2/events/**"</span>)
+            .filters(f -&gt; f
+                .requestRateLimiter(c -&gt; c.setKeyResolver(ipKeyResolver()))
+                .addRequestHeader(<span class="st">"X-Gateway-Version"</span>, <span class="st">"2"</span>))
+            .uri(<span class="st">"lb://events-service-v2"</span>))
+        .build();
+}</pre></div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>BFF Pattern (Backend for Frontend):</strong> An evolution of the API Gateway pattern — instead of one gateway for all clients, create specialized gateways for each client type. A Mobile BFF returns compact, mobile-optimized responses. A Web BFF returns richer, web-optimized responses. At JP Morgan, the internal operations dashboard (complex aggregated data) has a different BFF from the external API (simpler, stricter rate limits). Each BFF is owned by the team that owns the client it serves.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q6 ══════════════════════ -->
+  <div class="qc" id="q6">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">06</span></span>
+      <div class="qbody">
+        <div class="qtxt">Explain the Circuit Breaker pattern in Microservices — states, fallbacks, and when it saved production.</div>
+        <div class="qtags"><span class="tag tp">Circuit Breaker</span><span class="tag tb">Resilience</span><span class="tag tr">Production Critical</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">This is the resilience question. Ground it in a real production scenario — what would have happened WITHOUT the circuit breaker is as important as what happened WITH it.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>The Cascade Failure Problem It Prevents:</strong> In microservices, services call each other. If Service B becomes slow (3s instead of 100ms), all of Service A's threads accumulate waiting for B. Service A's thread pool exhausts. Service A becomes slow too. Now Service C (which calls A) exhausts its threads. The entire system cascades to failure because of one slow downstream service. The circuit breaker breaks this cascade.
+<div class="diag">WITHOUT CB:  A calls B (slow) → A threads exhaust → C calls A (slow) → cascade
+WITH CB:     A calls B (slow) → circuit OPENS → A returns fallback in &lt;1ms
+             → C calls A → A responds normally → no cascade</div></div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Circuit Breaker States (Resilience4j):</strong>
+<pre>CLOSED:    Normal operation. Calls pass through.
+           Failures counted in sliding window.
+           → If failure rate > 50%: trip to OPEN
+
+OPEN:      All calls immediately rejected.
+           Fallback returned. Downstream gets breathing room.
+           → After 30s wait: move to HALF_OPEN
+
+HALF_OPEN: Allow 3 probe calls through.
+           → All 3 succeed: close circuit (service recovered)
+           → Any fail: re-open circuit for another 30s</pre></div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>Fallback Strategy at JP Morgan:</strong>
+<pre><span class="an">@CircuitBreaker</span>(name=<span class="st">"enrichmentService"</span>, fallbackMethod=<span class="st">"enrichFallback"</span>)
+<span class="kw">public</span> <span class="ty">Mono</span>&lt;<span class="ty">Enrichment</span>&gt; enrich(<span class="ty">String</span> eventId) {
+    <span class="kw">return</span> webClient.get().uri(<span class="st">"/enrich/{id}"</span>, eventId)
+        .retrieve().bodyToMono(<span class="ty">Enrichment</span>.class);
+}
+<span class="kw">public</span> <span class="ty">Mono</span>&lt;<span class="ty">Enrichment</span>&gt; enrichFallback(<span class="ty">String</span> id, <span class="ty">Throwable</span> t) {
+    <span class="cm">// Try stale Redis cache first, then safe defaults</span>
+    <span class="kw">return</span> redisCache.get(<span class="st">"enrich:"</span>+id)
+        .switchIfEmpty(<span class="ty">Mono</span>.just(<span class="ty">Enrichment</span>.minimal(id)));
+}</pre></div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>The VISA Incident — Where It Saved Us:</strong> The counterparty API slowed from 100ms to 3,000ms during a third-party maintenance window. Without a circuit breaker, this would have exhausted our notification service's thread pool in ~60 seconds, causing downstream cascade failure to the reconciliation pipeline. With the circuit breaker configured with a 2s slow-call threshold: after 5 consecutive slow calls, circuit opened. Fallback served minimal enrichment. Notification pipeline continued at 85% quality. Counterparty API recovered 20 minutes later, circuit closed automatically. Zero manual intervention.</div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>Slow Call Threshold — Often Missed:</strong> Most engineers configure only failure rate threshold. But in financial systems, a slow response is just as dangerous as a failed one. Configure both:
+<pre>resilience4j.circuitbreaker.instances.counterpartyApi:
+  failureRateThreshold: 50       <span class="cm"># 50% errors → OPEN</span>
+  slowCallRateThreshold: 50      <span class="cm"># 50% slow calls → OPEN too</span>
+  slowCallDurationThreshold: 2s  <span class="cm"># anything &gt;2s = "slow"</span></pre></div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>Circuit Breaker vs Retry — When to Use Each:</strong> Retry handles <nt class="nt">transient failures</nt> (network blip, brief overload — retrying makes sense). Circuit Breaker handles <nt class="nt">sustained failures</nt> (service is genuinely down or overloaded — retrying makes it worse by adding more load). Combine both: Retry wraps individual calls (3 retries with backoff), Circuit Breaker monitors aggregate call health and trips when the service is fundamentally unhealthy. Retry inside Circuit Breaker, not the other way around.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q7 ══════════════════════ -->
+  <div class="qc" id="q7">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">07</span></span>
+      <div class="qbody">
+        <div class="qtxt">Explain CQRS and Event Sourcing — how do they work together and when should you use them?</div>
+        <div class="qtags"><span class="tag tp">CQRS</span><span class="tag tb">Event Sourcing</span><span class="tag tg">Advanced Pattern</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">Know when NOT to use these — that's the senior signal. Many teams apply CQRS/ES unnecessarily and create massive complexity.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>CQRS — Command Query Responsibility Segregation:</strong> Separate the model for reading data (Query) from the model for writing data (Command). Commands modify state. Queries read state. Why? Reads and writes often have very different requirements — queries may need denormalized views optimized for specific UIs; writes need consistency and validation. Separate models allows each to be optimized independently.
+<div class="diag">CQRS Architecture:
+Client → [Command API] → CommandService → Write DB (normalized)
+                                        → publishes event
+                                        → Read DB (denormalized, optimized)
+Client → [Query API]  → QueryService → Read DB (fast, indexed for queries)</div></div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Event Sourcing — Store Events, Not State:</strong> Instead of storing the current state of an entity (UPDATE events SET status='COMPLETED'), store every event that led to the current state (INSERT INTO event_log: PaymentInitiated, PaymentProcessed, PaymentCompleted). The current state is derived by replaying events. Benefits: complete audit trail, ability to replay history, temporal queries ("what was the account balance on March 1?"), event-driven integration.</div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>CQRS + Event Sourcing Together at VISA:</strong> The settlement service used a simplified version: Commands (ApplySettlement, MarkDiscrepancy) were processed and events appended to an event log. Query projections were built from the event log — a real-time settlement summary projection for the dashboard, a separate discrepancy report projection. Adding a new report required only a new projection from the same event log — no new DB columns, no migration:
+<pre>Event Log: [SettlementIngested, MatchedToCounterparty, LedgerApplied, NotificationSent]
+     ↓
+Projection 1: SettlementSummaryView (for dashboard)
+Projection 2: DiscrepancyReportView (for compliance)
+Projection 3: AuditTrailView (for regulators)</pre></div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>Eventual Consistency of Read Models:</strong> Read projections are updated asynchronously after write events. A user who posts a command will briefly see stale data in the query side. This is acceptable for most use cases ("Your request is processing") but not for all (bank balance shown immediately after deposit must be accurate). Design your UX to handle eventual consistency — show "updating..." states, provide refresh mechanisms, or use synchronous read-after-write for critical paths.</div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>When to Use CQRS:</strong> Use CQRS when: read and write loads are vastly different (10:1 read:write ratio), different teams own read vs write concerns, multiple read representations needed for different consumers. Do NOT use CQRS for: simple CRUD with no complex read requirements, small teams where the complexity overhead exceeds the benefit, systems with &lt;100K records where a single well-indexed table serves all queries. CQRS is not a default — it's a solution to a specific scaling problem.</div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>When to Use Event Sourcing:</strong> Use it when: you need a complete immutable audit trail (financial systems, healthcare, legal), you need temporal queries ("what was the state at time T?"), you need event replay for rebuilding projections or debugging, you're building event-driven systems where events are the first-class integration mechanism. Do NOT use it: when the full audit trail is not required, when the event schema will change frequently (schema evolution is hard with event sourcing), for simple CRUD domains. At JP Morgan, we use event sourcing for the audit trail (regulatory requirement) but not for all services.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q8 ══════════════════════ -->
+  <div class="qc" id="q8">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">08</span></span>
+      <div class="qbody">
+        <div class="qtxt">How do you ensure data consistency across Microservices? Explain eventual consistency and compensating transactions.</div>
+        <div class="qtags"><span class="tag tp">Data Consistency</span><span class="tag tb">Eventual Consistency</span><span class="tag tg">Distributed Systems</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">This is the hardest problem in microservices — show you've dealt with it in production, not just theory.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>The Core Challenge:</strong> Each microservice owns its own database. When a business operation spans multiple services (create order → reserve inventory → charge payment → ship), there is no single ACID transaction. Any step can fail after previous steps have committed. You must design for partial failure and inconsistency as a normal operating condition, not an exception.</div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Eventual Consistency — The Accepted Model:</strong> In distributed systems, you trade strong consistency for availability. "Eventually consistent" means: if no new updates are made to an entity, eventually all reads will return the same value. The window of inconsistency might be milliseconds or seconds. Design your system to tolerate brief inconsistencies. At JP Morgan, operational dashboard data may be 1-2 seconds stale — acceptable. Payment settlement amounts are synchronously consistent — not acceptable to be stale.</div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>Idempotency — The Foundation:</strong> Every operation that may be retried must be idempotent. In a distributed system with at-least-once delivery, the same message will arrive more than once. Idempotency ensures processing it twice produces the same result as once. Implementation: check a unique event_id before processing. If already processed, return success without re-processing:
+<pre><span class="cm">// Check before processing — atomic with the write operation</span>
+<span class="kw">if</span> (processedEventRepo.existsById(eventId)) <span class="kw">return</span>; <span class="cm">// already done</span>
+processBusinessLogic(event);
+processedEventRepo.save(<span class="kw">new</span> <span class="ty">ProcessedEvent</span>(eventId));</pre></div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>Compensating Transactions vs Rollbacks:</strong> Traditional rollbacks undo a DB operation — only possible within a single transaction. In microservices with committed local transactions, you cannot rollback. Instead, you apply <nt class="nt">compensating transactions</nt> — new operations that create the opposite business effect. "Cancel the order" is a compensation for "create the order." Compensations are domain-meaningful operations, not technical undos.
+<div class="diag">VISA Settlement Failure Compensation:
+Forward:     ingest → match → apply_ledger → FAIL
+Compensate:  revert_ledger (new business action, not a SQL ROLLBACK)
+             unmark_settlement (marks record as unmatched)
+             flag_for_review (creates audit record)</div></div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>Outbox Pattern for Reliable Event Delivery:</strong> The dual-write problem: if you write to DB and publish to Kafka separately, one can succeed and the other fail. Solution — write to an outbox table in the same DB transaction as the business update. A Debezium CDC (Change Data Capture) connector or a polling relay reads the outbox and publishes to Kafka. Exactly-once delivery guaranteed: event published if and only if the DB transaction committed.</div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>Domain-Level Locking via Status Fields:</strong> A pragmatic approach used at VISA for preventing concurrent modifications: add a status field to entities (PENDING, PROCESSING, COMPLETED, FAILED). A settlement in PROCESSING status is locked — other services attempting to modify it check the status first and reject if PROCESSING. This is application-level locking, not DB locking — works across services because all check the same shared DB status field. Lightweight and effective for low-contention scenarios.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q9 ══════════════════════ -->
+  <div class="qc" id="q9">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">09</span></span>
+      <div class="qbody">
+        <div class="qtxt">How do you design Microservices for observability? Explain the three pillars and how you implemented them.</div>
+        <div class="qtags"><span class="tag tp">Observability</span><span class="tag tb">Metrics · Logs · Traces</span><span class="tag tg">Production</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">Observability is what separates engineers who write microservices from engineers who OPERATE microservices. Show all three pillars with JP Morgan specifics.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>Why Observability is Different in Microservices:</strong> In a monolith, you SSH into one server and grep one log file. In microservices, a single user request spans 5-10 services across 30-50 container instances. When something fails, you must be able to: see which service is slow (metrics), understand what happened in detail (logs), trace the full request path (distributed traces). Without all three, production debugging takes hours. With all three, it takes minutes.</div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Pillar 1 — Metrics (CloudWatch + Micrometer at JP Morgan):</strong> The 4 Golden Signals per service: Latency (p99 per endpoint), Traffic (requests/min), Errors (5xx rate), Saturation (pool utilization). Plus business metrics: events_processed/min, kafka_consumer_lag, circuit_breaker_state. CloudWatch Composite Alarms combining multiple signals — single metric alarms generate too much noise. Alert only when BOTH latency p99 &gt; 500ms AND error rate &gt; 2% simultaneously. This reduced false alarms by 70%.</div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>Pillar 2 — Structured Logs (JSON + Correlation ID):</strong> Every log line is JSON with standard fields: timestamp, level, service, correlationId, eventId, durationMs, message. The correlation ID is generated at the API Gateway, propagated in every HTTP header and Kafka message header, and added to MDC for every log line.
+<pre><span class="cm">// CloudWatch Logs Insights query:</span>
+fields @timestamp, level, service, correlationId, durationMs
+| filter correlationId = "req-abc-123"
+| sort @timestamp asc
+<span class="cm">// Full trace across 12 services in 5 seconds — was 20 minutes before</span></pre></div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>Pillar 3 — Distributed Tracing (Micrometer Tracing + X-Ray):</strong> Each request gets a Trace ID at entry. Every service call creates a Span — a timed unit of work with the trace ID. Spans are reported to AWS X-Ray. The result is a service map showing exact latency contribution of each service and DB call. At JP Morgan, X-Ray identified that a missing Aurora index was adding 300ms per request — invisible without tracing because the slow query was in a different service than the symptom appeared in.</div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>MTTD Reduction — The 35% I Achieved:</strong> Before: ops team received alerts after users reported issues — MTTD ~20 minutes. After implementing structured logging + composite alarms + X-Ray tracing: MTTD dropped to ~13 minutes (35% reduction). Key changes: (1) Composite alarms fire faster and with less noise. (2) Structured logs let investigators find root cause in 2 minutes instead of 20. (3) X-Ray service map immediately shows which service is the bottleneck — no guessing.</div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>Runbook Links on Every Alert:</strong> Technical observability is half the battle. The other half is ensuring on-call engineers know what to do when an alert fires. Every CloudWatch alarm at JP Morgan has a description field linking to a Confluence runbook: detection signals, diagnostic steps, resolution actions, escalation path. An alert without a runbook is an alert that causes a 2 AM panic. An alert with a runbook is an alert that gets resolved in 10 minutes.</div></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Q10 ══════════════════════ -->
+  <div class="qc" id="q10">
+    <div class="qq" onclick="tog(this)">
+      <span class="qnum"><span class="qnum-inner">10</span></span>
+      <div class="qbody">
+        <div class="qtxt">What are the 12-Factor App principles? How do they guide Microservices design in production?</div>
+        <div class="qtags"><span class="tag tp">12-Factor</span><span class="tag tb">Cloud Native</span><span class="tag tg">Production Best Practices</span></div>
+      </div>
+      <span class="qarr">▾</span>
+    </div>
+    <div class="ans">
+      <div class="ai">Don't just list all 12 factors — focus on the 6 most important ones and connect each to a concrete JP Morgan or VISA practice. That's what interviewers remember.</div>
+      <ul class="bl">
+        <li><span class="bi i1">01</span><div class="bc"><strong>What the 12-Factor App Is:</strong> A methodology for building software-as-a-service apps that are portable, scalable, and maintainable. Developed by Heroku engineers, it's now the de facto standard for cloud-native microservices. Every factor addresses a specific class of production problems. The 12 factors are: Codebase, Dependencies, Config, Backing Services, Build/Release/Run, Processes, Port Binding, Concurrency, Disposability, Dev/Prod Parity, Logs, Admin Processes.</div></li>
+        <li><span class="bi i2">02</span><div class="bc"><strong>Factor 3 — Config (Most Important in Practice):</strong> "Store config in the environment." Never hardcode DB URLs, API keys, or service addresses in code. Never commit secrets to version control. All config that differs between environments (dev/staging/prod) must come from environment variables or a config service. At JP Morgan: all secrets in AWS Secrets Manager, all environment-specific config in ECS task environment variables. The same Docker image runs in all 3 environments — only config changes.</div></li>
+        <li><span class="bi i3">03</span><div class="bc"><strong>Factor 6 — Processes (Stateless):</strong> "Execute the app as one or more stateless processes." Services must not store session state in memory between requests. All state goes to external stores (Redis, RDS, S3). This enables horizontal scaling — any instance can handle any request. At JP Morgan: all 6 EventService instances are interchangeable. ECS scales from 2 to 20 tasks during peak with zero coordination overhead because there's no shared in-memory state between instances.</div></li>
+        <li><span class="bi i4">04</span><div class="bc"><strong>Factor 9 — Disposability:</strong> "Maximize robustness with fast startup and graceful shutdown." Services should start fast (be ready quickly for auto-scaling), and shut down gracefully (finish in-flight requests before stopping). At JP Morgan: startup optimized to 8 seconds via Spring Boot lazy initialization + AOT. Graceful shutdown configured with <code>server.shutdown=graceful</code> + 30s timeout. ECS rolling deployments complete without dropping a single request.</div></li>
+        <li><span class="bi i5">05</span><div class="bc"><strong>Factor 11 — Logs (Treat as Event Streams):</strong> "Treat logs as event streams." Services write to stdout only — they do not manage log files or log rotation. The infrastructure (ECS → CloudWatch Logs) handles collection, storage, and routing. At JP Morgan: Spring Boot writes JSON-structured logs to stdout. ECS CloudWatch log driver captures them to log groups. No log configuration inside the service — just <code>System.out.println</code> via SLF4J, the platform handles the rest.</div></li>
+        <li><span class="bi i6">06</span><div class="bc"><strong>Factor 10 — Dev/Prod Parity:</strong> "Keep development, staging, and production as similar as possible." The biggest source of "works on my machine" bugs is environment drift. At JP Morgan: same Docker image in all environments. Same Terraform modules (different variables). Same Kafka cluster type (different MSK instance size). Local development uses Docker Compose with real Kafka and PostgreSQL containers — not in-memory fakes. When local behaves like prod, production surprises disappear.
+<div class="diag">Same image:   dev → staging → prod (only config differs)
+Same infra:   LocalKafka → MSK-small → MSK-large
+Same DB:      H2 ✗  →  PostgreSQL container ✓  → Aurora ✓
+This alignment eliminated "works in dev, fails in prod" incidents</div></div></li>
+      </ul>
+      <div class="tip">When you cite the 12-Factor App in an interview, always say "the ones that matter most in practice are Config (Factor 3), Processes (Factor 6), and Disposability (Factor 9) — these three directly determine whether your service can scale, deploy, and recover reliably." This shows practical wisdom, not textbook recitation.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">MICROSERVICES TOP 10 · SERVICE DISCOVERY · SAGA · CIRCUIT BREAKER · CQRS · OBSERVABILITY · 12-FACTOR · JP MORGAN &amp; VISA · 2025</div>
+
+<script>
+let reviewed = new Set();
+function tog(btn) {
+  const card = btn.closest('.qc');
+  card.classList.toggle('open');
+  const id = card.id;
+  if (card.classList.contains('open')) reviewed.add(id);
+  const total = document.querySelectorAll('.qc').length;
+  const pct = Math.round((reviewed.size / total) * 100);
+  document.getElementById('pF').style.width = pct + '%';
+  document.getElementById('pL').textContent = reviewed.size + ' / ' + total + ' reviewed';
+}
+</script>
+
+  </main>
+  <script type="module" src="../../../js/topic.js"></script>
+  </body>
+</html>

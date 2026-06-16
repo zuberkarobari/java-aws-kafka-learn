@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spring MVC Routing Engine - Deep Tech Reel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    :root {
+        --bg-color: #020617; /* Deep Slate */
+        --neon-cyan: #2dd4bf; /* Teal */
+        --neon-pink: #f472b6; /* Pink */
+        --neon-purple: #818cf8; /* Indigo */
+        --neon-red: #f43f5e; /* Rose */
+        --neon-green: #34d399; /* Emerald */
+        --neon-orange: #fb923c; /* Orange */
+        --panel-bg: rgba(15, 23, 42, 0.7);
+        --spring-green: #6db33f;
+    }
+
+    body {
+        margin: 0; padding: 0; background-color: #000; color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        display: flex; justify-content: center; align-items: center;
+        min-height: 100vh; overflow: hidden;
+    }
+
+    /* 9:16 Aspect Ratio Container - Strict Flex Layout */
+    #reel-container {
+        width: 100%; max-width: 420px; height: 100vh; max-height: 850px;
+        background: var(--bg-color); position: relative;
+        box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6); border: 1px solid rgba(255,255,255,0.1);
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 16px;
+    }
+
+    /* Aurora Background Engine */
+    .aurora-bg {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        overflow: hidden; z-index: 0; background: var(--bg-color);
+        background-image: 
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    
+    .orb {
+        position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.4;
+        animation: float 15s infinite ease-in-out alternate;
+    }
+    .orb-1 { width: 300px; height: 300px; background: #3b82f6; top: -50px; left: -100px; }
+    .orb-2 { width: 350px; height: 350px; background: #8b5cf6; bottom: -50px; right: -100px; animation-delay: -5s; }
+
+    @keyframes float {
+        0% { transform: translate(0, 0) scale(1); }
+        100% { transform: translate(20px, -20px) scale(1.1); }
+    }
+
+    /* Header */
+    .header { padding: 25px 20px 10px; text-align: center; z-index: 10; flex-shrink: 0;}
+    .header h1 {
+        font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 800;
+        background: linear-gradient(135deg, #ffffff, var(--spring-green));
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-bottom: 4px; letter-spacing: -0.5px;
+    }
+    .header p {
+        color: var(--neon-cyan); font-size: 11px; font-family: 'JetBrains Mono', monospace;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0;
+    }
+
+    /* Top Half: Visual Canvas Area */
+    .canvas {
+        flex: 1.3; position: relative; z-index: 5; display: flex;
+        align-items: center; justify-content: center; min-height: 0; padding: 10px 0;
+    }
+
+    .scene-container {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    }
+    .scene-container.active { opacity: 1; pointer-events: auto; }
+
+    /* The Dispatcher Engine Visuals */
+    .engine-core {
+        position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.9); border: 2px solid var(--spring-green);
+        padding: 12px 20px; border-radius: 8px; font-family: 'Space Grotesk'; font-weight: bold;
+        box-shadow: 0 0 25px rgba(109, 179, 63, 0.3); z-index: 20; color: #fff; text-align: center;
+    }
+    .engine-core span { font-size: 9px; color: var(--spring-green); font-family: 'JetBrains Mono'; display: block; margin-top: 2px; text-transform: uppercase;}
+
+    /* Nodes & Pipelines */
+    .node {
+        position: absolute; background: rgba(0,0,0,0.8); border: 1px solid var(--neon-purple);
+        padding: 10px 15px; border-radius: 8px; font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; color: var(--neon-purple); font-weight: bold; text-align: center;
+        box-shadow: 0 0 15px rgba(168, 85, 247, 0.2); z-index: 15; transition: all 0.4s ease;
+    }
+    
+    .node-controller { top: 90px; left: 50%; transform: translateX(-50%); border-color: var(--neon-cyan); color: var(--neon-cyan); }
+    .node-view { top: 180px; left: 30px; border-color: var(--neon-orange); color: var(--neon-orange); opacity: 0;}
+    .node-converter { top: 180px; right: 30px; border-color: var(--neon-pink); color: var(--neon-pink); opacity: 0;}
+    
+    .client-end { position: absolute; bottom: 20px; padding: 10px; border-radius: 6px; font-family: 'Space Grotesk'; font-size: 12px; font-weight: bold; text-align: center; opacity: 0; z-index: 15;}
+    .ce-browser { left: 30px; background: rgba(251,146,60,0.2); color: var(--neon-orange); border: 1px solid var(--neon-orange);}
+    .ce-mobile { right: 30px; background: rgba(244,114,182,0.2); color: var(--neon-pink); border: 1px solid var(--neon-pink);}
+
+    /* Paths & Pipes */
+    .pipe { position: absolute; background: rgba(255,255,255,0.1); z-index: 10; opacity: 0; transition: all 0.4s ease;}
+    .pipe-vert { width: 2px; }
+    .pipe-horz { height: 2px; }
+    
+    .data-packet {
+        position: absolute; font-family: monospace; font-size: 10px; font-weight: bold;
+        background: #fff; color: #000; padding: 4px 8px; border-radius: 4px;
+        opacity: 0; z-index: 25; pointer-events: none; white-space: nowrap;
+        box-shadow: 0 0 15px rgba(255,255,255,0.6);
+    }
+    .dp-html { background: var(--neon-orange); }
+    .dp-json { background: var(--neon-pink); }
+    .dp-error { background: var(--neon-red); color: white; }
+
+    /* Detour Barrier */
+    .detour-sign {
+        position: absolute; top: 140px; left: 50%; transform: translateX(-50%);
+        background: var(--neon-red); color: #fff; font-family: monospace; font-size: 10px; font-weight: bold;
+        padding: 2px 8px; border-radius: 4px; box-shadow: 0 0 15px var(--neon-red); opacity: 0; z-index: 30;
+    }
+
+    /* Scene 4: Meta-Annotation Code Reveal */
+    .meta-box {
+        width: 85%; background: rgba(0,0,0,0.7); border: 2px solid var(--spring-green); border-radius: 12px;
+        padding: 15px; box-shadow: 0 0 30px rgba(109,179,63,0.2); backdrop-filter: blur(10px);
+    }
+    .mb-title { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: bold; color: var(--spring-green); margin-bottom: 10px; border-bottom: 1px solid rgba(109,179,63,0.3); padding-bottom: 5px;}
+
+    /* Scene 6: Final Matrix */
+    .matrix-grid { display: flex; flex-direction: column; gap: 10px; width: 90%; }
+    .m-row { display: flex; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; align-items: center; gap: 15px;}
+    .m-anno { flex: 1; font-family: monospace; font-size: 12px; font-weight: bold; color: var(--neon-cyan);}
+    .m-route { flex: 1; font-family: monospace; font-size: 10px; color: var(--muted);}
+    .m-out { flex: 1; font-family: 'Space Grotesk'; font-size: 11px; font-weight: bold; text-align: right;}
+
+    /* Bottom Half: Explainer Panel (Frosted Glass) */
+    .explainer-panel {
+        background: rgba(15, 23, 42, 0.6);
+        padding: 20px; position: relative; width: 100%; z-index: 30;
+        flex: 1; display: flex; flex-direction: column; min-height: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(24px);
+    }
+    
+    .explainer-content {
+        flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 12px;
+    }
+    .explainer-content::-webkit-scrollbar { width: 4px; }
+    .explainer-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+    .step-badge {
+        display: inline-block; background: rgba(109, 179, 63, 0.15); color: var(--spring-green);
+        font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+        padding: 4px 10px; border-radius: 6px; margin-bottom: 10px; text-transform: uppercase;
+        border: 1px solid rgba(109, 179, 63, 0.4); align-self: flex-start;
+    }
+
+    .explainer-title {
+        font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+        margin-bottom: 8px; letter-spacing: -0.5px;
+    }
+
+    .explainer-text { font-size: 12px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px; }
+
+    /* Embedded Code Block */
+    .code-block {
+        background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
+        padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+        line-height: 1.5; color: #e2e8f0; margin-bottom: 10px; overflow-x: auto;
+    }
+    
+    .c-kw { color: #f472b6; font-weight: bold; } 
+    .c-ty { color: var(--neon-cyan); } 
+    .c-fn { color: #818cf8; } 
+    .c-st { color: var(--neon-green); } 
+    .c-cm { color: #64748b; font-style: italic; } 
+    .c-an { color: var(--spring-green); font-weight: bold;} 
+    .c-hi { background: rgba(45, 212, 191, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-cyan); display: block; margin: 0 -12px; padding-left: 12px;} 
+    .c-err { background: rgba(244, 63, 94, 0.15); padding: 0 4px; border-radius: 3px; border-left: 2px solid var(--neon-red); display: block; margin: 0 -12px; padding-left: 12px;} 
+
+    .btn-next {
+        background: linear-gradient(135deg, var(--neon-cyan), #0284c7);
+        color: white; border: none; padding: 14px 24px; border-radius: 12px;
+        font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 4px 20px rgba(45, 212, 191, 0.3);
+        transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif;
+        text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(45, 212, 191, 0.3); }
+
+    /* Animations */
+    @keyframes moveDownLeft {
+        0% { top: 120px; left: 50%; opacity: 1;}
+        20% { top: 150px; left: 50%; }
+        50% { top: 150px; left: 70px; }
+        100% { top: 180px; left: 70px; opacity: 1;}
+    }
+    @keyframes moveDownRight {
+        0% { top: 120px; left: 50%; opacity: 1;}
+        20% { top: 150px; left: 50%; }
+        50% { top: 150px; left: calc(100% - 70px); }
+        100% { top: 180px; left: calc(100% - 70px); opacity: 1;}
+    }
+    @keyframes moveEndLeft {
+        0% { top: 220px; left: 70px; opacity: 1;}
+        100% { top: 280px; left: 70px; opacity: 0;}
+    }
+    @keyframes moveEndRight {
+        0% { top: 220px; left: calc(100% - 70px); opacity: 1;}
+        100% { top: 280px; left: calc(100% - 70px); opacity: 0;}
+    }
+    @keyframes shakeError {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        50% { transform: translateX(5px); }
+        75% { transform: translateX(-5px); }
+        100% { transform: translateX(0); }
+    }
+</style>
+</head>
+<body>
+
+<div id="reel-container">
+    <div class="aurora-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <!-- Top Header -->
+    <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+        <h1>Spring MVC Engine</h1>
+        <p>The Routing Architecture</p>
+    </div>
+
+    <!-- Canvas Area (Top Half) -->
+    <div class="canvas" id="canvas">
+        
+        <!-- Persistent Routing Engine Visuals -->
+        <div class="scene-container active" id="main-engine">
+            <div class="engine-core">DispatcherServlet<span>The Brain</span></div>
+            
+            <div class="pipe pipe-vert" id="p1" style="height: 30px; top: 60px; left: 50%; transform: translateX(-50%);"></div>
+            
+            <div class="node node-controller" id="n-ctrl">@Controller</div>
+
+            <!-- Diverging Paths -->
+            <div class="pipe pipe-vert" id="p-down" style="height: 30px; top: 125px; left: 50%; transform: translateX(-50%);"></div>
+            
+            <div class="pipe pipe-horz" id="p-left" style="width: calc(50% - 70px); top: 155px; left: 70px;"></div>
+            <div class="pipe pipe-vert" id="p-left-d" style="height: 25px; top: 155px; left: 70px;"></div>
+            
+            <div class="pipe pipe-horz" id="p-right" style="width: calc(50% - 70px); top: 155px; right: 70px;"></div>
+            <div class="pipe pipe-vert" id="p-right-d" style="height: 25px; top: 155px; right: 70px;"></div>
+
+            <!-- View Pipeline (Left) -->
+            <div class="node node-view" id="n-view">ViewResolver<br><span style="font-size:8px; color:var(--muted);">(Thymeleaf/JSP)</span></div>
+            <div class="pipe pipe-vert" id="p-view-out" style="height: 40px; top: 220px; left: 70px;"></div>
+            <div class="client-end ce-browser" id="ce-browser">Browser<br><span style="font-size:8px; color:var(--muted);">text/html</span></div>
+
+            <!-- REST Pipeline (Right) -->
+            <div class="detour-sign" id="detour">ABORT! @ResponseBody</div>
+            <div class="node node-converter" id="n-conv">MessageConverter<br><span style="font-size:8px; color:var(--muted);">(Jackson)</span></div>
+            <div class="pipe pipe-vert" id="p-conv-out" style="height: 40px; top: 220px; right: 70px;"></div>
+            <div class="client-end ce-mobile" id="ce-mobile">Mobile/SPA<br><span style="font-size:8px; color:var(--muted);">application/json</span></div>
+
+            <!-- Animated Packets -->
+            <div class="data-packet" id="pkt-main"></div>
+            <div class="data-packet" id="pkt-out"></div>
+        </div>
+
+        <!-- Scene 4: Meta-Annotation Code -->
+        <div class="scene-container" id="scene-meta">
+            <div class="meta-box">
+                <div class="mb-title">@RestController Source Code</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6; color:#e2e8f0;">
+                    <span class="c-an">@Target</span>(ElementType.TYPE)<br>
+                    <span class="c-an">@Retention</span>(RetentionPolicy.RUNTIME)<br>
+                    <span class="c-an">@Documented</span><br><br>
+                    <span style="background: rgba(109,179,63,0.2); padding: 2px 5px; border-radius:4px; font-weight:bold; color:var(--spring-green);">@Controller</span><br>
+                    <span style="background: rgba(109,179,63,0.2); padding: 2px 5px; border-radius:4px; font-weight:bold; color:var(--spring-green);">@ResponseBody</span><br>
+                    <span class="c-kw">public @interface</span> <span class="c-ty">RestController</span> {<br>
+                    &nbsp;&nbsp;<span class="c-cm">// It is literally just a wrapper!</span><br>
+                    &nbsp;&nbsp;<span class="c-cm">// Zero new routing logic.</span><br>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 6: Matrix -->
+        <div class="scene-container" id="scene-matrix">
+            <div class="matrix-grid">
+                <div class="m-row">
+                    <div class="m-anno">@Controller</div>
+                    <div class="m-route">→ ViewResolver</div>
+                    <div class="m-out" style="color:var(--neon-orange);">HTML Page</div>
+                </div>
+                <div class="m-row">
+                    <div class="m-anno">@RestController</div>
+                    <div class="m-route">→ Jackson Converter</div>
+                    <div class="m-out" style="color:var(--neon-pink);">JSON Data</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Explainer Panel (Bottom Half) -->
+    <div class="explainer-panel">
+        <div class="explainer-content">
+            <div id="step-badge" class="step-badge">[SPRING_WEB_MVC]</div>
+            <h2 id="explainer-title" class="explainer-title">The MVC Routing Engine</h2>
+            <p id="explainer-text" class="explainer-text">Every developer uses <code>@RestController</code>, but very few understand the mechanical routing engine underneath. If you don't understand the <code>DispatcherServlet</code>, debugging 406 errors is impossible. Let's open the black box.</p>
+            
+            <div id="code-container" class="code-block" style="display: none;"></div>
+        </div>
+
+        <button id="btn-next" class="btn-next" onclick="nextStep()">Initiate Trace</button>
+    </div>
+</div>
+
+<script>
+    const badge = document.getElementById('step-badge');
+    const title = document.getElementById('explainer-title');
+    const text = document.getElementById('explainer-text');
+    const codeContainer = document.getElementById('code-container');
+    const btnNext = document.getElementById('btn-next');
+    
+    let currentStep = 0;
+    let isAnimating = false;
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    // Reset visual elements helper
+    function resetVisuals() {
+        document.getElementById('p1').style.opacity = '0';
+        document.getElementById('p-down').style.opacity = '0';
+        document.getElementById('p-left').style.opacity = '0';
+        document.getElementById('p-left-d').style.opacity = '0';
+        document.getElementById('p-right').style.opacity = '0';
+        document.getElementById('p-right-d').style.opacity = '0';
+        document.getElementById('p-view-out').style.opacity = '0';
+        document.getElementById('p-conv-out').style.opacity = '0';
+        
+        document.getElementById('n-view').style.opacity = '0';
+        document.getElementById('n-conv').style.opacity = '0';
+        document.getElementById('ce-browser').style.opacity = '0';
+        document.getElementById('ce-mobile').style.opacity = '0';
+        document.getElementById('detour').style.opacity = '0';
+        
+        document.getElementById('n-view').style.animation = 'none';
+        
+        const p1 = document.getElementById('pkt-main');
+        const p2 = document.getElementById('pkt-out');
+        p1.style.animation = 'none'; p1.style.opacity = '0';
+        p2.style.animation = 'none'; p2.style.opacity = '0';
+        
+        document.getElementById('main-engine').classList.remove('active');
+        document.getElementById('scene-meta').classList.remove('active');
+        document.getElementById('scene-matrix').classList.remove('active');
+    }
+
+    const steps = [
+        {
+            badge: "Phase 1/6",
+            title: "Traditional Spring MVC",
+            text: "When a request hits your <code>@Controller</code>, it returns a string like <code>\"home\"</code>. The <strong>DispatcherServlet</strong> doesn't send this to the user! It routes that string to the <strong>ViewResolver</strong>. The resolver finds <code>home.html</code> on your hard drive, injects data, and returns a fully rendered webpage.",
+            code: `
+<span class="c-an">@Controller</span>
+<span class="c-kw">public class</span> <span class="c-ty">WebController</span> {
+    <span class="c-an">@GetMapping</span>(<span class="c-st">"/home"</span>)
+    <span class="c-kw">public</span> <span class="c-ty">String</span> <span class="c-fn">getHome</span>(<span class="c-ty">Model</span> m) {
+        m.addAttribute(<span class="c-st">"user"</span>, <span class="c-st">"Zuber"</span>);
+<span class="c-hi">        <span class="c-kw">return</span> <span class="c-st">"home"</span>; <span class="c-cm">// -> ViewResolver</span></span>
+    }
+}
+            `,
+            action: async () => {
+                resetVisuals();
+                document.getElementById('main-engine').classList.add('active');
+                codeContainer.style.display = 'block';
+                
+                await sleep(300);
+                document.getElementById('p1').style.opacity = '1';
+                document.getElementById('n-view').style.opacity = '1';
+                document.getElementById('ce-browser').style.opacity = '1';
+                
+                await sleep(300);
+                document.getElementById('p-down').style.opacity = '1';
+                document.getElementById('p-left').style.opacity = '1';
+                document.getElementById('p-left-d').style.opacity = '1';
+                
+                // Animate packet
+                const p1 = document.getElementById('pkt-main');
+                p1.innerText = '"home"';
+                p1.className = 'data-packet'; // default
+                p1.style.animation = 'moveDownLeft 2s forwards';
+                
+                await sleep(2000);
+                document.getElementById('p-view-out').style.opacity = '1';
+                const p2 = document.getElementById('pkt-out');
+                p2.innerText = '<html>...</html>';
+                p2.className = 'data-packet dp-html';
+                p2.style.animation = 'moveEndLeft 1s forwards';
+            }
+        },
+        {
+            badge: "Phase 2/6",
+            title: "The API Crisis",
+            text: "Fast forward: A mobile app requests JSON data. If it hits a standard <code>@Controller</code> and you return a <code>User</code> object, the DispatcherServlet panics! It blindly passes the User object to the ViewResolver, which fails to find a template named after a memory address and crashes.",
+            code: `
+<span class="c-an">@Controller</span>
+<span class="c-kw">public class</span> <span class="c-ty">ApiController</span> {
+    <span class="c-an">@GetMapping</span>(<span class="c-st">"/api/user"</span>)
+    <span class="c-kw">public</span> <span class="c-ty">User</span> <span class="c-fn">getUser</span>() {
+<span class="c-err">        <span class="c-kw">return new</span> User(<span class="c-st">"Zuber"</span>); <span class="c-cm">// Crash!</span></span>
+    }
+}
+            `,
+            action: async () => {
+                resetVisuals();
+                document.getElementById('main-engine').classList.add('active');
+                
+                document.getElementById('p1').style.opacity = '1';
+                document.getElementById('p-down').style.opacity = '1';
+                document.getElementById('p-left').style.opacity = '1';
+                document.getElementById('p-left-d').style.opacity = '1';
+                document.getElementById('n-view').style.opacity = '1';
+                
+                await sleep(300);
+                const p1 = document.getElementById('pkt-main');
+                p1.innerText = 'User@0x8b';
+                p1.className = 'data-packet';
+                p1.style.animation = 'moveDownLeft 2s forwards';
+                
+                await sleep(2000);
+                const view = document.getElementById('n-view');
+                view.style.borderColor = 'var(--neon-red)';
+                view.style.color = 'var(--neon-red)';
+                view.innerText = '500 Template Not Found!';
+                view.style.animation = 'shakeError 0.5s infinite';
+            }
+        },
+        {
+            badge: "Phase 3/6",
+            title: "The @ResponseBody Bypass",
+            text: "To fix this, we use <code>@ResponseBody</code>. This acts as a physical detour inside the DispatcherServlet. It screams: 'ABORT! Skip the ViewResolver!' The object is routed to the <strong>HttpMessageConverter</strong> (Jackson), which reads your getters and serializes it into raw JSON.",
+            code: `
+<span class="c-an">@Controller</span>
+<span class="c-kw">public class</span> <span class="c-ty">ApiController</span> {
+    <span class="c-an">@GetMapping</span>(<span class="c-st">"/api/user"</span>)
+<span class="c-hi">    <span class="c-an">@ResponseBody</span> <span class="c-cm">// THE DETOUR SIGN</span></span>
+    <span class="c-kw">public</span> <span class="c-ty">User</span> <span class="c-fn">getUser</span>() {
+        <span class="c-kw">return new</span> User(<span class="c-st">"Zuber"</span>); 
+    }
+}
+            `,
+            action: async () => {
+                resetVisuals();
+                document.getElementById('main-engine').classList.add('active');
+                document.getElementById('n-view').innerText = 'ViewResolver';
+                document.getElementById('n-view').style.borderColor = 'var(--neon-orange)';
+                document.getElementById('n-view').style.color = 'var(--neon-orange)';
+                
+                document.getElementById('p1').style.opacity = '1';
+                document.getElementById('n-conv').style.opacity = '1';
+                document.getElementById('ce-mobile').style.opacity = '1';
+                
+                await sleep(300);
+                document.getElementById('detour').style.opacity = '1';
+                
+                await sleep(400);
+                document.getElementById('p-down').style.opacity = '1';
+                document.getElementById('p-right').style.opacity = '1';
+                document.getElementById('p-right-d').style.opacity = '1';
+                
+                const p1 = document.getElementById('pkt-main');
+                p1.innerText = 'User@0x8b';
+                p1.className = 'data-packet';
+                p1.style.animation = 'moveDownRight 2s forwards';
+                
+                await sleep(2000);
+                document.getElementById('p-conv-out').style.opacity = '1';
+                const p2 = document.getElementById('pkt-out');
+                p2.innerText = '{"name":"Zuber"}';
+                p2.className = 'data-packet dp-json';
+                p2.style.animation = 'moveEndRight 1s forwards';
+            }
+        },
+        {
+            badge: "Phase 4/6",
+            title: "The Meta-Annotation Illusion",
+            text: "Writing <code>@ResponseBody</code> on 50 methods is bloated. So, Spring created <code>@RestController</code>. If you look at the source code, it contains ZERO new routing logic! It is literally just <code>@Controller</code> and <code>@ResponseBody</code> bundled into one name. It is pure syntactic sugar.",
+            code: ``,
+            action: async () => {
+                resetVisuals();
+                codeContainer.style.display = 'none';
+                document.getElementById('scene-meta').classList.add('active');
+            }
+        },
+        {
+            badge: "Phase 5/6",
+            title: "Content Negotiation (406 Error)",
+            text: "What if a client sends <code>Accept: application/xml</code>? Spring routes your <code>User</code> to the Converter pipeline. But if it only has Jackson (JSON) loaded, it realizes it CANNOT satisfy the XML request. It refuses to send JSON and throws a <code>406 Not Acceptable</code> error.",
+            code: `
+<span class="c-cm">// Client Request:</span>
+<span class="c-kw">GET</span> /api/user HTTP/1.1
+<span class="c-err">Accept: application/xml</span>
+
+<span class="c-cm">// Fix 406 Error: Add to pom.xml</span>
+&lt;dependency&gt;
+  &lt;groupId&gt;com.fasterxml.jackson.dataformat&lt;/groupId&gt;
+<span class="c-hi">  &lt;artifactId&gt;jackson-dataformat-xml&lt;/artifactId&gt;</span>
+&lt;/dependency&gt;
+            `,
+            action: async () => {
+                resetVisuals();
+                document.getElementById('main-engine').classList.add('active');
+                codeContainer.style.display = 'block';
+                
+                document.getElementById('p1').style.opacity = '1';
+                document.getElementById('n-conv').style.opacity = '1';
+                document.getElementById('p-down').style.opacity = '1';
+                document.getElementById('p-right').style.opacity = '1';
+                document.getElementById('p-right-d').style.opacity = '1';
+                
+                const p1 = document.getElementById('pkt-main');
+                p1.innerText = 'User@0x8b';
+                p1.className = 'data-packet';
+                p1.style.animation = 'moveDownRight 2s forwards';
+                
+                await sleep(2000);
+                const conv = document.getElementById('n-conv');
+                conv.style.borderColor = 'var(--neon-red)';
+                conv.style.color = 'var(--neon-red)';
+                conv.innerHTML = '406 Not Acceptable<br><span style="font-size:8px;">(No XML Converter!)</span>';
+                conv.style.animation = 'shakeError 0.5s infinite';
+            }
+        },
+        {
+            badge: "Summary",
+            title: "The Architecture Matrix",
+            text: "You now understand the internal routing engine. <code>@Controller</code> maps to the ViewResolver for HTML templates. <code>@RestController</code> physically bypasses the resolver, routing data to Jackson to serialize JSON. You have mastered Spring MVC.",
+            code: ``,
+            action: async () => {
+                resetVisuals();
+                codeContainer.style.display = 'none';
+                document.getElementById('scene-matrix').classList.add('active');
+            }
+        }
+    ];
+
+    async function nextStep() {
+        if (isAnimating) return;
+        
+        if (currentStep >= steps.length) {
+            // Hard Reset
+            currentStep = 0; 
+            resetVisuals();
+            codeContainer.style.display = 'none';
+            document.getElementById('n-view').innerText = 'ViewResolver\n(Thymeleaf/JSP)';
+            document.getElementById('n-view').style.borderColor = 'var(--neon-orange)';
+            document.getElementById('n-view').style.color = 'var(--neon-orange)';
+            document.getElementById('n-conv').innerHTML = 'MessageConverter<br><span style="font-size:8px; color:var(--muted);">(Jackson)</span>';
+            document.getElementById('n-conv').style.borderColor = 'var(--neon-pink)';
+            document.getElementById('n-conv').style.color = 'var(--neon-pink)';
+
+            badge.innerText = "[SPRING_WEB_MVC]";
+            title.innerText = "The MVC Routing Engine";
+            text.innerHTML = "Every developer uses <code>@RestController</code>, but very few understand the mechanical routing engine underneath. If you don't understand the <code>DispatcherServlet</code>, debugging 406 errors is impossible. Let's open the black box.";
+            btnNext.innerText = "Initiate Trace";
+            return;
+        }
+
+        isAnimating = true;
+        btnNext.disabled = true;
+
+        const stepData = steps[currentStep];
+        
+        badge.innerText = stepData.badge;
+        title.innerText = stepData.title;
+        text.innerHTML = stepData.text;
+        
+        if (stepData.code) {
+            codeContainer.innerHTML = stepData.code;
+        }
+        
+        btnNext.innerText = currentStep === steps.length - 1 ? "Reset Architecture" : "Next Stage →";
+
+        await stepData.action();
+        
+        currentStep++;
+        isAnimating = false;
+        btnNext.disabled = false;
+    }
+</script>
+</body>
+</html>

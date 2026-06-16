@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Bean Lifecycle Reel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@500;700&family=Fira+Code:wght@400;500&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #020617; 
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 9:16 Aspect Ratio Container */
+        #reel-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100vh;
+            max-height: 880px;
+            background: #0b1120;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+            border: 1px solid #1e293b;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Tech Grid Background */
+            background-image: 
+                linear-gradient(rgba(30, 41, 59, 0.4) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30, 41, 59, 0.4) 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: center center;
+        }
+
+        /* Header */
+        .header {
+            padding: 25px 20px 5px;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(to right, #6ee7b7, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 11px;
+            font-family: 'Fira Code', monospace;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Visualization Area */
+        .canvas {
+            flex: 1;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* Factory Nodes */
+        .node {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            z-index: 20;
+            width: 120px;
+        }
+
+        .node-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #334155;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+            transition: all 0.3s ease;
+            position: relative;
+            backdrop-filter: blur(4px);
+        }
+
+        .node-label {
+            margin-top: 6px;
+            font-size: 9px;
+            font-weight: 800;
+            color: #cbd5e1;
+            text-align: center;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: rgba(2, 6, 23, 0.85);
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 1px solid #1e293b;
+        }
+        
+        .node-sub {
+            font-family: 'Fira Code', monospace;
+            font-size: 8px;
+            color: #64748b;
+            margin-top: 2px;
+            text-align: center;
+        }
+
+        /* Node Positioning - Vertical Conveyor Belt */
+        #node-class { top: 8%; left: 50%; }
+        #node-di { top: 22%; left: 50%; }
+        #node-aware { top: 36%; left: 50%; }
+        #node-init { top: 50%; left: 50%; }
+        #node-proxy { top: 64%; left: 50%; }
+        
+        /* Container and Trash */
+        #node-context { top: 78%; left: 30%; }
+        #node-destroy { top: 78%; left: 70%; }
+
+        /* The Bean (The moving packet) */
+        #the-bean {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: #e2e8f0;
+            border: 2px solid #94a3b8;
+            border-radius: 6px;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Bean States */
+        .bean-raw { background-color: #cbd5e1; border-color: #94a3b8; border-radius: 6px; }
+        .bean-injected { background-color: #38bdf8; border-color: #0284c7; border-radius: 6px; box-shadow: 0 0 10px rgba(56, 189, 248, 0.5); }
+        .bean-aware { background-color: #fcd34d; border-color: #d97706; border-radius: 6px; box-shadow: 0 0 10px rgba(252, 211, 77, 0.5); }
+        .bean-init { background-color: #a78bfa; border-color: #7c3aed; border-radius: 6px; box-shadow: 0 0 15px rgba(167, 139, 250, 0.6); }
+        
+        /* The Proxy state gets a dashed shield around it */
+        .bean-proxied { 
+            background-color: #34d399; 
+            border-color: #059669; 
+            border-radius: 50%; /* Becomes a circle */
+            box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.3), 0 0 20px rgba(52, 211, 153, 0.6); 
+        }
+
+        /* Connections / Conveyor Belt */
+        svg.connections {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        path.line {
+            fill: none;
+            stroke: #334155;
+            stroke-width: 4;
+            transition: stroke 0.3s ease;
+        }
+
+        path.line.active {
+            stroke: #60a5fa;
+            animation: flow 1s linear infinite;
+            stroke-dasharray: 8 8;
+        }
+        
+        @keyframes flow {
+            to { stroke-dashoffset: -16; }
+        }
+
+        /* Node Theme Colors */
+        .active-class .node-icon { border-color: #94a3b8; box-shadow: 0 0 15px rgba(148, 163, 184, 0.5); }
+        .active-di .node-icon { border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.5); }
+        .active-aware .node-icon { border-color: #fcd34d; box-shadow: 0 0 15px rgba(252, 211, 77, 0.5); }
+        .active-init .node-icon { border-color: #a78bfa; box-shadow: 0 0 15px rgba(167, 139, 250, 0.5); }
+        .active-proxy .node-icon { border-color: #34d399; box-shadow: 0 0 15px rgba(52, 211, 153, 0.5); }
+        .active-context .node-icon { border-color: #10b981; box-shadow: 0 0 25px rgba(16, 185, 129, 0.7); background: rgba(15, 23, 42, 1); }
+        .active-destroy .node-icon { border-color: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+
+        /* Explainer Panel at Bottom */
+        .explainer-panel {
+            background: linear-gradient(to top, rgba(2, 6, 23, 1) 75%, rgba(2, 6, 23, 0.95) 90%, transparent);
+            padding: 30px 24px 30px;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            z-index: 30;
+            min-height: 270px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            backdrop-filter: blur(4px);
+            border-top: 1px solid rgba(30, 41, 59, 0.5);
+        }
+
+        .step-badge {
+            display: inline-block;
+            background: rgba(15, 23, 42, 0.8);
+            color: #60a5fa;
+            font-family: 'Fira Code', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1px solid #334155;
+            align-self: flex-start;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .explainer-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .explainer-text {
+            font-size: 13px;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 24px;
+            min-height: 60px;
+        }
+        
+        .explainer-text code {
+            background: #1e293b;
+            color: #34d399;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            border: 1px solid #334155;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+            border: 1px solid #818cf8;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s;
+            width: 100%;
+            font-family: 'Space Grotesk', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-next:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-next:disabled {
+            background: #1e293b;
+            border-color: #334155;
+            color: #64748b;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Injector visual lines */
+        .di-inject {
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            font-size: 12px;
+            color: #38bdf8;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s;
+        }
+        .di-inject.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="reel-container">
+        <!-- Header -->
+        <div class="header" style="position: relative;">
+    <a href="../../index.html?pathway=keytopics" style="position: absolute; left: 16px; top: 16px; text-decoration: none; color: var(--text-muted, var(--muted, #8b9eb3)); font-size: 11px; font-family: 'JetBrains Mono', monospace; font-weight: 500; display: flex; align-items: center; gap: 4px; z-index: 1000; transition: opacity 0.2s;">
+      <span>←</span> Back
+    </a>
+            <h1>Spring IoC Container</h1>
+            <p>The Bean Lifecycle Demystified</p>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas" id="canvas">
+            <!-- Conveyor Belt Lines -->
+            <svg class="connections" id="svg-lines">
+                <path id="line-1" class="line" d=""></path>
+                <path id="line-2" class="line" d=""></path>
+                <path id="line-3" class="line" d=""></path>
+                <path id="line-4" class="line" d=""></path>
+                <path id="line-5" class="line" d=""></path>
+                <path id="line-6" class="line" d=""></path>
+            </svg>
+
+            <!-- Stations -->
+            <div class="node" id="node-class">
+                <div class="node-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg></div>
+                <div class="node-label">1. Instantiation</div>
+                <div class="node-sub">Constructor called</div>
+            </div>
+
+            <div class="node" id="node-di">
+                <div class="di-inject" id="di-arrow">→ @Autowired</div>
+                <div class="node-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
+                <div class="node-label">2. Dependency Inject</div>
+                <div class="node-sub">Populate Properties</div>
+            </div>
+
+            <div class="node" id="node-aware">
+                <div class="node-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></div>
+                <div class="node-label">3. Aware Interfaces</div>
+                <div class="node-sub">setBeanName()</div>
+            </div>
+
+            <div class="node" id="node-init">
+                <div class="node-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
+                <div class="node-label">4. Initialization</div>
+                <div class="node-sub">@PostConstruct</div>
+            </div>
+
+            <div class="node" id="node-proxy">
+                <div class="node-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+                <div class="node-label">5. BeanPostProcessor</div>
+                <div class="node-sub">AOP Proxies created</div>
+            </div>
+
+            <div class="node" id="node-context">
+                <div class="node-icon" style="width: 54px; height: 54px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg></div>
+                <div class="node-label" style="color: #10b981;">ApplicationContext</div>
+                <div class="node-sub">Singleton Pool</div>
+            </div>
+
+            <div class="node" id="node-destroy">
+                <div class="node-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></div>
+                <div class="node-label" style="color: #ef4444;">6. Destruction</div>
+                <div class="node-sub">@PreDestroy</div>
+            </div>
+
+            <!-- The Bean Object -->
+            <div id="the-bean" class="bean-raw">{}</div>
+        </div>
+
+        <!-- Text Overlay / Explainer -->
+        <div class="explainer-panel">
+            <div id="step-badge" class="step-badge">[IOC_CONTAINER]</div>
+            <h2 id="explainer-title" class="explainer-title">The Spring Bean Lifecycle</h2>
+            <p id="explainer-text" class="explainer-text">A Spring Bean isn't just a Java object. When you use <code>@Component</code>, you hand over control to the Spring IoC Container. Let's trace a bean from birth to death.</p>
+            
+            <button id="btn-next" class="btn-next" onclick="nextStep()">Start Lifecycle</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const bean = document.getElementById('the-bean');
+        const badge = document.getElementById('step-badge');
+        const title = document.getElementById('explainer-title');
+        const text = document.getElementById('explainer-text');
+        const btnNext = document.getElementById('btn-next');
+        let currentStep = 0;
+        let isAnimating = false;
+
+        // Setup Lines
+        function getPx(id) {
+            const el = document.getElementById(id);
+            return { x: el.offsetLeft, y: el.offsetTop };
+        }
+
+        function drawLine(pathId, startId, endId) {
+            const start = getPx(startId);
+            const end = getPx(endId);
+            // Draw a straight line
+            document.getElementById(pathId).setAttribute('d', `M${start.x},${start.y} L${end.x},${end.y}`);
+        }
+
+        function updateLines() {
+            drawLine('line-1', 'node-class', 'node-di');
+            drawLine('line-2', 'node-di', 'node-aware');
+            drawLine('line-3', 'node-aware', 'node-init');
+            drawLine('line-4', 'node-init', 'node-proxy');
+            
+            // Angled line to Context
+            const p = getPx('node-proxy');
+            const c = getPx('node-context');
+            document.getElementById('line-5').setAttribute('d', `M${p.x},${p.y} L${p.x},${c.y - 20} L${c.x},${c.y - 20} L${c.x},${c.y}`);
+            
+            // Line from Context to Destroy
+            drawLine('line-6', 'node-context', 'node-destroy');
+        }
+
+        window.addEventListener('load', updateLines);
+        window.addEventListener('resize', updateLines);
+
+        // Animation Helpers
+        function clearNodes() {
+            document.querySelectorAll('.node').forEach(n => {
+                n.classList.remove('active-class', 'active-di', 'active-aware', 'active-init', 'active-proxy', 'active-context', 'active-destroy');
+            });
+            document.querySelectorAll('.line').forEach(l => l.classList.remove('active'));
+            document.getElementById('di-arrow').classList.remove('show');
+        }
+
+        function setActive(nodeId, themeClass) {
+            document.getElementById(nodeId).classList.add(themeClass);
+        }
+
+        function moveBean(nodeId, beanClass) {
+            const node = document.getElementById(nodeId);
+            const top = node.style.top || window.getComputedStyle(node).top;
+            const left = node.style.left || window.getComputedStyle(node).left;
+
+            bean.style.opacity = '1';
+            bean.style.top = top;
+            bean.style.left = left;
+            bean.className = beanClass;
+            bean.innerText = beanClass === 'bean-proxied' ? 'P' : '{}';
+        }
+
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        // The Animation Sequence
+        const steps = [
+            {
+                badge: "Phase 1: Birth",
+                title: "Instantiation",
+                text: "Spring scans your classes, finds the blueprint, and uses Java Reflection to call the constructor <code>new MyBean()</code>. Right now, it's just an empty, raw Java object.",
+                btn: "Next: Inject Dependencies",
+                action: async () => {
+                    setActive('node-class', 'active-class');
+                    bean.style.top = '0%';
+                    bean.style.left = '50%';
+                    bean.style.opacity = '0';
+                    
+                    await sleep(100);
+                    moveBean('node-class', 'bean-raw');
+                }
+            },
+            {
+                badge: "Phase 2: Wiring",
+                title: "Dependency Injection",
+                text: "The container kicks in and populates properties. It resolves your <code>@Autowired</code> fields and setter methods, wiring this bean to the rest of the application.",
+                btn: "Next: Aware Interfaces",
+                action: async () => {
+                    clearNodes();
+                    document.getElementById('line-1').classList.add('active');
+                    moveBean('node-di', 'bean-raw');
+                    
+                    await sleep(600);
+                    setActive('node-di', 'active-di');
+                    document.getElementById('di-arrow').classList.add('show');
+                    bean.className = 'bean-injected';
+                }
+            },
+            {
+                badge: "Phase 3: Context",
+                title: "Aware Interfaces",
+                text: "The bean needs to know where it lives. If it implements interfaces like <code>ApplicationContextAware</code> or <code>BeanNameAware</code>, Spring passes it its own name and context.",
+                btn: "Next: Initialization",
+                action: async () => {
+                    clearNodes();
+                    document.getElementById('line-2').classList.add('active');
+                    moveBean('node-aware', 'bean-injected');
+                    
+                    await sleep(600);
+                    setActive('node-aware', 'active-aware');
+                    bean.className = 'bean-aware';
+                }
+            },
+            {
+                badge: "Phase 4: Setup",
+                title: "Initialization",
+                text: "Spring runs the BeanPostProcessor's <code>postProcessBeforeInitialization</code>, followed by your custom <code>@PostConstruct</code> methods. This is where you put startup logic (e.g. warming a cache).",
+                btn: "Next: Post-Process (Proxies)",
+                action: async () => {
+                    clearNodes();
+                    document.getElementById('line-3').classList.add('active');
+                    moveBean('node-init', 'bean-aware');
+                    
+                    await sleep(600);
+                    setActive('node-init', 'active-init');
+                    bean.className = 'bean-init';
+                }
+            },
+            {
+                badge: "Phase 5: Magic",
+                title: "Post-Init (AOP Proxies)",
+                text: "The most critical step! The 'After' BPP runs. If your bean has <code>@Transactional</code> or <code>@Async</code>, Spring wraps your raw bean in a CGLIB Dynamic Proxy. The container stores this proxy, not the raw object.",
+                btn: "Next: Ready Pool",
+                action: async () => {
+                    clearNodes();
+                    document.getElementById('line-4').classList.add('active');
+                    moveBean('node-proxy', 'bean-init');
+                    
+                    await sleep(600);
+                    setActive('node-proxy', 'active-proxy');
+                    bean.className = 'bean-proxied';
+                    bean.innerText = 'P'; // P for Proxy
+                }
+            },
+            {
+                badge: "Phase 6: Active",
+                title: "Ready for Use",
+                text: "The fully configured, proxied bean is placed into the Application Context pool. It sits here as a Singleton, ready to serve thousands of user requests.",
+                btn: "Next: Shutdown",
+                action: async () => {
+                    clearNodes();
+                    document.getElementById('line-5').classList.add('active');
+                    
+                    // Move to context (angled)
+                    const c = getPx('node-context');
+                    bean.style.top = c.y + 'px';
+                    bean.style.left = c.x + 'px';
+                    
+                    await sleep(600);
+                    setActive('node-context', 'active-context');
+                }
+            },
+            {
+                badge: "Phase 7: Death",
+                title: "Destruction",
+                text: "When the application shuts down, the container gracefully kills the bean. It calls your <code>@PreDestroy</code> methods so you can cleanly close network connections and release memory.",
+                btn: "Reset Flow",
+                action: async () => {
+                    clearNodes();
+                    document.getElementById('line-6').classList.add('active');
+                    
+                    moveBean('node-destroy', 'bean-proxied');
+                    
+                    await sleep(600);
+                    setActive('node-destroy', 'active-destroy');
+                    
+                    await sleep(400);
+                    bean.style.transform = 'translate(-50%, -50%) scale(0)';
+                    bean.style.opacity = '0';
+                }
+            }
+        ];
+
+        async function nextStep() {
+            if (isAnimating) return;
+            
+            if (currentStep >= steps.length) {
+                // Hard Reset
+                currentStep = 0; 
+                clearNodes();
+                bean.style.opacity = '0';
+                bean.style.transform = 'translate(-50%, -50%) scale(1)';
+                bean.className = 'bean-raw';
+                bean.innerText = '{}';
+                
+                badge.innerText = "[IOC_CONTAINER]";
+                title.innerText = "The Spring Bean Lifecycle";
+                text.innerHTML = "A Spring Bean isn't just a Java object. When you use <code>@Component</code>, you hand over control to the Spring IoC Container. Let's trace a bean from birth to death.";
+                btnNext.innerText = "Start Lifecycle";
+                return;
+            }
+
+            isAnimating = true;
+            btnNext.disabled = true;
+
+            const stepData = steps[currentStep];
+            
+            badge.innerText = stepData.badge;
+            title.innerText = stepData.title;
+            text.innerHTML = stepData.text;
+            btnNext.innerText = stepData.btn;
+
+            await stepData.action();
+            
+            currentStep++;
+            isAnimating = false;
+            btnNext.disabled = false;
+        }
+    </script>
+</body>
+</html>
