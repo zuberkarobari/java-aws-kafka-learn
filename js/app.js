@@ -39,10 +39,10 @@ import { initCommandPalette, openCommandPalette } from './command-palette.js';
 
 const applyTheme = (theme) => {
   document.documentElement.setAttribute('data-theme', theme);
-  const btn = document.getElementById('theme-toggle') || document.getElementById('theme-toggle-topbar');
-  if (btn) btn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
   const icon = document.getElementById('theme-icon') || document.getElementById('top-theme-icon');
   if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+  const checkbox = document.getElementById('theme-toggle-checkbox');
+  if (checkbox) checkbox.checked = theme === 'dark';
 };
 
 const initTheme = () => {
@@ -393,7 +393,7 @@ const renderDashboard = () => {
                   a 15.9155 15.9155 0 0 1 0 31.831
                   a 15.9155 15.9155 0 0 1 0 -31.831"
               />
-              <text x="18" y="20.35" class="percentage">${interviewReadiness}%</text>
+              <text x="18" y="17" class="percentage">${interviewReadiness}%</text>
             </svg>
             <div class="chart-label">Overall</div>
           </div>
@@ -912,11 +912,10 @@ const init = () => {
   const theme = getSavedTheme();
   applyTheme(theme);
 
-  const themeToggleBtn = document.getElementById('theme-toggle-topbar');
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme') || 'dark';
-      const newTheme = current === 'dark' ? 'light' : 'dark';
+  const themeToggle = document.getElementById('theme-toggle-checkbox');
+  if (themeToggle) {
+    themeToggle.addEventListener('change', (e) => {
+      const newTheme = e.target.checked ? 'dark' : 'light';
       applyTheme(newTheme);
       saveTheme(newTheme);
     });
