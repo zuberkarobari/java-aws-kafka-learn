@@ -937,6 +937,33 @@ const init = () => {
     mobileOverlay.addEventListener('click', toggleMobileNav);
   }
 
+  // Desktop navigation toggles
+  const desktopLeftToggle = document.getElementById('desktop-left-toggle');
+  const desktopRightToggle = document.getElementById('desktop-right-toggle');
+  const dashboardWrapper = document.querySelector('.dashboard-wrapper');
+
+  if (desktopLeftToggle && dashboardWrapper) {
+    // Restore state from localStorage if available
+    const leftCollapsed = localStorage.getItem('java-learn-left-collapsed') === 'true';
+    if (leftCollapsed) dashboardWrapper.classList.add('left-collapsed');
+
+    desktopLeftToggle.addEventListener('click', () => {
+      const isCollapsed = dashboardWrapper.classList.toggle('left-collapsed');
+      localStorage.setItem('java-learn-left-collapsed', isCollapsed);
+    });
+  }
+
+  if (desktopRightToggle && dashboardWrapper) {
+    // Restore state from localStorage if available
+    const rightCollapsed = localStorage.getItem('java-learn-right-collapsed') === 'true';
+    if (rightCollapsed) dashboardWrapper.classList.add('right-collapsed');
+
+    desktopRightToggle.addEventListener('click', () => {
+      const isCollapsed = dashboardWrapper.classList.toggle('right-collapsed');
+      localStorage.setItem('java-learn-right-collapsed', isCollapsed);
+    });
+  }
+
   initPathwayTabs();
   initSearch();
   initCommandPalette();
@@ -944,10 +971,22 @@ const init = () => {
   // Paths accordion toggle
   const accordionToggle = document.getElementById('nav-paths-toggle');
   if (accordionToggle) {
+    // Check initial state from localStorage
+    const isCollapsed = localStorage.getItem('java-learn-paths-collapsed') === 'true';
+    const content = document.getElementById('nav-paths-content');
+    const icon = document.getElementById('nav-paths-icon');
+    
+    if (isCollapsed && content && icon) {
+      content.style.display = 'none';
+      icon.style.transform = 'rotate(-90deg)';
+    }
+
     accordionToggle.addEventListener('click', () => {
-      const content = document.getElementById('nav-paths-content');
-      if (content) {
-        content.style.display = content.style.display === 'none' ? 'block' : 'none';
+      if (content && icon) {
+        const willCollapse = content.style.display !== 'none';
+        content.style.display = willCollapse ? 'none' : 'block';
+        icon.style.transform = willCollapse ? 'rotate(-90deg)' : 'rotate(0deg)';
+        localStorage.setItem('java-learn-paths-collapsed', willCollapse);
       }
     });
   }
