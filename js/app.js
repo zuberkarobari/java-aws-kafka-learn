@@ -24,7 +24,13 @@ import {
   addPlannerTask,
   togglePlannerTask,
   deletePlannerTask,
+  editPlannerTask,
   getConfidenceRatings,
+  getTotalStudyTimeStr,
+  getInterviewReadiness,
+  getSkillProgress,
+  getWeeklyStats,
+  getUserXP
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
 import { initCommandPalette, openCommandPalette } from './command-palette.js';
@@ -206,255 +212,307 @@ const renderDashboard = () => {
   if (!container) return;
 
   try {
-  const { visited, total, percent } = calcProgress('dashboard');
-  const streak = calcStreakDays();
-  const recommended = getRecommendation();
+    const xpData = getUserXP();
+    const streak = calcStreakDays();
+    const stats = getWeeklyStats();
+    const recommended = getRecommendation();
+    const skillProgress = getSkillProgress();
+    const interviewReadiness = getInterviewReadiness();
+
+    // 1. Welcome Header
+    const welcomeHtml = `
+      <div class="dashboard-welcome">
+        <h2>Good Morning, Zuber! 👋</h2>
+        <p>Let's continue your learning journey and build something amazing.</p>
+      </div>
+    `;
+
+    // 2. Stats Row
+    const statsHtml = `
+      <div class="dashboard-stats-row">
+        <div class="stat-box">
+          <span class="stat-icon" style="background:#e8f5e9; color:#4caf50;">🛡️</span>
+          <div>
+            <div class="stat-val">Level ${xpData.level}</div>
+            <div class="stat-label">Java Beginner</div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <span class="stat-icon" style="background:#fff3e0; color:#ff9800;">🎯</span>
+          <div style="flex:1;">
+            <div class="stat-val">XP Progress</div>
+            <div class="stat-label">${xpData.progressXP} / ${xpData.nextLevelXP} XP</div>
+            <div class="stat-progress-bar"><div class="stat-progress-fill" style="width:${(xpData.progressXP/xpData.nextLevelXP)*100}%"></div></div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <span class="stat-icon" style="background:#ffebee; color:#f44336;">🔥</span>
+          <div>
+            <div class="stat-val">Streak</div>
+            <div class="stat-label">${streak} Days</div>
+          </div>
+        </div>
+        <div class="stat-box">
+          <span class="stat-icon" style="background:#f3e5f5; color:#9c27b0;">🟣</span>
+          <div>
+            <div class="stat-val">Sessions</div>
+            <div class="stat-label">${stats.topicsCompleted} Completed</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // 3. Continue Learning
+    const continueHtml = recommended ? `
+      <div class="continue-learning-card">
+        <div class="continue-header">
+          <h3>Continue Learning</h3>
+          <span class="last-studied">Last studied: Today</span>
+        </div>
+        <div class="continue-body">
+          <div class="continue-icon">${recommended.icon}</div>
+          <div class="continue-info">
+            <h4>${recommended.title}</h4>
+            <p>${recommended.description}</p>
+            <div class="continue-meta">Next up · 0% Complete</div>
+          </div>
+          <button class="btn-continue" onclick="window.location.href='topics/${recommended.file}'">Continue →</button>
+        </div>
+      </div>
+    ` : `
+      <div class="continue-learning-card">
+        <h3>All Caught Up!</h3>
+        <p>You have completed all available topics.</p>
+      </div>
+    `;
+
+    // 4. Learning Roadmap (Horizontal)
+    const pathwaysArray = [
+      { id: 'java', title: 'Java', icon: '☕' },
+      { id: 'springboot', title: 'Spring Boot', icon: '🌱' },
+      { id: 'microservices', title: 'Microservices', icon: '🕸️' },
+      { id: 'kafka', title: 'Kafka', icon: '🐿️' },
+      { id: 'aws', title: 'AWS', icon: '☁️' }
+    ];
+
+    let roadmapNodes = pathwaysArray.map((p, idx) => {
+      const pPercent = skillProgress[p.id] || 0;
+      let state = 'locked';
+      let stateIcon = '🔒';
+      let stateText = '0% Complete';
+      if (pPercent === 100) { state = 'done'; stateIcon = '✅'; stateText = '100% Complete'; }
+      else if (pPercent > 0) { state = 'active'; stateIcon = p.icon; stateText = `${pPercent}% Complete`; }
+      else if (idx === 0 || (skillProgress[pathwaysArray[idx-1].id] === 100)) { 
+        state = 'next'; stateIcon = p.icon; stateText = 'Next Up'; 
+      }
+
+      return `
+        <div class="roadmap-node ${state}" onclick="document.getElementById('tab-${p.id}').click()">
+          <div class="node-icon">${stateIcon}</div>
+          <div class="node-title">${p.title}</div>
+          <div class="node-meta">${stateText}</div>
+        </div>
+      `;
+    }).join('<div class="roadmap-line"></div>');
+
+    const roadmapHtml = `
+      <div class="roadmap-card">
+        <div class="card-header-flex">
+          <h3>Learning Roadmap</h3>
+          <a href="#" class="view-link" onclick="document.getElementById('tab-studyplan').click()">View Full Roadmap</a>
+        </div>
+        <p class="subtitle">Your personalized learning journey</p>
+        <div class="roadmap-timeline">
+          ${roadmapNodes}
+        </div>
+      </div>
+    `;
+
+    // 5. Progress Overview & Interview Readiness
+    const barsHtml = pathwaysArray.map(p => {
+      const pPercent = skillProgress[p.id] || 0;
+      return `
+        <div class="progress-bar-row">
+          <span class="bar-label">${p.title}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${pPercent}%; background:var(--accent);"></div></div>
+          <span class="bar-percent">${pPercent}%</span>
+        </div>
+      `;
+    }).join('');
+
+    const studyTime = getTotalStudyTimeStr();
+    const bottomRowHtml = `
+      <div class="dashboard-bottom-grid">
+        <div class="progress-overview-card">
+          <h3>Your Progress Overview</h3>
+          <div class="overview-split">
+            <div class="overview-bars">${barsHtml}</div>
+            <div class="overview-stats">
+              <div class="overview-stat-row"><span>Study Time</span><strong>${studyTime}</strong></div>
+              <div class="overview-stat-row"><span>Topics Completed</span><strong>${stats.topicsCompleted}</strong></div>
+              <div class="overview-stat-row"><span>Sessions</span><strong>${stats.sessions}</strong></div>
+              <div class="overview-stat-row"><span>Most Active Day</span><strong>${stats.mostActiveDay}</strong></div>
+              <div class="overview-stat-row"><span>Learning Velocity</span><strong style="color:var(--success);">▲ ${stats.velocity}%</strong></div>
+            </div>
+          </div>
+        </div>
+        <div class="interview-readiness-card">
+          <h3>Interview Readiness</h3>
+          <div class="circular-chart-container">
+             <svg viewBox="0 0 36 36" class="circular-chart orange">
+              <path class="circle-bg"
+                d="M18 2.0845
+                  a 15.9155 15.9155 0 0 1 0 31.831
+                  a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <path class="circle"
+                stroke-dasharray="${interviewReadiness}, 100"
+                d="M18 2.0845
+                  a 15.9155 15.9155 0 0 1 0 31.831
+                  a 15.9155 15.9155 0 0 1 0 -31.831"
+              />
+              <text x="18" y="20.35" class="percentage">${interviewReadiness}%</text>
+            </svg>
+            <div class="chart-label">Overall</div>
+          </div>
+          <p>Keep going! You're on the right track.</p>
+          <button class="btn-outline" onclick="document.getElementById('tab-interview').click()">View Details</button>
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = `
+      <div class="dashboard-main-wrapper">
+        ${welcomeHtml}
+        ${statsHtml}
+        ${continueHtml}
+        ${roadmapHtml}
+        ${bottomRowHtml}
+      </div>
+    `;
+
+    // Update Header
+    const headerLevel = document.getElementById('header-user-level');
+    const headerStreak = document.getElementById('header-streak-count');
+    if (headerLevel) headerLevel.textContent = `Level ${xpData.level}`;
+    if (headerStreak) headerStreak.textContent = streak;
+
+  } catch (err) {
+    console.error('[renderDashboard] CRASH:', err);
+    container.innerHTML = `<div style="color:red;padding:2rem;"><b>Dashboard Error:</b><br>${err.message}</div>`;
+  }
+};
+
+export const renderRightSidebar = () => {
+  const sidebar = document.getElementById('right-sidebar');
+  if (!sidebar) return;
+
   const plannerTasks = getPlannerTasks();
-
-  // Streak Encouragement Message
-  let streakMsg = "Start learning to build a streak!";
-  if (streak > 0) {
-    if (streak < 3) streakMsg = "Great start! Keep study habits active.";
-    else if (streak < 7) streakMsg = "Awesome streak! You are building solid momentum.";
-    else streakMsg = "Unstoppable! Staff engineer dedication.";
-  }
-
-  // Recommended next topic card
-  let recommendedHtml = "";
-  if (recommended) {
-    recommendedHtml = `
-      <div class="dashboard-recommendation-card">
-        <div class="rec-icon-box">${recommended.icon}</div>
-        <div class="rec-info-box">
-          <div class="rec-tag">${recommended.category}</div>
-          <h4 class="rec-title">${recommended.title}</h4>
-          <p class="rec-desc">${recommended.description || 'Dive into this session next.'}</p>
-        </div>
-        <a href="topics/${recommended.file}" class="rec-launch-btn">Resume Study →</a>
-      </div>
-    `;
-  } else {
-    recommendedHtml = `
-      <div class="dashboard-recommendation-card completed">
-        <div class="rec-icon-box">🏆</div>
-        <div class="rec-info-box">
-          <div class="rec-tag">All Complete</div>
-          <h4 class="rec-title">Mastery Level Achieved!</h4>
-          <p class="rec-desc">You've successfully completed all active pathway sessions.</p>
-        </div>
-      </div>
-    `;
-  }
-
-  // Pathways Selection grid launcher
-  const pathwayLaunchersHtml = Object.entries(PATHWAYS).map(([id, pw]) => {
-    const topics = getTopics().filter(t => pw.categories.includes(t.category));
-    const visitedSet = getVisited();
-    const completed = topics.filter(t => visitedSet.has(t.id)).length;
-    const pathPercent = topics.length > 0 ? Math.round((completed / topics.length) * 100) : 0;
-
+  const skillProgress = getSkillProgress();
+  const { visited, total, percent } = calcProgress('java'); // Assuming milestone is Java Core
+  
+  const tasksHtml = plannerTasks.map((t, idx) => {
     return `
-      <div class="pathway-launcher-card" data-pathway="${id}" onclick="document.getElementById('tab-${id}').click()">
-        <div class="launcher-top">
-          <span class="launcher-icon-circle">${pw.icon}</span>
-          <h4 class="launcher-title">${pw.title}</h4>
-        </div>
-        <p class="launcher-desc">${pw.description}</p>
-        <div class="launcher-footer">
-          <div class="launcher-progress-info">
-            <span>${pathPercent}% Complete</span>
-            <span>${completed}/${topics.length} Sessions</span>
+      <div class="timeline-item ${t.done ? 'done' : ''}">
+        <div class="timeline-dot" onclick="window.toggleTodo(${t.id})"></div>
+        <div class="timeline-content">
+          <div class="timeline-time" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Task ${idx+1}</span>
+            <div class="timeline-actions">
+              <button onclick="window.editTodo(${t.id})" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0;margin-right:6px;" title="Edit Task">✏️</button>
+              <button onclick="window.deleteTodo(${t.id})" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0;color:#ef4444;" title="Delete Task">🗑️</button>
+            </div>
           </div>
-          <div class="launcher-progress-bar-track">
-            <div class="launcher-progress-bar-fill" style="width: ${pathPercent}%"></div>
-          </div>
-          <span class="launcher-action-btn">Launch Path →</span>
+          <div class="timeline-text">${t.text}</div>
+          <div class="timeline-status">${t.done ? 'Completed' : 'Upcoming'}</div>
         </div>
       </div>
     `;
   }).join('');
 
-  // Interactive Monthly Activity Calendar
-  const calendarHtml = generateCalendarMarkup();
-
-  // Study Planner Todo list items
-  const todoItemsHtml = plannerTasks.map(task => `
-    <li class="planner-todo-item ${task.done ? 'done' : ''}">
-      <label class="todo-checkbox-container">
-        <input type="checkbox" ${task.done ? 'checked' : ''} onclick="window.toggleTodo(${task.id}); event.stopPropagation();">
-        <span class="todo-custom-checkbox"></span>
-      </label>
-      <span class="todo-text">${task.text}</span>
-      <button class="todo-delete-btn" onclick="window.deleteTodo(${task.id}); event.stopPropagation();" aria-label="Delete task">✕</button>
-    </li>
-  `).join('');
-
-  const todoListHtml = plannerTasks.length > 0 
-    ? `<ul class="planner-todo-list">${todoItemsHtml}</ul>`
-    : `
-      <div class="planner-todo-empty">
-        <span class="todo-empty-icon">📝</span>
-        <p>Your Study Planner is empty. Add a task above!</p>
+  const heatmapHtml = ['Java', 'Spring Boot', 'Microservices', 'Kafka', 'AWS'].map(title => {
+    const id = title.toLowerCase().replace(' ', '');
+    const p = skillProgress[id] || 0;
+    // render 10 little blocks based on p (each block 10%)
+    let blocks = '';
+    for(let i=0; i<10; i++) {
+      blocks += `<div class="heatmap-block ${i*10 < p ? 'filled' : ''}"></div>`;
+    }
+    return `
+      <div class="heatmap-row">
+        <span class="heatmap-label">${title}</span>
+        <div class="heatmap-blocks">${blocks}</div>
+        <span class="heatmap-percent">${p}%</span>
       </div>
     `;
+  }).join('');
 
-  container.innerHTML = `
-    <div class="dashboard-container">
-      <!-- Section 1: Dashboard Stats Grid -->
-      <div class="dashboard-stats-grid">
-        <!-- Radial overall progress -->
-        <div class="dashboard-stat-card radial-progress-card">
-          <h4 class="stat-card-title">Overall Progress</h4>
-          <div class="radial-progress-inner">
-            <svg class="radial-svg" viewBox="0 0 100 100">
-              <circle class="radial-track" cx="50" cy="50" r="40"></circle>
-              <circle class="radial-fill" cx="50" cy="50" r="40" style="stroke-dasharray: 251.2; stroke-dashoffset: ${251.2 - (251.2 * percent) / 100}"></circle>
-            </svg>
-            <div class="radial-percentage">${percent}%</div>
-          </div>
-          <div class="radial-meta">${visited} of ${total} sessions completed</div>
-        </div>
+  sidebar.innerHTML = `
+    <!-- Today's Plan -->
+    <div class="right-widget">
+      <h3 class="widget-title">Today's Plan <span class="widget-link" onclick="document.getElementById('tab-studyplan').click()">View Calendar</span></h3>
+      <div class="todays-plan-timeline">
+        ${tasksHtml || '<p style="color:var(--text-muted);font-size:0.8rem;">No tasks planned.</p>'}
+      </div>
+      <div style="margin-top: 10px;">
+        <input type="text" id="rs-todo-input" placeholder="+ Add Task" style="width:100%; padding:8px; border:none; border-bottom:1px solid var(--border); background:transparent; outline:none; font-size:0.85rem; color:var(--text-primary);">
+      </div>
+    </div>
 
-        <!-- Daily streak status -->
-        <div class="dashboard-stat-card streak-card">
-          <h4 class="stat-card-title">Study Streak</h4>
-          <div class="streak-days-wrap">
-            <span class="streak-number">${streak}</span>
-            <span class="streak-days-label">Days</span>
-          </div>
-          <p class="streak-encourage">${streakMsg}</p>
-        </div>
-
-        <!-- Smart next study recommend -->
-        <div class="dashboard-stat-card recommendation-card">
-          <h4 class="stat-card-title">Recommended Next Step</h4>
-          ${recommendedHtml}
+    <!-- Upcoming Milestone -->
+    <div class="right-widget">
+      <h3 class="widget-title">Upcoming Milestone</h3>
+      <div class="milestone-card">
+        <div class="milestone-text">Complete Java Core</div>
+        <div class="milestone-track"><div class="milestone-fill" style="width:${percent}%"></div></div>
+        <div class="milestone-meta">
+          <span>${total - visited} Sessions Remaining</span>
+          <span>${percent}%</span>
         </div>
       </div>
+    </div>
 
-      <!-- Section 2: Pathway Quick Launchers -->
-      <h3 class="dashboard-section-title">Select a Pathway to Launch</h3>
-      <div class="pathways-launcher-grid">
-        ${pathwayLaunchersHtml}
-      </div>
-
-      <!-- Section 3: Interactive Learning Tools (Calendar & TODO Planner) -->
-      <div class="dashboard-tools-layout">
-        <!-- activity calendar -->
-        <div class="dashboard-tool-card calendar-card">
-          <h3 class="tool-card-title">📅 Study Activity Calendar</h3>
-          <div class="monthly-calendar-wrap">
-            ${calendarHtml}
-          </div>
-          <div class="calendar-legend">
-            <span class="legend-indicator studied"></span> Studied
-            <span class="legend-indicator today"></span> Today
-          </div>
-        </div>
-
-        <!-- planner todo -->
-        <div class="dashboard-tool-card planner-card">
-          <h3 class="tool-card-title">📋 Interactive Study Planner</h3>
-          <div class="planner-todo-input-group">
-            <input type="text" id="todo-input" placeholder="Plan a custom task (e.g. Master AWS IAM Policies)..." autocomplete="off">
-            <button id="todo-add-btn">Add Task</button>
-          </div>
-          <div class="planner-todo-list-wrap">
-            ${todoListHtml}
-          </div>
-        </div>
+    <!-- Skill Heatmap -->
+    <div class="right-widget">
+      <h3 class="widget-title">Skill Heatmap <span class="widget-link" onclick="document.getElementById('tab-profile').click()">View All</span></h3>
+      <div class="skill-heatmap">
+        ${heatmapHtml}
       </div>
     </div>
   `;
 
-  // Wire up the add task input triggers
-  setupTodoInputListeners();
-  } catch (err) {
-    console.error('[renderDashboard] CRASH:', err);
-    container.innerHTML = `<div style="color:red;padding:2rem;font-family:monospace;"><b>Dashboard Error:</b><br>${err.message}<br><pre>${err.stack}</pre></div>`;
+  const input = document.getElementById('rs-todo-input');
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && input.value.trim()) {
+        addPlannerTask(input.value.trim());
+        renderRightSidebar();
+      }
+    });
   }
-};
-
-const generateCalendarMarkup = () => {
-  const studyDates = getStreakHistory();
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const dayNames = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-  
-  const firstDayIndex = new Date(year, month, 1).getDay();
-  const totalMonthDays = new Date(year, month + 1, 0).getDate();
-  
-  const local = new Date();
-  const offset = local.getTimezoneOffset();
-  const localDate = new Date(local.getTime() - offset * 60 * 1000);
-  const todayStr = localDate.toISOString().split('T')[0];
-  
-  const cells = [];
-  
-  // padding empty boxes
-  for (let i = 0; i < firstDayIndex; i++) {
-    cells.push('<div class="calendar-cell empty"></div>');
-  }
-  
-  // actual days
-  for (let day = 1; day <= totalMonthDays; day++) {
-    const dateObj = new Date(year, month, day);
-    const dateStr = dateObj.toISOString().split('T')[0];
-    
-    const hasStudied = studyDates.includes(dateStr);
-    const isToday = dateStr === todayStr;
-    
-    let cellClass = 'calendar-cell day-cell';
-    if (hasStudied) cellClass += ' studied';
-    if (isToday) cellClass += ' today';
-    
-    cells.push(`
-      <div class="${cellClass}" title="${dateStr}">
-        <span class="cell-day-num">${day}</span>
-      </div>
-    `);
-  }
-  
-  return `
-    <div class="calendar-header-title">${monthNames[month]} ${year}</div>
-    <div class="calendar-grid">
-      ${dayNames.map(d => `<div class="calendar-day-label">${d}</div>`).join('')}
-      ${cells.join('')}
-    </div>
-  `;
-};
-
-const setupTodoInputListeners = () => {
-  const input = document.getElementById('todo-input');
-  const btn = document.getElementById('todo-add-btn');
-  if (!input || !btn) return;
-
-  const handleAdd = () => {
-    const text = input.value.trim();
-    if (text) {
-      addPlannerTask(text);
-      renderDashboard();
-    }
-  };
-
-  btn.addEventListener('click', handleAdd);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleAdd();
-  });
 };
 
 // Expose Todo actions globally on window object for dynamic string inline events
 window.toggleTodo = (taskId) => {
   togglePlannerTask(taskId);
-  renderDashboard();
+  renderRightSidebar();
 };
 
 window.deleteTodo = (taskId) => {
   deletePlannerTask(taskId);
-  renderDashboard();
+  renderRightSidebar();
+};
+
+window.editTodo = (taskId) => {
+  const tasks = getPlannerTasks();
+  const task = tasks.find(t => t.id === taskId);
+  if (task) {
+    const newText = prompt("Edit Task:", task.text);
+    if (newText !== null && newText.trim() !== "") {
+      editPlannerTask(taskId, newText.trim());
+      renderRightSidebar();
+    }
+  }
 };
 
 // ─── Study Plan Roadmap Grid ──────────────────────────────────────────────────────
@@ -784,20 +842,46 @@ const init = () => {
   initPathwayTabs();
   initSearch();
   initCommandPalette();
+  
+  // New Theme Toggle Listener
+  const themeCheckbox = document.getElementById('theme-toggle-checkbox');
+  if (themeCheckbox) {
+    themeCheckbox.checked = document.documentElement.getAttribute('data-theme') === 'dark';
+    themeCheckbox.addEventListener('change', (e) => {
+      const next = e.target.checked ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      saveTheme(next);
+    });
+  }
+
+  // Paths accordion toggle
+  const accordionToggle = document.getElementById('nav-paths-toggle');
+  if (accordionToggle) {
+    accordionToggle.addEventListener('click', () => {
+      const content = document.getElementById('nav-paths-content');
+      if (content) {
+        content.style.display = content.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+  }
+
   document.getElementById('header-search-btn')?.addEventListener('click', openCommandPalette);
 
-  renderSidebar();
+  renderSidebar(); // Note: sidebar might be different in new layout but kept for compat
+  renderRightSidebar();
   renderProgress();
   renderCards(getSearchParam('search'));
 
   window.addEventListener('storage', () => {
     renderProgress();
+    renderRightSidebar();
     renderCards(getSearchParam('search'));
   });
 
   window.addEventListener('pageshow', (event) => {
     if (event.persisted) {
       renderProgress();
+      renderRightSidebar();
       renderCards(getSearchParam('search'));
     }
   });
