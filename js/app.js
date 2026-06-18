@@ -41,8 +41,12 @@ const applyTheme = (theme) => {
   document.documentElement.setAttribute('data-theme', theme);
   const icon = document.getElementById('theme-icon') || document.getElementById('top-theme-icon');
   if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+  const mobileIcon = document.getElementById('mobile-theme-icon');
+  if (mobileIcon) mobileIcon.textContent = theme === 'dark' ? '☀️' : '🌙';
   const checkbox = document.getElementById('theme-toggle-checkbox');
   if (checkbox) checkbox.checked = theme === 'dark';
+  const mobileCheckbox = document.getElementById('mobile-theme-toggle-checkbox');
+  if (mobileCheckbox) mobileCheckbox.checked = theme === 'dark';
 };
 
 const initTheme = () => {
@@ -913,12 +917,19 @@ const init = () => {
   applyTheme(theme);
 
   const themeToggle = document.getElementById('theme-toggle-checkbox');
+  const mobileThemeToggle = document.getElementById('mobile-theme-toggle-checkbox');
+  
+  const handleThemeChange = (e) => {
+    const newTheme = e.target.checked ? 'dark' : 'light';
+    applyTheme(newTheme);
+    saveTheme(newTheme);
+  };
+
   if (themeToggle) {
-    themeToggle.addEventListener('change', (e) => {
-      const newTheme = e.target.checked ? 'dark' : 'light';
-      applyTheme(newTheme);
-      saveTheme(newTheme);
-    });
+    themeToggle.addEventListener('change', handleThemeChange);
+  }
+  if (mobileThemeToggle) {
+    mobileThemeToggle.addEventListener('change', handleThemeChange);
   }
 
   // Mobile navigation
