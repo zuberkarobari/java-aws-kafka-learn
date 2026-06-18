@@ -947,6 +947,11 @@ const init = () => {
     mobileOverlay.addEventListener('click', toggleMobileNav);
   }
 
+  const mobileSidebarClose = document.getElementById('mobile-sidebar-close');
+  if (mobileSidebarClose) {
+    mobileSidebarClose.addEventListener('click', toggleMobileNav);
+  }
+
   // Desktop navigation toggles
   const desktopLeftToggle = document.getElementById('desktop-left-toggle');
   const desktopRightToggle = document.getElementById('desktop-right-toggle');
