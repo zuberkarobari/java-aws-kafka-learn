@@ -263,28 +263,50 @@ const renderDashboard = () => {
     `;
 
     // 3. Continue Learning
-    const continueHtml = recommended ? `
-      <div class="continue-learning-card">
-        <div class="continue-header">
-          <h3>Continue Learning</h3>
-          <span class="last-studied">Last studied: Today</span>
-        </div>
-        <div class="continue-body">
-          <div class="continue-icon">${recommended.icon}</div>
-          <div class="continue-info">
-            <h4>${recommended.title}</h4>
-            <p>${recommended.description}</p>
-            <div class="continue-meta">Next up · 0% Complete</div>
+    let continueHtml = '';
+    if (xpData.progressXP === 0) {
+      continueHtml = `
+        <div class="continue-learning-card" style="background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0)); border-color: rgba(16,185,129,0.2);">
+          <div class="continue-header">
+            <h3>Welcome to Java Learn!</h3>
+            <span class="last-studied">Just starting out</span>
           </div>
-          <button class="btn-continue" onclick="window.location.href='topics/${recommended.file}'">Continue →</button>
+          <div class="continue-body">
+            <div class="continue-icon">🚀</div>
+            <div class="continue-info">
+              <h4>Start Your Journey</h4>
+              <p>You haven't completed any topics yet. Let's dive into Java Fundamentals.</p>
+            </div>
+            <button class="btn-continue" style="background: var(--accent);" onclick="document.getElementById('tab-java').click()">Get Started →</button>
+          </div>
         </div>
-      </div>
-    ` : `
-      <div class="continue-learning-card">
-        <h3>All Caught Up!</h3>
-        <p>You have completed all available topics.</p>
-      </div>
-    `;
+      `;
+    } else if (recommended) {
+      continueHtml = `
+        <div class="continue-learning-card">
+          <div class="continue-header">
+            <h3>Continue Learning</h3>
+            <span class="last-studied">Last studied: Today</span>
+          </div>
+          <div class="continue-body">
+            <div class="continue-icon">${recommended.icon}</div>
+            <div class="continue-info">
+              <h4>${recommended.title}</h4>
+              <p>${recommended.description}</p>
+              <div class="continue-meta">Next up · 0% Complete</div>
+            </div>
+            <button class="btn-continue" onclick="window.location.href='topics/${recommended.file}'">Continue →</button>
+          </div>
+        </div>
+      `;
+    } else {
+      continueHtml = `
+        <div class="continue-learning-card">
+          <h3>All Caught Up!</h3>
+          <p>You have completed all available topics.</p>
+        </div>
+      `;
+    }
 
     // 4. Learning Roadmap (Horizontal)
     const pathwaysArray = [
@@ -423,7 +445,7 @@ export const renderRightSidebar = () => {
               <button onclick="window.deleteTodo(${t.id})" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0;color:#ef4444;" title="Delete Task">🗑️</button>
             </div>
           </div>
-          <div class="timeline-text">${t.text}</div>
+          <div class="timeline-text" id="task-text-${t.id}">${t.text}</div>
           <div class="timeline-status">${t.done ? 'Completed' : 'Upcoming'}</div>
         </div>
       </div>
@@ -486,10 +508,30 @@ export const renderRightSidebar = () => {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && input.value.trim()) {
         addPlannerTask(input.value.trim());
+        if(window.showToast) window.showToast('Task added successfully', 'success');
         renderRightSidebar();
       }
     });
   }
+};
+
+// ─── Toast System ─────────────────────────────────────────────────────────────
+window.showToast = (message, type = 'success') => {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  const icon = type === 'success' ? '✅' : '❌';
+  toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+  container.appendChild(toast);
+  
+  // Trigger animation
+  requestAnimationFrame(() => toast.classList.add('show'));
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 };
 
 // Expose Todo actions globally on window object for dynamic string inline events
@@ -500,19 +542,40 @@ window.toggleTodo = (taskId) => {
 
 window.deleteTodo = (taskId) => {
   deletePlannerTask(taskId);
+  if(window.showToast) window.showToast('Task deleted', 'success');
   renderRightSidebar();
 };
 
 window.editTodo = (taskId) => {
-  const tasks = getPlannerTasks();
-  const task = tasks.find(t => t.id === taskId);
-  if (task) {
-    const newText = prompt("Edit Task:", task.text);
-    if (newText !== null && newText.trim() !== "") {
-      editPlannerTask(taskId, newText.trim());
-      renderRightSidebar();
+  const textElement = document.getElementById(`task-text-${taskId}`);
+  if (!textElement) return;
+  
+  const currentText = textElement.innerText;
+  textElement.innerHTML = `<input type="text" id="edit-input-${taskId}" value="${currentText.replace(/"/g, '&quot;')}" style="width:100%; border:1px solid var(--accent); background:var(--bg-elevated); color:var(--text-primary); padding:4px; border-radius:4px; outline:none; font-size:0.9rem;" />`;
+  
+  const input = document.getElementById(`edit-input-${taskId}`);
+  input.focus();
+  
+  const saveChange = () => {
+    const newText = input.value.trim();
+    if (newText && newText !== currentText) {
+      editPlannerTask(taskId, newText);
+      if(window.showToast) window.showToast('Task updated', 'success');
+    } else if (!newText) {
+      // Revert if empty
+      textElement.innerText = currentText;
+      return;
     }
-  }
+    renderRightSidebar();
+  };
+  
+  input.addEventListener('blur', saveChange);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveChange();
+    if (e.key === 'Escape') {
+      textElement.innerText = currentText;
+    }
+  });
 };
 
 // ─── Study Plan Roadmap Grid ──────────────────────────────────────────────────────
@@ -767,6 +830,14 @@ const initSearch = () => {
     setSearchParam('search', query);
     renderCards(query);
   });
+
+  // Global hotkey '/' to focus search
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      input.focus();
+    }
+  });
 };
 
 // Exposed globally for the "Clear search" button in empty state
@@ -838,22 +909,38 @@ const slugify = (str) =>
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 const init = () => {
-  initTheme();
+  const theme = getSavedTheme();
+  applyTheme(theme);
+
+  const themeToggle = document.getElementById('theme-toggle-checkbox');
+  if (themeToggle) {
+    themeToggle.checked = theme === 'dark';
+    themeToggle.addEventListener('change', (e) => {
+      const newTheme = e.target.checked ? 'dark' : 'light';
+      applyTheme(newTheme);
+      saveTheme(newTheme);
+    });
+  }
+
+  // Mobile navigation
+  const hamburgerBtn = document.getElementById('hamburger-btn');
+  const leftSidebar = document.getElementById('left-sidebar');
+  const mobileOverlay = document.getElementById('mobile-overlay');
+  
+  const toggleMobileNav = () => {
+    leftSidebar.classList.toggle('open');
+    mobileOverlay.classList.toggle('open');
+  };
+  
+  if (hamburgerBtn && leftSidebar && mobileOverlay) {
+    hamburgerBtn.addEventListener('click', toggleMobileNav);
+    mobileOverlay.addEventListener('click', toggleMobileNav);
+  }
+
   initPathwayTabs();
   initSearch();
   initCommandPalette();
   
-  // New Theme Toggle Listener
-  const themeCheckbox = document.getElementById('theme-toggle-checkbox');
-  if (themeCheckbox) {
-    themeCheckbox.checked = document.documentElement.getAttribute('data-theme') === 'dark';
-    themeCheckbox.addEventListener('change', (e) => {
-      const next = e.target.checked ? 'dark' : 'light';
-      document.documentElement.setAttribute('data-theme', next);
-      saveTheme(next);
-    });
-  }
-
   // Paths accordion toggle
   const accordionToggle = document.getElementById('nav-paths-toggle');
   if (accordionToggle) {
