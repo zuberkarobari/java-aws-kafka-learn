@@ -348,10 +348,21 @@ const assembleLayout = () => {
   const originalContent = document.getElementById('topic-content');
   if (!originalContent) return;
 
-  const breadcrumb = injectBreadcrumb();
+  const originalParent = originalContent.parentNode;
+  const nextSibling = originalContent.nextSibling;
+  const existingLayout = originalContent.closest('.topic-layout');
+
+  const isChecklist = document.body.classList.contains('study-checklist-page');
+
+  let breadcrumb, prevNext, footer, progressBar;
+  if (!isChecklist) {
+    breadcrumb = injectBreadcrumb();
+    prevNext = injectPrevNext();
+    footer = injectFooter();
+    progressBar = injectProgressBar();
+  }
+
   const sidebar = injectSidebar();
-  const prevNext = injectPrevNext();
-  const footer = injectFooter();
 
   // Build wrapper
   const wrapper = document.createElement('div');
@@ -369,17 +380,22 @@ const assembleLayout = () => {
   // Move original content into article
   article.appendChild(originalContent);
   main.appendChild(article);
-  main.appendChild(prevNext);
+  if (prevNext) main.appendChild(prevNext);
+  
   wrapper.appendChild(main);
 
-  document.body.appendChild(wrapper);
-  document.body.appendChild(footer);
-  
-  const progressBar = injectProgressBar();
+  if (existingLayout) {
+    existingLayout.parentNode.replaceChild(wrapper, existingLayout);
+  } else {
+    originalParent.insertBefore(wrapper, nextSibling);
+  }
+
+  if (footer) document.body.appendChild(footer);
   if (progressBar) document.body.appendChild(progressBar);
   
-  // Add padding to body so the footer/content isn't hidden by the fixed bar
-  document.body.style.paddingBottom = '40px';
+  if (!isChecklist) {
+    document.body.style.paddingBottom = '40px';
+  }
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -396,7 +412,9 @@ const init = () => {
   const theme = getSavedTheme();
   applyTheme(theme);
 
-  injectHeader();
+  if (!document.body.classList.contains('study-checklist-page')) {
+    injectHeader();
+  }
   assembleLayout();
 
   // Set page title from topic
