@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Spring Boot Testing Masterclass — @SpringBootTest, @WebMvcTest, @DataJpaTest, MockMvc, @MockBean, TestContainers for Java interview prep 2026." />
+  <title>Spring Boot Testing Masterclass — Java Learn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-test-tube"></i> Testing
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Spring Boot <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Testing</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        The most asked non-trivial Spring Boot topic in 2026 interviews. Master the testing pyramid: unit tests with Mockito, slice tests with @WebMvcTest and @DataJpaTest, and full integration tests with @SpringBootTest and TestContainers.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. The Testing Pyramid</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 gap-3">
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-4 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-triangle text-spring-400"></i> Spring Boot Test Types — Choose the Right Scope
+                            </h3>
+
+                            <!-- E2E / Integration -->
+                            <div class="bg-red-900/40 border border-red-500/50 px-6 py-4 rounded-xl w-[90%] text-center">
+                                <span class="text-red-300 font-bold">@SpringBootTest — Full Integration Test</span>
+                                <p class="text-[11px] text-slate-400 mt-1">Loads entire ApplicationContext. Slow (30s+). Test critical user flows end-to-end with a real DB (TestContainers). Few tests.</p>
+                            </div>
+
+                            <!-- Slice Tests -->
+                            <div class="grid grid-cols-2 gap-4 w-full">
+                                <div class="bg-amber-900/40 border border-amber-500/50 px-4 py-4 rounded-xl text-center">
+                                    <span class="text-amber-300 font-bold text-sm">@WebMvcTest</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">Controller layer only. No service/DB wired. Uses MockMvc. Fast.</p>
+                                </div>
+                                <div class="bg-blue-900/40 border border-blue-500/50 px-4 py-4 rounded-xl text-center">
+                                    <span class="text-blue-300 font-bold text-sm">@DataJpaTest</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">JPA layer only. In-memory H2 or TestContainers. Tests queries & mappings. Fast.</p>
+                                </div>
+                            </div>
+
+                            <!-- Unit Tests -->
+                            <div class="bg-emerald-900/40 border border-emerald-500/70 px-6 py-4 rounded-xl w-full text-center">
+                                <span class="text-emerald-300 font-bold">Plain JUnit 5 + Mockito — Unit Tests</span>
+                                <p class="text-[11px] text-slate-400 mt-1">No Spring context. Mock all dependencies. Fastest (milliseconds). Most tests live here. Tests one class in isolation.</p>
+                            </div>
+
+                            <div class="text-[11px] text-slate-400 text-center mt-2">
+                                <strong class="text-slate-300">Rule of thumb:</strong> 70% unit tests → 20% slice tests → 10% integration tests. More integration tests = slower CI pipeline.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Annotation Cheatsheet -->
+                <section id="annotations" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Testing Annotations Cheatsheet</h2>
+                    </div>
+
+                    <div class="bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-slate-100">
+                                        <th class="text-left py-3 px-4 font-bold text-slate-700">Annotation</th>
+                                        <th class="text-left py-3 px-4 font-bold text-slate-700">What It Does</th>
+                                        <th class="text-left py-3 px-4 font-bold text-slate-700">Context Loaded</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-50">
+                                    <tr class="hover:bg-slate-50"><td class="py-3 px-4 font-mono text-spring-600">@SpringBootTest</td><td class="py-3 px-4 text-slate-600">Full application context</td><td class="py-3 px-4 text-red-500">Everything (slow)</td></tr>
+                                    <tr class="hover:bg-slate-50"><td class="py-3 px-4 font-mono text-spring-600">@WebMvcTest</td><td class="py-3 px-4 text-slate-600">Controller + filters only</td><td class="py-3 px-4 text-amber-600">MVC layer</td></tr>
+                                    <tr class="hover:bg-slate-50"><td class="py-3 px-4 font-mono text-spring-600">@DataJpaTest</td><td class="py-3 px-4 text-slate-600">JPA / DB layer only</td><td class="py-3 px-4 text-blue-600">JPA layer</td></tr>
+                                    <tr class="hover:bg-slate-50"><td class="py-3 px-4 font-mono text-spring-600">@MockBean</td><td class="py-3 px-4 text-slate-600">Replace Spring bean with Mockito mock</td><td class="py-3 px-4 text-slate-500">Used inside slice/full tests</td></tr>
+                                    <tr class="hover:bg-slate-50"><td class="py-3 px-4 font-mono text-spring-600">@SpyBean</td><td class="py-3 px-4 text-slate-600">Real bean + partial mocking</td><td class="py-3 px-4 text-slate-500">Spring context tests</td></tr>
+                                    <tr class="hover:bg-slate-50"><td class="py-3 px-4 font-mono text-spring-600">@Mock</td><td class="py-3 px-4 text-slate-600">Mockito mock (no Spring context)</td><td class="py-3 px-4 text-emerald-600">Unit tests only</td></tr>
+                                    <tr class="hover:bg-slate-50"><td class="py-3 px-4 font-mono text-spring-600">@InjectMocks</td><td class="py-3 px-4 text-slate-600">Inject @Mock deps into tested class</td><td class="py-3 px-4 text-emerald-600">Unit tests only</td></tr>
+                                    <tr class="hover:bg-slate-50"><td class="py-3 px-4 font-mono text-spring-600">@AutoConfigureMockMvc</td><td class="py-3 px-4 text-slate-600">Auto-inject MockMvc in @SpringBootTest</td><td class="py-3 px-4 text-slate-500">Full context tests</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-test-tube text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">Testing an Order API — Three Layers</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">The right test for each layer of the same feature.</p>
+
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-function text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Unit Test — OrderService</h4>
+                                    <p class="text-sm text-slate-300 mt-1">No Spring. <code>@Mock OrderRepository</code> + <code>@InjectMocks OrderService</code>. Test: "When inventory is 0, throw InsufficientStockException." Runs in &lt;10ms. Mock isolates the business rule from DB.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30"><i class="ph-fill ph-arrows-in text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Slice Test — @WebMvcTest for OrderController</h4>
+                                    <p class="text-sm text-slate-300 mt-1"><code>@MockBean OrderService</code> in the test. Test: "POST /api/orders with invalid body returns 400 with field errors." Verifies controller validation + serialization without touching DB or service logic.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-database text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">Integration Test — @SpringBootTest + TestContainers</h4>
+                                    <p class="text-sm text-slate-300 mt-1">Starts a real PostgreSQL container. Full flow: POST → OrderController → OrderService → JPA → PostgreSQL. Verifies the entire user flow including real SQL queries and transaction commits. ~5s per test.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">@MockBean vs @Mock</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><code>@Mock</code> is pure Mockito — no Spring context involved. Used in plain unit tests with <code>@ExtendWith(MockitoExtension.class)</code>. <code>@MockBean</code> creates a Mockito mock AND replaces the real Spring bean in the application context. Use <code>@MockBean</code> in <code>@WebMvcTest</code>/<code>@SpringBootTest</code>, <code>@Mock</code> in unit tests.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">@DataJpaTest — Transactional by Default</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Every <code>@DataJpaTest</code> test method runs in a transaction that is <strong>automatically rolled back</strong> after the test. This means tests don't pollute each other with stale data. Use <code>@Commit</code> or <code>@Rollback(false)</code> only if you explicitly want data to persist between tests (rare).</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">TestContainers — Real DB in Tests</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">TestContainers starts actual Docker containers (PostgreSQL, Redis, Kafka) for your tests, then tears them down. Unlike H2 (which can mask DB-specific SQL dialect issues), TestContainers tests against the same database engine as production — finding bugs that H2 silently ignores.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">@SpringBootTest is Slow — Use it Sparingly</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Every time <code>@SpringBootTest</code> loads with a different configuration (different <code>@MockBean</code> combinations), Spring creates a NEW application context — each one takes 3–30 seconds. Keep <code>@SpringBootTest</code> configuration consistent across tests to enable context caching and reuse the same context across multiple test classes.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Testing Security with @WithMockUser</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">In <code>@WebMvcTest</code>, Spring Security is active by default. Use <code>@WithMockUser(roles = "ADMIN")</code> to simulate an authenticated user in your test without going through the full login flow. Use <code>@WithAnonymousUser</code> to test unauthorized access.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Testing Async Methods</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">For <code>@Async</code> methods, use <code>CompletableFuture.get()</code> to block until completion in tests, or use <code>Awaitility</code> for event-driven assertions: <code>await().atMost(5, SECONDS).until(() -> verify(service).processOrder(any()))</code>. Awaitility polls the condition until it's true or times out.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">@RestClientTest for HTTP Clients</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Testing components that call external REST APIs? Use <code>@RestClientTest</code> to load only the HTTP client and configure a <code>MockRestServiceServer</code> that intercepts HTTP calls and returns canned responses — without actually making network requests. Tests both happy path and error handling (timeouts, 500s) in milliseconds.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: When do you use @SpringBootTest vs @WebMvcTest?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Use <code>@WebMvcTest</code> for testing controller logic in isolation — request mapping, validation, serialization, security rules. Use <code>@SpringBootTest</code> for integration tests that verify multiple layers working together (e.g., controller → service → repository → DB). <code>@WebMvcTest</code> is 5–10x faster because it doesn't load the full context.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: How do you test a method annotated with @Transactional?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> For unit tests, transaction behavior is an AOP concern — just test the business logic without Spring. For integration tests (<code>@DataJpaTest</code> or <code>@SpringBootTest</code>), call the service method from outside the bean so the AOP proxy intercepts it and applies the transaction. If you call the method within the test class directly on the injected bean, the transaction is applied. If testing rollback on exception, call the service, catch the exception, then verify the DB state is unchanged using a separate query.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: Why might H2 tests pass but PostgreSQL tests fail?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> H2 is lenient about SQL syntax and often silently accepts PostgreSQL-incompatible statements. Common examples: <code>ON CONFLICT DO NOTHING</code> (Postgres upsert), <code>JSONB</code> column types, <code>ILIKE</code> case-insensitive matching, and native query functions like <code>array_agg()</code>. TestContainers solves this by running the actual PostgreSQL engine — the same database you use in production — catching these dialect mismatches before deployment.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Complete Code Example</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">OrderServiceTest.java + OrderControllerTest.java + IntegrationTest.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]">/* 1. UNIT TEST — No Spring context. Pure Mockito. */</span>
+<span class="text-[#4ec9b0]">@ExtendWith</span>(<span class="text-[#4ec9b0]">MockitoExtension</span>.<span class="text-[#569cd6]">class</span>)
+<span class="text-[#569cd6]">class</span> <span class="text-[#4ec9b0]">OrderServiceTest</span> {
+
+    <span class="text-[#4ec9b0]">@Mock</span> <span class="text-[#4ec9b0]">OrderRepository</span> orderRepo;
+    <span class="text-[#4ec9b0]">@Mock</span> <span class="text-[#4ec9b0]">InventoryService</span> inventoryService;
+    <span class="text-[#4ec9b0]">@InjectMocks</span> <span class="text-[#4ec9b0]">OrderService</span> orderService;
+
+    <span class="text-[#4ec9b0]">@Test</span>
+    <span class="text-[#569cd6]">void</span> shouldThrowWhenOutOfStock() {
+        given(inventoryService.getStock(<span class="text-[#ce9178]">"PROD-1"</span>)).willReturn(0);
+
+        assertThatThrownBy(() -> orderService.placeOrder(<span class="text-[#ce9178]">"PROD-1"</span>, 5))
+            .isInstanceOf(<span class="text-[#4ec9b0]">InsufficientStockException</span>.<span class="text-[#569cd6]">class</span>);
+
+        verify(orderRepo, never()).save(any()); <span class="text-[#6a9955]">// Never saved</span>
+    }
+}
+
+<span class="text-[#6a9955]">/* 2. SLICE TEST — @WebMvcTest loads MVC layer only */</span>
+<span class="text-[#4ec9b0]">@WebMvcTest</span>(<span class="text-[#4ec9b0]">OrderController</span>.<span class="text-[#569cd6]">class</span>)
+<span class="text-[#569cd6]">class</span> <span class="text-[#4ec9b0]">OrderControllerTest</span> {
+
+    <span class="text-[#4ec9b0]">@Autowired</span> <span class="text-[#4ec9b0]">MockMvc</span> mockMvc;
+    <span class="text-[#4ec9b0]">@MockBean</span> <span class="text-[#4ec9b0]">OrderService</span> orderService; <span class="text-[#6a9955]">// Replaces real service bean</span>
+
+    <span class="text-[#4ec9b0]">@Test</span>
+    <span class="text-[#4ec9b0]">@WithMockUser</span>(roles = <span class="text-[#ce9178]">"USER"</span>)
+    <span class="text-[#569cd6]">void</span> shouldReturn400WhenBodyInvalid() <span class="text-[#569cd6]">throws</span> Exception {
+        mockMvc.perform(post(<span class="text-[#ce9178]">"/api/orders"</span>)
+                .contentType(<span class="text-[#4ec9b0]">MediaType</span>.APPLICATION_JSON)
+                .content(<span class="text-[#ce9178]">"{\"productId\": null}"</span>)) <span class="text-[#6a9955]">// Invalid body</span>
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath(<span class="text-[#ce9178]">"$.violations.productId"</span>).exists());
+    }
+}
+
+<span class="text-[#6a9955]">/* 3. INTEGRATION TEST — TestContainers + real PostgreSQL */</span>
+<span class="text-[#4ec9b0]">@SpringBootTest</span>(webEnvironment = <span class="text-[#4ec9b0]">SpringBootTest</span>.<span class="text-[#4ec9b0]">WebEnvironment</span>.RANDOM_PORT)
+<span class="text-[#4ec9b0]">@Testcontainers</span>
+<span class="text-[#569cd6]">class</span> <span class="text-[#4ec9b0]">OrderIntegrationTest</span> {
+
+    <span class="text-[#4ec9b0]">@Container</span>
+    <span class="text-[#569cd6]">static</span> <span class="text-[#4ec9b0]">PostgreSQLContainer</span>&lt;?&gt; postgres =
+        <span class="text-[#569cd6]">new</span> <span class="text-[#4ec9b0]">PostgreSQLContainer</span>&lt;&gt;(<span class="text-[#ce9178]">"postgres:16"</span>);
+
+    <span class="text-[#4ec9b0]">@DynamicPropertySource</span>
+    <span class="text-[#569cd6]">static void</span> props(<span class="text-[#4ec9b0]">DynamicPropertyRegistry</span> registry) {
+        registry.add(<span class="text-[#ce9178]">"spring.datasource.url"</span>, postgres::getJdbcUrl);
+        registry.add(<span class="text-[#ce9178]">"spring.datasource.username"</span>, postgres::getUsername);
+        registry.add(<span class="text-[#ce9178]">"spring.datasource.password"</span>, postgres::getPassword);
+    }
+
+    <span class="text-[#4ec9b0]">@Autowired</span> <span class="text-[#4ec9b0]">TestRestTemplate</span> restTemplate;
+
+    <span class="text-[#4ec9b0]">@Test</span>
+    <span class="text-[#569cd6]">void</span> fullOrderFlow() {
+        <span class="text-[#4ec9b0]">var</span> request = <span class="text-[#569cd6]">new</span> <span class="text-[#4ec9b0]">CreateOrderRequest</span>(<span class="text-[#ce9178]">"PROD-1"</span>, 2);
+        <span class="text-[#4ec9b0]">var</span> response = restTemplate.postForEntity(<span class="text-[#ce9178]">"/api/orders"</span>, request, <span class="text-[#4ec9b0]">Order</span>.<span class="text-[#569cd6]">class</span>);
+
+        assertThat(response.getStatusCode()).isEqualTo(<span class="text-[#4ec9b0]">HttpStatus</span>.CREATED);
+        assertThat(response.getBody().getId()).isNotNull();
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "My testing philosophy for Spring Boot follows a strict pyramid. The majority of tests are plain JUnit 5 + Mockito unit tests — no Spring context, no annotations, just fast feedback on business logic. These run in under 100ms total and form the safety net for refactoring.
+                            <br><br>
+                            For the web layer, I use <code>@WebMvcTest</code> with <code>@MockBean</code> for the service. This validates HTTP contract — routing, validation, serialization, and security rules — without loading JPA or touching a database. It's 5–10x faster than <code>@SpringBootTest</code>.
+                            <br><br>
+                            For critical integration paths (order placement, payment processing), I use <code>@SpringBootTest</code> with TestContainers running actual PostgreSQL. H2 masks too many dialect-specific bugs. I also use <code>@DynamicPropertySource</code> to point the app at the container's JDBC URL.
+                            <br><br>
+                            The biggest mistake I see: overusing <code>@SpringBootTest</code>. Every unique combination of <code>@MockBean</code>s creates a new context — a project with 50 integration tests can have 10 seconds of startup per unique context. I enforce that all integration tests use a shared base class with the same <code>@MockBean</code> configuration to maximize Spring's context caching."
+                        </p>
+                    </div>
+                </section>
+
+            </div>
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

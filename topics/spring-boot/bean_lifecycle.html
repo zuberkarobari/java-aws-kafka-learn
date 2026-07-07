@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Spring Bean Lifecycle Deep Dive — @PostConstruct, @PreDestroy, BeanPostProcessor, BeanFactoryPostProcessor, InitializingBean, and the full lifecycle phases explained for Java interviews." />
+  <title>Spring Bean Lifecycle — Java Learn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-plant"></i> Bean Lifecycle
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Spring Bean <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Lifecycle</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Every Spring bean is born, lives, and dies under IoC container control. Understanding the full lifecycle — instantiation, dependency injection, post-processing, initialization, and destruction — is a senior-level must-know.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Think of a bean's lifecycle like hiring a new employee: HR (Spring) recruits them, trains them (injects dependencies), onboards them (runs @PostConstruct), then they do their job, and finally they retire gracefully (@PreDestroy cleanup).</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">The Spring bean lifecycle is the sequence of phases that the IoC container orchestrates for every managed bean: class loading, instantiation, property population, BeanPostProcessor callbacks, custom init logic, ready state, and eventually destruction callbacks.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Gives developers well-defined hooks to run custom logic at precise lifecycle moments — opening DB connections post-init, validating config, registering listeners, and releasing resources on shutdown — without Spring coupling in your code.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. The Full Lifecycle Flow -->
+                <section id="lifecycle-flow" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. The Complete Lifecycle Flow</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-spring-400"></i> Spring Bean Lifecycle — Phase by Phase
+                            </h3>
+
+                            <div class="flex flex-col items-center w-full max-w-2xl gap-2">
+
+                                <!-- Phase 1 -->
+                                <div class="bg-indigo-900/40 border border-indigo-500/50 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-indigo-300 font-bold text-sm">① Instantiation</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">Spring calls <code>new MyBean()</code> via reflection (constructor injection) or a factory method.</p>
+                                </div>
+
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Phase 2 -->
+                                <div class="bg-blue-900/40 border border-blue-500/50 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-blue-300 font-bold text-sm">② Property Population (Dependency Injection)</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">Spring injects all @Autowired dependencies, @Value fields, and other property values.</p>
+                                </div>
+
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Phase 3 -->
+                                <div class="bg-violet-900/40 border border-violet-500/50 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-violet-300 font-bold text-sm">③ Aware Interface Callbacks</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">If bean implements BeanNameAware, BeanFactoryAware, or ApplicationContextAware, Spring calls those setters to inject container references.</p>
+                                </div>
+
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Phase 4 -->
+                                <div class="bg-amber-900/40 border border-amber-500/50 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-amber-300 font-bold text-sm">④ BeanPostProcessor — postProcessBeforeInitialization()</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">All registered BeanPostProcessors get a chance to wrap or modify the bean BEFORE init. Spring's AOP proxy creation happens here.</p>
+                                </div>
+
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Phase 5 -->
+                                <div class="bg-emerald-900/40 border-2 border-emerald-500/70 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-emerald-300 font-bold text-sm">⑤ Initialization Callbacks (Your Code Runs Here)</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">Three options (in order): <code>afterPropertiesSet()</code> (InitializingBean), @PostConstruct method, or <code>initMethod</code> attribute in @Bean.</p>
+                                </div>
+
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Phase 6 -->
+                                <div class="bg-amber-900/40 border border-amber-500/50 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-amber-300 font-bold text-sm">⑥ BeanPostProcessor — postProcessAfterInitialization()</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">Post-processors can still modify the bean AFTER initialization. This is the final chance before the bean is handed to clients.</p>
+                                </div>
+
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Phase 7 -->
+                                <div class="bg-spring-900/40 border-2 border-spring-500/70 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-spring-300 font-bold text-sm">⑦ Bean is READY — Serves Application Requests</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">The fully initialized bean is placed in the singleton cache and injected wherever needed.</p>
+                                </div>
+
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Phase 8 -->
+                                <div class="bg-red-900/40 border border-red-500/50 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-red-300 font-bold text-sm">⑧ Destruction Callbacks (Application Shutdown)</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">On context.close(): @PreDestroy, then destroy() (DisposableBean), then destroyMethod. Close DB connections, thread pools, etc.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-heartbeat text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">Database Connection Pool Service</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">How lifecycle hooks power real enterprise initialization and cleanup.</p>
+
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-play text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">@PostConstruct — Open Resources</h4>
+                                    <p class="text-sm text-slate-300 mt-1">A <code>DataSourceHealthChecker</code> service annotates a method with <code>@PostConstruct</code>. After all properties are injected, Spring calls this method to establish a test DB connection, verifying the datasource URL is valid before the app serves any traffic.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30"><i class="ph-fill ph-wrench text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">BeanPostProcessor — AOP Proxies</h4>
+                                    <p class="text-sm text-slate-300 mt-1">When you put <code>@Transactional</code> on a service, Spring's <code>AnnotationAwareAspectJAutoProxyCreator</code> (a BeanPostProcessor) wraps your bean in a CGLIB proxy <em>after initialization</em>, transparently adding transaction boundary logic.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-stop text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">@PreDestroy — Release Resources</h4>
+                                    <p class="text-sm text-slate-300 mt-1">A <code>KafkaConsumerManager</code> uses <code>@PreDestroy</code> to gracefully call <code>consumer.close()</code> when the Spring context shuts down — preventing consumer group rebalancing storms and uncommitted offset loss.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">@PostConstruct vs Constructor</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Constructor runs before DI. If your init logic needs injected dependencies (e.g., a repository to fetch config), it <strong>must</strong> go in <code>@PostConstruct</code>, not the constructor — because dependencies aren't set yet when the constructor runs.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">BeanPostProcessor vs BeanFactoryPostProcessor</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><code>BeanPostProcessor</code> operates on <strong>bean instances</strong> (after creation). <code>BeanFactoryPostProcessor</code> operates on the <strong>bean definitions</strong> (metadata) before any beans are instantiated — used by <code>PropertySourcesPlaceholderConfigurer</code> to resolve <code>${}</code> placeholders.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Init Method Priority Order</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">When multiple init hooks are defined, the order is strict: <strong>① @PostConstruct</strong> → <strong>② afterPropertiesSet()</strong> (InitializingBean) → <strong>③ @Bean(initMethod)</strong>. Destruction order reverses this.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">Prototype Beans Have No Destroy</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Spring does NOT call <code>@PreDestroy</code> on Prototype beans. Once handed to the client, the container forgets about it. If a Prototype holds resources (connections, files), you must manage cleanup yourself — a common interview gotcha.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">SmartLifecycle for Ordering</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">For complex shutdown ordering (e.g., stop Kafka consumers before closing DB connections), implement <code>SmartLifecycle</code>. The <code>getPhase()</code> method returns an integer — higher phase number starts later and stops first.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">@DependsOn for Ordering</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Use <code>@DependsOn("cacheService")</code> to ensure a bean is initialized only after another specific bean. Useful when there's no direct DI relationship but an implicit ordering requirement.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">ApplicationContext Refresh Events</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">After all beans are initialized, the context publishes a <code>ContextRefreshedEvent</code>. You can listen for this via <code>@EventListener</code> to run one-time startup logic that requires ALL beans (including lazy ones) to be available — e.g., warming up caches after the full context is ready.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: What happens if you throw an exception inside @PostConstruct?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> The application context fails to start and throws a <code>BeanCreationException</code>, wrapping your exception. This is actually desirable — if initialization fails (e.g., cannot connect to a required service), fail-fast behavior is better than serving a broken app.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: How does @PreDestroy work in a containerized (Docker) environment?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Docker sends a <code>SIGTERM</code> signal before <code>SIGKILL</code>. The JVM catches SIGTERM and triggers Spring's graceful shutdown via registered shutdown hooks (<code>SpringApplication.registerShutdownHook()</code>). This in turn calls all <code>@PreDestroy</code> methods. Kubernetes uses this same mechanism — configure <code>terminationGracePeriodSeconds</code> to give your app enough time to complete cleanup.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: What's the difference between @PostConstruct and InitializingBean.afterPropertiesSet()?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Functionally they do the same thing. <code>@PostConstruct</code> is a JSR-250 standard annotation (no Spring import needed — good for portability). <code>InitializingBean.afterPropertiesSet()</code> couples your class to the Spring API. The Spring team recommends <code>@PostConstruct</code> for new code. Both run at the same lifecycle phase, with <code>@PostConstruct</code> running first if both are present.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Complete Code Example</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">BeanLifecycleDemo.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#c586c0]">import</span> jakarta.annotation.PostConstruct;
+<span class="text-[#c586c0]">import</span> jakarta.annotation.PreDestroy;
+<span class="text-[#c586c0]">import</span> org.springframework.beans.factory.InitializingBean;
+<span class="text-[#c586c0]">import</span> org.springframework.beans.BeansException;
+<span class="text-[#c586c0]">import</span> org.springframework.beans.factory.config.BeanPostProcessor;
+<span class="text-[#c586c0]">import</span> org.springframework.stereotype.Component;
+
+<span class="text-[#6a9955]">/* 1. The Bean — demonstrating all lifecycle hooks */</span>
+<span class="text-[#4ec9b0]">@Component</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">CacheWarmupService</span> <span class="text-[#569cd6]">implements</span> <span class="text-[#4ec9b0]">InitializingBean</span> {
+
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">ProductRepository</span> repo; <span class="text-[#6a9955]">// Injected by Spring</span>
+
+    <span class="text-[#6a9955]">// ① Constructor — dependencies NOT yet set for @Autowired fields</span>
+    <span class="text-[#569cd6]">public</span> CacheWarmupService(<span class="text-[#4ec9b0]">ProductRepository</span> repo) {
+        <span class="text-[#569cd6]">this</span>.repo = repo;
+        System.out.println(<span class="text-[#ce9178]">"[1] Constructor called"</span>);
+    }
+
+    <span class="text-[#6a9955]">// ② @PostConstruct — all dependencies are now injected ✅</span>
+    <span class="text-[#4ec9b0]">@PostConstruct</span>
+    <span class="text-[#569cd6]">public void</span> warmUpCache() {
+        System.out.println(<span class="text-[#ce9178]">"[2] @PostConstruct: loading hot products into cache"</span>);
+        repo.findTop100ByOrderBySalesDesc()
+            .forEach(p -> cache.put(p.getId(), p));
+    }
+
+    <span class="text-[#6a9955]">// ③ InitializingBean (runs after @PostConstruct)</span>
+    <span class="text-[#4ec9b0]">@Override</span>
+    <span class="text-[#569cd6]">public void</span> afterPropertiesSet() {
+        System.out.println(<span class="text-[#ce9178]">"[3] afterPropertiesSet(): verifying cache health"</span>);
+    }
+
+    <span class="text-[#6a9955]">// ④ @PreDestroy — graceful shutdown</span>
+    <span class="text-[#4ec9b0]">@PreDestroy</span>
+    <span class="text-[#569cd6]">public void</span> flushCache() {
+        System.out.println(<span class="text-[#ce9178]">"[4] @PreDestroy: flushing cache to disk"</span>);
+        cache.clear();
+    }
+}
+
+<span class="text-[#6a9955]">/* 2. Custom BeanPostProcessor — wraps every bean for logging */</span>
+<span class="text-[#4ec9b0]">@Component</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">LoggingBeanPostProcessor</span> <span class="text-[#569cd6]">implements</span> <span class="text-[#4ec9b0]">BeanPostProcessor</span> {
+
+    <span class="text-[#4ec9b0]">@Override</span>
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">Object</span> postProcessBeforeInitialization(<span class="text-[#4ec9b0]">Object</span> bean, <span class="text-[#4ec9b0]">String</span> beanName) {
+        System.out.println(<span class="text-[#ce9178]">"Before init: "</span> + beanName);
+        <span class="text-[#569cd6]">return</span> bean; <span class="text-[#6a9955]">// Must return bean (or a proxy)</span>
+    }
+
+    <span class="text-[#4ec9b0]">@Override</span>
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">Object</span> postProcessAfterInitialization(<span class="text-[#4ec9b0]">Object</span> bean, <span class="text-[#4ec9b0]">String</span> beanName) {
+        System.out.println(<span class="text-[#ce9178]">"After init: "</span> + beanName + <span class="text-[#ce9178]">" → READY"</span>);
+        <span class="text-[#569cd6]">return</span> bean;
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "The Spring bean lifecycle has several distinct phases that I leverage in production. After instantiation and dependency injection, Spring invokes <code>BeanPostProcessor.postProcessBeforeInitialization()</code> on all processors — this is where AOP proxy creation happens, which is why <code>@Transactional</code> works transparently. Then initialization hooks run in order: <code>@PostConstruct</code>, then <code>afterPropertiesSet()</code>, then the <code>initMethod</code>.
+                            <br><br>
+                            In practice, I use <code>@PostConstruct</code> to warm caches or validate configs that need injected services — you can't do this in a constructor because dependencies aren't set yet. For graceful shutdown, I use <code>@PreDestroy</code> to close Kafka consumers and thread pools before the context dies.
+                            <br><br>
+                            The most important distinction I emphasize is between <code>BeanPostProcessor</code> and <code>BeanFactoryPostProcessor</code> — the former operates on bean instances (used by AOP), while the latter operates on bean definitions before instantiation (used by Spring to resolve <code>${property}</code> placeholders). Mixing them up is a common senior interview mistake."
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 8. Quick Revision -->
+                <section id="revision-notes" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-lightning text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">8. Quick Revision Notes</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-3 font-medium">
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors">
+                            <i class="ph-fill ph-check-circle text-emerald-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Order:</strong> Constructor → DI → Aware → BPP Before → @PostConstruct → afterPropertiesSet() → BPP After → Ready → @PreDestroy</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-blue-100 hover:border-blue-300 transition-colors">
+                            <i class="ph-fill ph-check-circle text-blue-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>@PostConstruct:</strong> Use for init logic that needs injected dependencies. Fails fast on exception.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-red-100 hover:border-red-300 transition-colors">
+                            <i class="ph-fill ph-warning-circle text-red-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>Prototype beans:</strong> Spring does NOT call @PreDestroy on them — you manage cleanup.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-amber-100 hover:border-amber-300 transition-colors">
+                            <i class="ph-fill ph-info text-amber-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>BPP vs BFPP:</strong> BeanPostProcessor = bean instances. BeanFactoryPostProcessor = bean definitions (runs earlier).</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-check-circle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>AOP proxies</strong> are created by a BeanPostProcessor AFTER initialization.</span>
+                        </div>
+                        <div class="flex items-start gap-3 bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:border-spring-200 transition-colors">
+                            <i class="ph-fill ph-check-circle text-slate-500 mt-0.5 text-lg shrink-0"></i>
+                            <span class="text-slate-700 text-sm"><strong>SmartLifecycle:</strong> Use for ordered startup/shutdown of multiple services with phase numbers.</span>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

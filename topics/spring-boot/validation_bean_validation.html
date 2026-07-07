@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Spring Boot Bean Validation — @Valid, @Validated, custom ConstraintValidator, JSR-380 annotations, and validation error response shaping for Java interview prep." />
+  <title>Bean Validation — Java Learn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-shield-check"></i> Input Validation
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Bean <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">Validation</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Validating incoming data at the API boundary using JSR-380 (Bean Validation 3.0), Hibernate Validator, @Valid vs @Validated, and building custom constraint validators — all production-grade patterns.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Validation is the security guard at the entrance of your REST API. Before any business logic runs, it checks that all the required data is present, in the right format, and within acceptable bounds — rejecting bad input immediately.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Spring Boot integrates with the Bean Validation API (JSR-380) via Hibernate Validator. Annotations like <code>@NotNull</code>, <code>@Size</code>, and <code>@Email</code> on model fields, combined with <code>@Valid</code> on controller method parameters, trigger automatic validation before method execution.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Prevents invalid data from ever reaching service or database layers. Centralizes validation rules on DTOs — keeping controllers thin and services focused on business logic, not defensive null-checks.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Core Annotations Reference -->
+                <section id="annotations" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. Core Constraint Annotations</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-slate-100">
+                                        <th class="text-left py-3 px-4 font-bold text-slate-700">Annotation</th>
+                                        <th class="text-left py-3 px-4 font-bold text-slate-700">What It Validates</th>
+                                        <th class="text-left py-3 px-4 font-bold text-slate-700">Null OK?</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-50">
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@NotNull</td><td class="py-3 px-4 text-slate-600">Field must not be null</td><td class="py-3 px-4 text-red-500 font-bold">No</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@NotBlank</td><td class="py-3 px-4 text-slate-600">String not null, not empty, not whitespace-only</td><td class="py-3 px-4 text-red-500 font-bold">No</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@NotEmpty</td><td class="py-3 px-4 text-slate-600">String/Collection not null and not empty</td><td class="py-3 px-4 text-red-500 font-bold">No</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@Size(min, max)</td><td class="py-3 px-4 text-slate-600">String length or Collection size within range</td><td class="py-3 px-4 text-emerald-500 font-bold">Yes</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@Min / @Max</td><td class="py-3 px-4 text-slate-600">Numeric value within bounds</td><td class="py-3 px-4 text-emerald-500 font-bold">Yes</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@Email</td><td class="py-3 px-4 text-slate-600">Valid email address format</td><td class="py-3 px-4 text-emerald-500 font-bold">Yes</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@Pattern(regexp)</td><td class="py-3 px-4 text-slate-600">String matches a regular expression</td><td class="py-3 px-4 text-emerald-500 font-bold">Yes</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@Positive</td><td class="py-3 px-4 text-slate-600">Number must be strictly positive (&gt; 0)</td><td class="py-3 px-4 text-emerald-500 font-bold">Yes</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@Future / @Past</td><td class="py-3 px-4 text-slate-600">Date/time must be in the future or past</td><td class="py-3 px-4 text-emerald-500 font-bold">Yes</td></tr>
+                                    <tr class="hover:bg-slate-50 transition-colors"><td class="py-3 px-4 font-mono text-spring-600">@Valid</td><td class="py-3 px-4 text-slate-600">Trigger cascaded validation on nested objects</td><td class="py-3 px-4 text-slate-400">N/A</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                            <p class="text-amber-800 text-sm font-medium"><strong>⚠️ Spring Boot 3 Note:</strong> Add <code>spring-boot-starter-validation</code> explicitly — it's no longer included transitively from spring-boot-starter-web since Spring Boot 2.3.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-shield-check text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">User Registration API</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">Full validation pipeline for a POST /api/users/register endpoint.</p>
+
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30"><i class="ph-fill ph-user text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">1. Annotated DTO (Request Body)</h4>
+                                    <p class="text-sm text-slate-300 mt-1">A <code>CreateUserRequest</code> DTO holds fields annotated with <code>@NotBlank</code>, <code>@Email</code>, <code>@Size(min=8)</code> for password, and a custom <code>@UniqueEmail</code> to check against the database.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-check-circle text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">2. @Valid Triggers at Controller</h4>
+                                    <p class="text-sm text-slate-300 mt-1">The controller method parameter is annotated with <code>@Valid @RequestBody CreateUserRequest req</code>. Spring automatically calls Hibernate Validator before the method body executes.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-warning text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">3. MethodArgumentNotValidException → 400 Response</h4>
+                                    <p class="text-sm text-slate-300 mt-1">On failure, Spring throws <code>MethodArgumentNotValidException</code>. A <code>@ControllerAdvice</code> catches it, extracts all field errors from <code>BindingResult</code>, and returns a structured <code>400 Bad Request</code> JSON listing all violations.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">@Valid vs @Validated</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><code>@Valid</code> is JSR-380 standard — triggers validation but supports no groups. <code>@Validated</code> is Spring-specific — adds <strong>validation group</strong> support, letting you apply different constraints in create vs update scenarios. It also enables method-level validation in <code>@Service</code> classes.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">Cascaded Validation with @Valid</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">If a DTO contains a nested object (e.g., <code>AddressDTO address</code>), annotate the field with <code>@Valid</code> to trigger validation recursively into the nested object's constraints. Without <code>@Valid</code> on the field, nested constraints are silently ignored.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Custom ConstraintValidator</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">For business-specific rules (e.g., "email must not already exist"), create a custom annotation + a class implementing <code>ConstraintValidator&lt;YourAnnotation, String&gt;</code>. Spring auto-detects it and can even inject repositories for DB lookups inside the validator.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">@NotNull vs @NotBlank vs @NotEmpty</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Common interview trap. <code>@NotNull</code> only checks for null — <code>" "</code> passes. <code>@NotEmpty</code> rejects null and empty string but allows <code>"  "</code>. <code>@NotBlank</code> is strictest — rejects null, empty, and whitespace-only strings. Use <code>@NotBlank</code> for user-provided text fields.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Method-Level Validation</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Add <code>@Validated</code> to a <code>@Service</code> class to validate method parameters and return values using constraint annotations directly on method params (e.g., <code>@NotNull Long id</code>). Violations throw <code>ConstraintViolationException</code>, not <code>MethodArgumentNotValidException</code>.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Validation Groups</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Define marker interfaces as groups (e.g., <code>interface OnCreate {}</code>, <code>interface OnUpdate {}</code>). Apply on constraints: <code>@NotNull(groups = OnCreate.class)</code>. Use <code>@Validated(OnCreate.class)</code> in the controller to select which constraint group to activate per endpoint.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">Structured Error Response (RFC 7807)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Spring Boot 3 introduced <code>ProblemDetail</code> (RFC 7807 Problem JSON format) as the standard error response object. Use it in your <code>@ControllerAdvice</code> to return machine-readable, structured error responses with <code>type</code>, <code>title</code>, <code>status</code>, <code>detail</code>, and custom extension fields like <code>violations</code>.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: What exception is thrown when validation fails in a @RestController?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> <code>MethodArgumentNotValidException</code> (for <code>@RequestBody</code> / <code>@ModelAttribute</code>) or <code>ConstraintViolationException</code> (for <code>@RequestParam</code> / <code>@PathVariable</code> with method-level <code>@Validated</code>). Both can be caught in a <code>@ControllerAdvice</code> to return a clean 400 response.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: Can you inject a Spring bean (like a repository) into a ConstraintValidator?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Yes! Spring Boot automatically detects and initializes <code>ConstraintValidator</code> implementations as Spring beans, enabling full <code>@Autowired</code> / constructor injection support. This allows validators to call repositories, caches, or external services for cross-field or database-level validation.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How do you validate that two fields match (e.g., password == confirmPassword)?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Use a <strong>class-level constraint</strong>. Create a custom annotation that targets <code>ElementType.TYPE</code> and a <code>ConstraintValidator</code> that receives the whole DTO object, reads both fields, and compares them. Place the annotation on the DTO class itself: <code>@PasswordsMatch class CreateUserRequest</code>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Complete Code Example</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">ValidationDemo.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]">/* 1. DTO with JSR-380 constraints */</span>
+<span class="text-[#c586c0]">import</span> jakarta.validation.constraints.*;
+
+<span class="text-[#569cd6]">public record</span> <span class="text-[#4ec9b0]">CreateUserRequest</span>(
+
+    <span class="text-[#4ec9b0]">@NotBlank</span>(message = <span class="text-[#ce9178]">"Name is required"</span>)
+    <span class="text-[#4ec9b0]">@Size</span>(min = 2, max = 50, message = <span class="text-[#ce9178]">"Name must be 2–50 characters"</span>)
+    <span class="text-[#4ec9b0]">String</span> name,
+
+    <span class="text-[#4ec9b0]">@NotBlank @Email</span>(message = <span class="text-[#ce9178]">"Valid email required"</span>)
+    <span class="text-[#4ec9b0]">String</span> email,
+
+    <span class="text-[#4ec9b0]">@NotBlank</span>
+    <span class="text-[#4ec9b0]">@Size</span>(min = 8, message = <span class="text-[#ce9178]">"Password must be 8+ characters"</span>)
+    <span class="text-[#4ec9b0]">@Pattern</span>(regexp = <span class="text-[#ce9178]">".*[A-Z].*"</span>, message = <span class="text-[#ce9178]">"Password needs at least one uppercase"</span>)
+    <span class="text-[#4ec9b0]">String</span> password,
+
+    <span class="text-[#4ec9b0]">@Min</span>(18) <span class="text-[#4ec9b0]">@Max</span>(120)
+    <span class="text-[#4ec9b0]">Integer</span> age
+) {}
+
+<span class="text-[#6a9955]">/* 2. Controller — @Valid triggers validation */</span>
+<span class="text-[#4ec9b0]">@RestController</span>
+<span class="text-[#4ec9b0]">@RequestMapping</span>(<span class="text-[#ce9178]">"/api/users"</span>)
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">UserController</span> {
+
+    <span class="text-[#4ec9b0]">@PostMapping</span>
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">ResponseEntity</span>&lt;<span class="text-[#4ec9b0]">UserResponse</span>&gt; create(
+            <span class="text-[#4ec9b0]">@Valid @RequestBody</span> <span class="text-[#4ec9b0]">CreateUserRequest</span> req) {
+        <span class="text-[#6a9955]">// Guaranteed: all constraints passed at this point</span>
+        <span class="text-[#569cd6]">return</span> ResponseEntity.status(<span class="text-[#4ec9b0]">HttpStatus</span>.CREATED)
+                             .body(userService.create(req));
+    }
+}
+
+<span class="text-[#6a9955]">/* 3. Global error handler — shapes validation errors into clean JSON */</span>
+<span class="text-[#4ec9b0]">@RestControllerAdvice</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">GlobalExceptionHandler</span> {
+
+    <span class="text-[#4ec9b0]">@ExceptionHandler</span>(<span class="text-[#4ec9b0]">MethodArgumentNotValidException</span>.<span class="text-[#569cd6]">class</span>)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">ResponseEntity</span>&lt;<span class="text-[#4ec9b0]">Map</span>&lt;<span class="text-[#4ec9b0]">String</span>, <span class="text-[#4ec9b0]">Object</span>&gt;&gt; handleValidation(
+            <span class="text-[#4ec9b0]">MethodArgumentNotValidException</span> ex) {
+
+        <span class="text-[#4ec9b0]">Map</span>&lt;<span class="text-[#4ec9b0]">String</span>, <span class="text-[#4ec9b0]">String</span>&gt; errors = ex.getBindingResult()
+            .getFieldErrors()
+            .stream()
+            .collect(<span class="text-[#4ec9b0]">Collectors</span>.toMap(
+                <span class="text-[#4ec9b0]">FieldError</span>::getField,
+                <span class="text-[#4ec9b0]">FieldError</span>::getDefaultMessage
+            ));
+
+        <span class="text-[#569cd6]">return</span> ResponseEntity.badRequest().body(<span class="text-[#4ec9b0]">Map</span>.of(
+            <span class="text-[#ce9178]">"status"</span>, 400,
+            <span class="text-[#ce9178]">"violations"</span>, errors
+        ));
+    }
+}
+
+<span class="text-[#6a9955]">/* 4. Custom constraint — @UniqueEmail */</span>
+<span class="text-[#4ec9b0]">@Target</span>(<span class="text-[#4ec9b0]">ElementType</span>.FIELD)
+<span class="text-[#4ec9b0]">@Retention</span>(<span class="text-[#4ec9b0]">RetentionPolicy</span>.RUNTIME)
+<span class="text-[#4ec9b0]">@Constraint</span>(validatedBy = <span class="text-[#4ec9b0]">UniqueEmailValidator</span>.<span class="text-[#569cd6]">class</span>)
+<span class="text-[#569cd6]">public @interface</span> <span class="text-[#4ec9b0]">UniqueEmail</span> {
+    <span class="text-[#4ec9b0]">String</span> message() <span class="text-[#569cd6]">default</span> <span class="text-[#ce9178]">"Email already registered"</span>;
+    <span class="text-[#4ec9b0]">Class</span>&lt;?&gt;[] groups() <span class="text-[#569cd6]">default</span> {};
+    <span class="text-[#4ec9b0]">Class</span>&lt;? <span class="text-[#569cd6]">extends</span> <span class="text-[#4ec9b0]">Payload</span>&gt;[] payload() <span class="text-[#569cd6]">default</span> {};
+}
+
+<span class="text-[#4ec9b0]">@Component</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">UniqueEmailValidator</span> <span class="text-[#569cd6]">implements</span> <span class="text-[#4ec9b0]">ConstraintValidator</span>&lt;<span class="text-[#4ec9b0]">UniqueEmail</span>, <span class="text-[#4ec9b0]">String</span>&gt; {
+
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">UserRepository</span> userRepo;
+
+    <span class="text-[#569cd6]">public</span> UniqueEmailValidator(<span class="text-[#4ec9b0]">UserRepository</span> userRepo) {
+        <span class="text-[#569cd6]">this</span>.userRepo = userRepo;
+    }
+
+    <span class="text-[#4ec9b0]">@Override</span>
+    <span class="text-[#569cd6]">public boolean</span> isValid(<span class="text-[#4ec9b0]">String</span> email, <span class="text-[#4ec9b0]">ConstraintValidatorContext</span> ctx) {
+        <span class="text-[#569cd6]">if</span> (email == <span class="text-[#569cd6]">null</span>) <span class="text-[#569cd6]">return true</span>; <span class="text-[#6a9955]">// Let @NotBlank handle null</span>
+        <span class="text-[#569cd6]">return</span> !userRepo.existsByEmail(email);
+    }
+}</code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "I implement validation as a declarative contract on DTOs using JSR-380 annotations, never in service layers. In controllers, <code>@Valid</code> on <code>@RequestBody</code> triggers Hibernate Validator automatically — any failure throws <code>MethodArgumentNotValidException</code> which my global <code>@RestControllerAdvice</code> catches and shapes into a clean 400 response with field-level error messages.
+                            <br><br>
+                            For the <code>@Valid</code> vs <code>@Validated</code> question: I use <code>@Valid</code> at the controller boundary for standard bean validation, and <code>@Validated</code> when I need validation groups — for example, a 'name' field might be optional on update but required on create. I define marker interfaces as groups and activate them per endpoint.
+                            <br><br>
+                            For cross-field or database-level business rules like unique email checks, I write custom <code>ConstraintValidator</code> implementations that Spring treats as beans — so I can inject a repository directly into the validator for a DB existence check. This keeps service layer clean of defensive validation code."
+                        </p>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Footer -->
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>

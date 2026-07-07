@@ -18,6 +18,7 @@ import {
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
 import { initCommandPalette, openCommandPalette } from './command-palette.js';
+import { hasQuizForTopic, openQuiz } from './quiz.js';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -379,6 +380,16 @@ const assembleLayout = () => {
   article.className = 'topic-article';
   // Move original content into article
   article.appendChild(originalContent);
+  
+  // Inject Quiz button if applicable
+  if (currentId && hasQuizForTopic(currentId) && !isChecklist) {
+    const quizBtn = document.createElement('button');
+    quizBtn.className = 'btn-launch-quiz';
+    quizBtn.innerHTML = '<span class="quiz-icon">📝</span> Test Your Knowledge';
+    quizBtn.addEventListener('click', () => openQuiz(currentId));
+    article.appendChild(quizBtn);
+  }
+
   main.appendChild(article);
   if (prevNext) main.appendChild(prevNext);
   

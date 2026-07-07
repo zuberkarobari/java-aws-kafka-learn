@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Spring Boot Caching with Redis — @Cacheable, @CacheEvict, @CachePut, Cache-Aside pattern, RedisCacheManager, TTL, cache stampede prevention for Java interviews." />
+  <title>Spring Caching & Redis — Java Learn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="../../css/styles.css" />
+  <link rel="stylesheet" href="../../css/topic.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <main id="topic-content">
+    <div class="max-w-4xl mx-auto px-6 md:px-12 py-10 space-y-16 pb-24">
+<div class="max-w-4xl mx-auto p-6 md:p-12 space-y-20 pb-32">
+
+                <!-- Page Title -->
+                <div class="mb-16 pt-8 animate-on-scroll" style="animation-delay: 0.1s;">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-spring-100/80 border border-spring-200 text-spring-700 text-sm font-semibold mb-6">
+                        <i class="ph-fill ph-lightning"></i> Performance
+                    </div>
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-extrabold text-slate-900 tracking-tight mb-5 leading-tight">
+                        Spring Caching <span class="text-transparent bg-clip-text bg-gradient-to-r from-spring-600 to-emerald-500">& Redis</span>
+                    </h1>
+                    <p class="text-lg md:text-xl text-slate-600 max-w-2xl leading-relaxed">
+                        Eliminate redundant database calls with Spring's Cache Abstraction. From simple @Cacheable to Redis-backed distributed caches with TTL, cache-aside patterns, and stampede prevention — production-grade caching done right.
+                    </p>
+                </div>
+
+                <!-- 1. Definition -->
+                <section id="definition" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.2s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-book-open-text text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">1. Definition</h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-lg"></i> Simple English</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Imagine a waiter who memorizes your regular order. The first time you visit, they go to the kitchen (DB) and bring your food. Next time, they remember and serve you instantly. Caching does exactly this for your application — storing frequently accessed data in fast memory.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-cpu text-lg"></i> Technical</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Spring's Cache Abstraction provides a unified API (CacheManager, Cache) that decouples caching logic from implementation. Annotations like <code>@Cacheable</code> are AOP-driven — Spring intercepts the method call, checks the cache, and only invokes the method on a cache miss. Redis is the most common distributed cache backend.</p>
+                        </div>
+                        <div class="bg-white p-7 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300">
+                            <h3 class="text-xs font-bold text-spring-600 uppercase tracking-widest mb-3 flex items-center gap-2"><i class="ph-fill ph-crosshair text-lg"></i> Purpose</h3>
+                            <p class="text-slate-600 leading-relaxed text-sm font-medium">Reduce database load by 80–99% for read-heavy workloads. Sub-millisecond Redis reads replace 10–50ms database queries. Critical for scaling: the database is usually the first bottleneck in a growing system.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Cache-Aside Pattern -->
+                <section id="cache-aside" class="scroll-mt-24 animate-on-scroll" style="animation-delay: 0.3s;">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-gears text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">2. The Cache-Aside Pattern Flow</h2>
+                    </div>
+
+                    <div class="bg-white p-8 md:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+                        <div class="w-full flex flex-col items-center bg-slate-900 rounded-2xl p-6 md:p-10 shadow-inner border border-slate-800 text-slate-200 relative overflow-hidden">
+                            <h3 class="font-display font-bold text-xs text-slate-400 uppercase tracking-widest mb-8 text-left w-full flex items-center gap-2">
+                                <i class="ph-fill ph-git-commit text-spring-400"></i> @Cacheable — Cache-Aside (Lazy Loading)
+                            </h3>
+
+                            <div class="flex flex-col items-center w-full max-w-2xl gap-3">
+                                <!-- Request -->
+                                <div class="bg-blue-900/30 border border-blue-500/50 px-5 py-3 rounded-xl w-full text-center">
+                                    <span class="text-blue-300 font-bold text-sm">Incoming Request — getProduct(id: 42)</span>
+                                </div>
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Cache Check -->
+                                <div class="bg-amber-900/30 border border-amber-500/50 px-5 py-4 rounded-xl w-full text-center">
+                                    <span class="text-amber-300 font-bold text-sm">Spring AOP intercepts @Cacheable method</span>
+                                    <p class="text-[11px] text-slate-400 mt-1">Checks Redis for key <code>"products::42"</code></p>
+                                </div>
+                                <div class="w-0.5 h-4 bg-slate-600"></div>
+
+                                <!-- Cache Hit / Miss Split -->
+                                <div class="grid grid-cols-2 gap-6 w-full">
+                                    <div class="bg-emerald-900/30 border border-emerald-500/50 px-4 py-4 rounded-xl text-center">
+                                        <span class="text-emerald-400 font-bold text-sm">✓ Cache HIT</span>
+                                        <p class="text-[11px] text-slate-400 mt-2">Return cached object directly. <strong>Method never invoked.</strong> ~0.5ms response time.</p>
+                                    </div>
+                                    <div class="bg-red-900/30 border border-red-500/50 px-4 py-4 rounded-xl text-center">
+                                        <span class="text-red-400 font-bold text-sm">✗ Cache MISS</span>
+                                        <p class="text-[11px] text-slate-400 mt-2">Invoke the actual method → query DB → store result in Redis with TTL → return result.</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-[11px] text-spring-400 border border-spring-500/30 bg-spring-900/20 rounded-lg p-3 w-full text-center">
+                                    <strong>Key Guarantee:</strong> After a miss, subsequent requests for the same key are served from Redis until TTL expires.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Real-World Example -->
+                <section id="real-world" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-buildings text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">3. Real-World Project Example</h2>
+                    </div>
+
+                    <div class="glass-dark rounded-[2rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden group">
+                        <div class="absolute -top-10 -right-10 text-slate-700/30 group-hover:text-spring-500/20 transition-colors duration-700">
+                            <i class="ph-fill ph-database text-[12rem] transform -rotate-12"></i>
+                        </div>
+                        <h3 class="text-2xl font-display font-bold mb-3 relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-spring-400 to-emerald-300">E-Commerce Product Catalog</h3>
+                        <p class="text-slate-300 mb-8 relative z-10 font-medium">10,000 product reads per second, database stays at rest.</p>
+
+                        <div class="space-y-6 relative z-10">
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30"><i class="ph-fill ph-magnifying-glass text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">@Cacheable — Read: Product Detail Pages</h4>
+                                    <p class="text-sm text-slate-300 mt-1"><code>@Cacheable(value="products", key="#id")</code> on <code>getProductById(Long id)</code>. Product pages are read thousands of times per minute. After the first DB fetch, all subsequent reads come from Redis in ~0.3ms — vs 25ms DB query.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30"><i class="ph-fill ph-pencil text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">@CachePut — Write: Admin Updates Product</h4>
+                                    <p class="text-sm text-slate-300 mt-1"><code>@CachePut(value="products", key="#product.id")</code> on the update method. Unlike <code>@Cacheable</code>, this ALWAYS calls the method AND updates the cache — ensuring the cache is immediately consistent after an admin edit.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-5 items-start">
+                                <div class="mt-1 w-10 h-10 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30"><i class="ph-fill ph-trash text-xl"></i></div>
+                                <div>
+                                    <h4 class="font-bold text-white text-lg font-display">@CacheEvict — Delete: Product Removed</h4>
+                                    <p class="text-sm text-slate-300 mt-1"><code>@CacheEvict(value="products", key="#id")</code> on delete. Removes the specific entry from Redis immediately. Use <code>allEntries=true</code> for cache-bust-all scenarios like bulk price updates.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Key Points -->
+                <section id="key-points" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-target text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">4. 7 Key Points <span class="text-base font-medium text-slate-400 block md:inline md:ml-2">For senior-level depth</span></h2>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">1</div>
+                                <h4 class="font-bold text-slate-800 font-display">Annotation Comparison</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><code>@Cacheable</code> — read-through (only calls method on miss). <code>@CachePut</code> — always calls method AND updates cache (for write-through). <code>@CacheEvict</code> — removes one or all entries. <code>@Caching</code> — combines multiple cache operations on one method.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">2</div>
+                                <h4 class="font-bold text-slate-800 font-display">@Cacheable Only Works on Public Methods</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Because caching is AOP-based (via a CGLIB proxy), it only works on <strong>public methods called from outside the bean</strong>. Calling a <code>@Cacheable</code> method from within the same class bypasses the proxy and the cache entirely — a very common mistake in production.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-red-100 hover:border-red-300 hover:shadow-lg transition-all duration-300 group relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-2 h-full bg-red-400"></div>
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-display font-bold text-lg">3</div>
+                                <h4 class="font-bold text-slate-800 font-display">Cache Stampede (Thundering Herd)</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">When a popular cache entry expires, hundreds of concurrent requests simultaneously miss the cache and hit the DB at once. Solutions: <strong>Probabilistic early expiration</strong>, <strong>Redis SETNX locking</strong> (one request rebuilds the cache, others wait/return stale), or <strong>Caffeine's async refresh</strong>.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">4</div>
+                                <h4 class="font-bold text-slate-800 font-display">TTL (Time-To-Live) Strategy</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Set appropriate TTLs per cache: product catalog = 10 minutes (acceptable staleness), user session = 30 minutes, exchange rates = 30 seconds. Configure per-cache TTLs in <code>RedisCacheConfiguration</code> using <code>entryTtl(Duration.ofMinutes(10))</code>.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">5</div>
+                                <h4 class="font-bold text-slate-800 font-display">Cache Keys with SpEL</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">Cache keys are defined with Spring Expression Language (SpEL). <code>key="#userId + '-' + #type"</code> builds compound keys. Use <code>condition="#price > 100"</code> to cache only expensive operations. Use <code>unless="#result == null"</code> to avoid caching null results.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-slate-100 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">6</div>
+                                <h4 class="font-bold text-slate-800 font-display">Local vs Distributed Cache</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium"><strong>ConcurrentHashMap / Caffeine</strong>: in-process, zero latency, lost on restart, not shared between nodes. <strong>Redis</strong>: network hop (~0.3ms), survives restarts, shared across all app instances. For microservices and horizontally scaled apps, Redis is required.</p>
+                        </div>
+                        <div class="md:col-span-2 bg-gradient-to-r from-slate-50 to-white p-6 rounded-2xl border border-slate-200 hover:border-spring-300 hover:shadow-lg transition-all duration-300 group">
+                            <div class="flex items-center gap-4 mb-3">
+                                <div class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-spring-500 group-hover:bg-spring-50 transition-colors font-display font-bold text-lg">7</div>
+                                <h4 class="font-bold text-slate-800 font-display">What Happens If Redis Goes Down?</h4>
+                            </div>
+                            <p class="text-sm text-slate-600 font-medium">By default, if Redis is down, Spring's <code>RedisCacheManager</code> throws an exception on cache operations, potentially causing method failures. Configure a <code>CacheErrorHandler</code> to gracefully degrade: on cache failure, simply skip the cache and go directly to the database. Your app continues serving requests, just slower.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. FAQs -->
+                <section id="faqs" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-chats-circle text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">5. Follow-Up Questions</h2>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q1: What is the difference between @Cacheable and @CachePut?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> <code>@Cacheable</code> is "read-first": it checks the cache before calling the method. On a hit, the method is <strong>never called</strong>. On a miss, it calls the method and stores the result. <code>@CachePut</code> <strong>always calls the method</strong> and always updates the cache with the result. Use <code>@CachePut</code> on write/update operations to keep the cache fresh without an extra read-through cycle.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q2: Why must cached objects be Serializable?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Redis stores data as byte arrays. Spring's default <code>RedisSerializer</code> uses Java Serialization to convert objects to bytes. If your object doesn't implement <code>Serializable</code>, an exception is thrown. A better practice is to configure <code>Jackson2JsonRedisSerializer</code> so objects are serialized as JSON — human-readable, version-tolerant, and compatible with non-Java clients reading the same Redis keys.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-2xl overflow-hidden hover:border-spring-200 transition-colors">
+                            <button class="accordion-btn w-full px-6 py-5 text-left flex justify-between items-center focus:outline-none">
+                                <span class="font-display font-semibold text-slate-800">Q3: How do you prevent caching null values?</span>
+                                <i class="ph-bold ph-caret-down accordion-icon text-slate-400"></i>
+                            </button>
+                            <div class="accordion-content bg-slate-50/50 px-6">
+                                <p class="text-slate-600 font-medium text-sm leading-relaxed border-l-2 border-spring-400 pl-4">
+                                    <strong>Answer:</strong> Use the <code>unless</code> attribute: <code>@Cacheable(value="products", unless="#result == null")</code>. This instructs Spring not to store the result in the cache if it's null. Alternatively, configure <code>RedisCacheConfiguration.disableCachingNullValues()</code> globally to prevent null caching across all caches — avoiding "ghost" cache entries that pollute the cache with null results.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. Code Example -->
+                <section id="code-example" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-spring-100 to-spring-50 flex items-center justify-center text-spring-600 shadow-sm border border-spring-200/50">
+                            <i class="ph-duotone ph-code text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">6. Complete Code Example</h2>
+                    </div>
+
+                    <div class="mac-window rounded-2xl overflow-hidden bg-[#1e1e1e]">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-[#2d2d2d] border-b border-[#404040]">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-4 text-xs font-mono text-slate-400">RedisCacheConfig.java + ProductService.java</span>
+                            <div class="ml-auto flex items-center gap-2">
+                                <span id="copy-toast" class="text-xs text-spring-400 font-medium opacity-0 transition-opacity px-2">Copied!</span>
+                                <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy code">
+                                    <i class="ph-duotone ph-copy text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <pre class="p-6 overflow-x-auto font-mono text-sm leading-relaxed text-[#d4d4d4]"><code id="code-content"><span class="text-[#6a9955]">/* 1. pom.xml — add Redis starter */</span>
+<span class="text-[#6a9955]">// &lt;dependency&gt;
+//   &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+//   &lt;artifactId&gt;spring-boot-starter-data-redis&lt;/artifactId&gt;
+// &lt;/dependency&gt;</span>
+
+<span class="text-[#6a9955]">/* 2. Redis Cache Configuration — JSON serialization + per-cache TTL */</span>
+<span class="text-[#4ec9b0]">@Configuration</span>
+<span class="text-[#4ec9b0]">@EnableCaching</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">CacheConfig</span> {
+
+    <span class="text-[#4ec9b0]">@Bean</span>
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">RedisCacheManagerBuilderCustomizer</span> cacheCustomizer() {
+        <span class="text-[#569cd6]">return</span> builder -> builder
+            .withCacheConfiguration(<span class="text-[#ce9178]">"products"</span>,
+                <span class="text-[#4ec9b0]">RedisCacheConfiguration</span>.defaultCacheConfig()
+                    .entryTtl(<span class="text-[#4ec9b0]">Duration</span>.ofMinutes(10))
+                    .disableCachingNullValues()
+                    .serializeValuesWith(<span class="text-[#4ec9b0]">RedisSerializationContext</span>
+                        .SerializationPair.fromSerializer(
+                            <span class="text-[#569cd6]">new</span> <span class="text-[#4ec9b0]">Jackson2JsonRedisSerializer</span>&lt;&gt;(<span class="text-[#4ec9b0]">Object</span>.<span class="text-[#569cd6]">class</span>)))
+            )
+            .withCacheConfiguration(<span class="text-[#ce9178]">"users"</span>,
+                <span class="text-[#4ec9b0]">RedisCacheConfiguration</span>.defaultCacheConfig()
+                    .entryTtl(<span class="text-[#4ec9b0]">Duration</span>.ofMinutes(30)));
+    }
+}
+
+<span class="text-[#6a9955]">/* 3. Service with caching annotations */</span>
+<span class="text-[#4ec9b0]">@Service</span>
+<span class="text-[#569cd6]">public class</span> <span class="text-[#4ec9b0]">ProductService</span> {
+
+    <span class="text-[#569cd6]">private final</span> <span class="text-[#4ec9b0]">ProductRepository</span> repo;
+
+    <span class="text-[#6a9955]">// Cache HIT: return from Redis (method never called)</span>
+    <span class="text-[#6a9955]">// Cache MISS: call DB, store in Redis with 10min TTL</span>
+    <span class="text-[#4ec9b0]">@Cacheable</span>(value = <span class="text-[#ce9178]">"products"</span>, key = <span class="text-[#ce9178]">"#id"</span>, unless = <span class="text-[#ce9178]">"#result == null"</span>)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">Product</span> getById(<span class="text-[#4ec9b0]">Long</span> id) {
+        <span class="text-[#569cd6]">return</span> repo.findById(id).orElse(<span class="text-[#569cd6]">null</span>);
+    }
+
+    <span class="text-[#6a9955]">// Always calls DB update AND refreshes cache</span>
+    <span class="text-[#4ec9b0]">@CachePut</span>(value = <span class="text-[#ce9178]">"products"</span>, key = <span class="text-[#ce9178]">"#product.id"</span>)
+    <span class="text-[#569cd6]">public</span> <span class="text-[#4ec9b0]">Product</span> update(<span class="text-[#4ec9b0]">Product</span> product) {
+        <span class="text-[#569cd6]">return</span> repo.save(product);
+    }
+
+    <span class="text-[#6a9955]">// Remove from cache on delete</span>
+    <span class="text-[#4ec9b0]">@CacheEvict</span>(value = <span class="text-[#ce9178]">"products"</span>, key = <span class="text-[#ce9178]">"#id"</span>)
+    <span class="text-[#569cd6]">public void</span> delete(<span class="text-[#4ec9b0]">Long</span> id) {
+        repo.deleteById(id);
+    }
+
+    <span class="text-[#6a9955]">// Bust entire products cache (e.g., bulk price update)</span>
+    <span class="text-[#4ec9b0]">@CacheEvict</span>(value = <span class="text-[#ce9178]">"products"</span>, allEntries = <span class="text-[#569cd6]">true</span>)
+    <span class="text-[#569cd6]">public void</span> bulkPriceUpdate() { ... }
+}
+
+<span class="text-[#6a9955]">/* 4. application.yml */</span>
+<span class="text-[#6a9955]">// spring:
+//   data:
+//     redis:
+//       host: localhost
+//       port: 6379</span></code></pre>
+                    </div>
+                </section>
+
+                <!-- 7. Senior Dev Answer -->
+                <section id="senior-answer" class="scroll-mt-24 animate-on-scroll">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-md">
+                            <i class="ph-duotone ph-user-focus text-2xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-display font-bold text-slate-900 tracking-tight">7. Senior Developer Answer</h2>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-spring-50 to-white border-l-4 border-emerald-500 p-8 md:p-10 rounded-r-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] relative overflow-hidden">
+                        <i class="ph-fill ph-quotes text-emerald-100 text-8xl absolute -top-4 -left-4 z-0 rotate-12"></i>
+                        <p class="relative z-10 text-slate-700 text-lg leading-relaxed font-medium italic">
+                            "We use Spring's Cache Abstraction with Redis as the distributed backend across all our horizontally-scaled microservices. The abstraction layer means we can swap from Caffeine in unit tests to Redis in production without changing business code.
+                            <br><br>
+                            On the implementation side, I configure <code>Jackson2JsonRedisSerializer</code> over the default Java serializer — it's human-readable, version-tolerant, and non-Java services can consume the same cached data. I set per-cache TTLs matched to data staleness tolerance: 10 minutes for product catalog, 30 seconds for pricing.
+                            <br><br>
+                            The critical gotcha I always mention: <code>@Cacheable</code> is AOP-based, so it's completely bypassed when called within the same class (self-invocation). I've seen this cause subtle bugs where developers add caching to a private or internal method and wonder why the cache is never populated.
+                            <br><br>
+                            For cache stampede protection on high-traffic keys, we implement a Redis SETNX-based lock: the first thread to miss the cache acquires a short-lived lock to rebuild it, while other threads either wait or return a slightly stale value — preventing the thundering herd from pounding the database."
+                        </p>
+                    </div>
+                </section>
+
+            </div>
+            <footer class="text-center pb-10 text-slate-400 text-sm font-medium animate-on-scroll">
+                Generated with HTML, Tailwind CSS & JavaScript. <br>
+                <i class="ph-fill ph-coffee text-amber-700 text-lg mt-1 inline-block animate-float"></i> Good luck with your interview!
+            </footer>
+    </div>
+  </main>
+  <script type="module" src="../../js/topic.js"></script>
+</body>
+</html>
