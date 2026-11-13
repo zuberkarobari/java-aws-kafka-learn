@@ -130,7 +130,7 @@ const initThemeToggle = () => {
     outline: none;
   `;
 
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
   btn.innerHTML = `<span id="theme-icon">${currentTheme === 'dark' ? '☀️' : '🌙'}</span>`;
   btn.setAttribute('aria-label', 'Toggle theme');
 
@@ -148,7 +148,7 @@ const initThemeToggle = () => {
 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
     const next = current === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     saveTheme(next);

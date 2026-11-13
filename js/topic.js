@@ -1,7 +1,9 @@
 /**
- * topic.js — Topic page component injector
+ * topic.js — Topic page component injector & seamless navigation router
  * Reads the current page filename and injects ALL shared components:
  * header, sidebar, breadcrumb, prev/next nav, footer, Prism.js
+ * Provides independent sidebar scrolling with persistent scroll position
+ * and seamless in-page topic transitions without page reloads.
  */
 
 import {
@@ -9,12 +11,15 @@ import {
   getCurrentTopicId,
   getVisited,
   markVisited,
+  toggleVisited,
+  calculateReadTime,
   getSavedTheme,
   saveTheme,
   getPathPrefix,
   getTopicsByCategoryAndPathway,
   getActivePathway,
   calcProgress,
+  getPathwayTargetUrl,
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
 import { initCommandPalette, openCommandPalette } from './command-palette.js';
@@ -23,37 +28,44 @@ import { hasQuizForTopic, openQuiz } from './quiz.js';
 // ─── State ────────────────────────────────────────────────────────────────────
 
 const prefix = getPathPrefix();
-const currentId = getCurrentTopicId();
 const topics = getTopics();
-const currentTopic = topics.find((t) => t.id === currentId) || null;
-
+let currentId = getCurrentTopicId();
+let currentTopic = topics.find((t) => t.id === currentId) || null;
 let activePathway = getActivePathway();
 
-// Self-healing: if the current topic is not in the active pathway, find a pathway that contains it
-if (currentTopic) {
-  const isCurrentInActive = activePathway && 
-                            PATHWAYS[activePathway] && 
-                            PATHWAYS[activePathway].categories.includes(currentTopic.category);
-  if (!isCurrentInActive) {
-    // Find the first pathway that contains this topic's category
-    const matchingPathway = Object.keys(PATHWAYS).find(pwId => 
-      PATHWAYS[pwId]?.categories?.includes(currentTopic.category)
-    );
-    if (matchingPathway) {
-      activePathway = matchingPathway;
-      localStorage.setItem('java-learn-active-pathway', activePathway);
+const SIDEBAR_SCROLL_KEY = 'java_learn_sidebar_scroll';
+
+let pathwayCategories = [];
+let pathwayTopics = [];
+let currentIndexInPathway = -1;
+let prevTopic = null;
+let nextTopic = null;
+
+const recomputePathwayState = () => {
+  // Self-healing: if the current topic is not in the active pathway, find a pathway that contains it
+  if (currentTopic) {
+    const isCurrentInActive = activePathway && 
+                              PATHWAYS[activePathway] && 
+                              PATHWAYS[activePathway].categories.includes(currentTopic.category);
+    if (!isCurrentInActive) {
+      const matchingPathway = Object.keys(PATHWAYS).find(pwId => 
+        PATHWAYS[pwId]?.categories?.includes(currentTopic.category)
+      );
+      if (matchingPathway) {
+        activePathway = matchingPathway;
+        try { localStorage.setItem('java-learn-active-pathway', activePathway); } catch {}
+      }
     }
   }
-}
 
-// Filter topics list by the active pathway to keep navigation consistent
-const pathwayCategories = PATHWAYS[activePathway]?.categories || [];
-const pathwayTopics = topics.filter(t => 
-  pathwayCategories.includes(t.category)
-);
-const currentIndexInPathway = pathwayTopics.findIndex((t) => t.id === currentId);
-const prevTopic = currentIndexInPathway > 0 ? pathwayTopics[currentIndexInPathway - 1] : null;
-const nextTopic = currentIndexInPathway < pathwayTopics.length - 1 ? pathwayTopics[currentIndexInPathway + 1] : null;
+  pathwayCategories = PATHWAYS[activePathway]?.categories || [];
+  pathwayTopics = topics.filter(t => pathwayCategories.includes(t.category));
+  currentIndexInPathway = pathwayTopics.findIndex((t) => t.id === currentId);
+  prevTopic = currentIndexInPathway > 0 ? pathwayTopics[currentIndexInPathway - 1] : null;
+  nextTopic = currentIndexInPathway < pathwayTopics.length - 1 ? pathwayTopics[currentIndexInPathway + 1] : null;
+};
+
+recomputePathwayState();
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +78,8 @@ const applyTheme = (theme) => {
 // ─── Header Injection ─────────────────────────────────────────────────────────
 
 const injectHeader = () => {
+  if (document.getElementById('site-header')) return;
+
   const header = document.createElement('header');
   header.className = 'site-header';
   header.id = 'site-header';
@@ -76,77 +90,140 @@ const injectHeader = () => {
         <span class="logo-text">Java Learn</span>
       </a>
 
-      <!-- Pathway Navigation Tabs (Redirect Context) -->
-      <nav class="pathway-nav" id="pathway-nav" aria-label="Learning Pathways">
-        <a href="${prefix}index.html?pathway=dashboard" class="pathway-tab ${activePathway === 'dashboard' ? 'active' : ''}" data-pathway="dashboard">
-          <span class="tab-icon">📊</span>
-          <span class="tab-text">Dashboard</span>
-        </a>
-        ${Object.entries(PATHWAYS).map(([id, pw]) => `
-          <a href="${prefix}index.html?pathway=${id}" class="pathway-tab ${id === activePathway ? 'active' : ''}" data-pathway="${id}">
-            <span class="tab-icon">${pw.icon}</span>
-            <span class="tab-text">${pw.title}</span>
+      <!-- Pathway Navigation Container with smooth horizontal controls -->
+      <div class="pathway-nav-container">
+        <button class="nav-scroll-btn nav-scroll-prev" id="nav-scroll-prev" aria-label="Scroll pathways left" title="Scroll left">‹</button>
+        <nav class="pathway-nav" id="pathway-nav" aria-label="Learning Pathways">
+          <a href="${prefix}index.html?pathway=dashboard" class="pathway-tab ${activePathway === 'dashboard' ? 'active' : ''}" data-pathway="dashboard" title="Dashboard">
+            <span class="tab-icon">📊</span>
+            <span class="tab-text">Dashboard</span>
           </a>
-        `).join('')}
-      </nav>
+          ${Object.entries(PATHWAYS).map(([id, pw]) => {
+            const targetUrl = getPathwayTargetUrl(id, prefix);
+            return `
+              <a href="${targetUrl}" class="pathway-tab ${id === activePathway ? 'active' : ''}" data-pathway="${id}" title="${pw.title}">
+                <span class="tab-icon">${pw.icon}</span>
+                <span class="tab-text">${pw.title}</span>
+              </a>
+            `;
+          }).join('')}
+        </nav>
+        <button class="nav-scroll-btn nav-scroll-next" id="nav-scroll-next" aria-label="Scroll pathways right" title="Scroll right">›</button>
+      </div>
 
       <div class="header-actions">
-        <a href="${prefix}index.html" class="btn-home" aria-label="Home">
-          <span>🏠</span> Home
+        <a href="${prefix}index.html" class="btn-home" aria-label="Home" title="Return to Homepage">
+          <span aria-hidden="true">🏠</span> <span class="btn-home-label">Home</span>
         </a>
-        <button id="header-search-btn" class="header-search-btn" aria-label="Search topics">
-          <span>🔍</span>
+        <button id="header-search-btn" class="header-search-btn" aria-label="Search topics" title="Quick Search (Press / or Ctrl+K)">
+          <span aria-hidden="true">🔍</span>
         </button>
-        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Toggle dark/light mode">
           <span id="theme-icon">☀️</span>
         </button>
-        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="false">
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar" aria-expanded="false" title="Toggle navigation drawer">
           <span class="hamburger"></span>
         </button>
       </div>
     </div>
   `;
   document.body.insertBefore(header, document.body.firstChild);
+  initHeaderInteractions();
+};
+
+const initHeaderInteractions = () => {
+  const pathwayNav = document.getElementById('pathway-nav');
+  const prevBtn = document.getElementById('nav-scroll-prev');
+  const nextBtn = document.getElementById('nav-scroll-next');
+
+  if (pathwayNav) {
+    // Horizontal wheel scroll over pathway tabs
+    pathwayNav.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        pathwayNav.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // Arrow buttons
+    prevBtn?.addEventListener('click', () => {
+      pathwayNav.scrollBy({ left: -220, behavior: 'smooth' });
+    });
+    nextBtn?.addEventListener('click', () => {
+      pathwayNav.scrollBy({ left: 220, behavior: 'smooth' });
+    });
+
+    // Auto-scroll active tab into view
+    requestAnimationFrame(() => {
+      const activeTab = pathwayNav.querySelector('.pathway-tab.active');
+      if (activeTab) {
+        activeTab.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+      }
+    });
+  }
+};
+
+const updatePathwayTabsState = () => {
+  const tabs = document.querySelectorAll('.pathway-tab');
+  tabs.forEach(tab => {
+    const isTarget = tab.getAttribute('data-pathway') === activePathway;
+    tab.classList.toggle('active', isTarget);
+    if (isTarget) {
+      tab.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+    }
+  });
 };
 
 // ─── Breadcrumb Injection ─────────────────────────────────────────────────────
 
 const injectBreadcrumb = () => {
-  if (!currentTopic) return;
+  if (!currentTopic) return null;
 
   const breadcrumb = document.createElement('nav');
   breadcrumb.className = 'breadcrumb';
   breadcrumb.setAttribute('aria-label', 'Breadcrumb');
-  breadcrumb.innerHTML = `
+  breadcrumb.innerHTML = getBreadcrumbHTML(currentTopic);
+  return breadcrumb;
+};
+
+const getBreadcrumbHTML = (topic) => {
+  if (!topic) return '';
+  const contentEl = document.getElementById('topic-content');
+  const readMinutes = calculateReadTime(contentEl ? contentEl.innerText : '');
+  return `
     <ol class="breadcrumb-list">
       <li class="breadcrumb-item">
         <a href="${prefix}index.html">Home</a>
       </li>
       <li class="breadcrumb-sep" aria-hidden="true">›</li>
       <li class="breadcrumb-item">
-        <a href="${prefix}index.html#cat-${slugify(currentTopic.category)}">${currentTopic.category}</a>
+        <a href="${prefix}index.html?pathway=${activePathway}#cat-${slugify(topic.category)}">${topic.category}</a>
       </li>
       <li class="breadcrumb-sep" aria-hidden="true">›</li>
       <li class="breadcrumb-item breadcrumb-current" aria-current="page">
-        ${currentTopic.title}
+        ${topic.title}
       </li>
     </ol>
+    <span class="breadcrumb-read-time" title="Estimated reading time">
+      <span aria-hidden="true">⏱️</span> ${readMinutes} min read
+    </span>
   `;
-  return breadcrumb;
+};
+
+const updateBreadcrumbUI = (topic) => {
+  const breadcrumb = document.querySelector('.breadcrumb');
+  if (breadcrumb && topic) {
+    breadcrumb.innerHTML = getBreadcrumbHTML(topic);
+  }
 };
 
 // ─── Sidebar Injection ────────────────────────────────────────────────────────
 
-const injectSidebar = () => {
+const generateSidebarCategoriesHTML = () => {
   const byCategory = getTopicsByCategoryAndPathway(activePathway);
   const visited = getVisited();
 
-  const sidebar = document.createElement('aside');
-  sidebar.className = 'topic-sidebar';
-  sidebar.id = 'topic-sidebar';
-  sidebar.setAttribute('aria-label', 'Topics navigation');
-
-  const categoriesHtml = Object.entries(byCategory)
+  return Object.entries(byCategory)
     .map(([cat, catTopics]) => `
       <div class="sidebar-group">
         <h3 class="sidebar-group-title">${cat}</h3>
@@ -171,6 +248,7 @@ const injectSidebar = () => {
               <li>
                 <a href="${fileHref}"
                    class="sidebar-topic-link ${isCurrent ? 'sidebar-topic-active' : ''} ${visited.has(t.id) ? 'sidebar-topic-visited' : ''}"
+                   data-topic-id="${t.id}"
                    ${isCurrent ? 'aria-current="page"' : ''}>
                   <span class="sidebar-topic-icon">${t.icon}</span>
                   <span>${t.title}</span>
@@ -182,14 +260,25 @@ const injectSidebar = () => {
         </ul>
       </div>
     `).join('');
+};
+
+const injectSidebar = () => {
+  const sidebar = document.createElement('aside');
+  sidebar.className = 'topic-sidebar';
+  sidebar.id = 'topic-sidebar';
+  sidebar.setAttribute('aria-label', 'Topics navigation');
 
   sidebar.innerHTML = `
     <div class="sidebar-inner">
+      <div class="sidebar-mobile-header">
+        <span class="sidebar-mobile-title">Topics Navigation</span>
+        <button type="button" class="sidebar-mobile-close" id="sidebar-mobile-close" aria-label="Close topics sidebar">✕</button>
+      </div>
       <div class="sidebar-search-wrap">
         <input type="search" class="sidebar-search" id="sidebar-search" placeholder="Filter topics…" aria-label="Filter topics">
       </div>
       <div class="sidebar-categories" id="sidebar-categories">
-        ${categoriesHtml}
+        ${generateSidebarCategoriesHTML()}
       </div>
     </div>
   `;
@@ -197,22 +286,111 @@ const injectSidebar = () => {
   return sidebar;
 };
 
+const rebuildSidebarCategories = () => {
+  const container = document.getElementById('sidebar-categories');
+  if (container) {
+    container.innerHTML = generateSidebarCategoriesHTML();
+    initSidebarFilter();
+    initSidebarScroll();
+  }
+};
+
+const updateSidebarActiveState = (topicId) => {
+  const visited = getVisited();
+  const links = document.querySelectorAll('.sidebar-topic-link');
+  
+  links.forEach(link => {
+    const id = link.getAttribute('data-topic-id');
+    if (!id) return;
+    const isCurrent = id === topicId;
+    link.classList.toggle('sidebar-topic-active', isCurrent);
+    if (isCurrent) {
+      link.setAttribute('aria-current', 'page');
+    } else {
+      link.removeAttribute('aria-current');
+    }
+
+    const isVisited = visited.has(id);
+    link.classList.toggle('sidebar-topic-visited', isVisited);
+    const existingCheck = link.querySelector('.sidebar-check');
+    if (isVisited) {
+      if (!existingCheck) {
+        const check = document.createElement('span');
+        check.className = 'sidebar-check';
+        check.textContent = '✓';
+        link.appendChild(check);
+      }
+    } else if (existingCheck) {
+      existingCheck.remove();
+    }
+  });
+};
+
+// ─── Sidebar Independent Scroll & Persistence ─────────────────────────────────
+
+const initSidebarScroll = () => {
+  const scrollContainer = document.getElementById('sidebar-categories');
+  if (!scrollContainer) return;
+
+  // Track user scroll position in sessionStorage
+  scrollContainer.addEventListener('scroll', () => {
+    try {
+      sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(scrollContainer.scrollTop));
+    } catch {}
+  }, { passive: true });
+
+  // Restore scroll position
+  try {
+    const savedScroll = sessionStorage.getItem(SIDEBAR_SCROLL_KEY);
+    if (savedScroll !== null) {
+      scrollContainer.scrollTop = parseInt(savedScroll, 10);
+    }
+  } catch {}
+
+  // Auto-scroll to keep active topic visible without resetting to top
+  requestAnimationFrame(() => {
+    ensureActiveSidebarVisible(false);
+  });
+};
+
+const ensureActiveSidebarVisible = (smooth = true) => {
+  const scrollContainer = document.getElementById('sidebar-categories');
+  const activeLink = scrollContainer?.querySelector('.sidebar-topic-active');
+  if (!scrollContainer || !activeLink) return;
+
+  const containerRect = scrollContainer.getBoundingClientRect();
+  const linkRect = activeLink.getBoundingClientRect();
+
+  // If outside comfortable viewport, scroll smoothly into view
+  const isComfortablyVisible = (
+    linkRect.top >= containerRect.top + 36 &&
+    linkRect.bottom <= containerRect.bottom - 36
+  );
+
+  if (!isComfortablyVisible) {
+    activeLink.scrollIntoView({
+      block: 'center',
+      behavior: smooth ? 'smooth' : 'auto'
+    });
+  }
+};
+
 // ─── Prev/Next Nav Injection ──────────────────────────────────────────────────
 
 const injectProgressBar = () => {
-  const { visited, total, percent } = calcProgress(activePathway);
+  const { percent } = calcProgress(activePathway);
+  const isVisited = currentId ? getVisited().has(currentId) : false;
   
   const container = document.createElement('div');
   container.className = 'topic-sticky-progress';
   
-  // Styling to match the screenshot exactly
   container.style.position = 'fixed';
   container.style.bottom = '0';
   container.style.left = '0';
   container.style.width = '100%';
   container.style.height = '40px';
-  container.style.backgroundColor = 'var(--bg-surface, #f8f9fa)';
-  container.style.borderTop = '1px solid var(--border-color, #e5e7eb)';
+  container.style.backgroundColor = 'var(--bg-surface)';
+  container.style.borderTop = '1px solid var(--border)';
   container.style.display = 'flex';
   container.style.alignItems = 'center';
   container.style.justifyContent = 'center';
@@ -221,39 +399,73 @@ const injectProgressBar = () => {
   container.style.boxShadow = '0 -2px 10px rgba(0,0,0,0.05)';
   
   container.innerHTML = `
-    <span style="font-size: 13px; color: var(--text-color, #4b5563); font-weight: 500;">Topic progress: ${percent}%</span>
-    <div style="width: 200px; height: 12px; background: #ffffff; border: 1px solid #d1d5db; border-radius: 999px; overflow: hidden; position: relative;">
-      <div style="width: ${percent}%; height: 100%; background: #3b82f6; border-radius: 999px; transition: width 0.5s ease;"></div>
+    <span class="topic-progress-text" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Topic progress: ${percent}%</span>
+    <div style="width: 200px; height: 10px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-pill); overflow: hidden; position: relative;">
+      <div class="topic-progress-fill" style="width: ${percent}%; height: 100%; background: var(--accent); border-radius: var(--radius-pill); transition: width 0.5s ease;"></div>
     </div>
+    <button id="sticky-btn-toggle-completed" class="sticky-btn-complete ${isVisited ? 'completed' : ''}" style="margin-left: 10px; padding: 4px 14px; font-size: 12px; font-weight: 700; border-radius: var(--radius-pill); cursor: pointer; border: 1px solid ${isVisited ? '#10b981' : 'var(--border)'}; background: ${isVisited ? '#10b981' : 'var(--bg-elevated)'}; color: ${isVisited ? '#ffffff' : 'var(--text-primary)'}; transition: all var(--dur-fast);">
+      ${isVisited ? '✓ Completed' : 'Mark Done'}
+    </button>
   `;
+  container.querySelector('#sticky-btn-toggle-completed')?.addEventListener('click', handleToggleCompleted);
   return container;
 };
 
+const updateProgressBarUI = () => {
+  const { percent } = calcProgress(activePathway);
+  const bar = document.querySelector('.topic-sticky-progress');
+  if (!bar) return;
+  const label = bar.querySelector('.topic-progress-text');
+  const fill = bar.querySelector('.topic-progress-fill');
+  if (label) label.textContent = `Topic progress: ${percent}%`;
+  if (fill) fill.style.width = `${percent}%`;
+
+  const isVisited = currentId ? getVisited().has(currentId) : false;
+  const stickyBtn = bar.querySelector('#sticky-btn-toggle-completed');
+  if (stickyBtn) {
+    stickyBtn.className = `sticky-btn-complete ${isVisited ? 'completed' : ''}`;
+    stickyBtn.style.border = `1px solid ${isVisited ? '#10b981' : 'var(--border)'}`;
+    stickyBtn.style.background = isVisited ? '#10b981' : 'var(--bg-elevated)';
+    stickyBtn.style.color = isVisited ? '#ffffff' : 'var(--text-primary)';
+    stickyBtn.innerHTML = isVisited ? '✓ Completed' : 'Mark Done';
+  }
+};
+
+const getPrevNextHTML = (prev, next) => `
+  <div class="prev-next-inner">
+    <div class="prev-link-wrap">
+      ${prev ? `
+        <a href="${prefix}topics/${prev.file}" class="prev-next-link prev-link" id="prev-topic-link" title="Previous: ${prev.title} (Press [ or p)">
+          <span class="prev-next-dir">← Previous Topic <span class="kbd-shortcut-hint">[</span></span>
+          <span class="prev-next-title">${prev.icon} ${prev.title}</span>
+        </a>
+      ` : ''}
+    </div>
+    <div class="next-link-wrap">
+      ${next ? `
+        <a href="${prefix}topics/${next.file}" class="prev-next-link next-link" id="next-topic-link" title="Next: ${next.title} (Press ] or n)">
+          <span class="prev-next-dir">Next Topic → <span class="kbd-shortcut-hint">]</span></span>
+          <span class="prev-next-title">${next.icon} ${next.title}</span>
+        </a>
+      ` : ''}
+    </div>
+  </div>
+`;
+
 const injectPrevNext = () => {
+  if (!prevTopic && !nextTopic) return null;
+
   const nav = document.createElement('nav');
   nav.className = 'prev-next-nav';
   nav.setAttribute('aria-label', 'Previous and next topics');
-  nav.innerHTML = `
-    <div class="prev-next-inner">
-      <div class="prev-link-wrap">
-        ${prevTopic ? `
-          <a href="${prefix}topics/${prevTopic.file}" class="prev-next-link prev-link" id="prev-topic-link">
-            <span class="prev-next-dir">← Previous</span>
-            <span class="prev-next-title">${prevTopic.icon} ${prevTopic.title}</span>
-          </a>
-        ` : '<span></span>'}
-      </div>
-      <div class="next-link-wrap">
-        ${nextTopic ? `
-          <a href="${prefix}topics/${nextTopic.file}" class="prev-next-link next-link" id="next-topic-link">
-            <span class="prev-next-dir">Next →</span>
-            <span class="prev-next-title">${nextTopic.icon} ${nextTopic.title}</span>
-          </a>
-        ` : '<span></span>'}
-      </div>
-    </div>
-  `;
+  nav.innerHTML = getPrevNextHTML(prevTopic, nextTopic);
   return nav;
+};
+
+const updatePrevNextUI = () => {
+  const nav = document.querySelector('.prev-next-nav');
+  if (!nav) return;
+  nav.innerHTML = getPrevNextHTML(prevTopic, nextTopic);
 };
 
 // ─── Footer Injection ─────────────────────────────────────────────────────────
@@ -274,6 +486,276 @@ const injectFooter = () => {
   return footer;
 };
 
+// ─── Reading Depth Progress Bar & Floating Back to Top ──────────────
+
+const injectReadingProgressBar = () => {
+  let bar = document.getElementById('reading-progress-bar');
+  if (bar) return bar;
+  bar = document.createElement('div');
+  bar.id = 'reading-progress-bar';
+  bar.className = 'reading-progress-bar';
+  bar.setAttribute('role', 'progressbar');
+  bar.setAttribute('aria-valuemin', '0');
+  bar.setAttribute('aria-valuemax', '100');
+  bar.setAttribute('aria-valuenow', '0');
+  document.body.appendChild(bar);
+  return bar;
+};
+
+const updateReadingProgress = () => {
+  const progressBar = document.getElementById('reading-progress-bar');
+  if (!progressBar) return;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = docHeight > 0 ? (window.scrollY / docHeight) * 100 : 0;
+  const clamped = Math.min(100, Math.max(0, Math.round(progress)));
+  progressBar.style.width = `${clamped}%`;
+  progressBar.setAttribute('aria-valuenow', clamped);
+};
+
+const injectBackToTop = () => {
+  let btn = document.getElementById('btn-back-to-top');
+  if (btn) return btn;
+  btn = document.createElement('button');
+  btn.id = 'btn-back-to-top';
+  btn.className = 'btn-back-to-top';
+  btn.setAttribute('aria-label', 'Scroll back to top');
+  btn.setAttribute('title', 'Back to top (Press t)');
+  btn.innerHTML = '↑';
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  document.body.appendChild(btn);
+  return btn;
+};
+
+const updateBackToTopVisibility = () => {
+  const btn = document.getElementById('btn-back-to-top');
+  if (!btn) return;
+  btn.classList.toggle('visible', window.scrollY > 350);
+};
+
+let readingScrollTicking = false;
+const initReadingScrollListeners = () => {
+  window.addEventListener('scroll', () => {
+    if (!readingScrollTicking) {
+      window.requestAnimationFrame(() => {
+        updateReadingProgress();
+        updateBackToTopVisibility();
+        readingScrollTicking = false;
+      });
+      readingScrollTicking = true;
+    }
+  }, { passive: true });
+};
+
+// ─── Code Block Copy to Clipboard ─────────────────────────────
+
+const copyCodeToClipboard = async (btn, text) => {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    }
+    btn.innerHTML = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.innerHTML = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  } catch {
+    btn.innerHTML = 'Error';
+    setTimeout(() => { btn.innerHTML = '📋 Copy'; }, 2000);
+  }
+};
+
+const initCodeCopyButtons = (root = document) => {
+  const preElements = root.querySelectorAll('#topic-content pre');
+  preElements.forEach((pre) => {
+    if (pre.querySelector('.btn-copy-code')) return;
+    const btn = document.createElement('button');
+    btn.className = 'btn-copy-code';
+    btn.setAttribute('aria-label', 'Copy code to clipboard');
+    btn.setAttribute('title', 'Copy code');
+    btn.innerHTML = '📋 Copy';
+    btn.addEventListener('click', () => {
+      const codeEl = pre.querySelector('code') || pre;
+      copyCodeToClipboard(btn, codeEl.innerText.trim());
+    });
+    pre.appendChild(btn);
+  });
+};
+
+// ─── Table of Contents (On this page) ─────────────────────────
+
+const getHeadingsList = () => {
+  const contentEl = document.getElementById('topic-content');
+  if (!contentEl) return [];
+  return Array.from(contentEl.querySelectorAll('h2, h3'));
+};
+
+const buildTableOfContents = () => {
+  const headings = getHeadingsList();
+  if (headings.length < 2) return null;
+
+  const nav = document.createElement('nav');
+  nav.className = 'topic-toc-bar';
+  nav.id = 'topic-toc-bar';
+  nav.setAttribute('aria-label', 'On this page navigation');
+
+  const label = document.createElement('span');
+  label.className = 'toc-label';
+  label.innerHTML = '<span>📑</span> On this page:';
+  nav.appendChild(label);
+
+  const pillsWrap = document.createElement('div');
+  pillsWrap.className = 'toc-pills';
+
+  headings.forEach((h, index) => {
+    if (!h.id) {
+      h.id = slugify(h.textContent) || `section-${index + 1}`;
+    }
+    const pill = document.createElement('a');
+    pill.className = 'toc-pill';
+    pill.href = `#${h.id}`;
+    pill.textContent = h.textContent.replace(/^[\d.]+\s*/, '').trim();
+    pill.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.getElementById(h.id);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', `#${h.id}`);
+      }
+    });
+    pillsWrap.appendChild(pill);
+  });
+
+  nav.appendChild(pillsWrap);
+  return nav;
+};
+
+const updateTableOfContentsUI = () => {
+  const existingToc = document.getElementById('topic-toc-bar');
+  const newToc = buildTableOfContents();
+  if (existingToc && newToc) {
+    existingToc.parentNode.replaceChild(newToc, existingToc);
+  } else if (existingToc && !newToc) {
+    existingToc.remove();
+  } else if (!existingToc && newToc) {
+    const main = document.querySelector('.topic-main');
+    const article = document.querySelector('.topic-article');
+    if (main && article) {
+      main.insertBefore(newToc, article);
+    }
+  }
+};
+
+// ─── Gamified Completion Card & XP Toast ──────────────────────
+
+const showXPToast = (message, xpBadge = '+10 XP') => {
+  let container = document.querySelector('.xp-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'xp-toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'xp-toast';
+  toast.innerHTML = `
+    <span class="xp-toast-badge">${xpBadge}</span>
+    <span>${message}</span>
+  `;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 350);
+  }, 3200);
+};
+
+const getCompletionCardHTML = (isVisited) => `
+  <div class="complete-info">
+    <span class="complete-icon">🎯</span>
+    <div>
+      <h4 class="complete-title">Topic Completion</h4>
+      <p class="complete-subtitle">Mark this topic complete to record your study session and earn XP.</p>
+    </div>
+  </div>
+  <button id="btn-toggle-completed" class="btn-toggle-completed ${isVisited ? 'completed' : ''}" aria-pressed="${isVisited}">
+    ${isVisited ? '✓ Completed' : 'Mark as Completed'}
+  </button>
+`;
+
+const handleToggleCompleted = () => {
+  if (!currentId) return;
+  const isNowCompleted = toggleVisited(currentId);
+
+  updateSidebarActiveState(currentId);
+  updateProgressBarUI();
+  updateCompletionCardUI();
+
+  if (isNowCompleted) {
+    showXPToast('Topic completed! Study session logged.', '+10 XP');
+  } else {
+    showXPToast('Topic marked as uncompleted.', 'Updated');
+  }
+};
+
+const injectCompletionCard = () => {
+  const isVisited = currentId ? getVisited().has(currentId) : false;
+  const card = document.createElement('div');
+  card.className = 'topic-complete-card';
+  card.id = 'topic-complete-card';
+  card.innerHTML = getCompletionCardHTML(isVisited);
+  card.querySelector('#btn-toggle-completed')?.addEventListener('click', handleToggleCompleted);
+  return card;
+};
+
+const updateCompletionCardUI = () => {
+  const card = document.getElementById('topic-complete-card');
+  if (!card) return;
+  const isVisited = currentId ? getVisited().has(currentId) : false;
+  card.innerHTML = getCompletionCardHTML(isVisited);
+  card.querySelector('#btn-toggle-completed')?.addEventListener('click', handleToggleCompleted);
+};
+
+// ─── Keyboard Navigation ───────────────────────────────────────
+
+const initKeyboardNavigation = () => {
+  window.addEventListener('keydown', (e) => {
+    const tag = e.target.tagName;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || e.target.isContentEditable) {
+      return;
+    }
+    if (document.querySelector('.cmd-overlay.active') || document.querySelector('.quiz-overlay')) {
+      return;
+    }
+
+    if (e.key === ']' || e.key === 'n' || (e.altKey && e.key === 'ArrowRight')) {
+      if (nextTopic) {
+        e.preventDefault();
+        navigateToTopic(`${prefix}topics/${nextTopic.file}`, true);
+      }
+    } else if (e.key === '[' || e.key === 'p' || (e.altKey && e.key === 'ArrowLeft')) {
+      if (prevTopic) {
+        e.preventDefault();
+        navigateToTopic(`${prefix}topics/${prevTopic.file}`, true);
+      }
+    } else if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      openCommandPalette();
+    } else if (e.key === 't' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+};
+
 // ─── Sidebar Filter ───────────────────────────────────────────────────────────
 
 const initSidebarFilter = () => {
@@ -281,7 +763,7 @@ const initSidebarFilter = () => {
   if (!input) return;
 
   input.addEventListener('input', () => {
-    const query = input.value.toLowerCase();
+    const query = input.value.toLowerCase().trim();
     document.querySelectorAll('.sidebar-topic-link').forEach((link) => {
       const text = link.textContent.toLowerCase();
       const li = link.closest('li');
@@ -302,6 +784,7 @@ const initSidebarToggle = () => {
   const toggle = document.getElementById('sidebar-toggle');
   const sidebar = document.getElementById('topic-sidebar');
   const overlay = document.getElementById('sidebar-overlay');
+  const mobileClose = document.getElementById('sidebar-mobile-close');
   if (!toggle || !sidebar) return;
 
   const close = () => {
@@ -316,6 +799,7 @@ const initSidebarToggle = () => {
     overlay?.classList.toggle('overlay-visible', isOpen);
   });
 
+  mobileClose?.addEventListener('click', close);
   overlay?.addEventListener('click', close);
 
   document.addEventListener('keydown', (e) => {
@@ -326,27 +810,163 @@ const initSidebarToggle = () => {
 // ─── Prism.js ─────────────────────────────────────────────────────────────────
 
 const loadPrism = () => {
-  // Load Prism CSS
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css';
-  document.head.appendChild(link);
+  if (!document.querySelector('link[href*="prism-tomorrow"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css';
+    document.head.appendChild(link);
+  }
 
-  // Load Prism core + Java + markup
-  const script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js';
-  script.onload = () => {
-    const autoloader = document.createElement('script');
-    autoloader.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js';
-    document.head.appendChild(autoloader);
-  };
-  document.head.appendChild(script);
+  if (!window.Prism && !document.querySelector('script[src*="prism-core"]')) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js';
+    script.onload = () => {
+      const autoloader = document.createElement('script');
+      autoloader.src = 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js';
+      document.head.appendChild(autoloader);
+    };
+    document.head.appendChild(script);
+  }
+};
+
+// ─── Seamless In-Page Navigation Router ───────────────────────────────────────
+
+const navigateToTopic = async (targetUrl, updateHistory = true) => {
+  try {
+    const res = await fetch(targetUrl);
+    if (!res.ok) {
+      window.location.href = targetUrl;
+      return;
+    }
+    const htmlText = await res.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlText, 'text/html');
+
+    const newContent = doc.getElementById('topic-content');
+    if (!newContent) {
+      window.location.href = targetUrl;
+      return;
+    }
+
+    // Parse target topic ID with full URI decoding and canonical matching
+    const normalizedUrl = targetUrl.replace(/\\/g, '/');
+    const match = normalizedUrl.match(/\/topics\/(.+?)(?:\.html)?(?:[?#].*)?$/);
+    const extracted = match ? match[1] : '';
+    let decoded = extracted;
+    try {
+      decoded = decodeURIComponent(extracted);
+    } catch {}
+
+    const directMatch = topics.find(t => t.id === decoded || t.file === `${decoded}.html`);
+    const rawMatch = topics.find(t => t.id === extracted || t.file === `${extracted}.html`);
+    const newTopic = directMatch || rawMatch || null;
+    const newTopicId = newTopic ? newTopic.id : decoded;
+
+    // Update history & title
+    if (updateHistory) {
+      history.pushState({ topicId: newTopicId, url: targetUrl }, '', targetUrl);
+    }
+    if (newTopic) {
+      document.title = `${newTopic.title} — Java Learn`;
+    }
+
+    currentId = newTopicId;
+    currentTopic = newTopic;
+
+    // Mark visited & update state
+    if (newTopicId) {
+      markVisited(newTopicId);
+    }
+
+    // Fast, smooth swap of article content
+    const currentContent = document.getElementById('topic-content');
+    if (currentContent) {
+      currentContent.classList.add('topic-content-switching');
+      setTimeout(() => {
+        currentContent.innerHTML = newContent.innerHTML;
+        currentContent.classList.remove('topic-content-switching');
+        if (window.Prism) {
+          window.Prism.highlightAllUnder(currentContent);
+        }
+        initCodeCopyButtons(currentContent);
+      }, 100);
+    }
+
+    // Scroll reading pane to top
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
+    // Close mobile drawer if open
+    const sidebar = document.getElementById('topic-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    sidebar?.classList.remove('sidebar-open');
+    overlay?.classList.remove('overlay-visible');
+
+    // Recompute pathway state and rebuild sidebar if pathway changed
+    const prevPathway = activePathway;
+    recomputePathwayState();
+
+    if (activePathway !== prevPathway) {
+      rebuildSidebarCategories();
+      updatePathwayTabsState();
+    } else {
+      updateSidebarActiveState(newTopicId);
+    }
+
+    // Update controls
+    updateBreadcrumbUI(newTopic);
+    updateTableOfContentsUI();
+    updateCompletionCardUI();
+    updatePrevNextUI();
+    updateProgressBarUI();
+    updateReadingProgress();
+
+    // Auto-scroll sidebar to keep active topic visible without resetting to top
+    ensureActiveSidebarVisible(true);
+
+  } catch (err) {
+    console.warn('Seamless navigation fallback to full reload:', err);
+    window.location.href = targetUrl;
+  }
+};
+
+const initSeamlessNavigation = () => {
+  document.body.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
+
+    // Do not intercept modified or special clicks
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (link.target === '_blank' || link.hasAttribute('download')) return;
+
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+
+    // Intercept only topic-to-topic navigation
+    if (url.pathname.includes('/topics/')) {
+      e.preventDefault();
+      navigateToTopic(url.href, true);
+    }
+  });
+
+  window.addEventListener('popstate', () => {
+    navigateToTopic(window.location.href, false);
+  });
 };
 
 // ─── Layout Assembly ──────────────────────────────────────────────────────────
 
 const assembleLayout = () => {
-  const originalContent = document.getElementById('topic-content');
+  let originalContent = document.getElementById('topic-content');
+  if (!originalContent) {
+    const existingMain = document.querySelector('main');
+    if (existingMain) {
+      existingMain.id = 'topic-content';
+      originalContent = existingMain;
+    }
+  }
   if (!originalContent) return;
 
   const originalParent = originalContent.parentNode;
@@ -355,30 +975,46 @@ const assembleLayout = () => {
 
   const isChecklist = document.body.classList.contains('study-checklist-page');
 
-  let breadcrumb, prevNext, footer, progressBar;
+  let breadcrumb, prevNext, footer, progressBar, tocBar, completeCard;
   if (!isChecklist) {
     breadcrumb = injectBreadcrumb();
+    tocBar = buildTableOfContents();
+    completeCard = injectCompletionCard();
     prevNext = injectPrevNext();
     footer = injectFooter();
     progressBar = injectProgressBar();
+    injectReadingProgressBar();
+    injectBackToTop();
+  } else {
+    completeCard = injectCompletionCard();
+    progressBar = injectProgressBar();
+    injectBackToTop();
   }
 
   const sidebar = injectSidebar();
 
-  // Build wrapper
+  // Mobile drawer overlay attached directly to body
+  let overlay = document.getElementById('sidebar-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'sidebar-overlay';
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+  }
+
+  // Build grid wrapper (strictly 2 columns: sidebar and main)
   const wrapper = document.createElement('div');
   wrapper.className = 'topic-layout';
-  wrapper.innerHTML = '<div id="sidebar-overlay" class="sidebar-overlay"></div>';
   wrapper.appendChild(sidebar);
 
   const main = document.createElement('div');
   main.className = 'topic-main';
 
   if (breadcrumb) main.appendChild(breadcrumb);
+  if (tocBar) main.appendChild(tocBar);
 
   const article = document.createElement('article');
   article.className = 'topic-article';
-  // Move original content into article
   article.appendChild(originalContent);
   
   // Inject Quiz button if applicable
@@ -391,6 +1027,7 @@ const assembleLayout = () => {
   }
 
   main.appendChild(article);
+  if (completeCard) main.appendChild(completeCard);
   if (prevNext) main.appendChild(prevNext);
   
   wrapper.appendChild(main);
@@ -428,6 +1065,11 @@ const init = () => {
   }
   assembleLayout();
 
+  if (!document.querySelector('.topic-sticky-progress')) {
+    const progressBar = injectProgressBar();
+    if (progressBar) document.body.appendChild(progressBar);
+  }
+
   // Set page title from topic
   if (currentTopic) {
     document.title = `${currentTopic.title} — Java Learn`;
@@ -435,7 +1077,7 @@ const init = () => {
 
   // Theme toggle
   document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
     const next = current === 'dark' ? 'light' : 'dark';
     applyTheme(next);
     saveTheme(next);
@@ -446,18 +1088,13 @@ const init = () => {
 
   initSidebarToggle();
   initSidebarFilter();
+  initSidebarScroll();
+  initReadingScrollListeners();
+  initKeyboardNavigation();
+  initCodeCopyButtons();
   loadPrism();
-
-  // Scroll active sidebar item into view
-  requestAnimationFrame(() => {
-    document.querySelector('.sidebar-topic-active')?.scrollIntoView({
-      block: 'nearest',
-      behavior: 'smooth',
-    });
-  });
-
   initCommandPalette();
+  initSeamlessNavigation();
 };
 
 document.addEventListener('DOMContentLoaded', init);
-

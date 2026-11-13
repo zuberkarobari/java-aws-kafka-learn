@@ -356,6 +356,18 @@ export const TOPIC_META = {
     title: 'Java Operators',
     description: 'Master arithmetic, relational, logical, bitwise, assignment, and ternary operators, along with precedence rules.',
   },
+  'java/oops': {
+    category: 'Object-Oriented Programming',
+    icon: '🧩',
+    title: 'OOP Principles',
+    description: 'Object-Oriented Programming fundamentals in Java: classes, objects, and relationships.',
+  },
+  'java/collections': {
+    category: 'Core Java',
+    icon: '📦',
+    title: 'Collections Basics',
+    description: 'Collections overview, key interfaces, and core implementations.',
+  },
   'java/java_oop_concepts': {
     category: 'Object-Oriented Programming',
     icon: '🧱',
@@ -734,6 +746,12 @@ export const TOPIC_META = {
   },
 
   // ─── Microservices ─────────────────────────────────────────────
+  'spring-boot/microservices_fundamentals': {
+    category: 'Microservices',
+    icon: '🕸️',
+    title: 'Microservices Fundamentals',
+    description: 'Decomposition strategies, monolithic vs microservice tradeoffs, and database-per-service patterns.',
+  },
   'microservice/service-discovery': {
     category: 'Microservices',
     icon: '🔍',

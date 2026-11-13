@@ -14,7 +14,8 @@ export let inMemoryState = {
   checklistConfidence: null,
   checklistItems: null,
   timers: null,
-  notes: null
+  notes: null,
+  lastStudied: null
 };
 
 export const setInMemoryState = (data) => {
@@ -29,7 +30,8 @@ export const clearInMemoryState = () => {
     checklistConfidence: null,
     checklistItems: null,
     timers: null,
-    notes: null
+    notes: null,
+    lastStudied: null
   };
 };
 
@@ -111,13 +113,26 @@ export const fileToId = (filename) =>
 
 /**
  * Get the current topic id from the URL pathname
- * Works dynamically even for deep subdirectories
+ * Works dynamically even for deep subdirectories, query params, and URL-encoded chars
  * @returns {string}
  */
 export const getCurrentTopicId = () => {
-  const path = window.location.pathname;
-  const match = path.match(/\/topics\/(.+?)(?:\.html)?$/);
-  return match ? match[1] : '';
+  if (typeof window === 'undefined' || !window.location) return '';
+  const path = window.location.pathname.replace(/\\/g, '/');
+  const match = path.match(/\/topics\/(.+?)(?:\.html)?(?:[?#].*)?$/);
+  if (!match) return '';
+  let raw = match[1];
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {}
+
+  const allTopics = getTopics();
+  const directMatch = allTopics.find(t => t.id === decoded || t.file === `${decoded}.html`);
+  if (directMatch) return directMatch.id;
+  const rawMatch = allTopics.find(t => t.id === raw || t.file === `${raw}.html`);
+  if (rawMatch) return rawMatch.id;
+  return decoded;
 };
 
 // ─── Topic Resolution ────────────────────────────────────────────────────────
@@ -152,6 +167,28 @@ export const getTopicsByPathway = (pathwayId) => {
   const pathway = PATHWAYS[pathwayId];
   if (!pathway) return topics;
   return topics.filter(t => pathway.categories.includes(t.category));
+};
+
+/**
+ * Get target URL for a pathway tab
+ * In the web book, takes learner to the first or last-studied topic in that pathway.
+ * @param {string} pathwayId
+ * @param {string} [prefix='']
+ * @returns {string}
+ */
+export const getPathwayTargetUrl = (pathwayId, prefix = '') => {
+  if (pathwayId === 'dashboard') return `${prefix}index.html?pathway=dashboard`;
+  if (pathwayId === 'notes') return `${prefix}index.html?pathway=notes`;
+  if (pathwayId === 'profile') return `${prefix}index.html?pathway=profile`;
+
+  const pathwayTopics = getTopicsByPathway(pathwayId);
+  if (pathwayTopics && pathwayTopics.length > 0) {
+    const visited = getVisited();
+    const lastVisitedInPathway = [...pathwayTopics].reverse().find(t => visited.has(t.id));
+    const targetTopic = lastVisitedInPathway || pathwayTopics[0];
+    return `${prefix}topics/${targetTopic.file}`;
+  }
+  return `${prefix}index.html?pathway=${pathwayId}`;
 };
 
 /**
@@ -234,6 +271,75 @@ const STORAGE_KEYS = {
   VISITED: 'java-learn-visited',
   THEME: 'java-learn-theme',
   ACTIVE_PATHWAY: 'java-learn-active-pathway',
+  LAST_STUDIED: 'java-learn-last-studied',
+};
+
+/**
+ * Record the last studied topic with a timestamp
+ * @param {string} id
+ */
+export const setLastStudiedTopic = (id) => {
+  if (!id) return;
+  const payload = {
+    id,
+    timestamp: Date.now()
+  };
+  inMemoryState.lastStudied = payload;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.LAST_STUDIED, JSON.stringify(payload));
+    }
+  } catch {
+    // silently fail
+  }
+};
+
+/**
+ * Retrieve the last studied topic object, with intelligent fallback
+ * @returns {object|null}
+ */
+export const getLastStudiedTopic = () => {
+  // 1. Primary: check memory state or explicit last studied record
+  let lastStudiedData = inMemoryState.lastStudied;
+  if (!lastStudiedData) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem(STORAGE_KEYS.LAST_STUDIED);
+        if (raw) lastStudiedData = JSON.parse(raw);
+      }
+    } catch {}
+  }
+
+  if (lastStudiedData && lastStudiedData.id) {
+    const allTopics = getTopics();
+    const match = allTopics.find(t => t.id === lastStudiedData.id);
+    if (match) {
+      return { ...match, lastStudiedTime: lastStudiedData.timestamp };
+    }
+  }
+
+  // 2. Secondary fallback: check visited list (the latest item visited)
+  let visitedArr = inMemoryState.visited;
+  if (!visitedArr) {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const rawVisited = localStorage.getItem(STORAGE_KEYS.VISITED);
+        if (rawVisited) visitedArr = JSON.parse(rawVisited);
+      }
+    } catch {}
+  }
+
+  if (Array.isArray(visitedArr) && visitedArr.length > 0) {
+    const lastId = visitedArr[visitedArr.length - 1];
+    const allTopics = getTopics();
+    const match = allTopics.find(t => t.id === lastId);
+    if (match) {
+      return { ...match, lastStudiedTime: null };
+    }
+  }
+
+  // 3. Fallback: first unvisited topic (recommendation)
+  return getRecommendation();
 };
 
 /**
@@ -263,9 +369,55 @@ export const markVisited = (id) => {
   try {
     localStorage.setItem(STORAGE_KEYS.VISITED, JSON.stringify(arr));
     addStreakDate(); // Automatically log study day!
+    setLastStudiedTopic(id); // Automatically track last studied topic!
   } catch {
     // storage unavailable — silently fail
   }
+};
+
+/**
+ * Unmark a topic ID as visited
+ * @param {string} id
+ */
+export const unmarkVisited = (id) => {
+  const visited = getVisited();
+  visited.delete(id);
+  const arr = [...visited];
+  inMemoryState.visited = arr;
+  triggerSync();
+  try {
+    localStorage.setItem(STORAGE_KEYS.VISITED, JSON.stringify(arr));
+  } catch {
+    // storage unavailable — silently fail
+  }
+};
+
+/**
+ * Toggle visited status of a topic ID
+ * @param {string} id
+ * @returns {boolean} whether it is now visited
+ */
+export const toggleVisited = (id) => {
+  const visited = getVisited();
+  const isNowVisited = !visited.has(id);
+  if (isNowVisited) {
+    markVisited(id);
+  } else {
+    unmarkVisited(id);
+  }
+  return isNowVisited;
+};
+
+/**
+ * Calculate estimated read time in minutes from text content
+ * Assumes average reading speed of 200 words per minute
+ * @param {string} text
+ * @returns {number} Read time in minutes (minimum 1)
+ */
+export const calculateReadTime = (text) => {
+  if (!text || typeof text !== 'string') return 1;
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(wordCount / 200));
 };
 
 /**
@@ -273,7 +425,7 @@ export const markVisited = (id) => {
  * @returns {'dark'|'light'}
  */
 export const getSavedTheme = () =>
-  localStorage.getItem(STORAGE_KEYS.THEME) || 'dark';
+  localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
 
 /**
  * Persist theme preference
@@ -476,6 +628,27 @@ export const deletePlannerTask = (taskId) => {
   const tasks = getPlannerTasks();
   const filtered = tasks.filter(t => t.id !== taskId);
   savePlannerTasks(filtered);
+};
+
+export const getTaskCategoryInfo = (task) => {
+  const text = (task?.text || '').toLowerCase();
+  const explicit = (task?.category || '').toLowerCase();
+  if (explicit.includes('java') || text.includes('java') || text.includes('jvm') || text.includes('collections') || text.includes('thread')) {
+    return { name: 'Core Java', key: 'java', icon: '☕' };
+  }
+  if (explicit.includes('aws') || text.includes('aws') || text.includes('cloud') || text.includes('ec2') || text.includes('s3') || text.includes('iam')) {
+    return { name: 'AWS Cloud', key: 'aws', icon: '☁️' };
+  }
+  if (explicit.includes('kafka') || text.includes('kafka') || text.includes('consumer') || text.includes('producer') || text.includes('broker')) {
+    return { name: 'Kafka', key: 'kafka', icon: '🐿️' };
+  }
+  if (explicit.includes('spring') || text.includes('spring') || text.includes('boot') || text.includes('microservice') || text.includes('jpa')) {
+    return { name: 'Spring Boot', key: 'springboot', icon: '🌱' };
+  }
+  if (explicit.includes('interview') || text.includes('interview') || text.includes('dsa') || text.includes('faang') || text.includes('leetcode')) {
+    return { name: 'Interview Prep', key: 'interview', icon: '💼' };
+  }
+  return { name: 'Learning Path', key: 'general', icon: '🎯' };
 };
 
 // ─── Study Plan Checklist State API ──────────────────────────────────────────
