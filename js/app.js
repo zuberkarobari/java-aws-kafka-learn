@@ -340,19 +340,33 @@ const renderStatsRowHtml = (streak, xpData, rankTitle, globalProgress, stats) =>
   `;
 };
 
+const renderFeaturedPillsHtml = () => `
+  <div class="featured-subtopics-row">
+    <span class="subtopic-pill">OOP Internals</span>
+    <span class="subtopic-pill">Concurrency & Locks</span>
+    <span class="subtopic-pill">Java 21+ Virtual Threads</span>
+    <span class="subtopic-pill">Memory Model</span>
+  </div>
+`;
+
 const renderTrackCardHtml = (track) => {
   const progress = calcProgress(track.id);
   const targetUrl = getPathwayTargetUrl(track.id);
+  const isFeatured = track.id === 'java';
   const btnLabel = progress.percent === 100 ? 'Review Track →' : progress.percent > 0 ? 'Resume Track →' : 'Start Track →';
   return `
-    <div class="track-card track-card-${track.id}" onclick="window.location.href='${targetUrl}'">
+    <div class="track-card track-card-${track.id} ${isFeatured ? 'track-card-featured' : ''}" onclick="window.location.href='${targetUrl}'">
       <div class="track-card-top">
-        <div class="track-icon-badge">${track.icon}</div>
-        <span class="track-tag">${track.tag}</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="track-icon-badge">${track.icon}</div>
+          <span class="track-tag">${track.tag}</span>
+          ${isFeatured ? '<span class="featured-track-badge">⭐ Flagship</span>' : ''}
+        </div>
         <span class="track-percent-pill">${progress.percent}%</span>
       </div>
       <h4 class="track-title">${track.title}</h4>
       <p class="track-desc">${track.desc}</p>
+      ${isFeatured ? renderFeaturedPillsHtml() : ''}
       <div class="track-progress-wrap">
         <div class="track-progress-bar">
           <div class="track-progress-fill" style="width: ${progress.percent}%;"></div>
@@ -563,12 +577,16 @@ export const renderRightSidebar = () => {
   const { visited, total, percent } = calcProgress('java'); // Assuming milestone is Java Core
   
   const tasksHtml = plannerTasks.map((t, idx) => {
+    const cat = getTaskCategoryInfo(t);
     return `
       <div class="timeline-item ${t.done ? 'done' : ''}">
         <div class="timeline-dot" onclick="window.toggleTodo(${t.id})"></div>
         <div class="timeline-content">
           <div class="timeline-time" style="display:flex; justify-content:space-between; align-items:center;">
-            <span>Task ${idx+1}</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span>Task ${idx+1}</span>
+              <span class="task-category-pill task-cat-${cat.key}">${cat.icon} ${cat.name}</span>
+            </div>
             <div class="timeline-actions">
               <button onclick="window.editTodo(${t.id})" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0;margin-right:6px;" title="Edit Task">✏️</button>
               <button onclick="window.deleteTodo(${t.id})" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0;color:#ef4444;" title="Delete Task">🗑️</button>

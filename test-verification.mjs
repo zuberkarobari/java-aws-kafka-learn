@@ -1,4 +1,4 @@
-import { getTopics, getCurrentTopicId, getCategoriesByPathway, getTopicsByCategoryAndPathway, calcProgress, getRecommendation, getLastStudiedTopic, setLastStudiedTopic, markVisited, unmarkVisited, toggleVisited, calculateReadTime, getVisited, getPathwayTargetUrl } from './js/utils.js';
+import { getTopics, getCurrentTopicId, getCategoriesByPathway, getTopicsByCategoryAndPathway, calcProgress, getRecommendation, getLastStudiedTopic, setLastStudiedTopic, markVisited, unmarkVisited, toggleVisited, calculateReadTime, getVisited, getPathwayTargetUrl, getSavedTheme, getTaskCategoryInfo } from './js/utils.js';
 import { PATHWAYS, TOPIC_ORDER, TOPIC_META } from './js/topics.config.js';
 
 console.log('=== VERIFICATION TEST START ===\n');
@@ -142,6 +142,27 @@ if (!isNowDone || !getVisited().has(testTopicId)) throw new Error('Expected togg
 const isNowUndone = toggleVisited(testTopicId);
 if (isNowUndone || getVisited().has(testTopicId)) throw new Error('Expected toggleVisited to unmark topic');
 console.log('toggleVisited & unmarkVisited tests passed successfully.');
+
+// Test Default Theme
+if (getSavedTheme() !== 'light') {
+  throw new Error(`Expected default theme to be 'light', got '${getSavedTheme()}'`);
+}
+console.log('Default theme "light" test passed successfully.');
+
+// Test Task Category Mapping
+const taskJava = getTaskCategoryInfo({ text: 'Welcome! Complete Java basics first.' });
+if (taskJava.name !== 'Core Java' || taskJava.key !== 'java') {
+  throw new Error(`Expected Core Java category, got ${JSON.stringify(taskJava)}`);
+}
+const taskAws = getTaskCategoryInfo({ text: 'Review AWS Day 2 userdata mechanics.' });
+if (taskAws.name !== 'AWS Cloud' || taskAws.key !== 'aws') {
+  throw new Error(`Expected AWS Cloud category, got ${JSON.stringify(taskAws)}`);
+}
+const taskKafka = getTaskCategoryInfo({ text: 'Check Spring Kafka producer patterns.' });
+if (taskKafka.key !== 'kafka' && taskKafka.key !== 'springboot') {
+  throw new Error(`Expected Kafka or Spring Boot category, got ${JSON.stringify(taskKafka)}`);
+}
+console.log('Task Category Mapping tests passed successfully.');
 
 // Test 8: Full Topic URL Resolution and Completed Checkmark Integrity
 console.log('\nTest 8: Full Topic Resolution for All 200 Topics');

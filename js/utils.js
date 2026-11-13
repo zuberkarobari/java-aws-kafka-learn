@@ -424,15 +424,26 @@ export const calculateReadTime = (text) => {
  * Get saved theme preference
  * @returns {'dark'|'light'}
  */
-export const getSavedTheme = () =>
-  localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
+export const getSavedTheme = () => {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
+    }
+  } catch {}
+  return 'light';
+};
 
 /**
  * Persist theme preference
  * @param {'dark'|'light'} theme
  */
-export const saveTheme = (theme) =>
-  localStorage.setItem(STORAGE_KEYS.THEME, theme);
+export const saveTheme = (theme) => {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.THEME, theme);
+    }
+  } catch {}
+};
 
 /**
  * Get saved active learning pathway
