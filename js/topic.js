@@ -44,16 +44,16 @@ let nextTopic = null;
 const recomputePathwayState = () => {
   // Self-healing: if the current topic is not in the active pathway, find a pathway that contains it
   if (currentTopic) {
-    const isCurrentInActive = activePathway && 
-                              PATHWAYS[activePathway] && 
-                              PATHWAYS[activePathway].categories.includes(currentTopic.category);
+    const isCurrentInActive = activePathway &&
+      PATHWAYS[activePathway] &&
+      PATHWAYS[activePathway].categories.includes(currentTopic.category);
     if (!isCurrentInActive) {
-      const matchingPathway = Object.keys(PATHWAYS).find(pwId => 
+      const matchingPathway = Object.keys(PATHWAYS).find(pwId =>
         PATHWAYS[pwId]?.categories?.includes(currentTopic.category)
       );
       if (matchingPathway) {
         activePathway = matchingPathway;
-        try { localStorage.setItem('java-learn-active-pathway', activePathway); } catch {}
+        try { localStorage.setItem('java-learn-active-pathway', activePathway); } catch { }
       }
     }
   }
@@ -99,14 +99,14 @@ const injectHeader = () => {
             <span class="tab-text">Dashboard</span>
           </a>
           ${Object.entries(PATHWAYS).map(([id, pw]) => {
-            const targetUrl = getPathwayTargetUrl(id, prefix);
-            return `
+    const targetUrl = getPathwayTargetUrl(id, prefix);
+    return `
               <a href="${targetUrl}" class="pathway-tab ${id === activePathway ? 'active' : ''}" data-pathway="${id}" title="${pw.title}">
                 <span class="tab-icon">${pw.icon}</span>
                 <span class="tab-text">${pw.title}</span>
               </a>
             `;
-          }).join('')}
+  }).join('')}
         </nav>
         <button class="nav-scroll-btn nav-scroll-next" id="nav-scroll-next" aria-label="Scroll pathways right" title="Scroll right">›</button>
       </div>
@@ -229,11 +229,11 @@ const generateSidebarCategoriesHTML = () => {
         <h3 class="sidebar-group-title">${cat}</h3>
         <ul class="sidebar-topic-list">
           ${catTopics.map((t) => {
-            const isCurrent = t.id === currentId;
-            const fileHref = `${prefix}topics/${t.file}`;
-            
-            if (t.isLocked) {
-              return `
+      const isCurrent = t.id === currentId;
+      const fileHref = `${prefix}topics/${t.file}`;
+
+      if (t.isLocked) {
+        return `
                 <li>
                   <div class="sidebar-topic-link" style="opacity: 0.55; cursor: default;" title="Roadmap Planned Topic">
                     <span class="sidebar-topic-icon">${t.icon}</span>
@@ -242,9 +242,9 @@ const generateSidebarCategoriesHTML = () => {
                   </div>
                 </li>
               `;
-            }
+      }
 
-            return `
+      return `
               <li>
                 <a href="${fileHref}"
                    class="sidebar-topic-link ${isCurrent ? 'sidebar-topic-active' : ''} ${visited.has(t.id) ? 'sidebar-topic-visited' : ''}"
@@ -256,7 +256,7 @@ const generateSidebarCategoriesHTML = () => {
                 </a>
               </li>
             `;
-          }).join('')}
+    }).join('')}
         </ul>
       </div>
     `).join('');
@@ -298,7 +298,7 @@ const rebuildSidebarCategories = () => {
 const updateSidebarActiveState = (topicId) => {
   const visited = getVisited();
   const links = document.querySelectorAll('.sidebar-topic-link');
-  
+
   links.forEach(link => {
     const id = link.getAttribute('data-topic-id');
     if (!id) return;
@@ -336,7 +336,7 @@ const initSidebarScroll = () => {
   scrollContainer.addEventListener('scroll', () => {
     try {
       sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(scrollContainer.scrollTop));
-    } catch {}
+    } catch { }
   }, { passive: true });
 
   // Restore scroll position
@@ -345,7 +345,7 @@ const initSidebarScroll = () => {
     if (savedScroll !== null) {
       scrollContainer.scrollTop = parseInt(savedScroll, 10);
     }
-  } catch {}
+  } catch { }
 
   // Auto-scroll to keep active topic visible without resetting to top
   requestAnimationFrame(() => {
@@ -380,10 +380,10 @@ const ensureActiveSidebarVisible = (smooth = true) => {
 const injectProgressBar = () => {
   const { percent } = calcProgress(activePathway);
   const isVisited = currentId ? getVisited().has(currentId) : false;
-  
+
   const container = document.createElement('div');
   container.className = 'topic-sticky-progress';
-  
+
   container.innerHTML = `
     <span class="topic-progress-text">Topic progress: ${percent}%</span>
     <div class="topic-progress-track">
@@ -411,8 +411,6 @@ const updateProgressBarUI = () => {
   if (stickyBtn) {
     stickyBtn.className = `sticky-btn-complete ${isVisited ? 'completed' : ''}`;
     stickyBtn.innerHTML = isVisited ? '✓ Completed' : 'Mark Done';
-  }
-};
   }
 };
 
@@ -857,7 +855,7 @@ const navigateToTopic = async (targetUrl, updateHistory = true) => {
     let decoded = extracted;
     try {
       decoded = decodeURIComponent(extracted);
-    } catch {}
+    } catch { }
 
     const directMatch = topics.find(t => t.id === decoded || t.file === `${decoded}.html`);
     const rawMatch = topics.find(t => t.id === extracted || t.file === `${extracted}.html`);
@@ -1023,7 +1021,7 @@ const assembleLayout = () => {
   const article = document.createElement('article');
   article.className = 'topic-article';
   article.appendChild(originalContent);
-  
+
   // Inject Quiz button if applicable
   if (currentId && hasQuizForTopic(currentId) && !isChecklist) {
     const quizBtn = document.createElement('button');
@@ -1036,7 +1034,7 @@ const assembleLayout = () => {
   main.appendChild(article);
   if (completeCard) main.appendChild(completeCard);
   if (prevNext) main.appendChild(prevNext);
-  
+
   wrapper.appendChild(main);
 
   if (existingLayout) {
@@ -1047,7 +1045,7 @@ const assembleLayout = () => {
 
   if (footer) document.body.appendChild(footer);
   if (progressBar) document.body.appendChild(progressBar);
-  
+
   if (!isChecklist) {
     document.body.style.paddingBottom = '40px';
   }
