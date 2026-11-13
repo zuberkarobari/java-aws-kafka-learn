@@ -384,26 +384,12 @@ const injectProgressBar = () => {
   const container = document.createElement('div');
   container.className = 'topic-sticky-progress';
   
-  container.style.position = 'fixed';
-  container.style.bottom = '0';
-  container.style.left = '0';
-  container.style.width = '100%';
-  container.style.height = '40px';
-  container.style.backgroundColor = 'var(--bg-surface)';
-  container.style.borderTop = '1px solid var(--border)';
-  container.style.display = 'flex';
-  container.style.alignItems = 'center';
-  container.style.justifyContent = 'center';
-  container.style.gap = '12px';
-  container.style.zIndex = '1000';
-  container.style.boxShadow = '0 -2px 10px rgba(0,0,0,0.05)';
-  
   container.innerHTML = `
-    <span class="topic-progress-text" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Topic progress: ${percent}%</span>
-    <div style="width: 200px; height: 10px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-pill); overflow: hidden; position: relative;">
-      <div class="topic-progress-fill" style="width: ${percent}%; height: 100%; background: var(--accent); border-radius: var(--radius-pill); transition: width 0.5s ease;"></div>
+    <span class="topic-progress-text">Topic progress: ${percent}%</span>
+    <div class="topic-progress-track">
+      <div class="topic-progress-fill" style="width: ${percent}%;"></div>
     </div>
-    <button id="sticky-btn-toggle-completed" class="sticky-btn-complete ${isVisited ? 'completed' : ''}" style="margin-left: 10px; padding: 4px 14px; font-size: 12px; font-weight: 700; border-radius: var(--radius-pill); cursor: pointer; border: 1px solid ${isVisited ? '#10b981' : 'var(--border)'}; background: ${isVisited ? '#10b981' : 'var(--bg-elevated)'}; color: ${isVisited ? '#ffffff' : 'var(--text-primary)'}; transition: all var(--dur-fast);">
+    <button id="sticky-btn-toggle-completed" class="sticky-btn-complete ${isVisited ? 'completed' : ''}">
       ${isVisited ? '✓ Completed' : 'Mark Done'}
     </button>
   `;
@@ -424,10 +410,9 @@ const updateProgressBarUI = () => {
   const stickyBtn = bar.querySelector('#sticky-btn-toggle-completed');
   if (stickyBtn) {
     stickyBtn.className = `sticky-btn-complete ${isVisited ? 'completed' : ''}`;
-    stickyBtn.style.border = `1px solid ${isVisited ? '#10b981' : 'var(--border)'}`;
-    stickyBtn.style.background = isVisited ? '#10b981' : 'var(--bg-elevated)';
-    stickyBtn.style.color = isVisited ? '#ffffff' : 'var(--text-primary)';
     stickyBtn.innerHTML = isVisited ? '✓ Completed' : 'Mark Done';
+  }
+};
   }
 };
 
@@ -778,6 +763,19 @@ const initSidebarFilter = () => {
   });
 };
 
+// ─── Responsive Tables Helper ────────────────────────────────────────────────
+const makeTablesResponsive = (container = document) => {
+  const tables = container.querySelectorAll('table');
+  tables.forEach((table) => {
+    if (!table.parentElement.classList.contains('table-responsive-wrapper')) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'table-responsive-wrapper';
+      table.parentNode.insertBefore(wrapper, table);
+      wrapper.appendChild(table);
+    }
+  });
+};
+
 // ─── Sidebar Toggle (mobile) ──────────────────────────────────────────────────
 
 const initSidebarToggle = () => {
@@ -789,14 +787,18 @@ const initSidebarToggle = () => {
 
   const close = () => {
     sidebar.classList.remove('sidebar-open');
+    sidebar.classList.remove('open');
     toggle.setAttribute('aria-expanded', 'false');
     overlay?.classList.remove('overlay-visible');
+    document.body.style.overflow = '';
   };
 
   toggle.addEventListener('click', () => {
     const isOpen = sidebar.classList.toggle('sidebar-open');
+    sidebar.classList.toggle('open', isOpen);
     toggle.setAttribute('aria-expanded', String(isOpen));
     overlay?.classList.toggle('overlay-visible', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
   });
 
   mobileClose?.addEventListener('click', close);
@@ -889,6 +891,7 @@ const navigateToTopic = async (targetUrl, updateHistory = true) => {
           window.Prism.highlightAllUnder(currentContent);
         }
         initCodeCopyButtons(currentContent);
+        makeTablesResponsive(currentContent);
       }, 100);
     }
 
@@ -898,8 +901,12 @@ const navigateToTopic = async (targetUrl, updateHistory = true) => {
     // Close mobile drawer if open
     const sidebar = document.getElementById('topic-sidebar');
     const overlay = document.getElementById('sidebar-overlay');
+    const toggle = document.getElementById('sidebar-toggle');
     sidebar?.classList.remove('sidebar-open');
+    sidebar?.classList.remove('open');
     overlay?.classList.remove('overlay-visible');
+    toggle?.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
 
     // Recompute pathway state and rebuild sidebar if pathway changed
     const prevPathway = activePathway;
@@ -1064,6 +1071,7 @@ const init = () => {
     injectHeader();
   }
   assembleLayout();
+  makeTablesResponsive(document);
 
   if (!document.querySelector('.topic-sticky-progress')) {
     const progressBar = injectProgressBar();
