@@ -505,9 +505,13 @@ const initGlobalQuickActions = () => {
 
   sidebarToggle.addEventListener('click', () => {
     const sidebar = document.querySelector('.topic-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
     if (sidebar) {
-      sidebar.classList.toggle('open');
-      sidebarToggle.innerHTML = sidebar.classList.contains('open') ? '✕' : '☰';
+      const isOpen = sidebar.classList.toggle('sidebar-open');
+      sidebar.classList.toggle('open', isOpen);
+      overlay?.classList.toggle('overlay-visible', isOpen);
+      sidebarToggle.innerHTML = isOpen ? '✕' : '☰';
+      sidebarToggle.setAttribute('aria-expanded', String(isOpen));
     }
   });
 

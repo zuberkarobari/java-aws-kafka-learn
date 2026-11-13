@@ -409,6 +409,21 @@ export const toggleVisited = (id) => {
 };
 
 /**
+ * Safely escape HTML characters to prevent XSS vulnerabilities
+ * @param {string} str
+ * @returns {string}
+ */
+export const escapeHtml = (str) => {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
+/**
  * Calculate estimated read time in minutes from text content
  * Assumes average reading speed of 200 words per minute
  * @param {string} text

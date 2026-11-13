@@ -1850,24 +1850,44 @@ body.study-checklist-page .section-divider {
   /* ── Mobile Sidebar Drawer ── */
   .topic-sidebar {
     position: fixed;
-    top: var(--header-h);
+    top: 0;
     left: 0;
     width: min(320px, 85vw);
-    height: calc(100vh - var(--header-h));
+    height: 100vh;
+    height: 100dvh;
     z-index: 1000;
     transform: translateX(-100%);
     transition: transform var(--dur-med) var(--ease-out);
     box-shadow: var(--shadow-lg);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: max(var(--space-6), env(safe-area-inset-bottom, 24px));
   }
 
-  /* topic.js toggles .sidebar-open class on the sidebar */
-  .topic-sidebar.sidebar-open {
+  /* Support both .sidebar-open (topic.js) and .open (checklist.js) */
+  .topic-sidebar.sidebar-open,
+  .topic-sidebar.open {
     transform: translateX(0);
   }
 
   .sidebar-mobile-header {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-3);
+  }
+
+  .sidebar-mobile-close {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  .sidebar-topic-link {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
   }
 
   /* topic.js toggles .overlay-visible on #sidebar-overlay */
@@ -1892,11 +1912,114 @@ body.study-checklist-page .section-divider {
     padding: var(--space-5) var(--space-4);
   }
 
+  /* Breadcrumb wrapping & truncation */
+  .breadcrumb {
+    margin-bottom: var(--space-4);
+    gap: var(--space-2);
+  }
+
+  .breadcrumb-list {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .breadcrumb-current {
+    max-width: 170px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: bottom;
+  }
+
+  .breadcrumb-read-time {
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+
   /* Full-width code blocks on mobile */
   #topic-content pre {
     margin-left: calc(-1 * var(--space-4)) !important;
     margin-right: calc(-1 * var(--space-4)) !important;
     border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    max-width: calc(100% + 2 * var(--space-4)) !important;
+    box-sizing: border-box !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #topic-content pre code {
+    white-space: pre !important;
+    word-break: normal !important;
+    word-wrap: normal !important;
+  }
+
+  /* Always visible copy button on touch devices */
+  .btn-copy-code {
+    opacity: 0.85 !important;
+    top: 8px !important;
+    right: 8px !important;
+    font-size: 0.72rem !important;
+    padding: 4px 8px !important;
+  }
+
+  /* Responsive Tables */
+  #topic-content table {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-collapse: collapse;
+    font-size: 0.85rem !important;
+    margin: var(--space-4) 0 !important;
+  }
+
+  #topic-content th,
+  #topic-content td {
+    padding: var(--space-2) var(--space-3) !important;
+  }
+
+  /* Images and embedded media */
+  #topic-content img,
+  #topic-content svg,
+  #topic-content iframe {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Typography & Callout scaling */
+  #topic-content h1 {
+    font-size: clamp(22px, 5.5vw, 28px) !important;
+    line-height: 1.25 !important;
+    margin-bottom: var(--space-3) !important;
+  }
+
+  #topic-content h2 {
+    font-size: clamp(18px, 4.5vw, 22px) !important;
+    line-height: 1.3 !important;
+    margin-top: var(--space-6) !important;
+    margin-bottom: var(--space-3) !important;
+  }
+
+  #topic-content h3 {
+    font-size: clamp(15px, 3.8vw, 18px) !important;
+    line-height: 1.35 !important;
+  }
+
+  .info-box,
+  .tip-box,
+  .warning-box,
+  .danger-box,
+  .note-box,
+  .highlight-box,
+  .lede,
+  .snote {
+    padding: var(--space-3) var(--space-4) !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0.9rem !important;
+    margin: var(--space-4) 0 !important;
   }
 
   /* Prev/next stack vertically */
@@ -1908,7 +2031,14 @@ body.study-checklist-page .section-divider {
   .prev-link-wrap,
   .next-link-wrap {
     max-width: 100% !important;
+    width: 100% !important;
     margin-left: 0 !important;
+  }
+
+  .prev-link,
+  .next-link {
+    width: 100% !important;
+    min-height: 48px;
   }
 
   .next-link {
@@ -1918,6 +2048,59 @@ body.study-checklist-page .section-divider {
 
   .next-link .prev-next-dir {
     justify-content: flex-start;
+  }
+
+  /* Sticky Bottom Progress Bar */
+  .topic-sticky-progress {
+    padding: 6px 12px !important;
+    padding-bottom: max(6px, env(safe-area-inset-bottom, 0px)) !important;
+    gap: 8px !important;
+    height: auto !important;
+    min-height: 42px !important;
+  }
+
+  .topic-progress-text {
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+  }
+
+  .topic-sticky-progress > div {
+    flex: 1;
+    max-width: 130px;
+    min-width: 50px;
+  }
+
+  .sticky-btn-complete {
+    padding: 5px 10px !important;
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Floating Buttons placed safely above sticky bottom bar */
+  .btn-back-to-top {
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 16px !important;
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .mobile-sidebar-toggle {
+    display: flex;
+    position: fixed;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 66px !important;
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 2001;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    cursor: pointer;
   }
 
   .global-quick-actions {
@@ -1932,24 +2115,23 @@ body.study-checklist-page .section-divider {
     -webkit-overflow-scrolling: touch;
     padding-bottom: 4px !important;
   }
+}
 
-  .mobile-sidebar-toggle {
-    display: flex;
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    z-index: 2001;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    cursor: pointer;
+@media (max-width: 480px) {
+  .topic-main {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .breadcrumb-current {
+    max-width: 120px;
+  }
+
+  .topic-header > div {
+    padding: 0 var(--space-3) !important;
+  }
+
+  .pw {
+    min-width: 140px !important;
   }
 }
 

@@ -33,7 +33,8 @@ import {
   getSkillProgress,
   getWeeklyStats,
   getUserXP,
-  getPathwayTargetUrl
+  getPathwayTargetUrl,
+  escapeHtml
 } from './utils.js';
 import { PATHWAYS } from './topics.config.js';
 import { initCommandPalette, openCommandPalette } from './command-palette.js';
@@ -592,7 +593,7 @@ export const renderRightSidebar = () => {
               <button onclick="window.deleteTodo(${t.id})" style="background:none;border:none;cursor:pointer;font-size:0.8rem;padding:0;color:#ef4444;" title="Delete Task">🗑️</button>
             </div>
           </div>
-          <div class="timeline-text" id="task-text-${t.id}">${t.text}</div>
+          <div class="timeline-text" id="task-text-${t.id}">${escapeHtml(t.text)}</div>
           <div class="timeline-status">${t.done ? 'Completed' : 'Upcoming'}</div>
         </div>
       </div>
@@ -669,7 +670,7 @@ window.showToast = (message, type = 'success') => {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icon = type === 'success' ? '✅' : '❌';
-  toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+  toast.innerHTML = `<span>${icon}</span> <span>${escapeHtml(message)}</span>`;
   container.appendChild(toast);
   
   // Trigger animation
@@ -698,7 +699,7 @@ window.editTodo = (taskId) => {
   if (!textElement) return;
   
   const currentText = textElement.innerText;
-  textElement.innerHTML = `<input type="text" id="edit-input-${taskId}" value="${currentText.replace(/"/g, '&quot;')}" style="width:100%; border:1px solid var(--accent); background:var(--bg-elevated); color:var(--text-primary); padding:4px; border-radius:4px; outline:none; font-size:0.9rem;" />`;
+  textElement.innerHTML = `<input type="text" id="edit-input-${taskId}" value="${escapeHtml(currentText)}" style="width:100%; border:1px solid var(--accent); background:var(--bg-elevated); color:var(--text-primary); padding:4px; border-radius:4px; outline:none; font-size:0.9rem;" />`;
   
   const input = document.getElementById(`edit-input-${taskId}`);
   input.focus();
@@ -881,7 +882,7 @@ const renderCards = (filterText = '') => {
       container.innerHTML = `
         <div class="empty-state">
           <span class="empty-icon">🔍</span>
-          <p>No topics found for "<strong>${filterText}</strong>"</p>
+          <p>No topics found for "<strong>${escapeHtml(filterText)}</strong>"</p>
           <button class="btn-clear-search" onclick="clearSearch()">Clear search</button>
         </div>
       `;
@@ -974,7 +975,7 @@ const renderCards = (filterText = '') => {
     html = `
       <div class="empty-state">
         <span class="empty-icon">🔍</span>
-        <p>No topics found for "<strong>${filterText}</strong>"</p>
+        <p>No topics found for "<strong>${escapeHtml(filterText)}</strong>"</p>
         <button class="btn-clear-search" onclick="clearSearch()">Clear search</button>
       </div>
     `;
@@ -1140,20 +1141,47 @@ const init = () => {
   const leftSidebar = document.getElementById('left-sidebar');
   const mobileOverlay = document.getElementById('mobile-overlay');
   
+  const closeMobileNav = () => {
+    if (leftSidebar?.classList.contains('open')) {
+      leftSidebar.classList.remove('open');
+      mobileOverlay?.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  };
+
+  const openMobileNav = () => {
+    leftSidebar?.classList.add('open');
+    mobileOverlay?.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+
   const toggleMobileNav = () => {
-    leftSidebar.classList.toggle('open');
-    mobileOverlay.classList.toggle('open');
+    const willOpen = !leftSidebar?.classList.contains('open');
+    if (willOpen) openMobileNav();
+    else closeMobileNav();
   };
   
   if (hamburgerBtn && leftSidebar && mobileOverlay) {
     hamburgerBtn.addEventListener('click', toggleMobileNav);
-    mobileOverlay.addEventListener('click', toggleMobileNav);
+    mobileOverlay.addEventListener('click', closeMobileNav);
   }
 
   const mobileSidebarClose = document.getElementById('mobile-sidebar-close');
   if (mobileSidebarClose) {
-    mobileSidebarClose.addEventListener('click', toggleMobileNav);
+    mobileSidebarClose.addEventListener('click', closeMobileNav);
   }
+
+  // Auto-close mobile drawer when tapping links inside it
+  leftSidebar?.addEventListener('click', (e) => {
+    const target = e.target.closest('a, button');
+    if (target && !target.classList.contains('mobile-sidebar-close-btn') && !target.closest('.theme-toggle-container')) {
+      closeMobileNav();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMobileNav();
+  });
 
   // Desktop navigation toggles
   const desktopLeftToggle = document.getElementById('desktop-left-toggle');

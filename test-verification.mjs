@@ -1,4 +1,4 @@
-import { getTopics, getCurrentTopicId, getCategoriesByPathway, getTopicsByCategoryAndPathway, calcProgress, getRecommendation, getLastStudiedTopic, setLastStudiedTopic, markVisited, unmarkVisited, toggleVisited, calculateReadTime, getVisited, getPathwayTargetUrl, getSavedTheme, getTaskCategoryInfo } from './js/utils.js';
+import { getTopics, getCurrentTopicId, getCategoriesByPathway, getTopicsByCategoryAndPathway, calcProgress, getRecommendation, getLastStudiedTopic, setLastStudiedTopic, markVisited, unmarkVisited, toggleVisited, calculateReadTime, getVisited, getPathwayTargetUrl, getSavedTheme, getTaskCategoryInfo, escapeHtml } from './js/utils.js';
 import { PATHWAYS, TOPIC_ORDER, TOPIC_META } from './js/topics.config.js';
 
 console.log('=== VERIFICATION TEST START ===\n');
@@ -163,6 +163,17 @@ if (taskKafka.key !== 'kafka' && taskKafka.key !== 'springboot') {
   throw new Error(`Expected Kafka or Spring Boot category, got ${JSON.stringify(taskKafka)}`);
 }
 console.log('Task Category Mapping tests passed successfully.');
+
+// Test 7b: XSS Sanitization
+const xssPayload = '<script>alert("xss")</script><img src=x onerror=alert(1)>';
+const escaped = escapeHtml(xssPayload);
+if (escaped.includes('<script>') || escaped.includes('<img')) {
+  throw new Error(`XSS sanitization failed: got ${escaped}`);
+}
+if (!escaped.includes('&lt;script&gt;') || !escaped.includes('&quot;xss&quot;')) {
+  throw new Error(`XSS entity encoding incomplete: got ${escaped}`);
+}
+console.log('XSS Sanitization tests passed successfully.');
 
 // Test 8: Full Topic URL Resolution and Completed Checkmark Integrity
 console.log('\nTest 8: Full Topic Resolution for All 200 Topics');
